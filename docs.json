@@ -1,10 +1,221 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Your Docs",
+  "name": "AhaSend",
+  "description": "Email for developers.",
   "colors": {
-    "primary": "#ff0000"
+    "primary": "#066fd1",
+    "light": "#F8FAFC",
+    "dark": "#0F172A"
+  },
+  "logo": {
+    "light": "/logo.png",
+    "dark": "/logo-dark.png",
+    "href": "https://ahasend.com/docs"
+  },
+  "favicon": "/favicon.png",
+  "appearance": {
+    "strict": false
   },
   "navigation": {
+    "dropdowns": [
+      {
+        "dropdown": "Documentation",
+        "description": "Set up your account",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "index",
+              "quickstart",
+              "domains"
+            ]
+          },
+          {
+            "group": "Sending with SMTP",
+            "pages": [
+              "smtp/credentials",
+              "smtp/sandbox",
+              "smtp/special-headers",
+              "smtp/php",
+              "smtp/golang",
+              "smtp/cli",
+              "smtp/nodejs",
+              "smtp/python",
+              "smtp/ruby",
+              "smtp/delphi",
+              "smtp/dotnet"
+            ]
+          },
+          {
+            "group": "Email Tracking",
+            "pages": [
+              "tracking/open-tracking",
+              "tracking/click-tracking"
+            ]
+          },
+          {
+            "group": "Sending with API",
+            "pages": [
+              "api/send-email",
+              "api/send-email-with-template",
+              "api/sandbox"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "webhooks/index",
+              "webhooks/events",
+              "webhooks/security",
+              "webhooks/payload",
+              "webhooks/faq"
+            ]
+          },
+          {
+            "group": "Email Routing",
+            "pages": [
+              "routing/index",
+              "routing/deduplication",
+              "routing/security",
+              "routing/payload",
+              "routing/faq"
+            ]
+          },
+          {
+            "group": "Data Retention",
+            "pages": [
+              "retention/index",
+              "retention/s3"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "security/2fa",
+              "security/2fa-enforcement",
+              "security/scoped-credentials",
+              "security/sso"
+            ]
+          },
+          {
+            "group": "Scaling up",
+            "pages": [
+              "scale/dedicated-ips",
+              "scale/ip-pools"
+            ]
+          }
+        ]
+      },
+      {
+        "dropdown": "API References",
+        "description": "API Usage and Reference",
+        "icon": "square-terminal",
+        "pages": [
+          "api-reference/get",
+          "api-reference/post",
+          "api-reference/delete"
+        ]
+      },
+      {
+        "dropdown": "Changelog",
+        "description": "Updates and changes",
+        "icon": "clock-rotate-left",
+        "pages": [
+          "changelog"
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "AhaSend",
+        "href": "https://ahasend.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Get Started",
+      "href": "https://dash.ahasend.com/user/register"
+    }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/aha_send",
+      "linkedin": "https://www.linkedin.com/company/ahasend",
+      "github": "https://github.com/ahasend"
+    },
+    "links": [
+      {
+        "header": "Resources",
+        "items": [
+          {
+            "label": "Pricing",
+            "href": "https://ahasend.com/pricing"
+          },
+          {
+            "label": "Support",
+            "href": "mailto:support@ahasend.com"
+          }
+        ]
+      },
+      {
+        "header": "Company",
+        "items": [
+          {
+            "label": "Blog",
+            "href": "https://ahasend.com/blog"
+          },
+          {
+            "label": "Feedback Board",
+            "href": "https://ahasend.sleekplan.app/"
+          }
+        ]
+      },
+      {
+        "header": "Legal",
+        "items": [
+          {
+            "label": "Imprint",
+            "href": "https://ahasend.com/imprint"
+          },
+          {
+            "label": "Terms of Service",
+            "href": "https://ahasend.com/terms"
+          },
+          {
+            "label": "Privacy Policy",
+            "href": "https://ahasend.com/privacy"
+          },
+          {
+            "label": "GDPR Compliance",
+            "href": "https://ahasend.com/dpa"
+          }
+        ]
+      }
+    ]
+  },
+  "integrations": {
+    "ga4": {
+      "measurementId": "G-2RDLCTEVXK"
+    },
+    "telemetry": {
+      "enabled": true
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
+  },
+  "errors": {
+    "404": {
+      "redirect": true
+    }
   }
 }
