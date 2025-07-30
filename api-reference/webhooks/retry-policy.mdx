@@ -1,0 +1,19 @@
+---
+title: "Webhook Delivery Retry Policy"
+sidebarTitle: "Retry Policy"
+description: ""
+---
+A webhook delivery is considered successful as long as your webhook endpoint returns `2xx` HTTP status codes.
+
+Failed webhooks are retried **6 times over 16+ minutes**.
+
+The retry policy uses an exponential backoff based on how many times the webhook has errored.
+A randomized ±10% jitter is applied to prevent stampeding errors from all retrying at the same time.
+
+```
+time to next attempt: unsuccessful attempts ^ 4 + rand(±10%)
+```
+
+<Warning>
+After 100 consecutive failures, the webhook is automatically disabled, and all account members will be notified via email.
+</Warning>

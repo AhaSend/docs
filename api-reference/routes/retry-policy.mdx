@@ -1,0 +1,20 @@
+---
+title: "Message Routing Retry Policy"
+sidebarTitle: "Retry Policy"
+description: ""
+---
+
+A routing delivery is considered successful as long as your route endpoint returns `2xx` HTTP status codes.
+
+Failed routing for inbound messages are retried **10 times over 7+ hours**.
+
+The retry policy uses an exponential backoff based on how many times the route has errored.
+A randomized ±10% jitter is applied to prevent stampeding errors from all retrying at the same time.
+
+```
+time to next attempt: unsuccessful attempts ^ 4 + rand(±10%)
+```
+
+<Warning>
+After 100 consecutive failures, the route is automatically disabled, and all account members will be notified via email.
+</Warning>

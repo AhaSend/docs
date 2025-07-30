@@ -1,0 +1,2698 @@
+openapi: 3.1.0
+info:
+  title: AhaSend API v2
+  description: |
+    The AhaSend API v2 allows you to send transactional emails, manage domains, webhooks, routes, API keys, and view statistics.
+
+    ## Authentication
+    All API requests must be authenticated using a Bearer token in the Authorization header:
+    ```
+    Authorization: Bearer aha-sk-64-CHARACTER-RANDOM-STRING
+    ```
+
+    ## Scopes
+    API keys have specific scopes that control access to different resources and actions:
+
+    ### Message Scopes
+    - `messages:send:all` - Send messages from any domain in the account
+    - `messages:send:{domain}` - Send messages from a specific domain
+    - `messages:cancel:all` - Cancel messages from any domain
+    - `messages:cancel:{domain}` - Cancel messages from a specific domain
+    - `messages:read:all` - Read messages from any domain
+    - `messages:read:{domain}` - Read messages from a specific domain
+
+    ### Domain Scopes
+    - `domains:read` - Read all domains
+    - `domains:write` - Create and update domains
+    - `domains:delete:all` - Delete any domain
+    - `domains:delete:{domain}` - Delete a specific domain
+
+    ### Account Scopes
+    - `accounts:read` - Read account information
+    - `accounts:write` - Update account settings
+    - `accounts:billing` - Access billing information
+    - `accounts:members:read` - Read account members
+    - `accounts:members:add` - Add account members
+    - `accounts:members:update` - Update account members
+    - `accounts:members:remove` - Remove account members
+
+    ### Webhook Scopes
+    - `webhooks:read:all` - Read all webhooks
+    - `webhooks:read:{domain}` - Read webhooks for a specific domain
+    - `webhooks:write:all` - Create and update webhooks
+    - `webhooks:write:{domain}` - Create and update webhooks for a specific domain
+    - `webhooks:delete:all` - Delete any webhook
+    - `webhooks:delete:{domain}` - Delete webhooks for a specific domain
+
+    ### Route Scopes
+    - `routes:read:all` - Read all routes
+    - `routes:read:{domain}` - Read routes for a specific domain
+    - `routes:write:all` - Create and update routes
+    - `routes:write:{domain}` - Create and update routes for a specific domain
+    - `routes:delete:all` - Delete any route
+    - `routes:delete:{domain}` - Delete routes for a specific domain
+
+    ### Suppression Scopes
+    - `suppressions:read` - Read suppressions
+    - `suppressions:write` - Create suppressions
+    - `suppressions:delete` - Delete suppressions
+    - `suppressions:wipe` - Delete all suppressions (dangerous)
+
+    ### SMTP Credentials Scopes
+    - `smtp-credentials:read:all` - Read all SMTP credentials
+    - `smtp-credentials:read:{domain}` - Read SMTP credentials for a specific domain
+    - `smtp-credentials:write:all` - Create SMTP credentials
+    - `smtp-credentials:write:{domain}` - Create SMTP credentials for a specific domain
+    - `smtp-credentials:delete:all` - Delete any SMTP credentials
+    - `smtp-credentials:delete:{domain}` - Delete SMTP credentials for a specific domain
+
+    ### Statistics Scopes
+    - `statistics-transactional:read:all` - Read all transactional statistics
+    - `statistics-transactional:read:{domain}` - Read transactional statistics for a specific domain
+
+    ### API Key Scopes
+    - `api-keys:read` - Read API keys
+    - `api-keys:write` - Create and update API keys
+    - `api-keys:delete` - Delete API keys
+
+    ## Rate Limiting
+    - General API endpoints: 100 requests per second, 200 burst
+    - Statistics endpoints: 1 request per second, 1 burst
+
+    ## Pagination
+    List endpoints use cursor-based pagination with the following parameters:
+    - `limit`: Maximum number of items to return (default: 100, max: 100)
+    - `cursor`: Pagination cursor for the next page
+
+    ## Time Formats
+    All timestamps must be in RFC3339 format, e.g., `2023-12-25T10:30:00Z`
+
+  version: "2.0.0"
+  contact:
+    email: support@ahasend.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.ahasend.com
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "aha-sk-64-CHARACTER-RANDOM-STRING"
+      description: API key for authentication
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error description
+      example:
+        message: "Error message"
+
+    SuccessResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Success message
+      example:
+        message: "Operation completed successfully"
+
+    PaginationInfo:
+      type: object
+      required:
+        - has_more
+      properties:
+        has_more:
+          type: boolean
+          description: Whether there are more items available
+        next_cursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page of results
+      example:
+        has_more: true
+        next_cursor: "eyJpZCI6MTIzNH0="
+
+    # API Key Schemas
+    APIKeyScope:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the scope
+        created_at:
+          type: string
+          format: date-time
+          description: When the scope was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the scope was last updated
+        api_key_id:
+          type: string
+          format: uuid
+          description: ID of the API key this scope belongs to
+        scope:
+          type: string
+          description: The scope string
+        domain_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Domain ID for domain-specific scopes
+      required:
+        - id
+        - created_at
+        - updated_at
+        - api_key_id
+        - scope
+
+    APIKey:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [api_key]
+          description: Object type identifier
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the API key
+        created_at:
+          type: string
+          format: date-time
+          description: When the API key was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the API key was last updated
+        account_id:
+          type: string
+          format: uuid
+          description: Account ID this API key belongs to
+        label:
+          type: string
+          description: Human-readable label for the API key
+        public_key:
+          type: string
+          description: Public portion of the API key
+        secret_key:
+          type: string
+          description: Secret key (only returned on creation)
+        scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/APIKeyScope'
+          description: Scopes granted to this API key
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+        - account_id
+        - label
+        - public_key
+        - scopes
+
+    CreateAPIKeyRequest:
+      type: object
+      required:
+        - label
+        - scopes
+      properties:
+        label:
+          type: string
+          maxLength: 255
+          description: Human-readable label for the API key
+        scopes:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: Array of scope strings to grant to this API key
+      example:
+        label: "Production API Key"
+        scopes: ["messages:send:all", "domains:read"]
+
+    UpdateAPIKeyRequest:
+      type: object
+      properties:
+        label:
+          type: string
+          maxLength: 255
+          description: Human-readable label for the API key
+        scopes:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: Array of scope strings to grant to this API key
+      example:
+        label: "Updated API Key"
+        scopes: ["messages:send:example.com", "domains:read"]
+
+    PaginatedAPIKeysResponse:
+      type: object
+      required:
+        - object
+        - data
+        - pagination
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/APIKey'
+          description: Array of API keys
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Domain Schemas
+    Domain:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [domain]
+          description: Object type identifier
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the domain
+        created_at:
+          type: string
+          format: date-time
+          description: When the domain was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the domain was last updated
+        domain:
+          type: string
+          description: The domain name
+        account_id:
+          type: string
+          format: uuid
+          description: Account ID this domain belongs to
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+        - domain
+        - account_id
+
+    CreateDomainRequest:
+      type: object
+      required:
+        - domain
+      properties:
+        domain:
+          type: string
+          format: hostname
+          description: Fully qualified domain name
+      example:
+        domain: "example.com"
+
+    PaginatedDomainsResponse:
+      type: object
+      required:
+        - object
+        - data
+        - pagination
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Domain'
+          description: Array of domains
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Message Schemas
+    SenderAddress:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Valid email address from a domain defined in your account with valid DNS records
+        name:
+          type: string
+          description: Display name for the sender
+      example:
+        email: "noreply@example.com"
+        name: "Example Corp"
+
+    Recipient:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Recipient email address
+        name:
+          type: string
+          description: Display name for the recipient
+        substitution_data:
+          type: object
+          additionalProperties: true
+          description: Substitution data for the recipient. Used with jinja2 templating language for dynamic content
+      example:
+        email: "user@example.com"
+        name: "John Doe"
+        substitution_data:
+          first_name: "John"
+          order_id: "12345"
+
+    Attachment:
+      type: object
+      required:
+        - data
+        - content_type
+        - file_name
+      properties:
+        base64:
+          type: boolean
+          description: If true, data must be encoded using base64. Otherwise, data will be interpreted as UTF-8
+          default: false
+        data:
+          type: string
+          description: Either plaintext or base64 encoded attachment data (depending on base64 field)
+        content_type:
+          type: string
+          description: The MIME type of the attachment
+        content_id:
+          type: string
+          description: The Content-ID of the attachment for inline images
+        file_name:
+          type: string
+          description: The filename of the attachment
+      example:
+        base64: true
+        data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+        content_type: "image/png"
+        file_name: "pixel.png"
+
+    MessageSchedule:
+      type: object
+      properties:
+        first_attempt:
+          type: string
+          format: date-time
+          description: The time to make the first attempt for delivering the message (RFC3339 format)
+        expires:
+          type: string
+          format: date-time
+          description: Expire and drop the message if not delivered by this time (RFC3339 format)
+      example:
+        first_attempt: "2023-12-25T10:30:00Z"
+        expires: "2023-12-26T10:30:00Z"
+
+    CreateMessageRequest:
+      type: object
+      required:
+        - from
+        - recipients
+        - subject
+      properties:
+        from:
+          $ref: '#/components/schemas/SenderAddress'
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipient'
+          minItems: 1
+          description: This does not set the To header to multiple addresses, it sends a separate message for each recipient
+        reply_to:
+          $ref: '#/components/schemas/SenderAddress'
+          description: If provided, the reply-to header in headers array must not be provided
+        subject:
+          type: string
+          description: Email subject line
+        text_content:
+          type: string
+          description: Plain text content. Required if html_content is empty
+        html_content:
+          type: string
+          description: HTML content. Required if text_content is empty
+        amp_content:
+          type: string
+          description: AMP HTML content
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+          description: File attachments
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom email headers. reply-to header cannot be provided if reply_to is provided, message-id will be ignored and automatically generated
+        substitutions:
+          type: object
+          additionalProperties: true
+          description: Global substitutions, recipient substitutions override global
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for categorizing messages
+        sandbox:
+          type: boolean
+          description: If true, the message will be sent to the sandbox environment
+          default: false
+        sandbox_result:
+          type: string
+          enum: [deliver, bounce, defer, fail, suppress]
+          description: The result of the sandbox send
+        track_opens:
+          type: boolean
+          description: Overrides account-wide open tracking setting for this message
+        track_clicks:
+          type: boolean
+          description: Overrides account-wide click tracking setting for this message
+        metadata_retention:
+          type: integer
+          minimum: 1
+          maximum: 30
+          description: Number of days, overrides the account-wide metadata retention setting for this message
+        data_retention:
+          type: integer
+          minimum: 0
+          maximum: 30
+          description: Number of days, overrides the account-wide data retention setting for this message
+        schedule:
+          $ref: '#/components/schemas/MessageSchedule'
+          description: Schedule for message delivery
+      example:
+        from:
+          email: "noreply@example.com"
+          name: "Example Corp"
+        recipients:
+          - email: "user@example.com"
+            name: "John Doe"
+        subject: "Welcome to Example Corp"
+        html_content: "<h1>Welcome {{first_name}}!</h1>"
+        text_content: "Welcome {{first_name}}!"
+        substitutions:
+          first_name: "John"
+
+    CreateSingleMessageResponse:
+      type: object
+      required:
+        - object
+        - recipient
+        - status
+      properties:
+        object:
+          type: string
+          enum: [message]
+          description: Object type identifier
+        id:
+          type: string
+          nullable: true
+          description: Message ID (null if the message was not sent)
+        recipient:
+          $ref: '#/components/schemas/Recipient'
+        status:
+          type: string
+          enum: [queued, scheduled, error]
+          description: Status of the message
+        error:
+          type: string
+          nullable: true
+          description: Error message if the message was not sent
+        schedule:
+          $ref: '#/components/schemas/MessageSchedule'
+          description: Provided if the request contained a schedule
+
+    CreateMessageResponse:
+      type: object
+      required:
+        - object
+        - data
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateSingleMessageResponse'
+          description: List of messages and their statuses
+
+    Message:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [message]
+          description: Object type identifier
+        id:
+          type: integer
+          format: int64
+          description: Message ID
+        created_at:
+          type: string
+          format: date-time
+          description: When the message was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the message was last updated
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the message was sent
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the message was delivered
+        retain_until:
+          type: string
+          format: date-time
+          description: When the message data will be purged
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+          description: Message direction
+        is_bounce_notification:
+          type: boolean
+          description: Whether this is a bounce notification
+        bounce_classification:
+          type: string
+          description: Classification of bounce if applicable
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+        - retain_until
+        - direction
+        - is_bounce_notification
+
+    PaginatedMessagesResponse:
+      type: object
+      required:
+        - object
+        - data
+        - pagination
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          description: Array of messages
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Account Schemas
+    Account:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [account]
+          description: Object type identifier
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the account
+        created_at:
+          type: string
+          format: date-time
+          description: When the account was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the account was last updated
+        name:
+          type: string
+          description: Account name
+        website:
+          type: string
+          format: uri
+          nullable: true
+          description: Account website URL
+        about:
+          type: string
+          nullable: true
+          description: Account description
+        track_opens:
+          type: boolean
+          description: Default open tracking setting
+        track_clicks:
+          type: boolean
+          description: Default click tracking setting
+        reject_bad_recipients:
+          type: boolean
+          description: Whether to reject bad recipients
+        reject_mistyped_recipients:
+          type: boolean
+          description: Whether to reject mistyped recipients
+        message_metadata_retention:
+          type: integer
+          description: Default message metadata retention in days
+        message_data_retention:
+          type: integer
+          description: Default message data retention in days
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+        - name
+
+    UpdateAccountRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Account name
+        website:
+          type: string
+          format: uri
+          description: Account website URL
+        about:
+          type: string
+          description: Account description (used for account verification)
+        track_opens:
+          type: boolean
+          description: Default open tracking setting
+        track_clicks:
+          type: boolean
+          description: Default click tracking setting
+        reject_bad_recipients:
+          type: boolean
+          description: Whether to reject bad recipients
+        reject_mistyped_recipients:
+          type: boolean
+          description: Whether to reject mistyped recipients
+        message_metadata_retention:
+          type: integer
+          minimum: 1
+          maximum: 30
+          description: Default message metadata retention in days
+        message_data_retention:
+          type: integer
+          minimum: 0
+          maximum: 30
+          description: Default message data retention in days
+      example:
+        name: "Updated Company Name"
+        website: "https://example.com"
+        track_opens: true
+
+    UserAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user account relationship
+        created_at:
+          type: string
+          format: date-time
+          description: When the relationship was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the relationship was last updated
+        user_id:
+          type: string
+          format: uuid
+          description: User ID
+        account_id:
+          type: string
+          format: uuid
+          description: Account ID
+        role:
+          type: string
+          enum: [Administrator, Developer, Analyst, "Billing Manager"]
+          description: User role in the account
+      required:
+        - id
+        - created_at
+        - updated_at
+        - user_id
+        - account_id
+        - role
+
+    AccountMembersResponse:
+      type: object
+      required:
+        - object
+        - data
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAccount'
+          description: Array of account members
+
+    AddMemberRequest:
+      type: object
+      required:
+        - email
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address of the user to add
+        name:
+          type: string
+          description: Display name for the user
+        role:
+          type: string
+          enum: [Administrator, Developer, Analyst, "Billing Manager"]
+          description: Role to assign to the user
+      example:
+        email: "user@example.com"
+        name: "John Doe"
+        role: "Developer"
+
+    # Suppression Schemas
+    Suppression:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [suppression]
+          description: Object type identifier
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the suppression
+        created_at:
+          type: string
+          format: date-time
+          description: When the suppression was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the suppression was last updated
+        email:
+          type: string
+          format: email
+          description: Suppressed email address
+        domain:
+          type: string
+          nullable: true
+          description: Domain for which the email is suppressed
+        reason:
+          type: string
+          nullable: true
+          description: Reason for suppression
+        expires_at:
+          type: string
+          format: date-time
+          description: When the suppression expires
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+        - email
+        - expires_at
+
+    CreateSuppressionRequest:
+      type: object
+      required:
+        - email
+        - expires_at
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address to suppress
+        domain:
+          type: string
+          format: hostname
+          description: Domain for which to suppress the email
+        reason:
+          type: string
+          maxLength: 255
+          description: Reason for suppression
+        expires_at:
+          type: string
+          format: date-time
+          description: When the suppression expires (RFC3339 format)
+      example:
+        email: "user@example.com"
+        domain: "example.com"
+        reason: "User requested removal"
+        expires_at: "2024-12-25T10:30:00Z"
+
+    PaginatedSuppressionsResponse:
+      type: object
+      required:
+        - object
+        - data
+        - pagination
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Suppression'
+          description: Array of suppressions
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Route Schemas
+    Route:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [route]
+          description: Object type identifier
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the route
+        created_at:
+          type: string
+          format: date-time
+          description: When the route was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the route was last updated
+        name:
+          type: string
+          description: Route name
+        url:
+          type: string
+          format: uri
+          description: Webhook URL for the route
+        recipient:
+          type: string
+          nullable: true
+          description: Recipient filter
+        include_attachments:
+          type: boolean
+          description: Whether to include attachments in webhooks
+        include_headers:
+          type: boolean
+          description: Whether to include headers in webhooks
+        group_by_message_id:
+          type: boolean
+          description: Whether to group by message ID
+        strip_replies:
+          type: boolean
+          description: Whether to strip reply content
+        enabled:
+          type: boolean
+          description: Whether the route is enabled
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+        - name
+        - url
+        - enabled
+
+    CreateRouteRequest:
+      type: object
+      required:
+        - name
+        - url
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Route name
+        url:
+          type: string
+          format: uri
+          description: Webhook URL for the route
+        recipient:
+          type: string
+          maxLength: 255
+          description: Recipient filter
+        include_attachments:
+          type: boolean
+          description: Whether to include attachments in webhooks
+          default: false
+        include_headers:
+          type: boolean
+          description: Whether to include headers in webhooks
+          default: false
+        group_by_message_id:
+          type: boolean
+          description: Whether to group by message ID
+          default: false
+        strip_replies:
+          type: boolean
+          description: Whether to strip reply content
+          default: false
+        enabled:
+          type: boolean
+          description: Whether the route is enabled
+          default: true
+      example:
+        name: "Support Route"
+        url: "https://example.com/webhook"
+        enabled: true
+
+    UpdateRouteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Route name
+        url:
+          type: string
+          format: uri
+          description: Webhook URL for the route
+        recipient:
+          type: string
+          maxLength: 255
+          description: Recipient filter
+        include_attachments:
+          type: boolean
+          description: Whether to include attachments in webhooks
+        include_headers:
+          type: boolean
+          description: Whether to include headers in webhooks
+        group_by_message_id:
+          type: boolean
+          description: Whether to group by message ID
+        strip_replies:
+          type: boolean
+          description: Whether to strip reply content
+        enabled:
+          type: boolean
+          description: Whether the route is enabled
+      example:
+        name: "Updated Support Route"
+        enabled: false
+
+    PaginatedRoutesResponse:
+      type: object
+      required:
+        - object
+        - data
+        - pagination
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Route'
+          description: Array of routes
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Webhook Schemas
+    Webhook:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [webhook]
+          description: Object type identifier
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the webhook
+        created_at:
+          type: string
+          format: date-time
+          description: When the webhook was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the webhook was last updated
+        name:
+          type: string
+          description: Webhook name
+        url:
+          type: string
+          format: uri
+          description: Webhook URL
+        enabled:
+          type: boolean
+          description: Whether the webhook is enabled
+        on_reception:
+          type: boolean
+          description: Trigger on message reception
+        on_delivered:
+          type: boolean
+          description: Trigger on message delivery
+        on_transient_error:
+          type: boolean
+          description: Trigger on transient errors
+        on_failed:
+          type: boolean
+          description: Trigger on permanent failures
+        on_bounced:
+          type: boolean
+          description: Trigger on bounces
+        on_suppressed:
+          type: boolean
+          description: Trigger on suppressions
+        on_opened:
+          type: boolean
+          description: Trigger on opens
+        on_clicked:
+          type: boolean
+          description: Trigger on clicks
+        on_suppression_created:
+          type: boolean
+          description: Trigger on suppression creation
+        on_dns_error:
+          type: boolean
+          description: Trigger on DNS errors
+        scope:
+          type: string
+          description: Webhook scope
+        domains:
+          type: array
+          items:
+            type: string
+          description: Domains this webhook applies to
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+        - name
+        - url
+        - enabled
+
+    CreateWebhookRequest:
+      type: object
+      required:
+        - name
+        - url
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Webhook name
+        url:
+          type: string
+          format: uri
+          description: Webhook URL
+        enabled:
+          type: boolean
+          description: Whether the webhook is enabled
+          default: true
+        on_reception:
+          type: boolean
+          description: Trigger on message reception
+          default: false
+        on_delivered:
+          type: boolean
+          description: Trigger on message delivery
+          default: false
+        on_transient_error:
+          type: boolean
+          description: Trigger on transient errors
+          default: false
+        on_failed:
+          type: boolean
+          description: Trigger on permanent failures
+          default: false
+        on_bounced:
+          type: boolean
+          description: Trigger on bounces
+          default: false
+        on_suppressed:
+          type: boolean
+          description: Trigger on suppressions
+          default: false
+        on_opened:
+          type: boolean
+          description: Trigger on opens
+          default: false
+        on_clicked:
+          type: boolean
+          description: Trigger on clicks
+          default: false
+        on_suppression_created:
+          type: boolean
+          description: Trigger on suppression creation
+          default: false
+        on_dns_error:
+          type: boolean
+          description: Trigger on DNS errors
+          default: false
+        scope:
+          type: string
+          description: Webhook scope
+        domains:
+          type: array
+          items:
+            type: string
+          description: Domains this webhook applies to
+      example:
+        name: "Delivery Webhook"
+        url: "https://example.com/webhook"
+        enabled: true
+        on_delivered: true
+
+    UpdateWebhookRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Webhook name
+        url:
+          type: string
+          format: uri
+          description: Webhook URL
+        enabled:
+          type: boolean
+          description: Whether the webhook is enabled
+        on_reception:
+          type: boolean
+          description: Trigger on message reception
+        on_delivered:
+          type: boolean
+          description: Trigger on message delivery
+        on_transient_error:
+          type: boolean
+          description: Trigger on transient errors
+        on_failed:
+          type: boolean
+          description: Trigger on permanent failures
+        on_bounced:
+          type: boolean
+          description: Trigger on bounces
+        on_suppressed:
+          type: boolean
+          description: Trigger on suppressions
+        on_opened:
+          type: boolean
+          description: Trigger on opens
+        on_clicked:
+          type: boolean
+          description: Trigger on clicks
+        on_suppression_created:
+          type: boolean
+          description: Trigger on suppression creation
+        on_dns_error:
+          type: boolean
+          description: Trigger on DNS errors
+        scope:
+          type: string
+          description: Webhook scope
+        domains:
+          type: array
+          items:
+            type: string
+          description: Domains this webhook applies to
+
+    PaginatedWebhooksResponse:
+      type: object
+      required:
+        - object
+        - data
+        - pagination
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+          description: Array of webhooks
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # SMTP Credentials Schemas
+    SMTPCredential:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [smtp_credential]
+          description: Object type identifier
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the SMTP credential
+        created_at:
+          type: string
+          format: date-time
+          description: When the credential was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the credential was last updated
+        name:
+          type: string
+          description: Credential name
+        username:
+          type: string
+          description: SMTP username
+        sandbox:
+          type: boolean
+          description: Whether this is a sandbox credential
+        scope:
+          type: string
+          enum: [global, scoped]
+          description: Credential scope
+        domains:
+          type: array
+          items:
+            type: string
+          description: Domains this credential can send from
+      required:
+        - object
+        - id
+        - created_at
+        - updated_at
+        - name
+        - username
+        - sandbox
+        - scope
+
+    CreateSMTPCredentialRequest:
+      type: object
+      required:
+        - name
+        - username
+        - password
+        - scope
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Credential name
+        username:
+          type: string
+          maxLength: 255
+          description: SMTP username
+        password:
+          type: string
+          maxLength: 255
+          description: SMTP password
+        sandbox:
+          type: boolean
+          description: Whether this is a sandbox credential
+          default: false
+        scope:
+          type: string
+          enum: [global, scoped]
+          description: Credential scope - "global" or "scoped"
+        domains:
+          type: array
+          items:
+            type: string
+          description: Required if scope is "scoped"
+      example:
+        name: "Production SMTP"
+        username: "smtp_user"
+        password: "secure_password"
+        scope: "global"
+
+    PaginatedSMTPCredentialsResponse:
+      type: object
+      required:
+        - object
+        - data
+        - pagination
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SMTPCredential'
+          description: Array of SMTP credentials
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # Statistics Schemas
+    DeliverabilityStatistics:
+      type: object
+      properties:
+        time_bucket:
+          type: string
+          format: date-time
+          description: Time bucket for the statistics
+        direction:
+          type: string
+          enum: [inbound, outbound]
+          description: Message direction
+        sent:
+          type: integer
+          description: Number of messages sent
+        delivered:
+          type: integer
+          description: Number of messages delivered
+        bounced:
+          type: integer
+          description: Number of messages bounced
+        failed:
+          type: integer
+          description: Number of messages failed
+        suppressed:
+          type: integer
+          description: Number of messages suppressed
+      required:
+        - time_bucket
+        - direction
+
+    DeliverabilityStatisticsResponse:
+      type: object
+      required:
+        - object
+        - data
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliverabilityStatistics'
+          description: Array of deliverability statistics
+
+    BounceStatistics:
+      type: object
+      properties:
+        time_bucket:
+          type: string
+          format: date-time
+          description: Time bucket for the statistics
+        classification:
+          type: string
+          description: Bounce classification
+        count:
+          type: integer
+          description: Number of bounces
+      required:
+        - time_bucket
+        - classification
+        - count
+
+    BounceStatisticsResponse:
+      type: object
+      required:
+        - object
+        - data
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BounceStatistics'
+          description: Array of bounce statistics
+
+    DeliveryTimeStatistics:
+      type: object
+      properties:
+        time_bucket:
+          type: string
+          format: date-time
+          description: Time bucket for the statistics
+        recipient_domain:
+          type: string
+          description: Recipient domain
+        avg_delivery_time:
+          type: number
+          description: Average delivery time in seconds
+        median_delivery_time:
+          type: number
+          description: Median delivery time in seconds
+        count:
+          type: integer
+          description: Number of messages
+      required:
+        - time_bucket
+        - avg_delivery_time
+        - count
+
+    DeliveryTimeStatisticsResponse:
+      type: object
+      required:
+        - object
+        - data
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: Object type identifier
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryTimeStatistics'
+          description: Array of delivery time statistics
+
+paths:
+  # API Keys endpoints
+  /v2/accounts/{account_id}/api-keys:
+    get:
+      summary: Get API Keys
+      description: Returns a list of API keys for the account
+      operationId: getAPIKeys
+      tags:
+        - API Keys
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of items to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: cursor
+          in: query
+          description: Pagination cursor for the next page
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["api-keys:read"]
+      responses:
+        '200':
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAPIKeysResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create API Key
+      description: Creates a new API key with the specified scopes
+      operationId: createAPIKey
+      tags:
+        - API Keys
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["api-keys:write"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAPIKeyRequest'
+      responses:
+        '200':
+          description: API key created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/api-keys/{key_id}:
+    get:
+      summary: Get API Key
+      description: Returns a specific API key by ID
+      operationId: getAPIKey
+      tags:
+        - API Keys
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: key_id
+          in: path
+          required: true
+          description: API Key ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["api-keys:read"]
+      responses:
+        '200':
+          description: API key details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: API key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update API Key
+      description: Updates an existing API key's label and scopes
+      operationId: updateAPIKey
+      tags:
+        - API Keys
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: key_id
+          in: path
+          required: true
+          description: API Key ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["api-keys:write"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAPIKeyRequest'
+      responses:
+        '200':
+          description: API key updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKey'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: API key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete API Key
+      description: Deletes an API key
+      operationId: deleteAPIKey
+      tags:
+        - API Keys
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: key_id
+          in: path
+          required: true
+          description: API Key ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["api-keys:delete"]
+      responses:
+        '200':
+          description: API key deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: API key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Domains endpoints
+  /v2/accounts/{account_id}/domains:
+    get:
+      summary: Get Domains
+      description: Returns a list of domains for the account
+      operationId: getDomains
+      tags:
+        - Domains
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: cursor
+          in: query
+          description: Pagination cursor for the next page
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["domains:read"]
+      responses:
+        '200':
+          description: List of domains
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDomainsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create Domain
+      description: Creates a new domain
+      operationId: createDomain
+      tags:
+        - Domains
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["domains:write"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDomainRequest'
+      responses:
+        '200':
+          description: Domain created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/domains/{domain}:
+    get:
+      summary: Get Domain
+      description: Returns a specific domain by name
+      operationId: getDomain
+      tags:
+        - Domains
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: domain
+          in: path
+          required: true
+          description: Domain name
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["domains:read"]
+      responses:
+        '200':
+          description: Domain details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Domain not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete Domain
+      description: Deletes a domain
+      operationId: deleteDomain
+      tags:
+        - Domains
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: domain
+          in: path
+          required: true
+          description: Domain name
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["domains:delete:{domain}", "domains:delete:all"]
+      responses:
+        '200':
+          description: Domain deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Domain not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Messages endpoints
+  /v2/accounts/{account_id}/messages:
+    get:
+      summary: Get Messages
+      description: |
+        Returns a list of messages for the account. Can be filtered by various parameters.
+
+        **Query Parameters:**
+        - `sender`: Filter by sender email (required, must be from domain in API key scopes)
+        - `recipient`: Filter by recipient email
+        - `subject`: Filter by subject text
+        - `message_id_header`: Filter by message ID header (same ID returned by CreateMessage API)
+        - `from_time`: Filter messages created after this time (RFC3339 format)
+        - `to_time`: Filter messages created before this time (RFC3339 format)
+        - `limit`: Maximum number of items to return (1-100, default: 100)
+        - `cursor`: Pagination cursor for the next page
+      operationId: getMessages
+      tags:
+        - Messages
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: sender
+          in: query
+          required: true
+          description: Sender email address (must be from domain in API key scopes)
+          schema:
+            type: string
+            format: email
+        - name: recipient
+          in: query
+          description: Recipient email address
+          schema:
+            type: string
+            format: email
+        - name: subject
+          in: query
+          description: Filter by subject text
+          schema:
+            type: string
+        - name: message_id_header
+          in: query
+          description: Filter by message ID header (same ID returned by CreateMessage API)
+          schema:
+            type: string
+        - name: from_time
+          in: query
+          description: Filter messages created after this time (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+          example: "2023-12-25T10:30:00Z"
+        - name: to_time
+          in: query
+          description: Filter messages created before this time (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+          example: "2023-12-26T10:30:00Z"
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: cursor
+          in: query
+          description: Pagination cursor for the next page
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["messages:read:all", "messages:read:{domain}"]
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMessagesResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create Message
+      description: |
+        Creates and sends a message to one or more recipients.
+
+        **Validation Requirements:**
+        - Either `text_content` or `html_content` is required
+        - `from.email` must be from a domain you own with valid DNS records
+        - `metadata_retention` must be between 1 and 30 days
+        - `data_retention` must be between 0 and 30 days
+        - If `reply_to` is provided, do not include `reply-to` in headers
+        - `message-id` header will be ignored and automatically generated
+        - Schedule times must be in RFC3339 format
+      operationId: createMessage
+      tags:
+        - Messages
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["messages:send:all", "messages:send:{domain}"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageRequest'
+      responses:
+        '200':
+          description: Message created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateMessageResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/messages/{message_id}/cancel:
+    post:
+      summary: Cancel Message
+      description: Cancels a scheduled message
+      operationId: cancelMessage
+      tags:
+        - Messages
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: message_id
+          in: path
+          required: true
+          description: Message ID
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["messages:cancel:all", "messages:cancel:{domain}"]
+      responses:
+        '200':
+          description: Message cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Account endpoints
+  /v2/accounts/{account_id}:
+    get:
+      summary: Get Account
+      description: Returns account information
+      operationId: getAccount
+      tags:
+        - Accounts
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["accounts:read"]
+      responses:
+        '200':
+          description: Account details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update Account
+      description: |
+        Updates account settings
+
+        **Validation Requirements:**
+        - `name` must be maximum 255 characters
+        - `website` must be a valid URL
+        - `message_metadata_retention` must be between 1 and 30 days
+        - `message_data_retention` must be between 0 and 30 days
+      operationId: updateAccount
+      tags:
+        - Accounts
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["accounts:write"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAccountRequest'
+      responses:
+        '200':
+          description: Account updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/members:
+    get:
+      summary: Get Account Members
+      description: Returns a list of account members
+      operationId: getAccountMembers
+      tags:
+        - Accounts
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["accounts:members:read"]
+      responses:
+        '200':
+          description: List of account members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountMembersResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Add Account Member
+      description: |
+        Adds a new member to the account
+
+        **Validation Requirements:**
+        - `email` must be a valid email address
+        - `role` must be one of: Administrator, Developer, Analyst, Billing Manager
+      operationId: addAccountMember
+      tags:
+        - Accounts
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["accounts:members:add"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMemberRequest'
+      responses:
+        '200':
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAccount'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/members/{user_id}:
+    delete:
+      summary: Remove Account Member
+      description: |
+        Removes a member from the account
+
+        **Restrictions:**
+        - You cannot delete yourself
+        - You cannot delete the account owner
+      operationId: removeAccountMember
+      tags:
+        - Accounts
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["accounts:members:remove"]
+      responses:
+        '200':
+          description: Member removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Suppressions endpoints
+  /v2/accounts/{account_id}/suppressions:
+    get:
+      summary: Get Suppressions
+      description: |
+        Returns a list of suppressions for the account
+
+        **Query Parameters:**
+        - `domain`: Filter by domain (optional)
+        - `from_date`: Filter suppressions created after this date (RFC3339 format)
+        - `to_date`: Filter suppressions created before this date (RFC3339 format)
+        - `limit`: Maximum number of items to return (1-100, default: 100)
+        - `cursor`: Pagination cursor for the next page
+      operationId: getSuppressions
+      tags:
+        - Suppressions
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: domain
+          in: query
+          description: Filter by domain
+          schema:
+            type: string
+        - name: from_date
+          in: query
+          description: Filter suppressions created after this date (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          description: Filter suppressions created before this date (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: cursor
+          in: query
+          description: Pagination cursor for the next page
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["suppressions:read"]
+      responses:
+        '200':
+          description: List of suppressions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSuppressionsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: API Keys
+    description: Manage API keys for authentication and access control
+  - name: Domains
+    description: Manage sending domains
+  - name: Messages
+    description: Send and manage transactional messages
+  - name: Accounts
+    description: Manage account settings and members
+  - name: Suppressions
+    description: Manage email suppressions
+  - name: Routes
+    description: Manage inbound email routing
+  - name: Webhooks
+    description: Manage webhook notifications
+  - name: SMTP Credentials
+    description: Manage SMTP authentication credentials
+  - name: Statistics
+    description: Access transactional email statistics
+  - name: Message Events
+    description: Webhooks for outbound message delivery events
+  - name: Suppression Events
+    description: Webhooks for suppression list changes
+  - name: Domain Events
+    description: Webhooks for domain configuration issues
+  - name: Route Events
+    description: Webhooks for inbound email routing
