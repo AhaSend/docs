@@ -1,0 +1,204 @@
+---
+title: "API Authentication"
+sidebarTitle: "Authentication"
+description: "Learn how to authenticate your requests using AhaSend API keys"
+---
+
+# Authentication
+
+AhaSend uses API keys to authenticate requests. Your API keys carry many privileges, so be sure to keep them secure! Do not share your secret API keys in publicly accessible areas such as GitHub, client-side code, and so forth.
+
+All API requests must be made over HTTPS. Calls made over plain HTTP will fail. API requests without authentication will also fail.
+
+## API Key Format
+
+AhaSend API keys follow this format:
+
+```
+aha-sk-64-CHARACTER-RANDOM-STRING
+```
+
+<Warning>
+  Keep your API keys secure and never expose them in client-side code, version control, or logs.
+</Warning>
+
+## Obtaining Your API Key
+
+1. Log in to your AhaSend dashboard
+2. Navigate to [API Keys](https://dash.ahasend.com/accounts/api-keys)
+3. Click "Create API Key"
+4. Select the appropriate [scopes](/api-reference/scopes) for your use case
+5. Copy and securely store your new API key
+
+<Note>
+  API keys are only displayed once during creation. Make sure to copy and store them securely.
+</Note>
+
+## Making Authenticated Requests
+
+Authentication to the API is performed via HTTP Bearer Authentication. Provide your API key in the `Authorization` header:
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.ahasend.com/v2/messages \
+  -H "Authorization: Bearer aha-sk-your-api-key-here" \
+  -H "Content-Type: application/json"
+```
+
+```javascript Node.js
+const response = await fetch('https://api.ahasend.com/v2/messages', {
+  method: 'GET',
+  headers: {
+    'Authorization': 'Bearer aha-sk-your-api-key-here',
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': 'Bearer aha-sk-your-api-key-here',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get('https://api.ahasend.com/v2/messages', headers=headers)
+```
+
+```php PHP
+<?php
+$headers = [
+    'Authorization: Bearer aha-sk-your-api-key-here',
+    'Content-Type: application/json'
+];
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, 'https://api.ahasend.com/v2/messages');
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+curl_close($ch);
+?>
+```
+
+```ruby Ruby
+require 'net/http'
+require 'uri'
+
+uri = URI('https://api.ahasend.com/v2/messages')
+http = Net::HTTP.new(uri.host, uri.port)
+http.use_ssl = true
+
+request = Net::HTTP::Get.new(uri)
+request['Authorization'] = 'Bearer aha-sk-your-api-key-here'
+request['Content-Type'] = 'application/json'
+
+response = http.request(request)
+```
+
+```go Go
+package main
+
+import (
+    "net/http"
+)
+
+func main() {
+    client := &http.Client{}
+    req, _ := http.NewRequest("GET", "https://api.ahasend.com/v2/messages", nil)
+    req.Header.Add("Authorization", "Bearer aha-sk-your-api-key-here")
+    req.Header.Add("Content-Type", "application/json")
+
+    resp, _ := client.Do(req)
+    defer resp.Body.Close()
+}
+```
+
+</CodeGroup>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Server-Side Only" icon="server">
+    Only use API keys in server-side applications. Never include them in client-side code.
+  </Card>
+  <Card title="Secure Storage" icon="lock">
+    Store API keys in environment variables or secure configuration management systems.
+  </Card>
+  <Card title="Principle of Least Privilege" icon="shield">
+    Create API keys with only the minimum scopes required for your use case.
+  </Card>
+  <Card title="Regular Rotation" icon="rotate">
+    Regularly rotate your API keys and immediately revoke any compromised keys.
+  </Card>
+</CardGroup>
+
+### Environment Variables
+
+Store your API key as an environment variable:
+
+<CodeGroup>
+
+```bash Linux/macOS
+export AHASEND_API_KEY="aha-sk-your-api-key-here"
+```
+
+```bash Windows
+set AHASEND_API_KEY=aha-sk-your-api-key-here
+```
+
+```javascript Node.js
+// Use process.env to access the API key
+const apiKey = process.env.AHASEND_API_KEY;
+```
+
+```python Python
+import os
+
+api_key = os.environ.get('AHASEND_API_KEY')
+```
+
+</CodeGroup>
+
+## Testing Authentication
+
+You can test your authentication by making a simple request to the [Ping utility endpoint](/api-reference/utility/ping):
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.ahasend.com/v2/ping \
+  -H "Authorization: Bearer aha-sk-your-api-key-here"
+```
+
+```javascript Node.js
+const response = await fetch('https://api.ahasend.com/v2/ping', {
+  headers: {
+    'Authorization': 'Bearer aha-sk-your-api-key-here'
+  }
+});
+
+if (response.ok) {
+  console.log('Authentication successful!');
+  const account = await response.json();
+  console.log(account);
+} else {
+  console.log('Authentication failed:', response.status);
+}
+```
+
+</CodeGroup>
+
+<Tip>
+  If you're getting authentication errors, double-check that your API key is correct and that it has the necessary scopes for the endpoint you're trying to access.
+</Tip>
+
+## Next Steps
+
+Now that you understand authentication, you can:
+
+- Explore [API Scopes](/api-reference/scopes) to understand permission levels
+- Check [Rate Limits](/api-reference/rate-limits) to understand usage restrictions
+- Start [sending messages](/api-reference/messages/create-message) with the API

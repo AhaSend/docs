@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "maple",
+  "theme": "mint",
   "name": "AhaSend",
   "description": "Email for developers.",
   "colors": {
@@ -35,6 +35,7 @@
           {
             "group": "Sending with SMTP",
             "pages": [
+              "smtp/index",
               "smtp/credentials",
               "smtp/sandbox",
               "smtp/special-headers",
@@ -115,10 +116,103 @@
         "groups": [
           {
             "group": "API reference",
-            "openapi": {
-              "source": "/openapi.yaml",
-              "directory": "api-reference"
-            }
+            "pages": [
+              "api-reference/index",
+              "api-reference/authentication",
+              "api-reference/scopes",
+              "api-reference/rate-limits",
+              "api-reference/idempotency",
+              "api-reference/errors",
+              {
+                "group": "Messages",
+                "pages": [
+                  "api-reference/messages/create-message",
+                  "api-reference/messages/get-messages",
+                  "api-reference/messages/cancel-message"
+                ]
+              },
+              {
+                "group": "Suppressions",
+                "pages": [
+                  "api-reference/suppressions/create-suppression",
+                  "api-reference/suppressions/get-suppressions",
+                  "api-reference/suppressions/delete-suppression",
+                  "api-reference/suppressions/wipe-suppressions"
+                ]
+              },
+              {
+                "group": "SMTP Credentials",
+                "pages": [
+                  "api-reference/smtp-credentials/create-smtp-credential",
+                  "api-reference/smtp-credentials/get-smtp-credential",
+                  "api-reference/smtp-credentials/get-smtp-credentials",
+                  "api-reference/smtp-credentials/delete-smtp-credential"
+                ]
+              },
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "api-reference/webhooks/create-webhook",
+                  "api-reference/webhooks/get-webhook",
+                  "api-reference/webhooks/get-webhooks",
+                  "api-reference/webhooks/update-webhook",
+                  "api-reference/webhooks/delete-webhook"
+                ]
+              },
+              {
+                "group": "Routes",
+                "pages": [
+                  "api-reference/routes/create-route",
+                  "api-reference/routes/get-route",
+                  "api-reference/routes/get-routes",
+                  "api-reference/routes/update-route",
+                  "api-reference/routes/delete-route"
+                ]
+              },
+              {
+                "group": "Domains",
+                "pages": [
+                  "api-reference/domains/create-domain",
+                  "api-reference/domains/get-domain",
+                  "api-reference/domains/get-domains",
+                  "api-reference/domains/delete-domain"
+                ]
+              },
+              {
+                "group": "Accounts",
+                "pages": [
+                  "api-reference/accounts/get-account",
+                  "api-reference/accounts/update-account",
+                  "api-reference/accounts/get-account-members",
+                  "api-reference/accounts/create-account-member",
+                  "api-reference/accounts/delete-account-member"
+                ]
+              },
+              {
+                "group": "Reports",
+                "pages": [
+                  "api-reference/reports/get-deliverability-report",
+                  "api-reference/reports/get-bounce-report",
+                  "api-reference/reports/get-delivery-time-report"
+                ]
+              },
+              {
+                "group": "API Keys",
+                "pages": [
+                  "api-reference/api-keys/create-api-key",
+                  "api-reference/api-keys/get-api-key",
+                  "api-reference/api-keys/get-api-keys",
+                  "api-reference/api-keys/update-api-key",
+                  "api-reference/api-keys/delete-api-key"
+                ]
+              },
+              {
+                "group": "Utility endpoints",
+                "pages": [
+                  "api-reference/utility/ping"
+                ]
+              }
+            ]
           },
           {
             "group": "Webhooks",

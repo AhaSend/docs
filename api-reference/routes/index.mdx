@@ -7,17 +7,3 @@ Triggered when an email has been received and queued for delivery.
 
 This webhook is sent via HTTP POST to your configured webhook URL and follows the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md).
 
-## Security & Verification
-
-All webhooks include Standard Webhooks security headers for verification:
-- `webhook-id`: Unique identifier for the webhook event (used as idempotency key)
-- `webhook-timestamp`: Unix timestamp when the webhook was sent
-- `webhook-signature`: HMAC signature of the payload using your webhook secret
-
-Use the [Standard Webhooks libraries](https://github.com/standard-webhooks/standard-webhooks) to verify webhook authenticity. See the [verification documentation](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md#verifying-webhook-authenticity) for implementation details.
-
-## Retry Policy
-
-- Failed webhooks are retried 6 times over 16+ minutes
-- Only HTTP status codes 200-299 are considered successful
-- After 100 consecutive failures, the webhook is automatically disabled

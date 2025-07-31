@@ -2,3 +2,12 @@
 title: "Email Routing Security and Verification"
 sidebarTitle: "Security"
 ---
+
+## Security & Verification
+
+All webhooks include Standard Webhooks security headers for verification:
+- `webhook-id`: Unique identifier for the webhook event (used as idempotency key)
+- `webhook-timestamp`: Unix timestamp when the webhook was sent
+- `webhook-signature`: HMAC signature of the payload using your webhook secret
+
+Use the [Standard Webhooks libraries](https://github.com/standard-webhooks/standard-webhooks) to verify webhook authenticity. See the [verification documentation](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md#verifying-webhook-authenticity) for implementation details.

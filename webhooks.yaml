@@ -118,6 +118,7 @@ webhooks:
               $ref: '#/components/schemas/MessageReceptionWebhookPayload'
             example:
               type: "message.reception"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
               timestamp: "2024-05-06T09:49:16.687031577Z"
               data:
                 account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
@@ -556,6 +557,7 @@ components:
       type: object
       required:
         - type
+        - webhook_id
         - timestamp
         - data
       properties:
@@ -571,6 +573,10 @@ components:
             - message.opened
             - message.clicked
           description: The event type
+        webhook_id:
+          type: string
+          description: The webhook ID (the same ID as returned by the [Create Webhook API](/api-reference/webhooks/create-webhook))
+          format: uuid
         timestamp:
           type: string
           format: date-time
@@ -693,7 +699,7 @@ components:
           description: Email subject line
         message_id_header:
           type: string
-          description: Message ID header (same as returned by CreateMessage API)
+          description: Message ID header (same as returned by the [Create Message API](/api-reference/messages/create-message))
         id:
           type: string
           description: Internal AhaSend message ID
@@ -743,7 +749,7 @@ components:
           description: Email subject line
         message_id_header:
           type: string
-          description: Message ID header (same as returned by CreateMessage API)
+          description: Message ID header (same as returned by the [Create Message API](/api-reference/messages/create-message))
         url:
           type: string
           description: The URL that was clicked
@@ -816,12 +822,17 @@ components:
       required:
         - type
         - timestamp
+        - webhook_id
         - data
       properties:
         type:
           type: string
           enum: [domain.dns_error]
           description: The event type
+        webhook_id:
+          type: string
+          description: The webhook ID (the same ID as returned by the [Create Webhook API](/api-reference/webhooks/create-webhook))
+          format: uuid
         timestamp:
           type: string
           format: date-time
@@ -864,6 +875,7 @@ components:
       type: object
       required:
         - type
+        - route_id
         - timestamp
         - data
       properties:
@@ -875,6 +887,10 @@ components:
           type: string
           format: date-time
           description: When the event occurred (ISO 8601 format)
+        route_id:
+          type: string
+          description: The route ID (the same ID as returned by the [Create Route API](/api-reference/routes/create-route))
+          format: uuid
         data:
           $ref: '#/components/schemas/RouteWebhookData'
 

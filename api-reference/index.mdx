@@ -1,0 +1,65 @@
+---
+title: "Introduction"
+sidebarTitle: "Introduction"
+description: "Get started with AhaSend's powerful email delivery API. Send transactional emails, manage domains, and track delivery analytics."
+---
+
+AhaSend provides a powerful, reliable email delivery API designed for developers who need to send transactional emails at scale. Our RESTful API makes it easy to integrate email functionality into your applications with just a few lines of code.
+
+This API reference documentation covers all available endpoints, parameters, and responses. For implementation guides and examples, check out our usage documentation.
+
+For SMTP integration, please see
+<CardGroup cols={2}>
+  <Card title="SMTP Integration guide" icon="envelope" href="/smtp">
+    Use our SMTP service for easy email integration
+  </Card>
+</CardGroup>
+
+## Features
+
+- **Full-featured API with Idempotency**: Complete REST API with built-in idempotency support for safe retries
+- **Reliable Delivery**: 99.9% uptime with redundant infrastructure
+- **Global Scale**: Send millions of emails with low latency worldwide
+- **Real-time Analytics**: Track opens, clicks, bounces, and deliverability
+- **Advanced Routing**: Intelligent routing and failover mechanisms
+- **Webhook Support**: Real-time event notifications for all email activity
+- **Domain Management**: Easy setup and verification of sending domains
+- **Suppression Lists**: Automated bounce and complaint handling
+
+## Getting Started
+
+<Steps>
+  <Step title="Create Your Account">
+    Sign up for a free AhaSend account at [dash.ahasend.com/user/register](https://dash.ahasend.com/user/register)
+  </Step>
+  <Step title="Generate API Key">
+    Once logged in, navigate to [the API Keys page](https://dash.ahasend.com/accounts/api-keys) and create a new API key with the appropriate [scopes](/api-reference/scopes) for your use case
+  </Step>
+  <Step title="Make Your First Request">
+    Use your API key to authenticate and send your first email using our simple REST API
+  </Step>
+</Steps>
+
+<Note>
+  Keep your API keys secure and never expose them in client-side code. Always use server-side implementations for production applications.
+</Note>
+
+## Support
+
+Need help getting started? We're here to assist:
+
+<CardGroup cols={2}>
+  <Card title="Documentation" icon="book" href="/">
+    Comprehensive guides and examples
+  </Card>
+  <Card title="API Reference" icon="terminal" href="/api-reference">
+    Complete endpoint documentation
+  </Card>
+</CardGroup>
+
+<Note>
+  This is AhaSend API v2. We maintain full backwards compatibility - while new endpoints and fields may be added, existing APIs and fields will never be removed or changed in breaking ways.
+</Note>
+
+Ready to start sending emails? Check out our [Quick Start Guide](/quickstart) or explore our [Authentication](/api-reference/authentication) documentation.
+

@@ -87,6 +87,14 @@ info:
     ## Time Formats
     All timestamps must be in RFC3339 format, e.g., `2023-12-25T10:30:00Z`
 
+    ## Idempotency
+    POST requests support idempotency through the optional `Idempotency-Key` header. When provided:
+    - The same request can be safely retried multiple times
+    - Duplicate requests return the same response with `Idempotent-Replayed: true`
+    - In-progress requests return HTTP 409 with `Idempotent-Replayed: false`
+    - Failed requests return HTTP 412 with `Idempotent-Replayed: false`
+    - Idempotency keys expire after 24 hours
+
   version: "2.0.0"
   contact:
     email: support@ahasend.com
@@ -107,6 +115,54 @@ components:
       scheme: bearer
       bearerFormat: "aha-sk-64-CHARACTER-RANDOM-STRING"
       description: API key for authentication
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Optional idempotency key for safe request retries. Must be a unique string for each logical request.
+        Requests with the same key will return the same response. Keys expire after 24 hours.
+      schema:
+        type: string
+        maxLength: 255
+      example: "user-12345-create-domain-20240101"
+
+  headers:
+    IdempotentReplayed:
+      description: |
+        Indicates whether this response is replayed from a previous identical request.
+        - `true`: Response was replayed from cache (duplicate request)
+        - `false`: Response from original processing or error state
+      schema:
+        type: string
+        enum: [true, false]
+
+  responses:
+    IdempotencyConflict:
+      description: Request in progress - a request with this idempotency key is already being processed
+      headers:
+        Idempotent-Replayed:
+          $ref: '#/components/headers/IdempotentReplayed'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "A request with this idempotency key is already in progress"
+
+    IdempotencyPreconditionFailed:
+      description: Original request failed - the request with this idempotency key previously failed and cannot be retried
+      headers:
+        Idempotent-Replayed:
+          $ref: '#/components/headers/IdempotentReplayed'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "The original request with this idempotency key failed and cannot be retried"
 
   schemas:
     ErrorResponse:
@@ -141,7 +197,6 @@ components:
           description: Whether there are more items available
         next_cursor:
           type: string
-          nullable: true
           description: Cursor for the next page of results
       example:
         has_more: true
@@ -173,7 +228,6 @@ components:
         domain_id:
           type: string
           format: uuid
-          nullable: true
           description: Domain ID for domain-specific scopes
       required:
         - id
@@ -1502,6 +1556,44 @@ components:
           description: Array of delivery time statistics
 
 paths:
+  # Utility endpoints
+  /v2/ping:
+    get:
+      summary: Ping
+      description: Health check endpoint that returns a simple pong response
+      operationId: ping
+      tags:
+        - Utility
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Pong response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                message: "pong"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   # API Keys endpoints
   /v2/accounts/{account_id}/api-keys:
     get:
@@ -1579,6 +1671,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["api-keys:write"]
       requestBody:
@@ -1590,6 +1683,9 @@ paths:
       responses:
         '200':
           description: API key created successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -1612,6 +1708,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
         '500':
           description: Internal server error
           content:
@@ -1886,6 +1986,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["domains:write"]
       requestBody:
@@ -1897,6 +1998,9 @@ paths:
       responses:
         '200':
           description: Domain created successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -1919,6 +2023,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
         '500':
           description: Internal server error
           content:
@@ -2182,6 +2290,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["messages:send:all", "messages:send:{domain}"]
       requestBody:
@@ -2193,6 +2302,9 @@ paths:
       responses:
         '200':
           description: Message created successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -2215,6 +2327,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
         '500':
           description: Internal server error
           content:
@@ -2243,11 +2359,15 @@ paths:
           description: Message ID
           schema:
             type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["messages:cancel:all", "messages:cancel:{domain}"]
       responses:
         '200':
           description: Message cancelled successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -2276,6 +2396,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
         '500':
           description: Internal server error
           content:
@@ -2474,6 +2598,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["accounts:members:add"]
       requestBody:
@@ -2485,6 +2610,9 @@ paths:
       responses:
         '200':
           description: Member added successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -2507,6 +2635,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
         '500':
           description: Internal server error
           content:
@@ -2669,7 +2801,1437 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+    post:
+      summary: Create Suppression
+      description: |
+        Creates a new suppression for an email address
+
+        **Validation Requirements:**
+        - `email` must be a valid email address
+        - `expires_at` must be in RFC3339 format
+        - `domain` is optional - if not provided, applies to all account domains
+      operationId: createSuppression
+      tags:
+        - Suppressions
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+        - BearerAuth: ["suppressions:write"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSuppressionRequest'
+      responses:
+        '200':
+          description: Suppression created successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Suppression'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete All Suppressions
+      description: |
+        Deletes all suppressions for the account
+
+        **Query Parameters:**
+        - `domain`: Optional domain filter to delete suppressions for specific domain only
+      operationId: deleteAllSuppressions
+      tags:
+        - Suppressions
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: domain
+          in: query
+          description: Optional domain filter
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["suppressions:wipe"]
+      responses:
+        '200':
+          description: All suppressions deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/suppressions/{email}:
+    delete:
+      summary: Delete Suppression
+      description: |
+        Deletes a specific suppression by email address
+
+        **Query Parameters:**
+        - `domain`: Optional domain filter to delete suppression for specific domain only
+      operationId: deleteSuppression
+      tags:
+        - Suppressions
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: email
+          in: path
+          required: true
+          description: Email address
+          schema:
+            type: string
+            format: email
+        - name: domain
+          in: query
+          description: Optional domain filter
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["suppressions:delete"]
+      responses:
+        '200':
+          description: Suppression deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Suppression not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Routes endpoints
+  /v2/accounts/{account_id}/routes:
+    get:
+      summary: Get Routes
+      description: Returns a list of routes for the account
+      operationId: getRoutes
+      tags:
+        - Routes
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: cursor
+          in: query
+          description: Pagination cursor for the next page
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["routes:read:all", "routes:read:{domain}"]
+      responses:
+        '200':
+          description: List of routes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRoutesResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create Route
+      description: Creates a new route for inbound email routing
+      operationId: createRoute
+      tags:
+        - Routes
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+        - BearerAuth: ["routes:write:all", "routes:write:{domain}"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRouteRequest'
+      responses:
+        '200':
+          description: Route created successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/routes/{route_id}:
+    get:
+      summary: Get Route
+      description: Returns a specific route by ID
+      operationId: getRoute
+      tags:
+        - Routes
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: route_id
+          in: path
+          required: true
+          description: Route ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["routes:read:all", "routes:read:{domain}"]
+      responses:
+        '200':
+          description: Route details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Route not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update Route
+      description: Updates an existing route
+      operationId: updateRoute
+      tags:
+        - Routes
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: route_id
+          in: path
+          required: true
+          description: Route ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["routes:write:all", "routes:write:{domain}"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRouteRequest'
+      responses:
+        '200':
+          description: Route updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Route not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete Route
+      description: Deletes a route
+      operationId: deleteRoute
+      tags:
+        - Routes
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: route_id
+          in: path
+          required: true
+          description: Route ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["routes:delete:all", "routes:delete:{domain}"]
+      responses:
+        '200':
+          description: Route deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Route not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Webhooks endpoints
+  /v2/accounts/{account_id}/webhooks:
+    get:
+      summary: Get Webhooks
+      description: |
+        Returns a list of webhooks for the account
+
+        **Query Parameters:**
+        - `enabled`: Filter by enabled status
+        - Event filters: `on_reception`, `on_delivered`, `on_transient_error`, `on_failed`, `on_bounced`, `on_suppressed`, `on_opened`, `on_clicked`, `on_suppression_created`, `on_dns_error`
+        - `limit`: Maximum number of items to return (1-100, default: 100)
+        - `cursor`: Pagination cursor for the next page
+      operationId: getWebhooks
+      tags:
+        - Webhooks
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: enabled
+          in: query
+          description: Filter by enabled status
+          schema:
+            type: boolean
+        - name: on_reception
+          in: query
+          description: Filter by reception event trigger
+          schema:
+            type: boolean
+        - name: on_delivered
+          in: query
+          description: Filter by delivery event trigger
+          schema:
+            type: boolean
+        - name: on_transient_error
+          in: query
+          description: Filter by transient error event trigger
+          schema:
+            type: boolean
+        - name: on_failed
+          in: query
+          description: Filter by failure event trigger
+          schema:
+            type: boolean
+        - name: on_bounced
+          in: query
+          description: Filter by bounce event trigger
+          schema:
+            type: boolean
+        - name: on_suppressed
+          in: query
+          description: Filter by suppression event trigger
+          schema:
+            type: boolean
+        - name: on_opened
+          in: query
+          description: Filter by open event trigger
+          schema:
+            type: boolean
+        - name: on_clicked
+          in: query
+          description: Filter by click event trigger
+          schema:
+            type: boolean
+        - name: on_suppression_created
+          in: query
+          description: Filter by suppression creation event trigger
+          schema:
+            type: boolean
+        - name: on_dns_error
+          in: query
+          description: Filter by DNS error event trigger
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: cursor
+          in: query
+          description: Pagination cursor for the next page
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["webhooks:read:all", "webhooks:read:{domain}"]
+      responses:
+        '200':
+          description: List of webhooks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhooksResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create Webhook
+      description: Creates a new webhook for event notifications
+      operationId: createWebhook
+      tags:
+        - Webhooks
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+        - BearerAuth: ["webhooks:write:all", "webhooks:write:{domain}"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        '200':
+          description: Webhook created successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/webhooks/{webhook_id}:
+    get:
+      summary: Get Webhook
+      description: Returns a specific webhook by ID
+      operationId: getWebhook
+      tags:
+        - Webhooks
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: webhook_id
+          in: path
+          required: true
+          description: Webhook ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["webhooks:read:all", "webhooks:read:{domain}"]
+      responses:
+        '200':
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update Webhook
+      description: |
+        Updates an existing webhook
+
+        **Note:** The webhook secret is not updatable
+      operationId: updateWebhook
+      tags:
+        - Webhooks
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: webhook_id
+          in: path
+          required: true
+          description: Webhook ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["webhooks:write:all", "webhooks:write:{domain}"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWebhookRequest'
+      responses:
+        '200':
+          description: Webhook updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete Webhook
+      description: Deletes a webhook
+      operationId: deleteWebhook
+      tags:
+        - Webhooks
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: webhook_id
+          in: path
+          required: true
+          description: Webhook ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["webhooks:delete:all", "webhooks:delete:{domain}"]
+      responses:
+        '200':
+          description: Webhook deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # SMTP Credentials endpoints
+  /v2/accounts/{account_id}/smtp-credentials:
+    get:
+      summary: Get SMTP Credentials
+      description: Returns a list of SMTP credentials for the account
+      operationId: getSMTPCredentials
+      tags:
+        - SMTP Credentials
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: cursor
+          in: query
+          description: Pagination cursor for the next page
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["smtp-credentials:read:all", "smtp-credentials:read:{domain}"]
+      responses:
+        '200':
+          description: List of SMTP credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSMTPCredentialsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create SMTP Credential
+      description: Creates a new SMTP credential for SMTP authentication
+      operationId: createSMTPCredential
+      tags:
+        - SMTP Credentials
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+        - BearerAuth: ["smtp-credentials:write:all", "smtp-credentials:write:{domain}"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSMTPCredentialRequest'
+      responses:
+        '200':
+          description: SMTP credential created successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SMTPCredential'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/smtp-credentials/{smtp_credential_id}:
+    get:
+      summary: Get SMTP Credential
+      description: Returns a specific SMTP credential by ID
+      operationId: getSMTPCredential
+      tags:
+        - SMTP Credentials
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: smtp_credential_id
+          in: path
+          required: true
+          description: SMTP Credential ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["smtp-credentials:read:all", "smtp-credentials:read:{domain}"]
+      responses:
+        '200':
+          description: SMTP credential details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SMTPCredential'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: SMTP credential not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete SMTP Credential
+      description: Deletes an SMTP credential
+      operationId: deleteSMTPCredential
+      tags:
+        - SMTP Credentials
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: smtp_credential_id
+          in: path
+          required: true
+          description: SMTP Credential ID
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: ["smtp-credentials:delete:all", "smtp-credentials:delete:{domain}"]
+      responses:
+        '200':
+          description: SMTP credential deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: SMTP credential not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Statistics endpoints
+  /v2/accounts/{account_id}/statistics/transactional/deliverability:
+    get:
+      summary: Get Deliverability Statistics
+      description: |
+        Returns transactional deliverability statistics grouped by status
+
+        **Query Parameters:**
+        - `from_date`: Filter statistics after this date (RFC3339 format)
+        - `to_date`: Filter statistics before this date (RFC3339 format)
+        - `sender_domain`: Filter by sender domain
+        - `recipient_domain`: Filter by recipient domain
+        - `tags`: Filter by tags (comma-separated)
+        - `group_by`: Group by time period (hour, day, week, month)
+      operationId: getDeliverabilityStatistics
+      tags:
+        - Statistics
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          description: Filter statistics after this date (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          description: Filter statistics before this date (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+        - name: sender_domain
+          in: query
+          description: Filter by sender domain
+          schema:
+            type: string
+        - name: recipient_domain
+          in: query
+          description: Filter by recipient domain
+          schema:
+            type: string
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated)
+          schema:
+            type: string
+        - name: group_by
+          in: query
+          description: Group by time period
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+      security:
+        - BearerAuth: ["statistics-transactional:read:all", "statistics-transactional:read:{domain}"]
+      responses:
+        '200':
+          description: Deliverability statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliverabilityStatisticsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests (rate limited to 1 request per second)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/statistics/transactional/bounce:
+    get:
+      summary: Get Bounce Statistics
+      description: |
+        Returns transactional bounce statistics grouped by classification
+
+        **Query Parameters:**
+        - `from_date`: Filter statistics after this date (RFC3339 format)
+        - `to_date`: Filter statistics before this date (RFC3339 format)
+        - `sender_domain`: Filter by sender domain
+        - `recipient_domain`: Filter by recipient domain
+        - `tags`: Filter by tags (comma-separated)
+        - `group_by`: Group by time period (hour, day, week, month)
+      operationId: getBounceStatistics
+      tags:
+        - Statistics
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          description: Filter statistics after this date (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          description: Filter statistics before this date (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+        - name: sender_domain
+          in: query
+          description: Filter by sender domain
+          schema:
+            type: string
+        - name: recipient_domain
+          in: query
+          description: Filter by recipient domain
+          schema:
+            type: string
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated)
+          schema:
+            type: string
+        - name: group_by
+          in: query
+          description: Group by time period
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+      security:
+        - BearerAuth: ["statistics-transactional:read:all", "statistics-transactional:read:{domain}"]
+      responses:
+        '200':
+          description: Bounce statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BounceStatisticsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests (rate limited to 1 request per second)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/statistics/transactional/delivery-time:
+    get:
+      summary: Get Delivery Time Statistics
+      description: |
+        Returns transactional delivery time statistics grouped by recipient domain
+
+        **Query Parameters:**
+        - `from_date`: Filter statistics after this date (RFC3339 format)
+        - `to_date`: Filter statistics before this date (RFC3339 format)
+        - `sender_domain`: Filter by sender domain
+        - `tags`: Filter by tags (comma-separated)
+        - `group_by`: Group by time period (hour, day, week, month)
+      operationId: getDeliveryTimeStatistics
+      tags:
+        - Statistics
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          description: Filter statistics after this date (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          description: Filter statistics before this date (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+        - name: sender_domain
+          in: query
+          description: Filter by sender domain
+          schema:
+            type: string
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated)
+          schema:
+            type: string
+        - name: group_by
+          in: query
+          description: Group by time period
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+      security:
+        - BearerAuth: ["statistics-transactional:read:all", "statistics-transactional:read:{domain}"]
+      responses:
+        '200':
+          description: Delivery time statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryTimeStatisticsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests (rate limited to 1 request per second)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 tags:
+  - name: Utility
+    description: Utility endpoints for health checks and diagnostics
   - name: API Keys
     description: Manage API keys for authentication and access control
   - name: Domains
