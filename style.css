@@ -1,7 +1,7 @@
-table {
+#content-container table {
     display: table;
 }
 
-table thead td {
+#content-container table thead td {
     text-align: left;
 }
