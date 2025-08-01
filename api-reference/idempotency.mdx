@@ -1,5 +1,383 @@
 ---
-title: "Idempotent requests"
-sidebarTitle: "Idempotent requests"
-description: ""
+title: "Request Idempotency"
+description: "Ensure safe retries of API requests using idempotency keys"
 ---
+
+# Request Idempotency
+
+Request [idempotency](https://en.wikipedia.org/wiki/Idempotence) allows you to safely retry API requests without worrying about duplicate operations. When you include an `Idempotency-Key` header with your request, our API will ensure that multiple requests with the same key produce the same result.
+
+<Note>
+  Idempotency is particularly important for critical operations like sending emails, creating resources, or processing payments where duplicate actions could cause problems.
+</Note>
+
+## How It Works
+
+When you make a request with an `Idempotency-Key` header:
+
+1. **First Request**: The API processes your request normally and stores the response
+2. **Subsequent Requests**: If you retry with the same key, the API returns the stored response instead of processing the request again
+3. **Automatic Cleanup**: Idempotency keys expire after 24 hours
+
+<AccordionGroup>
+  <Accordion title="Supported Operations" icon="list-check">
+    Idempotency is supported on all POST endpoints that create or modify resources:
+
+    - **API Keys**: Create API keys
+    - **Domains**: Create domains
+    - **Messages**: Send messages and cancel scheduled messages
+    - **Account Members**: Add team members
+    - **Suppressions**: Create email suppressions
+    - **Routes**: Create message routes
+    - **Webhooks**: Create webhook endpoints
+    - **SMTP Credentials**: Create SMTP credentials
+  </Accordion>
+
+  <Accordion title="Key Requirements" icon="key">
+    - **Header Name**: `Idempotency-Key`
+    - **Key Format**: Any string up to 255 characters
+    - **Uniqueness**: Keys are scoped to your account
+    - **Expiration**: Keys expire after 24 hours
+    - **Request Method**: Only POST requests support idempotency
+  </Accordion>
+
+  <Accordion title="Request Matching" icon="fingerprint">
+    Requests are matched based on:
+
+    - Account ID
+    - Idempotency key
+    - Request body content (SHA256 hash)
+    - Request path
+
+    If any of these differ, the request is treated as unique.
+  </Accordion>
+</AccordionGroup>
+
+## Key Selection Best Practices
+
+A client generates an idempotency key, which is a unique key that the server uses to recognize subsequent retries of the same request. How you create unique keys is up to you, but we suggest using V4 UUIDs, or another random string with enough entropy to avoid collisions. Idempotency keys are up to 255 characters long.
+
+
+### Key Generation Examples
+
+<CodeGroup>
+
+```javascript Javascript
+// Using crypto.randomUUID() (Node.js 14.17+)
+const idempotencyKey = crypto.randomUUID();
+// Result: "550e8400-e29b-41d4-a716-446655440000"
+
+// Using a library like uuid
+import { v4 as uuidv4 } from 'uuid';
+const idempotencyKey = uuidv4();
+
+// Custom format with timestamp
+const timestamp = Date.now();
+const random = Math.random().toString(36).substring(2);
+const idempotencyKey = `msg_${timestamp}_${random}`;
+// Result: "msg_1705317045123_k2j5h8n3m1"
+```
+
+```python Python
+import uuid
+
+# V4 UUID (recommended)
+idempotency_key = str(uuid.uuid4())
+# Result: "550e8400-e29b-41d4-a716-446655440000"
+
+# Custom format with timestamp
+import time
+import secrets
+
+timestamp = int(time.time())
+random_suffix = secrets.token_hex(8)
+idempotency_key = f"msg_{timestamp}_{random_suffix}"
+# Result: "msg_1705317045_a1b2c3d4e5f6g7h8"
+```
+
+```php PHP
+<?php
+// Using built-in uniqid with more entropy
+$idempotencyKey = uniqid('msg_', true);
+// Result: "msg_65a5c8f51234567.89012345"
+
+// V4 UUID using ramsey/uuid
+use Ramsey\Uuid\Uuid;
+$idempotencyKey = Uuid::uuid4()->toString();
+// Result: "550e8400-e29b-41d4-a716-446655440000"
+
+// Custom with timestamp and random bytes
+$timestamp = time();
+$random = bin2hex(random_bytes(8));
+$idempotencyKey = "msg_{$timestamp}_{$random}";
+// Result: "msg_1705317045_a1b2c3d4e5f6g7h8"
+```
+
+```go Go
+package main
+
+import (
+    "crypto/rand"
+    "encoding/hex"
+    "fmt"
+    "time"
+
+    "github.com/google/uuid"
+)
+
+// V4 UUID (recommended)
+idempotencyKey := uuid.New().String()
+// Result: "550e8400-e29b-41d4-a716-446655440000"
+
+// Custom format with timestamp
+timestamp := time.Now().Unix()
+randomBytes := make([]byte, 8)
+rand.Read(randomBytes)
+randomHex := hex.EncodeToString(randomBytes)
+idempotencyKey := fmt.Sprintf("msg_%d_%s", timestamp, randomHex)
+// Result: "msg_1705317045_a1b2c3d4e5f6g7h8"
+```
+
+</CodeGroup>
+
+<Note>
+  **Key Collision Risk**: With V4 UUIDs, the probability of generating duplicate keys is approximately 1 in 5.3 x 10^36. For practical purposes, this is negligible even at massive scale.
+</Note>
+
+## Usage Example
+
+Include the `Idempotency-Key` header with any POST request:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.ahasend.com/v2/accounts/acct_123/messages \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: msg_20240115_001" \
+  -d '{
+    "from": "hello@yourdomain.com",
+    "to": "user@example.com",
+    "subject": "Welcome!",
+    "html": "<h1>Welcome to our service!</h1>"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.ahasend.com/v2/accounts/acct_123/messages', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json',
+    'Idempotency-Key': 'msg_20240115_001'
+  },
+  body: JSON.stringify({
+    from: 'hello@yourdomain.com',
+    to: 'user@example.com',
+    subject: 'Welcome!',
+    html: '<h1>Welcome to our service!</h1>'
+  })
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.ahasend.com/v2/accounts/acct_123/messages',
+    headers={
+        'Authorization': 'Bearer your_api_key',
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'msg_20240115_001'
+    },
+    json={
+        'from': 'hello@yourdomain.com',
+        'to': 'user@example.com',
+        'subject': 'Welcome!',
+        'html': '<h1>Welcome to our service!</h1>'
+    }
+)
+```
+
+</CodeGroup>
+
+## Response Behavior
+
+The API responds differently based on the idempotency key status:
+
+<Tabs>
+  <Tab title="First Request">
+    **Status**: `200 OK` (or appropriate success status)
+
+    **Headers**:
+    - Standard response headers
+    - No special idempotency headers
+
+    **Body**: Normal response content
+
+    ```json
+    {
+      "id": "msg_abc123",
+      "status": "queued",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+    ```
+  </Tab>
+
+  <Tab title="Replayed Response">
+    **Status**: Same as original response
+
+    **Headers**:
+    - `Idempotent-Replayed: true`
+    - Same content type as original
+
+    **Body**: Exact same response as the original request
+
+    ```json
+    {
+      "id": "msg_abc123",
+      "status": "queued",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+    ```
+  </Tab>
+
+  <Tab title="Concurrent Request">
+    **Status**: `409 Conflict`
+
+    **Headers**:
+    - `Idempotent-Replayed: false`
+
+    **Body**:
+    ```json
+    {
+      "message": "A request with this idempotency key is already in progress"
+    }
+    ```
+  </Tab>
+
+  <Tab title="Failed Original">
+    **Status**: `412 Precondition Failed`
+
+    **Headers**:
+    - `Idempotent-Replayed: false`
+
+    **Body**:
+    ```json
+    {
+      "message": "The original request with this idempotency key failed and cannot be retried"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<CardGroup cols={1}>
+  <Card title="Unique Keys" icon="fingerprint">
+    Use unique, descriptive keys that won't conflict with other operations. Consider including timestamps or UUIDs.
+
+    ```
+    Good: user_123_welcome_20240115_001
+    Bad: request_1
+    ```
+  </Card>
+
+  <Card title="Retry Logic" icon="arrow-rotate-right">
+    Implement exponential backoff when retrying requests. Always use the same idempotency key for retries.
+
+    ```javascript
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        return await makeRequest(idempotencyKey);
+      } catch (error) {
+        if (error.status === 409) {
+          // Request in progress, wait and retry
+          await sleep(Math.pow(2, attempt) * 1000);
+        } else {
+          throw error;
+        }
+      }
+      attempt++;
+    }
+    ```
+  </Card>
+
+  <Card title="Key Expiration" icon="clock">
+    Keys expire after 24 hours. Don't reuse keys after this period as the behavior is undefined.
+  </Card>
+
+  <Card title="Error Handling" icon="triangle-exclamation">
+    Handle different response codes appropriately:
+    - `409`: Wait and retry (concurrent request)
+    - `412`: Don't retry (original failed)
+    - `2xx` with `Idempotent-Replayed: true` header: Success (replayed)
+  </Card>
+</CardGroup>
+
+## Error Scenarios
+
+<AccordionGroup>
+  <Accordion title="Request Already in Progress (409 Conflict)" icon="clock">
+    This happens when you make concurrent requests with the same idempotency key.
+
+    **What it means**: Another request with the same key is currently being processed.
+
+    **What to do**: Wait a moment and retry with the same key. The second request will either get a `409` again (still processing) or the final result once complete.
+
+    ```json Response
+    {
+      "message": "A request with this idempotency key is already in progress"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Original Request Failed (412 Precondition Failed)" icon="xmark">
+    This happens when you retry a request whose original attempt failed.
+
+    **What it means**: The first request with this idempotency key encountered an error and cannot be safely retried.
+
+    **What to do**: Use a new idempotency key if you want to retry the operation.
+
+    ```json Response
+    {
+      "message": "The original request with this idempotency key failed and cannot be retried"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Key Mismatch" icon="key">
+    If you use the same idempotency key with different request data, the API will treat it as a new request.
+
+    **What it means**: The request body, path, or other parameters don't match the original request.
+
+    **What to do**: Ensure you're using the exact same request parameters when retrying, or use a different idempotency key for different requests.
+  </Accordion>
+</AccordionGroup>
+
+## Implementation Details
+
+<Warning>
+  The following technical details are provided for transparency but are not required for basic usage.
+</Warning>
+
+### Request Hashing
+
+The API uses SHA256 hashing of the request body to detect changes between requests with the same idempotency key. This ensures that different requests don't accidentally match.
+
+### Concurrency Protection
+
+PostgreSQL advisory locks prevent race conditions when multiple requests with the same idempotency key arrive simultaneously. The first request proceeds normally while subsequent requests wait.
+
+### Storage Duration
+
+Idempotency records are automatically cleaned up after 24 hours. This prevents the idempotency table from growing indefinitely while providing a reasonable retry window.
+
+---
+
+<Tip>
+  For high-volume applications, consider implementing client-side deduplication in addition to server-side idempotency to reduce unnecessary API calls.
+</Tip>

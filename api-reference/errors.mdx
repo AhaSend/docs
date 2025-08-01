@@ -1,5 +1,271 @@
 ---
-title: "Errors and error handling"
-sidebarTitle: "Errors"
-description: "Get started with AhaSend's powerful email delivery API. Send transactional emails, manage domains, and track delivery analytics."
+title: 'Error Handling'
+description: 'Understanding error responses in the AhaSend API'
 ---
+
+## Error Response Format
+
+All API errors return a consistent JSON structure with an HTTP status code and a descriptive message:
+
+```json
+{
+  "message": "Error description explaining what went wrong"
+}
+```
+
+The `message` field provides detailed information about the nature of the error, helping you understand what went wrong and how to fix it.
+
+## HTTP Status Codes
+
+The AhaSend API uses standard HTTP status codes to indicate the success or failure of requests:
+
+### 2xx Success
+
+- **200 OK** - Request succeeded
+- **201 Created** - Resource created successfully
+
+### 4xx Client Errors
+
+#### 400 Bad Request
+
+Returned when the request is malformed or contains invalid parameters.
+
+<Warning>
+Common causes include invalid JSON, missing required fields, or parameters that don't meet validation requirements.
+</Warning>
+
+**Example scenarios:**
+- Invalid UUID format for `account_id` or resource IDs
+- Malformed email addresses
+- Invalid time formats (expecting RFC3339)
+- Parameters outside allowed ranges (e.g., `limit` not between 1-100)
+- Invalid domain names or URLs
+- Malformed request body
+
+```json
+{
+  "message": "invalid account_id"
+}
+```
+
+```json
+{
+  "message": "invalid from_time, provide a valid RFC3339 time string"
+}
+```
+
+#### 401 Unauthorized
+
+Authentication failed or is missing.
+
+**Common causes:**
+- Missing `Authorization` header
+- Invalid API key format (must be `Bearer <api_key>`)
+- API key doesn't exist or has been revoked
+- Account associated with API key is suspended
+- API key doesn't belong to the specified account
+
+```json
+{
+  "message": "Missing or malformed bearer token"
+}
+```
+
+```json
+{
+  "message": "Invalid API key"
+}
+```
+
+```json
+{
+  "message": "Account is suspended"
+}
+```
+
+#### 403 Forbidden
+
+Authentication succeeded, but you don't have permission to access the resource.
+
+<Tip>
+This typically occurs when your API key doesn't have the required scopes for the operation you're trying to perform.
+</Tip>
+
+**Common causes:**
+- API key lacks required scopes (e.g., trying to delete domains without `domains:delete` scope)
+- Attempting to access resources outside your API key's domain restrictions
+- Insufficient permissions for specific operations
+
+```json
+{
+  "message": "Insufficient permissions for the required scope"
+}
+```
+
+```json
+{
+  "message": "api key does not have sufficient permissions to read webhooks"
+}
+```
+
+#### 404 Not Found
+
+The requested resource doesn't exist or you don't have access to it.
+
+**Common scenarios:**
+- Resource ID doesn't exist
+- Resource was deleted
+- Resource belongs to a different account
+
+```json
+{
+  "message": "account not found"
+}
+```
+
+```json
+{
+  "message": "domain not found"
+}
+```
+
+#### 409 Conflict
+
+The request conflicts with the current state of the resource.
+
+**Common causes:**
+- **Idempotency conflicts**: Another request with the same idempotency key is already in progress
+- **Resource conflicts**: Trying to create a resource that already exists (e.g., duplicate domain)
+
+```json
+{
+  "message": "A request with this idempotency key is already in progress"
+}
+```
+
+```json
+{
+  "message": "domain already exists"
+}
+```
+
+#### 412 Precondition Failed
+
+Returned for failed idempotency conditions.
+
+```json
+{
+  "message": "The original request with this idempotency key failed and cannot be retried"
+}
+```
+
+#### 429 Too Many Requests
+
+You've exceeded the API rate limits.
+
+<Tip>
+When you receive this error, wait before making additional requests. Check the response headers for rate limit information.
+</Tip>
+
+```json
+{
+  "message": "Rate limit exceeded"
+}
+```
+
+### 5xx Server Errors
+
+#### 500 Internal Server Error
+
+An unexpected server error occurred on our side (these are rare).
+
+<Danger>
+These errors indicate a problem on our end. If you consistently receive 500 errors, please contact support.
+</Danger>
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
+```json
+{
+  "message": "internal server error, please try again later"
+}
+```
+
+## Validation Errors
+
+When request validation fails, you'll receive a `400 Bad Request` with a descriptive message:
+
+### Request Body Validation
+
+```json
+{
+  "message": "invalid request body"
+}
+```
+
+### Field-Specific Validation
+
+The API provides specific validation messages for individual fields:
+
+```json
+{
+  "message": "invalid domain name, please provider a valid fully qualified domain name."
+}
+```
+
+```json
+{
+  "message": "limit must be between 1 and 100"
+}
+```
+
+### Security-Related Validation
+
+```json
+{
+  "message": "domain is banned to protect our network from abuse and spammers. if you think this is an error please contact support"
+}
+```
+
+## Scope and Permission Errors
+
+When your API key doesn't have sufficient permissions:
+
+### Missing Scopes
+
+```json
+{
+  "message": "sender domain not found in api key scopes"
+}
+```
+
+### Invalid API Key Context
+
+```json
+{
+  "message": "invalid api key context"
+}
+```
+
+## Best Practices
+
+### Error Handling
+- Always check the HTTP status code first
+- Parse the `message` field for detailed error information
+- Implement appropriate retry logic for 5xx errors
+- Respect rate limits when receiving 429 responses
+
+### Common Fixes
+- **400 errors**: Validate your request parameters and JSON structure
+- **401 errors**: Check your API key and authentication headers
+- **403 errors**: Verify your API key has the required scopes
+- **404 errors**: Confirm the resource exists and belongs to your account
+- **429 errors**: Implement exponential backoff in your retry logic
+
+<Note>
+Error messages are designed to be descriptive and actionable. They provide specific guidance on what needs to be corrected in your request.
+</Note>

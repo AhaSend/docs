@@ -1,4 +1,168 @@
 ---
 title: "Rate limits"
 sidebarTitle: "Rate limits"
+description: "Understanding AhaSend API rate limiting policies and best practices"
 ---
+
+## Overview
+
+AhaSend API implements rate limiting to ensure fair usage and maintain optimal performance for all users. Rate limits are applied per account and vary depending on the endpoint category.
+
+<Warning>
+Rate limits are enforced per account, not per API key. All API keys belonging to the same account share the same rate limit quotas.
+</Warning>
+
+## Rate Limit Tiers
+
+### Standard API Endpoints
+
+Most API endpoints are subject to the following rate limits:
+
+<CardGroup cols={2}>
+  <Card title="Request Rate" icon="gauge-high">
+    **100 requests per second**
+
+    Maximum sustained request rate
+  </Card>
+  <Card title="Burst Capacity" icon="bolt">
+    **200 requests**
+
+    Short-term burst allowance
+  </Card>
+</CardGroup>
+
+**Affected Endpoints:**
+- `/v2/accounts/*` - Account management
+- `/v2/accounts/{account_id}/api-keys/*` - API key management
+- `/v2/accounts/{account_id}/domains/*` - Domain management
+- `/v2/accounts/{account_id}/messages/*` - Message operations
+- `/v2/accounts/{account_id}/suppressions/*` - Suppression management
+- `/v2/accounts/{account_id}/routes/*` - Route management
+- `/v2/accounts/{account_id}/webhooks/*` - Webhook management
+- `/v2/accounts/{account_id}/smtp-credentials/*` - SMTP credential management
+
+### Statistics API Endpoints
+
+Statistics endpoints have more restrictive rate limits due to their resource-intensive nature:
+
+<CardGroup cols={2}>
+  <Card title="Request Rate" icon="chart-line">
+    **1 request per second**
+
+    Sustained request rate
+  </Card>
+  <Card title="Burst Capacity" icon="hourglass">
+    **1 request**
+
+    No burst allowance
+  </Card>
+</CardGroup>
+
+**Affected Endpoints:**
+- `/v2/accounts/{account_id}/statistics/transactional/deliverability`
+- `/v2/accounts/{account_id}/statistics/transactional/bounce`
+- `/v2/accounts/{account_id}/statistics/transactional/delivery-time`
+
+## Rate Limit Exceeded Response
+
+When you exceed the rate limit, the API returns a `429 Too Many Requests` status code:
+
+<CodeGroup>
+```json Rate Limit Error Response
+{
+  "message": "Too many requests, rate limited."
+}
+```
+</CodeGroup>
+
+<Info>
+The rate limit window uses a sliding window algorithm that resets every second, allowing for smooth request distribution.
+</Info>
+
+## Best Practices
+
+### 1. Implement Exponential Backoff
+
+When you receive a 429 response, implement exponential backoff with jitter:
+
+<CodeGroup>
+```javascript JavaScript Example
+async function makeRequestWithRetry(url, options, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      if (response.status === 429) {
+        if (attempt === maxRetries) {
+          throw new Error('Rate limit exceeded after max retries');
+        }
+
+        // Exponential backoff with jitter
+        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+    }
+  }
+}
+```
+
+```python Python Example
+import time
+import random
+import requests
+
+def make_request_with_retry(url, headers, max_retries=3):
+    for attempt in range(max_retries + 1):
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 429:
+            if attempt == max_retries:
+                raise Exception("Rate limit exceeded after max retries")
+
+            # Exponential backoff with jitter
+            delay = (2 ** attempt) + random.random()
+            time.sleep(delay)
+            continue
+
+        return response
+```
+</CodeGroup>
+
+### 2. Batch Operations When Possible
+
+For operations that support batching, group multiple items into single requests:
+
+<Tip>
+Instead of sending 100 individual message requests, consider using bulk operations or queuing messages to reduce API calls.
+</Tip>
+
+### 3. Cache Frequently Accessed Data
+
+Cache static or slowly-changing data like account information and domain lists to reduce unnecessary API calls.
+
+### 4. Use Webhooks for Real-time Updates
+
+Instead of polling endpoints repeatedly, configure webhooks to receive real-time notifications about message status changes and other events.
+
+## Statistics API Considerations
+
+<Warning>
+Statistics endpoints have very restrictive rate limits (1 request per second). Plan your analytics queries carefully and consider:
+
+- Caching results for frequently accessed time periods
+- Using broader time ranges to reduce query frequency
+- Implementing request queuing for multiple statistics calls
+</Warning>
+
+## Contact Support
+
+If your application requires higher rate limits due to legitimate high-volume usage patterns, please contact our support team to discuss custom rate limit arrangements.
+
+<Card title="Need Higher Limits?" icon="envelope">
+Reach out to our [support team](mailto:support@ahasend.com) if you need increased rate limits for your production application.
+</Card>

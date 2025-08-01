@@ -32,9 +32,9 @@ AhaSend supports three types of scopes:
   </Accordion>
 </AccordionGroup>
 
-<Callout type="info">
+<Note>
   The wildcard scope `*` grants all permissions and should be used with extreme caution, preferably only for development and testing.
-</Callout>
+</Note>
 
 ## Available Scopes
 
@@ -58,9 +58,9 @@ AhaSend supports three types of scopes:
 | `domains:write` | Add and update domains |
 | `domains:delete:{domain}` | Delete a specific domain |
 
-<Callout type="warning">
+<Warning>
   Domain deletion requires a domain-specific scope for security. You cannot use a global scope for domain deletion.
-</Callout>
+</Warning>
 
 ### Message Operations
 
@@ -183,9 +183,9 @@ AhaSend supports three types of scopes:
 2. **No Duplicates**: Duplicate scopes in the same API key are not allowed
 3. **Redundancy Filtering**: Specific domain scopes are automatically removed if a global scope exists
 
-<Callout type="info">
+<Note>
   If you have both `messages:send:all` and `messages:send:{example.com}`, only the global scope will be retained as it already covers the specific domain scope.
-</Callout>
+</Note>
 
 ### Scope Hierarchy
 
