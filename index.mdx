@@ -1,4 +1,124 @@
 ---
-title: "Introduction"
-description: "This is the introduction to the documentation"
+title: "Welcome to AhaSend"
+sidebarTitle: "Introduction"
+description: "Blazing fast transactional emails at unbeatable prices. Developer-friendly APIs and SMTP relay with fair, transparent pricing."
+icon: "book-open"
 ---
+
+# Welcome to AhaSend
+
+AhaSend is a **developer-first transactional email service** built for modern applications. We provide blazing fast email delivery through our own infrastructure, with simple REST APIs and reliable SMTP relays.
+
+<Info>
+**New to AhaSend?** Start with our [Quickstart Guide](/quickstart) to send your first email in under 5 minutes, or [create your free account](https://dash.ahasend.com/user/register) to get 1,000 free emails per month.
+</Info>
+
+## Why Choose AhaSend?
+
+### 🚀 **Built for Developers**
+- **[Clean, intuitive REST APIs](/api-reference)** and SMTP relay
+- **[Comprehensive SDKs](/api-reference/sdks)** and code examples for all major languages
+- **[Sandbox](/sandbox)** for testing and development
+- **[Engineering-led support](/support)** from real developers, not chatbots
+
+
+### ⚡ **Blazing Fast Delivery**
+- Below **2 seconds** delivery time to Gmail (99th percentile)
+- **Independent**: Our own infrastructure, not a reseller of other services.
+- **Reliable**: Delivering tens of millions of emails every month.
+
+### 💰 **Fair & Transparent Pricing**
+- **[Pay as You Go](/pricing)**: Pay exactly for what you send - no hidden fees
+- **[Free dedicated IPs](/scale/dedicated-ips)** for high-volume senders (300k+ emails/month)
+
+### 🛡️ **Enterprise-Ready Security**
+- **[SSO](/security/sso)** with OpenID Connect (OIDC)
+- **[Scoped API credentials](/api-reference/scopes)** with granular permissions
+- **[Customizable data retention policies](/retention)**
+    - From zero to 30 days [retention in our database](/retention).
+    - [Indefinite retention](/retention/s3) of data, metadata and delivery log on your own S3.
+- **[GDPR compliant](/dpa)**
+
+## Quick Start Options
+
+<CardGroup cols={2}>
+  <Card title="REST API" icon="code" href="/api/send-email">
+    Send emails using our modern HTTP API. Perfect for web applications and microservices.
+  </Card>
+  <Card title="SMTP Relay" icon="envelope" href="/smtp">
+    Use our SMTP servers with any email library or application. Compatible with all programming languages.
+  </Card>
+</CardGroup>
+
+## Popular Integration Guides
+
+Get started quickly with your preferred technology stack:
+
+<CardGroup cols={3}>
+  <Card title="Node.js" icon="node-js" href="/smtp/nodejs">
+    Integrate with Express, Next.js, or any Node.js application
+  </Card>
+  <Card title="Python" icon="python" href="/smtp/python">
+    Django, Flask, FastAPI - we've got you covered
+  </Card>
+  <Card title="PHP" icon="php" href="/smtp/php">
+    Laravel, Symfony, WordPress, and vanilla PHP examples
+  </Card>
+  <Card title="Go" icon="golang" href="/smtp/golang">
+    Lightweight integration for Go applications
+  </Card>
+  <Card title="Ruby" icon="gem" href="/smtp/ruby">
+    Rails and Ruby applications made simple
+  </Card>
+  <Card title="Command Line" icon="terminal" href="/smtp/cli">
+    Send emails directly from your terminal or scripts
+  </Card>
+</CardGroup>
+
+## Core Features
+
+<AccordionGroup>
+  <Accordion title="Email Tracking" icon="chart-line">
+    Track email opens and link clicks with detailed analytics. See exactly how your users engage with your emails.
+    [Learn more about tracking →](/tracking/open-tracking)
+  </Accordion>
+
+  <Accordion title="Webhooks" icon="webhook">
+    Real-time notifications for all email events - delivery, bounces, opens, clicks, and more.
+    [Explore webhooks →](/webhooks)
+  </Accordion>
+
+  <Accordion title="Email Routing" icon="route">
+    Forward incoming emails to your application with our email routing feature.
+    [Set up routing →](/routing)
+  </Accordion>
+
+  <Accordion title="Suppression Management" icon="shield-xmark">
+    Automatically handle bounces, complaints, and unsubscribes to maintain your sender reputation.
+    [Manage suppressions →](/api-reference/suppressions/get-suppressions)
+  </Accordion>
+</AccordionGroup>
+
+## Need Help?
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book-open" href="/api-reference">
+    Complete API documentation with examples and interactive playground
+  </Card>
+  <Card title="Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from real engineers - no chatbots, no automated replies
+  </Card>
+</CardGroup>
+
+<Tip>
+**Pro Tip:** All code examples in this documentation are tested and ready to use. Just replace the placeholder values with your actual API keys and domains.
+</Tip>
+
+## What's Next?
+
+1. **[Create your account](https://dash.ahasend.com/user/register)** and get 1,000 free emails
+2. **[Set up your domain](/domains)**, authorizing AhaSend to send emails on your behalf
+3. Use our **[APIs](/api/send-email)** or **[SMTP](/smtp)** to send your first email
+4. **[Configure webhooks](/webhooks)** to track email events in real-time
+
+Ready to start sending emails that actually reach the inbox? Let's get you set up! 🚀

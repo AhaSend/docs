@@ -1,0 +1,7 @@
+table {
+    display: table;
+}
+
+table thead td {
+    text-align: left;
+}

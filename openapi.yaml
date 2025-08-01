@@ -2339,7 +2339,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
   /v2/accounts/{account_id}/messages/{message_id}/cancel:
-    post:
+    delete:
       summary: Cancel Message
       description: Cancels a scheduled message
       operationId: cancelMessage
@@ -2359,15 +2359,11 @@ paths:
           description: Message ID
           schema:
             type: string
-        - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["messages:cancel:all", "messages:cancel:{domain}"]
       responses:
         '200':
-          description: Message cancelled successfully
-          headers:
-            Idempotent-Replayed:
-              $ref: '#/components/headers/IdempotentReplayed'
+          description: Scheduled message is cancelled
           content:
             application/json:
               schema:
@@ -2396,10 +2392,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          $ref: '#/components/responses/IdempotencyConflict'
-        '412':
-          $ref: '#/components/responses/IdempotencyPreconditionFailed'
         '500':
           description: Internal server error
           content:
