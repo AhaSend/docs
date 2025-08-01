@@ -2,6 +2,6 @@
     display: table;
 }
 
-#content-container table thead td {
+#content-container table thead th {
     text-align: left;
 }
