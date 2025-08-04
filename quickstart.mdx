@@ -5,8 +5,6 @@ description: "Send your first email in under 5 minutes with AhaSend"
 icon: "rocket"
 ---
 
-# Quickstart Guide
-
 Get up and running with AhaSend in under 5 minutes. This guide will walk you through sending your first email using either our REST API or SMTP relay.
 
 <Info>
@@ -14,17 +12,13 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
 </Info>
 
 <Steps>
-  <Step title="Create Your Account & Get Credentials" icon="user-plus">
+  <Step title="Sign Up & Verify Email" icon="user-plus">
     1. **[Sign up for a free account](https://dash.ahasend.com/user/register)**
-    2. **Verify your email address** (check your inbox)
-    3. **Get your API key** from the dashboard under "API Keys"
-
-    <Warning>
-    Keep your API key secure! Never commit it to version control or expose it in client-side code.
-    </Warning>
+    2. **Verify your email address** by clicking the link in your inbox
+    3. **Log in to your dashboard** to continue setup
   </Step>
 
-  <Step title="Set Up Your Domain" icon="globe">
+  <Step title="Add & Configure Domain" icon="globe">
     Before you can send emails, you need to add and verify your domain:
 
     1. **Add your domain** in your dashboard under "Domains"
@@ -40,9 +34,11 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
     </Warning>
   </Step>
 
-  <Step title="Choose Your Integration Method" icon="code">
+  <Step title="Choose Sending Method" icon="code">
+    Decide how you want to send emails:
+
     <CardGroup cols={2}>
-      <Card title="REST API" icon="code" href="#rest-api">
+      <Card title="HTTP API" icon="code" href="#http-api">
         **Recommended for most applications**
         - Faster and more reliable
         - Better error handling
@@ -57,42 +53,56 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
     </CardGroup>
   </Step>
 
-  <Step title="Send Your First Email" icon="paper-plane">
-    Choose your preferred method and send your first email! Use the code examples below.
+  <Step title="Create Sending Credentials" icon="key">
+    Create the appropriate credentials for your chosen method:
 
-    **You'll need:**
-    - Your API key from Step 1
-    - Your verified domain from Step 2
-    - A recipient email address
+    **For HTTP API:**
+    - Go to **API Keys** in your dashboard
+    - Click "Create API Key"
+    - Copy and securely store your API key
 
-    Jump to: [REST API](#rest-api) | [SMTP Relay](#smtp-relay)
+    **For SMTP:**
+    - Go to **SMTP Credentials** in your dashboard
+    - Click "Create SMTP Credential"
+    - Save the username and password
+
+    <Warning>
+    Keep your credentials secure! Never commit them to version control or expose them in client-side code.
+    </Warning>
   </Step>
 
-  <Step title="Verify Your Send" icon="check-circle">
-    After sending your first email:
+  <Step title="Send & Verify First Email" icon="paper-plane">
+    Send your first email using the code examples below, then verify delivery:
 
-    1. **Check the response** - You should get a `200` status with a message ID
-    2. **Check your dashboard** - The email will appear in your message logs
-    3. **Check the recipient's inbox** - Your email should arrive within seconds
+    **After sending:**
+    1. **Check your inbox** - Your test email should arrive within seconds
+    2. **Check the Messages page** in your dashboard to see delivery status
+    3. **Look for a 200 response** with a message ID
 
     <Check>
-    **Success!** If you see your email in the dashboard and it was delivered, you're all set up! 🎉
+    **Success!** See your email in both your inbox and the Messages page? You're all set up! 🎉
     </Check>
+
+    Jump to: [HTTP API](#http-api) | [SMTP Relay](#smtp-relay)
   </Step>
 </Steps>
 
 ---
 
-## REST API
+## HTTP API
 
 Send emails using our modern HTTP API. Perfect for web applications and microservices.
+
+<Info>
+**API Version Note:** These examples use API v1 to keep things simple and easier to get started with. If you need more powerful features like templates, advanced tracking, or bulk sending, check out our [API v2 documentation](/api-reference/messages/create-message).
+</Info>
 
 ### Basic Email
 
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.ahasend.com/v2/email \
+curl -X POST https://api.ahasend.com/v1/email/send \
   -H "Content-Type: application/json" \
   -H "X-Api-Key: YOUR_API_KEY" \
   -d '{
@@ -100,15 +110,17 @@ curl -X POST https://api.ahasend.com/v2/email \
       "name": "My App",
       "email": "hello@yourdomain.com"
     },
-    "to": [
+    "recipients": [
       {
         "name": "John Doe",
         "email": "john@example.com"
       }
     ],
-    "subject": "Welcome to My App!",
-    "text": "Thanks for signing up. We're excited to have you!",
-    "html": "<h1>Welcome!</h1><p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>"
+    "content": {
+      "subject": "Welcome to My App!",
+      "text_body": "Thanks for signing up. We'\''re excited to have you!",
+      "html_body": "<h1>Welcome!</h1><p>Thanks for signing up. We'\''re <strong>excited</strong> to have you!</p>"
+    }
   }'
 ```
 
@@ -117,21 +129,25 @@ const axios = require('axios');
 
 const sendEmail = async () => {
   try {
-    const response = await axios.post('https://api.ahasend.com/v2/email', {
+    const email = {
       from: {
         name: 'My App',
         email: 'hello@yourdomain.com'
       },
-      to: [
+      recipients: [
         {
           name: 'John Doe',
           email: 'john@example.com'
         }
       ],
-      subject: 'Welcome to My App!',
-      text: 'Thanks for signing up. We\'re excited to have you!',
-      html: '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
-    }, {
+      content: {
+        subject: 'Welcome to My App!',
+        text_body: 'Thanks for signing up. We\'re excited to have you!',
+        html_body: '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
+      }
+    };
+
+    const response = await axios.post('https://api.ahasend.com/v1/email/send', email, {
       headers: {
         'Content-Type': 'application/json',
         'X-Api-Key': 'YOUR_API_KEY'
@@ -151,28 +167,30 @@ sendEmail();
 import requests
 
 def send_email():
-    url = 'https://api.ahasend.com/v2/email'
+    url = 'https://api.ahasend.com/v1/email/send'
     headers = {
         'Content-Type': 'application/json',
         'X-Api-Key': 'YOUR_API_KEY'
     }
-    data = {
+    email = {
         'from': {
             'name': 'My App',
             'email': 'hello@yourdomain.com'
         },
-        'to': [
+        'recipients': [
             {
                 'name': 'John Doe',
                 'email': 'john@example.com'
             }
         ],
-        'subject': 'Welcome to My App!',
-        'text': 'Thanks for signing up. We\'re excited to have you!',
-        'html': '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
+        'content': {
+            'subject': 'Welcome to My App!',
+            'text_body': 'Thanks for signing up. We\'re excited to have you!',
+            'html_body': '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
+        }
     }
 
-    response = requests.post(url, json=data, headers=headers)
+    response = requests.post(url, json=email, headers=headers)
 
     if response.status_code == 200:
         print('Email sent:', response.json())
@@ -184,37 +202,36 @@ send_email()
 
 ```php PHP
 <?php
-$data = [
+$email = [
     'from' => [
         'name' => 'My App',
         'email' => 'hello@yourdomain.com'
     ],
-    'to' => [
+    'recipients' => [
         [
             'name' => 'John Doe',
             'email' => 'john@example.com'
         ]
     ],
-    'subject' => 'Welcome to My App!',
-    'text' => 'Thanks for signing up. We\'re excited to have you!',
-    'html' => '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
+    'content' => [
+        'subject' => 'Welcome to My App!',
+        'text_body' => 'Thanks for signing up. We\'re excited to have you!',
+        'html_body' => '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
+    ]
 ];
 
 $options = [
     'http' => [
-        'header' => [
-            'Content-Type: application/json',
-            'X-Api-Key: YOUR_API_KEY'
-        ],
+        'header' => "Content-type: application/json\r\nX-Api-Key: YOUR_API_KEY",
         'method' => 'POST',
-        'content' => json_encode($data)
+        'content' => json_encode($email)
     ]
 ];
 
 $context = stream_context_create($options);
-$response = file_get_contents('https://api.ahasend.com/v2/email', false, $context);
+$response = file_get_contents('https://api.ahasend.com/v1/email/send', false, $context);
 
-echo $response;
+var_export($response, true);
 ?>
 ```
 
@@ -229,16 +246,20 @@ import (
 )
 
 type Email struct {
-    From    Contact   `json:"from"`
-    To      []Contact `json:"to"`
-    Subject string    `json:"subject"`
-    Text    string    `json:"text"`
-    HTML    string    `json:"html"`
+    From       Contact   `json:"from"`
+    Recipients []Contact `json:"recipients"`
+    Content    Content   `json:"content"`
 }
 
 type Contact struct {
     Name  string `json:"name"`
     Email string `json:"email"`
+}
+
+type Content struct {
+    Subject  string `json:"subject"`
+    TextBody string `json:"text_body"`
+    HTMLBody string `json:"html_body"`
 }
 
 func main() {
@@ -247,20 +268,22 @@ func main() {
             Name:  "My App",
             Email: "hello@yourdomain.com",
         },
-        To: []Contact{
+        Recipients: []Contact{
             {
                 Name:  "John Doe",
                 Email: "john@example.com",
             },
         },
-        Subject: "Welcome to My App!",
-        Text:    "Thanks for signing up. We're excited to have you!",
-        HTML:    "<h1>Welcome!</h1><p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>",
+        Content: Content{
+            Subject:  "Welcome to My App!",
+            TextBody: "Thanks for signing up. We're excited to have you!",
+            HTMLBody: "<h1>Welcome!</h1><p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>",
+        },
     }
 
     jsonData, _ := json.Marshal(email)
 
-    req, _ := http.NewRequest("POST", "https://api.ahasend.com/v2/email", bytes.NewBuffer(jsonData))
+    req, _ := http.NewRequest("POST", "https://api.ahasend.com/v1/email/send", bytes.NewBuffer(jsonData))
     req.Header.Set("Content-Type", "application/json")
     req.Header.Set("X-Api-Key", "YOUR_API_KEY")
 
@@ -280,7 +303,7 @@ func main() {
 
 <Tip>
 **Replace the placeholders:**
-- `YOUR_API_KEY` with your actual API key from Step 1
+- `YOUR_API_KEY` with your actual API key from Step 4
 - `hello@yourdomain.com` with your verified domain from Step 2
 - `john@example.com` with the recipient's email address
 </Tip>
@@ -302,7 +325,7 @@ Password: Your SMTP password (from dashboard)
 ```
 
 <Info>
-**Get SMTP credentials:** Go to your dashboard → SMTP Credentials → Create New Credential
+**Get SMTP credentials:** You should have created these in Step 4. If not, go to your dashboard → Credentials → Create New Credential
 </Info>
 
 ### SMTP Examples

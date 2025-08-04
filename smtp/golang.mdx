@@ -1,4 +1,679 @@
 ---
 title: "Sending emails in Go"
-description: "This is the introduction to the documentation"
+sidebarTitle: "Go"
+description: "Learn how to send emails using AhaSend SMTP with Go, including net/smtp standard library and gomail.v2 package"
+icon: "golang"
 ---
+
+# Sending Emails with SMTP in Go
+
+Send emails through AhaSend's SMTP servers using Go with the standard library `net/smtp` package or the more feature-rich `gomail.v2` library. This guide covers everything from basic setup to advanced features like attachments and custom headers.
+
+<Info>
+**Go Standard Library vs Third-Party:** While Go's `net/smtp` package provides essential SMTP functionality, it's low-level and verbose. For complex emails with attachments or custom headers, consider using `gomail.v2` for a more convenient API.
+</Info>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<AccordionGroup>
+  <Accordion title="System Requirements" icon="server">
+    - **Go installed** on your system ([Download Go](https://golang.org/dl/))
+    - Basic knowledge of Go programming
+    - Go modules enabled (Go 1.11+)
+  </Accordion>
+
+  <Accordion title="AhaSend Setup" icon="envelope">
+    - **Domain verified** in your AhaSend account
+    - **SMTP credentials** created (username and password)
+    - Access to your AhaSend dashboard for credential management
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
+</Info>
+
+## Connection Settings
+
+Use these settings for all Go SMTP configurations with AhaSend:
+
+<CardGroup cols={2}>
+  <Card title="Primary Server" icon="server">
+    **Host:** `send.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+  <Card title="US Server" icon="flag-usa">
+    **Host:** `send-us.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+</CardGroup>
+
+## Using net/smtp (Standard Library)
+
+Go's standard library provides basic SMTP functionality through the `net/smtp` package. It's lightweight but requires manual message construction.
+
+<CodeGroup>
+
+```go Basic Email
+package main
+
+import (
+    "fmt"
+    "net/smtp"
+)
+
+func main() {
+    // SMTP server configuration
+    host := "send.ahasend.com"
+    port := "587"
+    username := "YOUR_SMTP_USERNAME"
+    password := "YOUR_SMTP_PASSWORD"
+
+    // Set up authentication
+    auth := smtp.PlainAuth("", username, password, host)
+
+    // Email details
+    from := "hello@yourdomain.com"
+    to := []string{"user@example.com"}
+
+    // Construct message
+    subject := "Welcome to our platform!"
+    body := "Thanks for signing up. We're excited to have you!"
+
+    msg := []byte(fmt.Sprintf("To: %s\r\n"+
+        "Subject: %s\r\n"+
+        "\r\n"+
+        "%s\r\n", to[0], subject, body))
+
+    // Send email
+    err := smtp.SendMail(host+":"+port, auth, from, to, msg)
+    if err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+        return
+    }
+
+    fmt.Println("Email sent successfully!")
+}
+```
+
+```go HTML Email
+package main
+
+import (
+    "fmt"
+    "net/smtp"
+)
+
+func main() {
+    // SMTP configuration
+    host := "send.ahasend.com"
+    port := "587"
+    auth := smtp.PlainAuth("", "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD", host)
+
+    // Email content
+    from := "hello@yourdomain.com"
+    to := []string{"user@example.com"}
+
+    // HTML message with proper headers
+    msg := []byte("To: user@example.com\r\n" +
+        "Subject: Welcome to our platform!\r\n" +
+        "MIME-Version: 1.0\r\n" +
+        "Content-Type: text/html; charset=UTF-8\r\n" +
+        "\r\n" +
+        "<html><body>" +
+        "<h1>Welcome!</h1>" +
+        "<p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>" +
+        "<p><a href='https://yourdomain.com/get-started'>Get Started</a></p>" +
+        "</body></html>\r\n")
+
+    err := smtp.SendMail(host+":"+port, auth, from, to, msg)
+    if err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+        return
+    }
+
+    fmt.Println("HTML email sent successfully!")
+}
+```
+
+```go With Special Headers
+package main
+
+import (
+    "fmt"
+    "net/smtp"
+)
+
+func main() {
+    host := "send.ahasend.com"
+    port := "587"
+    auth := smtp.PlainAuth("", "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD", host)
+
+    from := "hello@yourdomain.com"
+    to := []string{"user@example.com"}
+
+    // Message with AhaSend special headers
+    msg := []byte("To: user@example.com\r\n" +
+        "Subject: Welcome Newsletter\r\n" +
+        "ahasend-track-opens: true\r\n" +
+        "ahasend-track-clicks: true\r\n" +
+        "ahasend-tags: welcome,newsletter,golang\r\n" +
+        "ahasend-message-retention: 7\r\n" +
+        "MIME-Version: 1.0\r\n" +
+        "Content-Type: text/html; charset=UTF-8\r\n" +
+        "\r\n" +
+        "<html><body>" +
+        "<h1>Welcome Newsletter</h1>" +
+        "<p>This email has tracking and custom tags enabled.</p>" +
+        "</body></html>\r\n")
+
+    err := smtp.SendMail(host+":"+port, auth, from, to, msg)
+    if err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+        return
+    }
+
+    fmt.Println("Email sent with special headers!")
+}
+```
+
+</CodeGroup>
+
+## Using gomail.v2 (Recommended)
+<Tip>
+Use `gomail.v2` for production applications as it provides better error handling, attachment support, and cleaner API. Start with sandbox mode during development and use environment variables for credentials.
+</Tip>
+
+
+The `gomail.v2` package provides a more convenient and feature-rich API for sending emails with attachments, custom headers, and better message construction.
+
+### Installation
+
+Install gomail.v2 using Go modules:
+
+```bash
+go get gopkg.in/gomail.v2
+```
+
+<CodeGroup>
+
+```go Basic Email
+package main
+
+import (
+    "fmt"
+    "gopkg.in/gomail.v2"
+)
+
+func main() {
+    // Create new message
+    m := gomail.NewMessage()
+
+    // Set headers
+    m.SetHeader("From", "hello@yourdomain.com")
+    m.SetHeader("To", "user@example.com")
+    m.SetHeader("Subject", "Welcome to our platform!")
+
+    // Set body
+    m.SetBody("text/plain", "Thanks for signing up. We're excited to have you!")
+
+    // Create SMTP dialer
+    d := gomail.NewDialer("send.ahasend.com", 587, "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD")
+
+    // Send email
+    if err := d.DialAndSend(m); err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+        return
+    }
+
+    fmt.Println("Email sent successfully!")
+}
+```
+
+```go HTML Email
+package main
+
+import (
+    "fmt"
+    "gopkg.in/gomail.v2"
+)
+
+func main() {
+    m := gomail.NewMessage()
+
+    // Set headers
+    m.SetHeader("From", "hello@yourdomain.com")
+    m.SetHeader("To", "user@example.com")
+    m.SetHeader("Subject", "Welcome to our platform!")
+
+    // Set HTML body with plain text alternative
+    m.SetBody("text/html", `
+        <html>
+        <body>
+            <h1>Welcome!</h1>
+            <p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>
+            <p><a href="https://yourdomain.com/get-started">Get Started</a></p>
+        </body>
+        </html>
+    `)
+    m.AddAlternative("text/plain", "Welcome! Thanks for signing up. Visit https://yourdomain.com/get-started to get started.")
+
+    d := gomail.NewDialer("send.ahasend.com", 587, "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD")
+
+    if err := d.DialAndSend(m); err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+        return
+    }
+
+    fmt.Println("HTML email sent successfully!")
+}
+```
+
+```go With Attachments
+package main
+
+import (
+    "fmt"
+    "gopkg.in/gomail.v2"
+)
+
+func main() {
+    m := gomail.NewMessage()
+
+    // Set headers
+    m.SetHeader("From", "hello@yourdomain.com")
+    m.SetHeader("To", "user@example.com")
+    m.SetHeader("Subject", "Your Invoice is Ready")
+
+    // Set body
+    m.SetBody("text/html", `
+        <html>
+        <body>
+            <h1>Invoice Attached</h1>
+            <p>Please find your invoice attached to this email.</p>
+        </body>
+        </html>
+    `)
+
+    // Add attachments
+    m.Attach("/path/to/invoice.pdf")
+    m.Attach("/path/to/document.pdf", gomail.Rename("CustomName.pdf"))
+
+    // Send email
+    d := gomail.NewDialer("send.ahasend.com", 587, "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD")
+
+    if err := d.DialAndSend(m); err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+        return
+    }
+
+    fmt.Println("Email with attachments sent successfully!")
+}
+```
+
+```go With Special Headers
+package main
+
+import (
+    "fmt"
+    "gopkg.in/gomail.v2"
+)
+
+func main() {
+    m := gomail.NewMessage()
+
+    // Set standard headers
+    m.SetHeader("From", "hello@yourdomain.com")
+    m.SetHeader("To", "user@example.com", "user2@example.com") // Multiple recipients
+    m.SetHeader("Subject", "Product Update Newsletter")
+
+    // Set special AhaSend headers
+    m.SetHeader("ahasend-track-opens", "true")
+    m.SetHeader("ahasend-track-clicks", "true")
+    m.SetHeader("ahasend-tags", "newsletter,product-update,golang")
+    m.SetHeader("ahasend-message-retention", "14")
+    m.SetHeader("ahasend-message-data-retention", "3")
+
+    // For sandbox testing:
+    // m.SetHeader("AhaSend-Sandbox", "true")
+    // m.SetHeader("AhaSend-Sandbox-Result", "deliver")
+
+    // Set CC and BCC
+    m.SetAddressHeader("Cc", "cc@example.com", "CC Recipient")
+    m.SetAddressHeader("Bcc", "bcc@example.com", "BCC Recipient")
+
+    // Set body
+    m.SetBody("text/html", `
+        <html>
+        <body>
+            <h1>Product Updates</h1>
+            <p>Check out our <a href="https://yourdomain.com/features">latest features</a>!</p>
+            <p>This email has tracking enabled and custom tags.</p>
+        </body>
+        </html>
+    `)
+
+    d := gomail.NewDialer("send.ahasend.com", 587, "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD")
+
+    if err := d.DialAndSend(m); err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+        return
+    }
+
+    fmt.Println("Email sent with special headers!")
+}
+```
+
+</CodeGroup>
+
+### Advanced Examples
+
+<CodeGroup>
+
+```go Bulk Email Sending
+package main
+
+import (
+    "fmt"
+    "time"
+    "gopkg.in/gomail.v2"
+)
+
+type Recipient struct {
+    Email string
+    Name  string
+}
+
+func main() {
+    recipients := []Recipient{
+        {Email: "user1@example.com", Name: "User One"},
+        {Email: "user2@example.com", Name: "User Two"},
+        {Email: "user3@example.com", Name: "User Three"},
+    }
+
+    // Create dialer
+    d := gomail.NewDialer("send.ahasend.com", 587, "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD")
+
+    // Open connection
+    s, err := d.Dial()
+    if err != nil {
+        fmt.Printf("Failed to connect: %v\n", err)
+        return
+    }
+    defer s.Close()
+
+    // Send emails
+    for _, recipient := range recipients {
+        m := gomail.NewMessage()
+
+        m.SetHeader("From", "hello@yourdomain.com")
+        m.SetHeader("To", recipient.Email)
+        m.SetHeader("Subject", "Personalized Newsletter")
+        m.SetHeader("ahasend-tags", "newsletter,bulk,golang")
+
+        // Personalized content
+        body := fmt.Sprintf(`
+            <html>
+            <body>
+                <h1>Hello %s!</h1>
+                <p>This is your personalized newsletter.</p>
+            </body>
+            </html>
+        `, recipient.Name)
+        m.SetBody("text/html", body)
+
+        if err := gomail.Send(s, m); err != nil {
+            fmt.Printf("Failed to send to %s: %v\n", recipient.Email, err)
+            continue
+        }
+
+        fmt.Printf("Email sent to %s\n", recipient.Email)
+
+        // Add delay to avoid rate limiting
+        time.Sleep(100 * time.Millisecond)
+    }
+
+    fmt.Println("Bulk email sending completed!")
+}
+```
+
+```go Error Handling & Retry
+package main
+
+import (
+    "fmt"
+    "time"
+    "gopkg.in/gomail.v2"
+)
+
+func sendEmailWithRetry(host string, port int, username, password, from, to, subject, body string, maxRetries int) error {
+    for attempt := 1; attempt <= maxRetries; attempt++ {
+        m := gomail.NewMessage()
+        m.SetHeader("From", from)
+        m.SetHeader("To", to)
+        m.SetHeader("Subject", subject)
+        m.SetBody("text/html", body)
+
+        d := gomail.NewDialer(host, port, username, password)
+
+        err := d.DialAndSend(m)
+        if err == nil {
+            fmt.Printf("Email sent successfully on attempt %d\n", attempt)
+            return nil
+        }
+
+        fmt.Printf("Attempt %d failed: %v\n", attempt, err)
+
+        if attempt < maxRetries {
+            // Exponential backoff
+            delay := time.Duration(attempt) * time.Second
+            fmt.Printf("Retrying in %v...\n", delay)
+            time.Sleep(delay)
+        }
+    }
+
+    return fmt.Errorf("failed to send email after %d attempts", maxRetries)
+}
+
+func main() {
+    err := sendEmailWithRetry(
+        "send.ahasend.com", 587,
+        "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD",
+        "hello@yourdomain.com", "user@example.com",
+        "Test Email with Retry",
+        "<h1>Test Email</h1><p>This email was sent with retry logic.</p>",
+        3,
+    )
+
+    if err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+    }
+}
+```
+
+```go Environment Variables
+package main
+
+import (
+    "fmt"
+    "os"
+    "gopkg.in/gomail.v2"
+)
+
+func main() {
+    // Read configuration from environment variables
+    smtpHost := getEnv("SMTP_HOST", "send.ahasend.com")
+    smtpPort := 587
+    smtpUsername := os.Getenv("SMTP_USERNAME")
+    smtpPassword := os.Getenv("SMTP_PASSWORD")
+    fromEmail := os.Getenv("FROM_EMAIL")
+
+    // Validate required environment variables
+    if smtpUsername == "" || smtpPassword == "" || fromEmail == "" {
+        fmt.Println("Missing required environment variables")
+        fmt.Println("Set: SMTP_USERNAME, SMTP_PASSWORD, FROM_EMAIL")
+        return
+    }
+
+    m := gomail.NewMessage()
+    m.SetHeader("From", fromEmail)
+    m.SetHeader("To", "user@example.com")
+    m.SetHeader("Subject", "Test Email")
+    m.SetBody("text/plain", "This email uses environment variables for configuration.")
+
+    d := gomail.NewDialer(smtpHost, smtpPort, smtpUsername, smtpPassword)
+
+    if err := d.DialAndSend(m); err != nil {
+        fmt.Printf("Failed to send email: %v\n", err)
+        return
+    }
+
+    fmt.Println("Email sent successfully!")
+}
+
+func getEnv(key, defaultValue string) string {
+    if value := os.Getenv(key); value != "" {
+        return value
+    }
+    return defaultValue
+}
+```
+
+</CodeGroup>
+
+## Testing with Sandbox Mode
+
+Use sandbox mode to test your Go email integration safely:
+
+<CodeGroup>
+
+```go net/smtp Sandbox
+package main
+
+import (
+    "fmt"
+    "net/smtp"
+)
+
+func main() {
+    host := "send.ahasend.com"
+    port := "587"
+    auth := smtp.PlainAuth("", "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD", host)
+
+    from := "hello@yourdomain.com"
+    to := []string{"test@example.com"}
+
+    // Sandbox message with simulated outcome
+    msg := []byte("To: test@example.com\r\n" +
+        "Subject: Sandbox Test\r\n" +
+        "AhaSend-Sandbox: true\r\n" +
+        "AhaSend-Sandbox-Result: deliver\r\n" +
+        "\r\n" +
+        "This email is sent in sandbox mode for testing.\r\n")
+
+    err := smtp.SendMail(host+":"+port, auth, from, to, msg)
+    if err != nil {
+        fmt.Printf("Failed to send sandbox email: %v\n", err)
+        return
+    }
+
+    fmt.Println("Sandbox email sent!")
+}
+```
+
+```go gomail Sandbox
+package main
+
+import (
+    "fmt"
+    "gopkg.in/gomail.v2"
+)
+
+func main() {
+    m := gomail.NewMessage()
+
+    m.SetHeader("From", "hello@yourdomain.com")
+    m.SetHeader("To", "test@example.com")
+    m.SetHeader("Subject", "Sandbox Test")
+
+    // Enable sandbox mode and set result
+    m.SetHeader("AhaSend-Sandbox", "true")
+    m.SetHeader("AhaSend-Sandbox-Result", "bounce") // Test bounce handling
+
+    m.SetBody("text/plain", "This email is sent in sandbox mode for testing.")
+
+    d := gomail.NewDialer("send.ahasend.com", 587, "YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD")
+
+    if err := d.DialAndSend(m); err != nil {
+        fmt.Printf("Failed to send sandbox email: %v\n", err)
+        return
+    }
+
+    fmt.Println("Sandbox email sent - check webhooks for simulated bounce!")
+}
+```
+
+</CodeGroup>
+
+<Info>
+**Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
+</Info>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Error Handling" icon="triangle-exclamation">
+    **Robust error handling:**
+    - Always check for errors when sending emails
+    - Implement retry logic for temporary failures
+    - Log errors with sufficient detail for debugging
+    - Use exponential backoff for retries
+  </Accordion>
+
+  <Accordion title="Connection Management" icon="plug">
+    **Efficient SMTP connections:**
+    - Reuse connections for bulk sending
+    - Close connections properly with defer statements
+    - Handle connection timeouts gracefully
+    - Consider connection pooling for high-volume applications
+  </Accordion>
+
+  <Accordion title="Security" icon="shield">
+    **Secure credential handling:**
+    - Store credentials in environment variables
+    - Use Go's `os.Getenv()` to read credentials
+    - Never hardcode credentials in source code
+    - Rotate credentials regularly
+  </Accordion>
+
+  <Accordion title="Performance" icon="gauge">
+    **Optimize for performance:**
+    - Use goroutines for concurrent email sending
+    - Implement rate limiting to avoid throttling
+    - Add delays between bulk emails
+    - Monitor memory usage for large batches
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Go net/smtp Documentation" icon="book" href="https://pkg.go.dev/net/smtp">
+    Official Go standard library SMTP documentation
+  </Card>
+  <Card title="gomail.v2 Documentation" icon="book" href="https://pkg.go.dev/gopkg.in/gomail.v2">
+    Complete gomail.v2 package documentation
+  </Card>
+  <Card title="Go Documentation" icon="book" href="https://golang.org/doc/">
+    Official Go programming language documentation
+  </Card>
+  <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from our engineering team
+  </Card>
+</CardGroup>

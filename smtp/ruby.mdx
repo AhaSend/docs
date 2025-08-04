@@ -1,4 +1,994 @@
 ---
 title: "Sending emails in Ruby"
-description: "This is the introduction to the documentation"
+sidebarTitle: "Ruby"
+description: "Learn how to send emails using AhaSend SMTP with Ruby's net/smtp, Mail gem, and ActionMailer"
+icon: "gem"
 ---
+
+# Sending Emails with SMTP in Ruby
+
+Send emails through AhaSend's SMTP servers using Ruby's versatile email solutions. This guide covers three popular approaches: the built-in `net/smtp` library, the powerful Mail gem, and Rails' ActionMailer framework.
+
+<Info>
+**Ruby's Email Flexibility:** Ruby offers multiple excellent options for email sending, from lightweight standard library solutions to feature-rich frameworks - choose the one that best fits your application's needs.
+</Info>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<AccordionGroup>
+  <Accordion title="System Requirements" icon="server">
+    - **Ruby installed** on your system ([Download Ruby](https://ruby-lang.org/en/downloads/))
+    - Ruby 2.7 or higher (recommended)
+    - Basic knowledge of Ruby programming
+    - Access to install gems (if using Mail gem or Rails)
+  </Accordion>
+
+  <Accordion title="AhaSend Setup" icon="envelope">
+    - **Domain verified** in your AhaSend account
+    - **SMTP credentials** created (username and password)
+    - Access to your AhaSend dashboard for credential management
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
+</Info>
+
+## Ruby Email Solutions Overview
+
+Ruby provides multiple excellent options for sending emails via SMTP:
+
+<CardGroup cols={3}>
+  <Card title="Standard Library" icon="book">
+    **Best for:** Simple, lightweight email sending<br />
+    **Pros:** No dependencies<br />
+    **Cons:** Verbosity<br />
+    **Use case:** Scripts
+  </Card>
+  <Card title="Mail Gem" icon="gem">
+    **Best for:** non-Rails applications<br />
+    **Pros:** High-level API<br />
+    **Cons:** Ext. dependency<br />
+    **Use case:** Standalone apps
+  </Card>
+  <Card title="ActionMailer (Rails)" icon="train">
+    **Best for:** Rails applications<br />
+    **Pros:** Rails integration, templates, testing<br />
+    **Cons:** Rails-specific<br />
+    **Use case:** Web applications, MVC pattern
+  </Card>
+</CardGroup>
+
+## Connection Settings
+
+Use these settings for all Ruby SMTP configurations with AhaSend:
+
+<CardGroup cols={2}>
+  <Card title="Primary Server" icon="server">
+    **Host:** `send.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+  <Card title="US Server" icon="flag-usa">
+    **Host:** `send-us.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+</CardGroup>
+
+## Method 1: Using net/smtp (Standard Library)
+
+The `net/smtp` library is part of Ruby's standard library, offering a lightweight solution for sending emails without external dependencies.
+
+<Info>
+**Standard Library Advantage:** `net/smtp` comes with Ruby - no gem installation required! Perfect for simple scripts and lightweight applications.
+</Info>
+
+### Basic Examples
+
+<CodeGroup>
+
+```ruby Plain Text Email
+require 'net/smtp'
+
+def send_plain_text_email
+  # SMTP server configuration
+  smtp_settings = {
+    address: 'send.ahasend.com',
+    port: 587,
+    domain: 'yourdomain.com',
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+
+  # Email content
+  from_email = 'hello@yourdomain.com'
+  to_email = 'user@example.com'
+  subject = 'Welcome to our platform!'
+  body = 'Thanks for signing up. We\'re excited to have you!'
+
+  # Construct the email message
+  message = <<~MESSAGE_END
+    From: Your Company <#{from_email}>
+    To: #{to_email}
+    Subject: #{subject}
+    Date: #{Time.now.rfc2822}
+    Content-Type: text/plain; charset=UTF-8
+
+    #{body}
+  MESSAGE_END
+
+  # Send the email
+  begin
+    Net::SMTP.start(
+      smtp_settings[:address],
+      smtp_settings[:port],
+      smtp_settings[:domain],
+      smtp_settings[:user_name],
+      smtp_settings[:password],
+      smtp_settings[:authentication]
+    ) do |smtp|
+      smtp.enable_starttls
+      smtp.send_message(message, from_email, to_email)
+    end
+
+    puts "Email sent successfully!"
+  rescue => e
+    puts "Failed to send email: #{e.message}"
+  end
+end
+
+# Send the email
+send_plain_text_email
+```
+
+```ruby HTML Email
+require 'net/smtp'
+
+def send_html_email
+  # SMTP server configuration
+  smtp_settings = {
+    address: 'send.ahasend.com',
+    port: 587,
+    domain: 'yourdomain.com',
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+
+  # Email content
+  from_email = 'hello@yourdomain.com'
+  to_email = 'user@example.com'
+  subject = 'Welcome to our platform!'
+
+  html_body = <<~HTML
+    <html>
+    <body>
+      <h1>Welcome!</h1>
+      <p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>
+      <p><a href="https://yourdomain.com/get-started">Get Started</a></p>
+    </body>
+    </html>
+  HTML
+
+  # Construct the email message
+  message = <<~MESSAGE_END
+    From: Your Company <#{from_email}>
+    To: #{to_email}
+    Subject: #{subject}
+    Date: #{Time.now.rfc2822}
+    MIME-Version: 1.0
+    Content-Type: text/html; charset=UTF-8
+
+    #{html_body}
+  MESSAGE_END
+
+  # Send the email
+  begin
+    Net::SMTP.start(
+      smtp_settings[:address],
+      smtp_settings[:port],
+      smtp_settings[:domain],
+      smtp_settings[:user_name],
+      smtp_settings[:password],
+      smtp_settings[:authentication]
+    ) do |smtp|
+      smtp.enable_starttls
+      smtp.send_message(message, from_email, to_email)
+    end
+
+    puts "HTML email sent successfully!"
+  rescue => e
+    puts "Failed to send email: #{e.message}"
+  end
+end
+
+send_html_email
+```
+
+```ruby With Special Headers
+require 'net/smtp'
+
+def send_email_with_headers
+  # SMTP server configuration
+  smtp_settings = {
+    address: 'send.ahasend.com',
+    port: 587,
+    domain: 'yourdomain.com',
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+
+  # Email content
+  from_email = 'updates@yourdomain.com'
+  to_email = 'user@example.com'
+  subject = 'Product Updates with Tracking'
+  body = 'Check out our latest features at https://yourdomain.com/features'
+
+  # Construct the email message with special headers
+  message = <<~MESSAGE_END
+    From: Your Company <#{from_email}>
+    To: #{to_email}
+    Subject: #{subject}
+    Date: #{Time.now.rfc2822}
+    Content-Type: text/plain; charset=UTF-8
+    ahasend-track-opens: true
+    ahasend-track-clicks: true
+    ahasend-tags: product-update,newsletter,ruby
+    ahasend-message-retention: 30
+    ahasend-message-data-retention: 7
+
+    #{body}
+  MESSAGE_END
+
+  # Send the email
+  begin
+    Net::SMTP.start(
+      smtp_settings[:address],
+      smtp_settings[:port],
+      smtp_settings[:domain],
+      smtp_settings[:user_name],
+      smtp_settings[:password],
+      smtp_settings[:authentication]
+    ) do |smtp|
+      smtp.enable_starttls
+      smtp.send_message(message, from_email, to_email)
+    end
+
+    puts "Email sent with special headers!"
+  rescue => e
+    puts "Failed to send email: #{e.message}"
+  end
+end
+
+send_email_with_headers
+```
+
+</CodeGroup>
+
+## Method 2: Using the Mail Gem
+
+The Mail gem provides a high-level, Ruby-style interface for email handling with rich features like attachments, multipart messages, and template support.
+
+<Info>
+**Mail Gem Benefits:** Clean API, automatic MIME handling, built-in attachment support, and excellent template integration. Perfect for complex email applications.
+</Info>
+
+### Installation
+
+Add the Mail gem to your project:
+
+<CodeGroup>
+
+```bash Gemfile (Bundler)
+# Add to your Gemfile
+gem 'mail'
+
+# Then run:
+bundle install
+```
+
+```bash Direct Installation
+gem install mail
+```
+
+</CodeGroup>
+
+### Basic Examples
+
+<CodeGroup>
+
+```ruby Plain Text Email
+require 'mail'
+
+# Configure Mail gem defaults
+Mail.defaults do
+  delivery_method :smtp, {
+    address: 'send.ahasend.com',
+    port: 587,
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+end
+
+def send_plain_text_email
+  begin
+    mail = Mail.new do
+      from     'hello@yourdomain.com'
+      to       'user@example.com'
+      subject  'Welcome to our platform!'
+      body     'Thanks for signing up. We\'re excited to have you!'
+    end
+
+    mail.deliver!
+    puts "Email sent successfully!"
+  rescue => e
+    puts "Failed to send email: #{e.message}"
+  end
+end
+
+send_plain_text_email
+```
+
+```ruby HTML Email
+require 'mail'
+
+# Configure Mail gem defaults
+Mail.defaults do
+  delivery_method :smtp, {
+    address: 'send.ahasend.com',
+    port: 587,
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+end
+
+def send_html_email
+  begin
+    mail = Mail.new do
+      from     'hello@yourdomain.com'
+      to       'user@example.com'
+      subject  'Welcome to our platform!'
+
+      # Add both text and HTML parts
+      text_part do
+        body 'Welcome! Thanks for signing up. Visit https://yourdomain.com/get-started to get started.'
+      end
+
+      html_part do
+        content_type 'text/html; charset=UTF-8'
+        body <<~HTML
+          <html>
+          <body>
+            <h1>Welcome!</h1>
+            <p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>
+            <p><a href="https://yourdomain.com/get-started">Get Started</a></p>
+          </body>
+          </html>
+        HTML
+      end
+    end
+
+    mail.deliver!
+    puts "HTML email sent successfully!"
+  rescue => e
+    puts "Failed to send email: #{e.message}"
+  end
+end
+
+send_html_email
+```
+
+```ruby With Attachments
+require 'mail'
+
+# Configure Mail gem defaults
+Mail.defaults do
+  delivery_method :smtp, {
+    address: 'send.ahasend.com',
+    port: 587,
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+end
+
+def send_email_with_attachment
+  begin
+    mail = Mail.new do
+      from     'hello@yourdomain.com'
+      to       'user@example.com'
+      subject  'Your Invoice is Ready'
+
+      text_part do
+        body 'Please find your invoice attached to this email.'
+      end
+
+      html_part do
+        content_type 'text/html; charset=UTF-8'
+        body <<~HTML
+          <html>
+          <body>
+            <h1>Invoice Attached</h1>
+            <p>Please find your invoice attached to this email.</p>
+          </body>
+          </html>
+        HTML
+      end
+
+      # Add attachment
+      add_file '/path/to/invoice.pdf'
+    end
+
+    mail.deliver!
+    puts "Email with attachment sent successfully!"
+  rescue => e
+    puts "Failed to send email: #{e.message}"
+  end
+end
+
+send_email_with_attachment
+```
+
+</CodeGroup>
+
+### Advanced Mail Gem Features
+
+<CodeGroup>
+
+```ruby Multiple Recipients & Special Headers
+require 'mail'
+
+# Configure Mail gem defaults
+Mail.defaults do
+  delivery_method :smtp, {
+    address: 'send.ahasend.com',
+    port: 587,
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+end
+
+def send_email_with_special_headers
+  begin
+    mail = Mail.new do
+      from     'updates@yourdomain.com'
+      to       ['user1@example.com', 'user2@example.com']
+      cc       'manager@yourdomain.com'
+      bcc      'analytics@yourdomain.com'
+      subject  'Product Updates with Tracking'
+
+      # Add AhaSend special headers
+      header['ahasend-track-opens'] = 'true'
+      header['ahasend-track-clicks'] = 'true'
+      header['ahasend-tags'] = 'product-update,newsletter,ruby'
+      header['ahasend-message-retention'] = '30'
+      header['ahasend-message-data-retention'] = '7'
+
+      text_part do
+        body 'Check out our latest features at https://yourdomain.com/features'
+      end
+
+      html_part do
+        content_type 'text/html; charset=UTF-8'
+        body <<~HTML
+          <html>
+          <body>
+            <h1>Product Updates</h1>
+            <p>Check out our <a href="https://yourdomain.com/features">latest features</a>!</p>
+            <p>This email has tracking enabled and custom tags.</p>
+          </body>
+          </html>
+        HTML
+      end
+    end
+
+    mail.deliver!
+    puts "Email sent with special headers!"
+  rescue => e
+    puts "Failed to send email: #{e.message}"
+  end
+end
+
+send_email_with_special_headers
+```
+
+```ruby Bulk Email with Templates
+require 'mail'
+
+# Configure Mail gem defaults
+Mail.defaults do
+  delivery_method :smtp, {
+    address: 'send.ahasend.com',
+    port: 587,
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+end
+
+def send_bulk_emails_with_templates
+  # Recipients list
+  recipients = [
+    { email: 'user1@example.com', name: 'John Doe', plan: 'Premium' },
+    { email: 'user2@example.com', name: 'Jane Smith', plan: 'Basic' },
+    { email: 'user3@example.com', name: 'Bob Johnson', plan: 'Pro' }
+  ]
+
+  recipients.each do |recipient|
+    begin
+      mail = Mail.new do
+        from     'hello@yourdomain.com'
+        to       recipient[:email]
+        subject  'Personalized Newsletter'
+
+        # Add custom headers
+        header['ahasend-tags'] = 'newsletter,bulk,ruby'
+
+        text_part do
+          body "Hello #{recipient[:name]}! Your #{recipient[:plan]} plan gives you amazing benefits."
+        end
+
+        html_part do
+          content_type 'text/html; charset=UTF-8'
+          body <<~HTML
+            <html>
+            <body>
+              <h1>Hello #{recipient[:name]}!</h1>
+              <p>Your <strong>#{recipient[:plan]}</strong> plan gives you amazing benefits.</p>
+              <p>This is your personalized newsletter.</p>
+            </body>
+            </html>
+          HTML
+        end
+      end
+
+      mail.deliver!
+      puts "Email sent to #{recipient[:email]}"
+
+      # Add delay to avoid rate limiting
+      sleep(0.1)
+    rescue => e
+      puts "Failed to send to #{recipient[:email]}: #{e.message}"
+    end
+  end
+
+  puts "Bulk email sending completed!"
+end
+
+send_bulk_emails_with_templates
+```
+
+```ruby Mailer Class
+require 'mail'
+
+class EmailService
+  def initialize(smtp_config = {})
+    default_config = {
+      address: 'send.ahasend.com',
+      port: 587,
+      user_name: ENV['SMTP_USERNAME'],
+      password: ENV['SMTP_PASSWORD'],
+      authentication: 'plain',
+      enable_starttls_auto: true
+    }
+
+    @smtp_config = default_config.merge(smtp_config)
+    configure_mail!
+  end
+
+  def send_welcome_email(to:, name:)
+    send_email(
+      to: to,
+      subject: 'Welcome to our platform!',
+      template: :welcome,
+      data: { name: name }
+    )
+  end
+
+  def send_notification(to:, title:, message:, tags: [])
+    send_email(
+      to: to,
+      subject: title,
+      template: :notification,
+      data: { title: title, message: message },
+      headers: { 'ahasend-tags' => tags.join(',') }
+    )
+  end
+
+  private
+
+  def configure_mail!
+    Mail.defaults do
+      delivery_method :smtp, @smtp_config
+    end
+  end
+
+  def send_email(to:, subject:, template:, data:, headers: {})
+    begin
+      mail = Mail.new do
+        from     'hello@yourdomain.com'
+        to       to
+        subject  subject
+
+        # Add custom headers
+        headers.each { |key, value| header[key] = value }
+
+        text_part do
+          body generate_text_template(template, data)
+        end
+
+        html_part do
+          content_type 'text/html; charset=UTF-8'
+          body generate_html_template(template, data)
+        end
+      end
+
+      mail.deliver!
+      true
+    rescue => e
+      puts "Failed to send email: #{e.message}"
+      false
+    end
+  end
+
+  def generate_text_template(template, data)
+    case template
+    when :welcome
+      "Hello #{data[:name]}! Welcome to our platform. We're excited to have you!"
+    when :notification
+      "#{data[:title]}\n\n#{data[:message]}"
+    else
+      "Email content"
+    end
+  end
+
+  def generate_html_template(template, data)
+    case template
+    when :welcome
+      <<~HTML
+        <html><body>
+          <h1>Hello #{data[:name]}!</h1>
+          <p>Welcome to our platform. We're <strong>excited</strong> to have you!</p>
+        </body></html>
+      HTML
+    when :notification
+      <<~HTML
+        <html><body>
+          <h1>#{data[:title]}</h1>
+          <p>#{data[:message]}</p>
+        </body></html>
+      HTML
+    else
+      "<html><body><p>Email content</p></body></html>"
+    end
+  end
+end
+
+# Usage example
+email_service = EmailService.new
+
+# Send welcome email
+success = email_service.send_welcome_email(
+  to: 'user@example.com',
+  name: 'John Doe'
+)
+
+# Send notification
+email_service.send_notification(
+  to: 'user@example.com',
+  title: 'Account Update',
+  message: 'Your account has been successfully updated.',
+  tags: ['notification', 'account', 'ruby']
+)
+```
+
+</CodeGroup>
+
+## Method 3: Using ActionMailer (Rails)
+
+ActionMailer is part of Ruby on Rails and provides a comprehensive email solution with MVC patterns, templates, and excellent testing support.
+
+<Info>
+**Rails Integration:** ActionMailer seamlessly integrates with Rails applications, providing view templates, internationalization, background job support, and comprehensive testing utilities.
+</Info>
+
+### Configuration
+
+Configure your SMTP settings in the appropriate environment file:
+
+<CodeGroup>
+
+```ruby config/environments/production.rb
+# Production environment configuration
+Rails.application.configure do
+  # Email configuration
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = {
+    address: 'send.ahasend.com',
+    port: 587,
+    domain: 'yourdomain.com',
+    user_name: ENV['SMTP_USERNAME'],
+    password: ENV['SMTP_PASSWORD'],
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+
+  # Set default host for URL generation
+  config.action_mailer.default_url_options = {
+    host: 'yourdomain.com',
+    protocol: 'https'
+  }
+end
+```
+
+```ruby config/environments/development.rb
+# Development environment configuration
+Rails.application.configure do
+  # Email configuration for development
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = {
+    address: 'send.ahasend.com',
+    port: 587,
+    domain: 'yourdomain.com',
+    user_name: ENV['SMTP_USERNAME'],
+    password: ENV['SMTP_PASSWORD'],
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+
+  # For development, you might want to use sandbox mode
+  config.action_mailer.default_url_options = {
+    host: 'localhost:3000',
+    protocol: 'http'
+  }
+end
+```
+
+```bash Environment Variables (.env)
+# Add to your .env file
+SMTP_USERNAME=your_smtp_username
+SMTP_PASSWORD=your_smtp_password
+```
+
+</CodeGroup>
+
+### Basic Mailer Setup
+
+<CodeGroup>
+
+```ruby app/mailers/user_mailer.rb
+class UserMailer < ActionMailer::Base
+  default from: 'hello@yourdomain.com'
+
+  def welcome_email(user)
+    @user = user
+    @url = root_url
+
+    mail(
+      to: user.email,
+      subject: 'Welcome to our platform!'
+    )
+  end
+
+  def notification_email(user, title, message)
+    @user = user
+    @title = title
+    @message = message
+
+    # Add AhaSend special headers
+    headers['ahasend-track-opens'] = 'true'
+    headers['ahasend-track-clicks'] = 'true'
+    headers['ahasend-tags'] = 'notification,rails'
+
+    mail(
+      to: user.email,
+      subject: title
+    )
+  end
+end
+```
+
+```erb app/views/user_mailer/welcome_email.html.erb
+<!DOCTYPE html>
+<html>
+<head>
+  <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #f8f9fa; padding: 20px; text-align: center; }
+    .content { padding: 20px; }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to Our Platform!</h1>
+    </div>
+    <div class="content">
+      <p>Hello <%= @user.name %>,</p>
+
+      <p>Thanks for signing up! We're excited to have you on board.</p>
+
+      <p><%= link_to "Get Started", @url, class: "button" %></p>
+
+      <p>Best regards,<br>The Team</p>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+```ruby app/controllers/users_controller.rb
+class UsersController < ApplicationController
+  def create
+    @user = User.new(user_params)
+
+    if @user.save
+      # Send welcome email asynchronously
+      UserMailer.welcome_email(@user).deliver_later
+
+      redirect_to @user, notice: 'User created successfully!'
+    else
+      render :new
+    end
+  end
+end
+```
+
+</CodeGroup>
+
+## Testing with Sandbox Mode
+
+Use sandbox mode to safely test your Ruby email integration across all methods:
+
+<CodeGroup>
+
+```ruby net/smtp Sandbox Test
+require 'net/smtp'
+
+def send_sandbox_test
+  smtp_settings = {
+    address: 'send.ahasend.com',
+    port: 587,
+    domain: 'yourdomain.com',
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain'
+  }
+
+  message = <<~MESSAGE_END
+    From: test@yourdomain.com
+    To: test@example.com
+    Subject: Sandbox Test Email
+    AhaSend-Sandbox: true
+    AhaSend-Sandbox-Result: deliver
+
+    This email is sent in sandbox mode for testing.
+  MESSAGE_END
+
+  begin
+    Net::SMTP.start(
+      smtp_settings[:address], smtp_settings[:port], smtp_settings[:domain],
+      smtp_settings[:user_name], smtp_settings[:password], smtp_settings[:authentication]
+    ) do |smtp|
+      smtp.enable_starttls
+      smtp.send_message(message, 'test@yourdomain.com', 'test@example.com')
+    end
+
+    puts "Sandbox email sent successfully!"
+  rescue => e
+    puts "Failed to send sandbox email: #{e.message}"
+  end
+end
+
+send_sandbox_test
+```
+
+```ruby Mail Gem Sandbox Test
+require 'mail'
+
+Mail.defaults do
+  delivery_method :smtp, {
+    address: 'send.ahasend.com',
+    port: 587,
+    user_name: 'YOUR_SMTP_USERNAME',
+    password: 'YOUR_SMTP_PASSWORD',
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+end
+
+def send_sandbox_bounce_test
+  begin
+    mail = Mail.new do
+      from     'test@yourdomain.com'
+      to       'test@example.com'
+      subject  'Sandbox Bounce Test'
+
+      # Enable sandbox mode with bounce simulation
+      header['AhaSend-Sandbox'] = 'true'
+      header['AhaSend-Sandbox-Result'] = 'bounce'
+
+      body 'This email simulates a bounce for webhook testing.'
+    end
+
+    mail.deliver!
+    puts "Sandbox bounce test sent - check webhooks!"
+  rescue => e
+    puts "Failed to send sandbox email: #{e.message}"
+  end
+end
+
+send_sandbox_bounce_test
+```
+
+```ruby ActionMailer Sandbox Test
+# app/mailers/test_mailer.rb
+class TestMailer < ApplicationMailer
+  def sandbox_test(email, result_type = 'deliver')
+    headers['AhaSend-Sandbox'] = 'true'
+    headers['AhaSend-Sandbox-Result'] = result_type
+
+    mail(
+      to: email,
+      subject: "Sandbox Test - #{result_type.capitalize}",
+      body: "This is a sandbox test email simulating: #{result_type}"
+    )
+  end
+end
+
+# Usage in Rails console or controller
+TestMailer.sandbox_test('test@example.com', 'deliver').deliver_now
+TestMailer.sandbox_test('test@example.com', 'bounce').deliver_now
+TestMailer.sandbox_test('test@example.com', 'reject').deliver_now
+```
+
+</CodeGroup>
+
+<Info>
+**Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
+</Info>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Ruby net/smtp Documentation" icon="book" href="https://github.com/ruby/net-smtp">
+    Official net/smtp library documentation
+  </Card>
+  <Card title="Mail Gem Documentation" icon="book" href="https://github.com/mikel/mail">
+    Comprehensive Mail gem guide and examples
+  </Card>
+  <Card title="ActionMailer Guide" icon="book" href="https://guides.rubyonrails.org/action_mailer_basics.html">
+    Official Rails ActionMailer documentation
+  </Card>
+  <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from our engineering team
+  </Card>
+</CardGroup>

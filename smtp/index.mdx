@@ -1,5 +1,251 @@
 ---
-title: "Introduction"
-sidebarTitle: "Introduction"
-description: ""
+title: "SMTP Server Information"
+sidebarTitle: "Server Information"
+description: "Complete guide to AhaSend SMTP servers, connection settings, limits, and response codes"
+icon: "server"
 ---
+
+AhaSend provides high-performance SMTP relay servers for sending transactional emails. Our SMTP infrastructure supports standard protocols and offers reliable email delivery with comprehensive error handling.
+
+<Info>
+**New to SMTP?** Check out our [SMTP credentials guide](/smtp/credentials) to get started, or try our [HTTP API](/api/send-email) for a more modern approach.
+</Info>
+
+## Server Endpoints
+
+AhaSend operates SMTP servers in multiple regions for optimal performance:
+
+<CardGroup cols={2}>
+  <Card title="European Server" icon="earth-europe">
+    **Hostname:** `send.ahasend.com`<br />
+    **Location:** Germany (Primary)<br />
+    **Best for:** European and global traffic
+  </Card>
+  <Card title="US Server" icon="earth-americas">
+    **Hostname:** `send-us.ahasend.com`<br />
+    **Location:** Oregon, USA<br />
+    **Best for:** North American traffic
+  </Card>
+</CardGroup>
+
+<Tip>
+**Server selection:** Choose the server closest to your application for best performance. Both servers offer identical functionality and delivery capabilities.
+</Tip>
+
+## Connection Settings
+
+### Supported Ports & Encryption
+
+All AhaSend SMTP servers support the following configurations:
+
+```
+Servers: send.ahasend.com | send-us.ahasend.com
+Ports: 25, 587, 2525
+Encryption: STARTTLS (required)
+Authentication: PLAIN (required)
+```
+
+<Warning>
+**SMTPS not supported:** AhaSend does not support implicit SSL/TLS (SMTPS) on port 465. Use STARTTLS on ports 25, 587, or 2525 instead.
+</Warning>
+
+### Authentication Requirements
+
+- **Authentication Method:** PLAIN authentication over STARTTLS
+- **Username:** Your SMTP username from the dashboard
+- **Password:** Your SMTP password from the dashboard
+- **STARTTLS:** Required for all connections
+
+<Note>
+**Get SMTP credentials:** Create SMTP credentials in your [AhaSend Dashboard](https://dash.ahasend.com) in the "Credentials" page or via the [API](/api-reference/smtp-credentials/create-smtp-credential).
+</Note>
+
+## Connection Limits & Specifications
+
+Understanding AhaSend's SMTP limits helps you optimize your email sending:
+
+<AccordionGroup>
+  <Accordion title="Recipients Per Message" icon="users">
+    **Limit:** 50 recipients maximum per message
+
+    This is the maximum number of consecutive `RCPT TO` commands that can be issued for a single SMTP transaction.
+
+    ```
+    MAIL FROM: <sender@yourdomain.com>
+    RCPT TO: <user1@example.com>
+    RCPT TO: <user2@example.com>
+    ... (up to 50 recipients)
+    DATA
+    ```
+
+    <Tip>
+    For bulk sending to more recipients, send multiple separate messages or use our [HTTP API](/api/send-email) with batch operations.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Message Size Limit" icon="file-zipper">
+    **Limit:** 20 MB maximum per message
+
+    Messages exceeding this size will be rejected with an error code. This includes:
+    - Email headers
+    - Message body (text and HTML)
+    - All attachments (base64 encoded)
+
+    <Warning>
+    Remember that attachments are base64 encoded, increasing their size by approximately 33%. A 15MB file becomes ~20MB when encoded.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Messages Per Connection" icon="envelopes-bulk">
+    **Limit:** 10,000 messages maximum per connection
+
+    This is the maximum number of consecutive `MAIL FROM` commands that can be issued for a single SMTP connection.
+
+    When this limit is reached:
+    - Additional `MAIL FROM` commands return transient failures
+    - You should close and reopen the connection
+    - Existing queued messages are not affected
+
+    <Note>
+    Most SMTP libraries handle connection pooling automatically, but you may need to configure this for high-volume applications.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Connection Timeout" icon="clock">
+    **Timeout:** 1 minute of inactivity
+
+    Connections are automatically closed if there's no new data within 60 seconds. This applies to:
+    - Idle connections between commands
+    - Slow data transmission during `DATA` command
+    - Unresponsive clients
+
+    <Tip>
+    Keep connections active or implement proper reconnection logic in your application to handle timeouts gracefully.
+    </Tip>
+  </Accordion>
+</AccordionGroup>
+
+## SMTP Response Codes
+
+AhaSend returns standard SMTP response codes with specific meanings:
+
+### Success Codes
+
+| Code | Description |
+|------|-------------|
+| `250` | **OK** - Message queued successfully for delivery |
+
+### Error Codes
+
+| Code | Description | Action Required |
+|------|-------------|-----------------|
+| `421` | **Load shedding** - Server overwhelmed, cannot accept new connections | Retry later with exponential backoff |
+| `451` | **Internal server error** - Temporary server issue | Retry the request |
+| `500` | **Invalid credentials** - Authentication failed | Check username/password |
+| `521` | **Account disabled** - Account suspended or out of credits | Check account status in dashboard |
+| `552` | **Invalid message format** - Malformed email content | Validate email structure and headers |
+| `553` | **Email rejected** - Recipient domain is toxic, temporary, or has typos | Verify recipient domain |
+| `556` | **Invalid account or domain** - Account or sending domain not configured | Verify domain setup |
+
+<Warning>
+**553 email Rejection:** This response requires [domain protection](/security/protection) to be enabled in your account settings.
+</Warning>
+
+## Special Headers
+
+AhaSend supports special email headers that modify system behavior:
+
+<Card title="Custom Headers" icon="tags" href="/smtp/special-headers">
+  Learn about custom headers for tracking, routing, and advanced email features
+</Card>
+
+## Example Configurations
+
+### Basic SMTP Configuration
+
+```
+Host: send.ahasend.com
+Port: 587
+Security: STARTTLS
+Username: your-smtp-username
+Password: your-smtp-password
+Authentication: PLAIN
+```
+
+### Programming Language Examples
+
+<CardGroup cols={3}>
+  <Card title="Node.js" icon="node-js" href="/smtp/nodejs">
+    Nodemailer and native SMTP examples
+  </Card>
+  <Card title="Python" icon="python" href="/smtp/python">
+    smtplib and popular framework integrations
+  </Card>
+  <Card title="PHP" icon="php" href="/smtp/php">
+    PHPMailer and framework examples
+  </Card>
+  <Card title="Go" icon="golang" href="/smtp/golang">
+    Native Go SMTP implementations
+  </Card>
+  <Card title=".NET" icon="microsoft" href="/smtp/dotnet">
+    C# and .NET Core examples
+  </Card>
+  <Card title="Command Line" icon="terminal" href="/smtp/cli">
+    sendmail, swaks, and curl examples
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Connection Management">
+    **Optimize your SMTP connections:**
+
+    - Reuse connections when sending multiple emails
+    - Implement connection pooling for high-volume sending
+    - Handle timeouts and reconnections gracefully
+    - Close connections properly when done
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    **Handle SMTP errors appropriately:**
+
+    - Implement exponential backoff for `421` responses
+    - Retry `451` errors with reasonable delays
+    - Don't retry `5xx` errors (permanent failures)
+    - Log error codes for debugging and monitoring
+  </Accordion>
+
+  <Accordion title="Performance Optimization">
+    **Maximize sending performance:**
+
+    - Use persistent connections for batch sending (up to 10k messages per connection)
+    - Choose the server closest to your application
+    - Monitor connection limits and adjust accordingly
+  </Accordion>
+</AccordionGroup>
+
+## Security Considerations
+
+<Warning>
+**Always use STARTTLS:** Unencrypted SMTP connections are not secure and may expose your credentials and email content.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Credential Security" icon="shield-check">
+    - Store SMTP credentials securely
+    - Use environment variables, not hardcoded values
+    - Rotate credentials regularly
+    - Use scoped credentials when possible
+  </Card>
+  <Card title="Domain Authentication" icon="certificate">
+    - Verify your sending domains
+    - Configure SPF, DKIM, and DMARC records
+    - Use dedicated sending domains
+    - Monitor domain reputation
+  </Card>
+</CardGroup>
+
+<Info>
+**Prefer HTTP API?** While SMTP is great for compatibility, our [HTTP API](/api/send-email) offers better performance, features, and error handling for modern applications.
+</Info>

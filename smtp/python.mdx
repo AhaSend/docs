@@ -1,4 +1,468 @@
 ---
 title: "Sending emails in Python"
-description: "This is the introduction to the documentation"
+sidebarTitle: "Python"
+description: "Learn how to send emails using AhaSend SMTP with Python's built-in smtplib and email modules"
+icon: "python"
 ---
+
+# Sending Emails with SMTP in Python
+
+Send emails through AhaSend's SMTP servers using Python's built-in [smtplib](https://docs.python.org/3/library/smtplib.html) and [email](https://docs.python.org/3/library/email.html) modules. This guide covers everything from basic setup to advanced features like HTML content, attachments, and custom headers.
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<AccordionGroup>
+  <Accordion title="System Requirements" icon="server">
+    - **Python installed** on your system ([Download Python](https://python.org/downloads/))
+    - Python 3.6 or higher (recommended)
+    - Basic knowledge of Python programming
+  </Accordion>
+
+  <Accordion title="AhaSend Setup" icon="envelope">
+    - **Domain verified** in your AhaSend account
+    - **SMTP credentials** created (username and password)
+    - Access to your AhaSend dashboard for credential management
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
+</Info>
+
+## Built-in Modules
+
+Python's standard library includes everything you need for SMTP:
+
+<CardGroup cols={2}>
+  <Card title="smtplib Module" icon="server">
+    **Purpose:** SMTP client session object<br />
+    **Features:** Connection, authentication, sending<br />
+    **Security:** STARTTLS support<br />
+    **Import:** `import smtplib`
+  </Card>
+  <Card title="email Module" icon="envelope">
+    **Purpose:** Email message construction<br />
+    **Features:** MIME, attachments, HTML<br />
+    **Classes:** EmailMessage, MIMEMultipart<br />
+    **Import:** `from email.message import EmailMessage`
+  </Card>
+</CardGroup>
+
+## Connection Settings
+
+Use these settings for all Python SMTP configurations with AhaSend:
+
+<CardGroup cols={2}>
+  <Card title="Primary Server" icon="server">
+    **Host:** `send.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+  <Card title="US Server" icon="flag-usa">
+    **Host:** `send-us.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+</CardGroup>
+
+## Basic Email Examples
+
+<CodeGroup>
+
+```python Plain Text Email
+import smtplib
+from email.message import EmailMessage
+
+def send_plain_text_email():
+    # SMTP server configuration
+    smtp_server = "send.ahasend.com"
+    smtp_port = 587
+    smtp_username = "YOUR_SMTP_USERNAME"
+    smtp_password = "YOUR_SMTP_PASSWORD"
+
+    # Email details
+    from_addr = "hello@yourdomain.com"
+    to_addr = "user@example.com"
+    subject = "Welcome to our platform!"
+    body = "Thanks for signing up. We're excited to have you!"
+
+    # Create the email message
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = to_addr
+
+    # Connect to the SMTP server and send
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()  # Secure the connection
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        print("Email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+# Send the email
+send_plain_text_email()
+```
+
+```python HTML Email
+import smtplib
+from email.message import EmailMessage
+
+def send_html_email():
+    # SMTP server configuration
+    smtp_server = "send.ahasend.com"
+    smtp_port = 587
+    smtp_username = "YOUR_SMTP_USERNAME"
+    smtp_password = "YOUR_SMTP_PASSWORD"
+
+    # Email details
+    from_addr = "hello@yourdomain.com"
+    to_addr = "user@example.com"
+    subject = "Welcome to our platform!"
+
+    # Create the email message
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = to_addr
+
+    # Set plain text content (fallback)
+    msg.set_content("Welcome! Thanks for signing up. Visit https://yourdomain.com/get-started to get started.")
+
+    # Add HTML alternative
+    html_content = """
+    <html>
+    <body>
+        <h1>Welcome!</h1>
+        <p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>
+        <p><a href="https://yourdomain.com/get-started">Get Started</a></p>
+    </body>
+    </html>
+    """
+    msg.add_alternative(html_content, subtype='html')
+
+    # Connect and send
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        print("HTML email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+send_html_email()
+```
+
+```python With Attachments
+import smtplib
+from email.message import EmailMessage
+
+def send_email_with_attachment():
+    # SMTP server configuration
+    smtp_server = "send.ahasend.com"
+    smtp_port = 587
+    smtp_username = "YOUR_SMTP_USERNAME"
+    smtp_password = "YOUR_SMTP_PASSWORD"
+
+    # Email details
+    from_addr = "hello@yourdomain.com"
+    to_addr = "user@example.com"
+    subject = "Your Invoice is Ready"
+
+    # Create the email message
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = to_addr
+
+    # Set content
+    msg.set_content("Please find your invoice attached to this email.")
+
+    # Add HTML alternative
+    html_content = """
+    <html>
+    <body>
+        <h1>Invoice Attached</h1>
+        <p>Please find your invoice attached to this email.</p>
+    </body>
+    </html>
+    """
+    msg.add_alternative(html_content, subtype='html')
+
+    # Add attachment
+    attachment_path = "/path/to/invoice.pdf"
+    try:
+        with open(attachment_path, 'rb') as f:
+            file_data = f.read()
+            file_name = f.name.split('/')[-1]  # Get filename
+            msg.add_attachment(file_data,
+                             maintype='application',
+                             subtype='pdf',
+                             filename=file_name)
+    except FileNotFoundError:
+        print(f"Attachment file not found: {attachment_path}")
+        return
+
+    # Connect and send
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        print("Email with attachment sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+send_email_with_attachment()
+```
+
+</CodeGroup>
+
+<Tip>
+**Pro Tip:** Python's built-in modules are powerful and reliable. Use context managers for connection handling, always provide both HTML and text versions, and implement proper error handling with retry logic. Start with sandbox mode during development and use environment variables for credentials.
+</Tip>
+
+## Testing with Sandbox Mode
+
+Use sandbox mode to safely test your Python email integration:
+
+<CodeGroup>
+
+```python Sandbox Test
+import smtplib
+from email.message import EmailMessage
+
+def send_sandbox_email():
+    # SMTP server configuration
+    smtp_server = "send.ahasend.com"
+    smtp_port = 587
+    smtp_username = "YOUR_SMTP_USERNAME"
+    smtp_password = "YOUR_SMTP_PASSWORD"
+
+    # Email details
+    from_addr = "test@yourdomain.com"
+    to_addr = "test@example.com"
+    subject = "Sandbox Test Email"
+
+    # Create the email message
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = to_addr
+
+    # Enable sandbox mode
+    msg['AhaSend-Sandbox'] = 'true'
+    msg['AhaSend-Sandbox-Result'] = 'deliver'
+
+    msg.set_content("This email is sent in sandbox mode for testing.")
+
+    # Connect and send
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        print("Sandbox email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send sandbox email: {e}")
+
+send_sandbox_email()
+```
+
+```python Sandbox Bounce Test
+import smtplib
+from email.message import EmailMessage
+
+def send_sandbox_bounce_test():
+    # SMTP server configuration
+    smtp_server = "send.ahasend.com"
+    smtp_port = 587
+    smtp_username = "YOUR_SMTP_USERNAME"
+    smtp_password = "YOUR_SMTP_PASSWORD"
+
+    # Email details
+    from_addr = "test@yourdomain.com"
+    to_addr = "test@example.com"
+    subject = "Sandbox Bounce Test"
+
+    # Create the email message
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = to_addr
+
+    # Enable sandbox mode with bounce simulation
+    msg['AhaSend-Sandbox'] = 'true'
+    msg['AhaSend-Sandbox-Result'] = 'bounce'
+
+    # Set content
+    msg.set_content("This email simulates a bounce for webhook testing.")
+
+    # Add HTML content
+    html_content = """
+    <html>
+    <body>
+        <h1>Bounce Test</h1>
+        <p>This email simulates a bounce for webhook testing.</p>
+    </body>
+    </html>
+    """
+    msg.add_alternative(html_content, subtype='html')
+
+    # Connect and send
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        print("Sandbox bounce test sent - check webhooks!")
+    except Exception as e:
+        print(f"Failed to send sandbox email: {e}")
+
+send_sandbox_bounce_test()
+```
+
+```python With Special Headers
+import smtplib
+from email.message import EmailMessage
+
+def send_email_with_special_headers():
+    # SMTP server configuration
+    smtp_server = "send.ahasend.com"
+    smtp_port = 587
+    smtp_username = "YOUR_SMTP_USERNAME"
+    smtp_password = "YOUR_SMTP_PASSWORD"
+
+    # Email details
+    from_addr = "updates@yourdomain.com"
+    to_addrs = ["user1@example.com", "user2@example.com"]
+    subject = "Product Update with Tracking"
+
+    # Create the email message
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = from_addr
+    msg['To'] = ", ".join(to_addrs)
+
+    # Add AhaSend special headers
+    msg['ahasend-track-opens'] = 'true'
+    msg['ahasend-track-clicks'] = 'true'
+    msg['ahasend-tags'] = 'product-update,newsletter,python'
+    msg['ahasend-message-retention'] = '30'
+    msg['ahasend-message-data-retention'] = '7'
+
+    # Set content
+    msg.set_content("Check out our latest features at https://yourdomain.com/features")
+
+    # Add HTML content
+    html_content = """
+    <html>
+    <body>
+        <h1>Product Updates</h1>
+        <p>Check out our <a href="https://yourdomain.com/features">latest features</a>!</p>
+        <p>This email has tracking enabled and custom tags.</p>
+    </body>
+    </html>
+    """
+    msg.add_alternative(html_content, subtype='html')
+
+    # Connect and send
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        print("Email sent with special headers!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+send_email_with_special_headers()
+```
+
+</CodeGroup>
+
+<Info>
+**Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
+</Info>
+
+## Environment Variables & Best Practices
+
+### Using Environment Variables
+
+```python smtplib with environment variables
+import smtplib
+import os
+from email.message import EmailMessage
+
+def send_email_with_env_vars():
+    # Load configuration from environment variables
+    smtp_server = os.getenv('SMTP_HOST', 'send.ahasend.com')
+    smtp_port = int(os.getenv('SMTP_PORT', '587'))
+    smtp_username = os.getenv('SMTP_USERNAME')
+    smtp_password = os.getenv('SMTP_PASSWORD')
+    from_email = os.getenv('FROM_EMAIL')
+    from_name = os.getenv('FROM_NAME', 'Your Company')
+
+    # Validate required environment variables
+    required_vars = [smtp_username, smtp_password, from_email]
+    if not all(required_vars):
+        print("Missing required environment variables:")
+        print("Set: SMTP_USERNAME, SMTP_PASSWORD, FROM_EMAIL")
+        return False
+
+    # Create email message
+    msg = EmailMessage()
+    msg['Subject'] = "Environment Variables Test"
+    msg['From'] = f'"{from_name}" <{from_email}>'
+    msg['To'] = "user@example.com"
+    msg.set_content("This email uses environment variables for configuration.")
+
+    # Send email
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        print("Email sent using environment variables!")
+        return True
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
+
+# Usage
+if __name__ == "__main__":
+    send_email_with_env_vars()
+```
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Python smtplib Documentation" icon="book" href="https://docs.python.org/3/library/smtplib.html">
+    Official Python smtplib module documentation
+  </Card>
+  <Card title="Python email Documentation" icon="book" href="https://docs.python.org/3/library/email.html">
+    Official Python email module documentation
+  </Card>
+  <Card title="Python.org" icon="book" href="https://python.org/docs/">
+    Official Python programming language documentation
+  </Card>
+  <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from our engineering team
+  </Card>
+</CardGroup>
+

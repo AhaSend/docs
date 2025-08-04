@@ -1,4 +1,746 @@
 ---
 title: "Sending emails in C#"
-description: "This is the introduction to the documentation"
+sidebarTitle: "C# / .NET"
+description: "Learn how to send emails using AhaSend SMTP with C# and .NET, featuring MailKit for reliable SMTP integration"
+icon: "microsoft"
 ---
+
+# Sending Emails with SMTP in C# / .NET
+
+Send emails through AhaSend's SMTP servers using C# and .NET with the powerful MailKit library. This guide covers why you should avoid `System.Net.Mail` and use MailKit instead for reliable email delivery.
+
+<Warning>
+**Avoid System.Net.Mail:** The built-in `SmtpClient` in .NET does not reliably support `AUTH PLAIN` over `STARTTLS`, causing authentication failures with AhaSend. Use MailKit instead for guaranteed compatibility.
+</Warning>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<AccordionGroup>
+  <Accordion title="Development Environment" icon="desktop">
+    - **.NET SDK** installed (.NET 6.0 or higher recommended)
+    - **Visual Studio** or **Visual Studio Code** for development
+    - **NuGet package manager** access
+    - Basic knowledge of C# programming
+  </Accordion>
+
+  <Accordion title="AhaSend Setup" icon="envelope">
+    - **Domain verified** in your AhaSend account
+    - **SMTP credentials** created (username and password)
+    - Access to your AhaSend dashboard for credential management
+  </Accordion>
+
+  <Accordion title="Project Dependencies" icon="code-fork">
+    - **MailKit** NuGet package (recommended)
+    - **MimeKit** (included with MailKit)
+    - Avoid using `System.Net.Mail` for PLAIN AUTH over STARTTLS
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
+</Info>
+
+## Why MailKit Over System.Net.Mail?
+
+AhaSend works with any SMTP-compatible library, but for C#/.NET applications, we strongly recommend MailKit over the built-in `System.Net.Mail`:
+
+<CardGroup cols={2}>
+  <Card title="✅ MailKit (Recommended)">
+    **Pros:** Modern, reliable STARTTLS<br />
+    **Auth:** AUTH PLAIN/LOGIN support<br />
+    **Compatibility:** Works with StartTLS<br />
+    **Features:** Rich MIME support, attachments, HTML
+  </Card>
+  <Card title="❌ System.Net.Mail (Avoid)">
+    **Issues:** Unreliable STARTTLS authentication<br />
+    **Auth:** Silent AUTH failures with AhaSend<br />
+    **Status:** Legacy, minimal updates<br />
+    **Problems:** May not send AUTH commands at all
+  </Card>
+</CardGroup>
+
+## Connection Settings
+
+Use these settings for all C#/.NET SMTP configurations with AhaSend:
+
+<CardGroup cols={2}>
+  <Card title="Primary Server" icon="server">
+    **Host:** `send.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+  <Card title="US Server" icon="flag-usa">
+    **Host:** `send-us.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+</CardGroup>
+
+## ❌ Why System.Net.Mail Fails
+
+The built-in `System.Net.Mail.SmtpClient` in .NET has fundamental issues with STARTTLS authentication that make it incompatible with AhaSend.
+
+### The Problem
+
+Even with correct credentials and `EnableSsl = true`, the SMTP client often never issues an `AUTH` command after the STARTTLS handshake. This causes silent authentication failures where the connection appears to succeed but emails are rejected.
+
+<Warning>
+**Tested and Confirmed:** We've tested this issue on .NET 9 across Linux and Windows. The problem persists across different .NET versions and platforms.
+</Warning>
+
+### What Doesn't Work
+
+Here's the problematic code that fails with AhaSend:
+
+```csharp System.Net.Mail (Don't Use This)
+using System;
+using System.Net;
+using System.Net.Mail;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        SmtpClient smtp = new SmtpClient("send.ahasend.com", 587);
+
+        // Enable StartTLS
+        smtp.EnableSsl = true;
+
+        // Don't use the OS/Windows account. We want to supply our own credentials.
+        smtp.UseDefaultCredentials = false;
+        smtp.Credentials = new NetworkCredential("YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD");
+
+        MailMessage message = new MailMessage("hello@yourdomain.com", "user@example.com");
+        message.Subject = "Testing Auth";
+        message.Body = "This is a test email via AUTH PLAIN.";
+
+        try
+        {
+            smtp.Send(message);
+            Console.WriteLine("Email sent successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error sending email: " + ex.Message);
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine("Inner Exception: " + ex.InnerException.Message);
+            }
+        }
+    }
+}
+```
+
+### Debugging the Issue
+
+You can confirm this authentication failure by capturing SMTP traffic with tools like `tcpdump` or `Wireshark`:
+
+1. **Connection succeeds** - Client connects to AhaSend SMTP server
+2. **STARTTLS works** - TLS encryption is established successfully
+3. **AUTH command missing** - Client never sends authentication credentials
+4. **Silent failure** - No clear error message, just rejection
+
+<Info>
+**Know a Workaround?** If you've found a way to make `System.Net.Mail` work reliably with AhaSend's AUTH PLAIN over STARTTLS, please [contact our support team](mailto:support@ahasend.com). We'd be happy to update this guide with your solution!
+</Info>
+
+## ✅ Use MailKit (Recommended)
+
+MailKit is a modern, actively maintained .NET library that correctly handles SMTP authentication with AhaSend. It properly negotiates authentication mechanisms like `PLAIN` and `LOGIN` over `STARTTLS`.
+
+### Installation
+
+Install MailKit via NuGet Package Manager:
+
+<CodeGroup>
+
+```bash Package Manager Console
+Install-Package MailKit
+```
+
+```bash .NET CLI
+dotnet add package MailKit
+```
+
+```xml PackageReference
+<PackageReference Include="MailKit" Version="4.3.0" />
+```
+
+```bash Package Manager UI
+Search for "MailKit" by Jeffrey Stedfast in NuGet Package Manager
+```
+
+</CodeGroup>
+
+<Info>
+**MimeKit Included:** MailKit automatically includes MimeKit for MIME message construction. No additional packages needed!
+</Info>
+
+### Basic MailKit Examples
+
+<CodeGroup>
+
+```csharp Plain Text Email
+using System;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+class Program
+{
+    static void Main()
+    {
+        using (var client = new SmtpClient())
+        {
+            try
+            {
+                // Connect to AhaSend SMTP with STARTTLS
+                client.Connect("send.ahasend.com", 587, SecureSocketOptions.StartTls);
+
+                // Authenticate with your SMTP credentials
+                client.Authenticate("YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD");
+
+                // Create a simple message
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress("Your Company", "hello@yourdomain.com"));
+                message.To.Add(new MailboxAddress("User", "user@example.com"));
+                message.Subject = "Welcome to our platform!";
+                message.Body = new TextPart("plain")
+                {
+                    Text = "Thanks for signing up. We're excited to have you!"
+                };
+
+                client.Send(message);
+                client.Disconnect(true);
+
+                Console.WriteLine("Email sent successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send email: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+```csharp HTML Email
+using System;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+class Program
+{
+    static void Main()
+    {
+        using (var client = new SmtpClient())
+        {
+            try
+            {
+                // Connect to AhaSend SMTP with STARTTLS
+                client.Connect("send.ahasend.com", 587, SecureSocketOptions.StartTls);
+
+                // Authenticate with your SMTP credentials
+                client.Authenticate("YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD");
+
+                // Create an HTML message
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress("Your Company", "hello@yourdomain.com"));
+                message.To.Add(new MailboxAddress("User", "user@example.com"));
+                message.Subject = "Welcome to our platform!";
+
+                var builder = new BodyBuilder();
+
+                // Set the plain-text version of the message text
+                builder.TextBody = "Welcome! Thanks for signing up. Visit https://yourdomain.com/get-started to get started.";
+
+                // Set the html version of the message text
+                builder.HtmlBody = @"
+                    <html>
+                    <body>
+                        <h1>Welcome!</h1>
+                        <p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>
+                        <p><a href=""https://yourdomain.com/get-started"">Get Started</a></p>
+                    </body>
+                    </html>";
+
+                message.Body = builder.ToMessageBody();
+
+                client.Send(message);
+                client.Disconnect(true);
+
+                Console.WriteLine("HTML email sent successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send email: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+```csharp Email with Attachments
+using System;
+using System.IO;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+class Program
+{
+    static void Main()
+    {
+        using (var client = new SmtpClient())
+        {
+            try
+            {
+                // Connect to AhaSend SMTP with STARTTLS
+                client.Connect("send.ahasend.com", 587, SecureSocketOptions.StartTls);
+
+                // Authenticate with your SMTP credentials
+                client.Authenticate("YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD");
+
+                // Create message with attachment
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress("Your Company", "hello@yourdomain.com"));
+                message.To.Add(new MailboxAddress("User", "user@example.com"));
+                message.Subject = "Your Invoice is Ready";
+
+                var builder = new BodyBuilder();
+
+                // Set the message body
+                builder.TextBody = "Please find your invoice attached to this email.";
+                builder.HtmlBody = @"
+                    <html>
+                    <body>
+                        <h1>Invoice Attached</h1>
+                        <p>Please find your invoice attached to this email.</p>
+                    </body>
+                    </html>";
+
+                // Add attachment
+                string attachmentPath = @"C:\path\to\invoice.pdf";
+                if (File.Exists(attachmentPath))
+                {
+                    builder.Attachments.Add(attachmentPath);
+                }
+
+                message.Body = builder.ToMessageBody();
+
+                client.Send(message);
+                client.Disconnect(true);
+
+                Console.WriteLine("Email with attachment sent successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send email: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+</CodeGroup>
+
+### Advanced MailKit Examples
+
+<CodeGroup>
+
+```csharp Multiple Recipients & Special Headers
+using System;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+class Program
+{
+    static void Main()
+    {
+        using (var client = new SmtpClient())
+        {
+            try
+            {
+                // Connect to AhaSend SMTP with STARTTLS
+                client.Connect("send.ahasend.com", 587, SecureSocketOptions.StartTls);
+
+                // Authenticate with your SMTP credentials
+                client.Authenticate("YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD");
+
+                // Create message with multiple recipients
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress("Your Company", "updates@yourdomain.com"));
+
+                // Add multiple recipients
+                message.To.Add(new MailboxAddress("User One", "user1@example.com"));
+                message.To.Add(new MailboxAddress("User Two", "user2@example.com"));
+
+                // Add CC recipient
+                message.Cc.Add(new MailboxAddress("Manager", "manager@yourdomain.com"));
+
+                // Add BCC recipient (not visible to other recipients)
+                message.Bcc.Add(new MailboxAddress("Analytics", "analytics@yourdomain.com"));
+
+                message.Subject = "Product Updates with Tracking";
+
+                // Add AhaSend special headers
+                message.Headers.Add("ahasend-track-opens", "true");
+                message.Headers.Add("ahasend-track-clicks", "true");
+                message.Headers.Add("ahasend-tags", "product-update,newsletter,csharp");
+                message.Headers.Add("ahasend-message-retention", "30");
+                message.Headers.Add("ahasend-message-data-retention", "7");
+
+                var builder = new BodyBuilder();
+                builder.TextBody = "Check out our latest features at https://yourdomain.com/features";
+                builder.HtmlBody = @"
+                    <html>
+                    <body>
+                        <h1>Product Updates</h1>
+                        <p>Check out our <a href=""https://yourdomain.com/features"">latest features</a>!</p>
+                        <p>This email has tracking enabled and custom tags.</p>
+                    </body>
+                    </html>";
+
+                message.Body = builder.ToMessageBody();
+
+                client.Send(message);
+                client.Disconnect(true);
+
+                Console.WriteLine("Email sent with special headers!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send email: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+```csharp Bulk Email Sending
+using System;
+using System.Collections.Generic;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+class Program
+{
+    static void Main()
+    {
+        // Recipients list
+        var recipients = new List<(string Email, string Name)>
+        {
+            ("user1@example.com", "John Doe"),
+            ("user2@example.com", "Jane Smith"),
+            ("user3@example.com", "Bob Johnson")
+        };
+
+        using (var client = new SmtpClient())
+        {
+            try
+            {
+                // Connect once for all emails
+                client.Connect("send.ahasend.com", 587, SecureSocketOptions.StartTls);
+                client.Authenticate("YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD");
+
+                foreach (var recipient in recipients)
+                {
+                    try
+                    {
+                        var message = new MimeMessage();
+                        message.From.Add(new MailboxAddress("Your Company", "hello@yourdomain.com"));
+                        message.To.Add(new MailboxAddress(recipient.Name, recipient.Email));
+                        message.Subject = "Personalized Newsletter";
+
+                        // Add custom header for bulk emails
+                        message.Headers.Add("ahasend-tags", "newsletter,bulk,csharp");
+
+                        var builder = new BodyBuilder();
+                        builder.TextBody = $"Hello {recipient.Name}! This is your personalized newsletter.";
+                        builder.HtmlBody = $@"
+                            <html>
+                            <body>
+                                <h1>Hello {recipient.Name}!</h1>
+                                <p>This is your personalized newsletter.</p>
+                            </body>
+                            </html>";
+
+                        message.Body = builder.ToMessageBody();
+
+                        client.Send(message);
+                        Console.WriteLine($"Email sent to {recipient.Email}");
+
+                        // Add delay to avoid rate limiting
+                        System.Threading.Thread.Sleep(100);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to send to {recipient.Email}: {ex.Message}");
+                    }
+                }
+
+                client.Disconnect(true);
+                Console.WriteLine("Bulk email sending completed!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to connect to SMTP server: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+```csharp Email Service Class
+using System;
+using System.Threading.Tasks;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+public class EmailService
+{
+    private readonly string _smtpHost;
+    private readonly int _smtpPort;
+    private readonly string _smtpUsername;
+    private readonly string _smtpPassword;
+
+    public EmailService(string smtpHost, int smtpPort, string smtpUsername, string smtpPassword)
+    {
+        _smtpHost = smtpHost;
+        _smtpPort = smtpPort;
+        _smtpUsername = smtpUsername;
+        _smtpPassword = smtpPassword;
+    }
+
+    public async Task<bool> SendEmailAsync(string fromEmail, string fromName, string toEmail, string toName,
+                                          string subject, string textBody, string htmlBody = null)
+    {
+        try
+        {
+            using var client = new SmtpClient();
+
+            // Connect to AhaSend SMTP with STARTTLS
+            await client.ConnectAsync(_smtpHost, _smtpPort, SecureSocketOptions.StartTls);
+
+            // Authenticate with your SMTP credentials
+            await client.AuthenticateAsync(_smtpUsername, _smtpPassword);
+
+            // Create message
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(fromName, fromEmail));
+            message.To.Add(new MailboxAddress(toName, toEmail));
+            message.Subject = subject;
+
+            var builder = new BodyBuilder();
+            builder.TextBody = textBody;
+
+            if (!string.IsNullOrEmpty(htmlBody))
+            {
+                builder.HtmlBody = htmlBody;
+            }
+
+            message.Body = builder.ToMessageBody();
+
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to send email: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> SendWelcomeEmailAsync(string toEmail, string toName)
+    {
+        var subject = "Welcome to our platform!";
+        var textBody = $"Hello {toName}, welcome to our platform!";
+        var htmlBody = $@"
+            <html>
+            <body>
+                <h1>Welcome {toName}!</h1>
+                <p>Thanks for joining our platform. We're excited to have you!</p>
+            </body>
+            </html>";
+
+        return await SendEmailAsync("hello@yourdomain.com", "Your Company",
+                                   toEmail, toName, subject, textBody, htmlBody);
+    }
+}
+
+// Usage example
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        var emailService = new EmailService(
+            "send.ahasend.com",
+            587,
+            "YOUR_SMTP_USERNAME",
+            "YOUR_SMTP_PASSWORD"
+        );
+
+        // Send welcome email
+        bool success = await emailService.SendWelcomeEmailAsync("user@example.com", "John Doe");
+
+        if (success)
+        {
+            Console.WriteLine("Welcome email sent successfully!");
+        }
+        else
+        {
+            Console.WriteLine("Failed to send welcome email.");
+        }
+    }
+}
+```
+
+</CodeGroup>
+
+## Testing with Sandbox Mode
+
+Use sandbox mode to safely test your C# email integration:
+
+<CodeGroup>
+
+```csharp Sandbox Test
+using System;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+class Program
+{
+    static void Main()
+    {
+        using (var client = new SmtpClient())
+        {
+            try
+            {
+                // Connect to AhaSend SMTP with STARTTLS
+                client.Connect("send.ahasend.com", 587, SecureSocketOptions.StartTls);
+
+                // Authenticate with your SMTP credentials
+                client.Authenticate("YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD");
+
+                // Create sandbox test message
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress("Test", "test@yourdomain.com"));
+                message.To.Add(new MailboxAddress("Test User", "test@example.com"));
+                message.Subject = "Sandbox Test Email";
+
+                // Enable sandbox mode
+                message.Headers.Add("AhaSend-Sandbox", "true");
+                message.Headers.Add("AhaSend-Sandbox-Result", "deliver");
+
+                message.Body = new TextPart("plain")
+                {
+                    Text = "This email is sent in sandbox mode for testing."
+                };
+
+                client.Send(message);
+                client.Disconnect(true);
+
+                Console.WriteLine("Sandbox email sent successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send sandbox email: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+```csharp Sandbox Bounce Test
+using System;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+class Program
+{
+    static void Main()
+    {
+        using (var client = new SmtpClient())
+        {
+            try
+            {
+                // Connect to AhaSend SMTP with STARTTLS
+                client.Connect("send.ahasend.com", 587, SecureSocketOptions.StartTls);
+
+                // Authenticate with your SMTP credentials
+                client.Authenticate("YOUR_SMTP_USERNAME", "YOUR_SMTP_PASSWORD");
+
+                // Create sandbox bounce test message
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress("Test", "test@yourdomain.com"));
+                message.To.Add(new MailboxAddress("Test User", "test@example.com"));
+                message.Subject = "Sandbox Bounce Test";
+
+                // Enable sandbox mode with bounce simulation
+                message.Headers.Add("AhaSend-Sandbox", "true");
+                message.Headers.Add("AhaSend-Sandbox-Result", "bounce");
+
+                var builder = new BodyBuilder();
+                builder.TextBody = "This email simulates a bounce for webhook testing.";
+                builder.HtmlBody = @"
+                    <html>
+                    <body>
+                        <h1>Bounce Test</h1>
+                        <p>This email simulates a bounce for webhook testing.</p>
+                    </body>
+                    </html>";
+
+                message.Body = builder.ToMessageBody();
+
+                client.Send(message);
+                client.Disconnect(true);
+
+                Console.WriteLine("Sandbox bounce test sent - check webhooks!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send sandbox email: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+</CodeGroup>
+
+<Info>
+**Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
+</Info>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="MailKit Documentation" icon="book" href="https://www.mimekit.net/docs/">
+    Official MailKit and MimeKit documentation
+  </Card>
+  <Card title="Microsoft .NET Docs" icon="book" href="https://docs.microsoft.com/en-us/dotnet/">
+    Comprehensive .NET development guide
+  </Card>
+  <Card title="MailKit GitHub" icon="code" href="https://github.com/jstedfast/MailKit">
+    Source code, examples, and issue tracking
+  </Card>
+  <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from our engineering team
+  </Card>
+</CardGroup>
+
+<Tip>
+**Pro Tip:** Always use MailKit instead of System.Net.Mail for AhaSend integration. Configure your SMTP settings through dependency injection, implement proper error handling with retry logic, and start with sandbox mode during development. Use async patterns for better performance in web applications.
+</Tip>

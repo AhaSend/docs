@@ -1,4 +1,486 @@
 ---
 title: "Sending emails in Delphi"
-description: "This is the introduction to the documentation"
+sidebarTitle: "Delphi"
+description: "Learn how to send emails using AhaSend SMTP with Delphi and the Indy networking library"
+icon: "file-code"
 ---
+
+# Sending Emails with SMTP in Delphi
+
+Send emails through AhaSend's SMTP servers using Delphi and the powerful Indy networking library. This guide covers everything from basic setup to advanced features like HTML content, attachments, and custom headers.
+
+<Info>
+**Delphi & Indy Power:** Delphi's robust development environment combined with Indy's comprehensive networking components provides excellent email capabilities for desktop and server applications.
+</Info>
+
+<Tip>
+**Special Thanks:** This guide was partly provided by **Kirk**, one of our amazing customers! We're grateful for the Delphi community's contributions and expertise in helping fellow developers integrate with AhaSend.
+</Tip>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<AccordionGroup>
+  <Accordion title="Development Environment" icon="desktop">
+    - **Delphi installed** on your system (Delphi 10.3 or higher recommended)
+    - **Indy networking library** configured in your project
+    - Basic knowledge of Delphi/Object Pascal programming
+    - Access to Delphi's component palette and IDE
+  </Accordion>
+
+  <Accordion title="AhaSend Setup" icon="envelope">
+    - **Domain verified** in your AhaSend account
+    - **SMTP credentials** created (username and password)
+    - Access to your AhaSend dashboard for credential management
+  </Accordion>
+
+  <Accordion title="Indy Components" icon="puzzle-piece">
+    - **TIdSMTP** component for SMTP functionality
+    - **TIdSSLIOHandlerSocketOpenSSL** for secure connections
+    - **TIdMessage** for email message construction
+    - **TIdEncoderMIME** for encoding operations
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
+</Info>
+
+## Indy Components Overview
+
+Delphi's Indy library provides powerful networking components for email operations:
+
+<CardGroup cols={2}>
+  <Card title="TIdSMTP" icon="server">
+    **Purpose:** Main SMTP client component<br />
+    **Features:** Connection, auth, sending<br />
+    **Security:** TLS/SSL support<br />
+    **Location:** Internet tab in component palette
+  </Card>
+  <Card title="TIdMessage" icon="envelope">
+    **Purpose:** Email message construction<br />
+    **Features:** Headers, body, attachments<br />
+    **Encoding:** MIME support<br />
+    **Location:** Internet tab in component palette
+  </Card>
+</CardGroup>
+
+## Connection Settings
+
+Use these settings for all Delphi SMTP configurations with AhaSend:
+
+<CardGroup cols={2}>
+  <Card title="Primary Server" icon="server">
+    **Host:** `send.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+  <Card title="US Server" icon="flag-usa">
+    **Host:** `send-us.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS<br />
+    **Authentication:** Required
+  </Card>
+</CardGroup>
+
+## Basic Email Examples
+
+### Component Setup
+
+First, add the required Indy components to your form or data module:
+
+<CodeGroup>
+
+```pascal Form Setup
+// Add these components to your form/data module:
+// - TIdSMTP (name: IdSMTP1)
+// - TIdSSLIOHandlerSocketOpenSSL (name: IdSSL1)
+// - TIdMessage (name: IdMessage1)
+// - TIdEncoderMIME (name: IdEncoderMIME1)
+
+// Required units in your uses clause:
+uses
+  IdSMTP, IdSSLIOHandlerSocketOpenSSL, IdMessage,
+  IdEncoderMIME, IdGlobal, IdText, IdAttachmentFile;
+```
+
+```pascal Unit Declarations
+unit EmailService;
+
+interface
+
+uses
+  System.SysUtils, System.Classes,
+  IdSMTP, IdSSLIOHandlerSocketOpenSSL, IdMessage,
+  IdEncoderMIME, IdGlobal, IdText, IdAttachmentFile;
+
+type
+  TEmailService = class
+  private
+    FIdSMTP: TIdSMTP;
+    FIdSSL: TIdSSLIOHandlerSocketOpenSSL;
+    FIdMessage: TIdMessage;
+    FIdEncoder: TIdEncoderMIME;
+    procedure ConfigureSMTP;
+    function CreateMessage(const AFrom, ATo, ASubject, ABody: string): TIdMessage;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function SendEmail(const AFrom, ATo, ASubject, ABody: string): Boolean;
+  end;
+
+implementation
+```
+
+</CodeGroup>
+
+### Basic Examples
+
+<CodeGroup>
+
+```pascal Plain Text Email
+procedure TForm1.SendPlainTextEmail;
+var
+  IdMessage: TIdMessage;
+begin
+  // Configure SMTP component
+  IdSMTP1.IOHandler := IdSSL1;
+  (IdSMTP1.IOHandler as TIdSSLIOHandlerSocketOpenSSL).PassThrough := False;
+  IdSMTP1.Username := 'YOUR_SMTP_USERNAME';
+  IdSMTP1.Password := 'YOUR_SMTP_PASSWORD';
+  IdSMTP1.Host := 'send.ahasend.com';
+  IdSMTP1.Port := 587;
+  IdSMTP1.AuthType := satNone;
+  IdSMTP1.UseTLS := utUseExplicitTLS;
+  IdSMTP1.UseEhlo := True;
+
+  // Create message
+  IdMessage := TIdMessage.Create(nil);
+  try
+    IdMessage.From.Address := 'hello@yourdomain.com';
+    IdMessage.From.Name := 'Your Company';
+    IdMessage.Recipients.Add.Address := 'user@example.com';
+    IdMessage.Subject := 'Welcome to our platform!';
+    IdMessage.Body.Text := 'Thanks for signing up. We''re excited to have you!';
+    IdMessage.ContentType := 'text/plain';
+
+    // Send the email
+    IdSMTP1.Connect;
+    try
+      if IdSMTP1.Authenticate then
+      begin
+        IdSMTP1.SendCmd('AUTH PLAIN ' + IdEncoderMIME1.EncodeString(#0 + IdSMTP1.Username + #0 + IdSMTP1.Password));
+        IdSMTP1.Send(IdMessage);
+        ShowMessage('Email sent successfully!');
+      end;
+    finally
+      IdSMTP1.Disconnect;
+    end;
+  finally
+    IdMessage.Free;
+  end;
+end;
+```
+
+```pascal HTML Email
+procedure TForm1.SendHTMLEmail;
+var
+  IdMessage: TIdMessage;
+  HTMLPart: TIdText;
+begin
+  // Configure SMTP component
+  IdSMTP1.IOHandler := IdSSL1;
+  (IdSMTP1.IOHandler as TIdSSLIOHandlerSocketOpenSSL).PassThrough := False;
+  IdSMTP1.Username := 'YOUR_SMTP_USERNAME';
+  IdSMTP1.Password := 'YOUR_SMTP_PASSWORD';
+  IdSMTP1.Host := 'send.ahasend.com';
+  IdSMTP1.Port := 587;
+  IdSMTP1.AuthType := satNone;
+  IdSMTP1.UseTLS := utUseExplicitTLS;
+  IdSMTP1.UseEhlo := True;
+
+  // Create message
+  IdMessage := TIdMessage.Create(nil);
+  try
+    IdMessage.From.Address := 'hello@yourdomain.com';
+    IdMessage.From.Name := 'Your Company';
+    IdMessage.Recipients.Add.Address := 'user@example.com';
+    IdMessage.Subject := 'Welcome to our platform!';
+
+    // Add plain text part for fallback
+    IdMessage.Body.Text := 'Welcome! Thanks for signing up. Visit https://yourdomain.com/get-started to get started.';
+
+    // Add HTML part
+    HTMLPart := TIdText.Create(IdMessage.MessageParts, nil);
+    HTMLPart.ContentType := 'text/html';
+    HTMLPart.Body.Text :=
+      '<html>' +
+      '<body>' +
+      '<h1>Welcome!</h1>' +
+      '<p>Thanks for signing up. We''re <strong>excited</strong> to have you!</p>' +
+      '<p><a href="https://yourdomain.com/get-started">Get Started</a></p>' +
+      '</body>' +
+      '</html>';
+
+    // Send the email
+    IdSMTP1.Connect;
+    try
+      if IdSMTP1.Authenticate then
+      begin
+        IdSMTP1.SendCmd('AUTH PLAIN ' + IdEncoderMIME1.EncodeString(#0 + IdSMTP1.Username + #0 + IdSMTP1.Password));
+        IdSMTP1.Send(IdMessage);
+        ShowMessage('HTML email sent successfully!');
+      end;
+    finally
+      IdSMTP1.Disconnect;
+    end;
+  finally
+    IdMessage.Free;
+  end;
+end;
+```
+
+```pascal Email with Attachment
+procedure TForm1.SendEmailWithAttachment;
+var
+  IdMessage: TIdMessage;
+  Attachment: TIdAttachmentFile;
+begin
+  // Configure SMTP component
+  IdSMTP1.IOHandler := IdSSL1;
+  (IdSMTP1.IOHandler as TIdSSLIOHandlerSocketOpenSSL).PassThrough := False;
+  IdSMTP1.Username := 'YOUR_SMTP_USERNAME';
+  IdSMTP1.Password := 'YOUR_SMTP_PASSWORD';
+  IdSMTP1.Host := 'send.ahasend.com';
+  IdSMTP1.Port := 587;
+  IdSMTP1.AuthType := satNone;
+  IdSMTP1.UseTLS := utUseExplicitTLS;
+  IdSMTP1.UseEhlo := True;
+
+  // Create message
+  IdMessage := TIdMessage.Create(nil);
+  try
+    IdMessage.From.Address := 'hello@yourdomain.com';
+    IdMessage.From.Name := 'Your Company';
+    IdMessage.Recipients.Add.Address := 'user@example.com';
+    IdMessage.Subject := 'Your Invoice is Ready';
+    IdMessage.Body.Text := 'Please find your invoice attached to this email.';
+
+    // Add attachment
+    if FileExists('C:\path\to\invoice.pdf') then
+    begin
+      Attachment := TIdAttachmentFile.Create(IdMessage.MessageParts, 'C:\path\to\invoice.pdf');
+      Attachment.DisplayName := 'invoice.pdf';
+    end;
+
+    // Send the email
+    IdSMTP1.Connect;
+    try
+      if IdSMTP1.Authenticate then
+      begin
+        IdSMTP1.SendCmd('AUTH PLAIN ' + IdEncoderMIME1.EncodeString(#0 + IdSMTP1.Username + #0 + IdSMTP1.Password));
+        IdSMTP1.Send(IdMessage);
+        ShowMessage('Email with attachment sent successfully!');
+      end;
+    finally
+      IdSMTP1.Disconnect;
+    end;
+  finally
+    IdMessage.Free;
+  end;
+end;
+```
+
+</CodeGroup>
+
+## Testing with Sandbox Mode
+
+Use sandbox mode to safely test your Delphi email integration:
+
+<CodeGroup>
+
+```pascal Sandbox Test
+procedure TForm1.SendSandboxTest;
+var
+  IdMessage: TIdMessage;
+begin
+  // Configure SMTP component
+  IdSMTP1.IOHandler := IdSSL1;
+  (IdSMTP1.IOHandler as TIdSSLIOHandlerSocketOpenSSL).PassThrough := False;
+  IdSMTP1.Username := 'YOUR_SMTP_USERNAME';
+  IdSMTP1.Password := 'YOUR_SMTP_PASSWORD';
+  IdSMTP1.Host := 'send.ahasend.com';
+  IdSMTP1.Port := 587;
+  IdSMTP1.AuthType := satNone;
+  IdSMTP1.UseTLS := utUseExplicitTLS;
+  IdSMTP1.UseEhlo := True;
+
+  // Create message
+  IdMessage := TIdMessage.Create(nil);
+  try
+    IdMessage.From.Address := 'test@yourdomain.com';
+    IdMessage.Recipients.Add.Address := 'test@example.com';
+    IdMessage.Subject := 'Sandbox Test Email';
+    IdMessage.Body.Text := 'This email is sent in sandbox mode for testing.';
+
+    // Enable sandbox mode
+    IdMessage.ExtraHeaders.Values['AhaSend-Sandbox'] := 'true';
+    IdMessage.ExtraHeaders.Values['AhaSend-Sandbox-Result'] := 'deliver';
+
+    // Send the email
+    IdSMTP1.Connect;
+    try
+      if IdSMTP1.Authenticate then
+      begin
+        IdSMTP1.SendCmd('AUTH PLAIN ' + IdEncoderMIME1.EncodeString(#0 + IdSMTP1.Username + #0 + IdSMTP1.Password));
+        IdSMTP1.Send(IdMessage);
+        ShowMessage('Sandbox email sent successfully!');
+      end;
+    finally
+      IdSMTP1.Disconnect;
+    end;
+  finally
+    IdMessage.Free;
+  end;
+end;
+```
+
+```pascal Sandbox Bounce Test
+procedure TForm1.SendSandboxBounceTest;
+var
+  IdMessage: TIdMessage;
+begin
+  // Configure SMTP component
+  IdSMTP1.IOHandler := IdSSL1;
+  (IdSMTP1.IOHandler as TIdSSLIOHandlerSocketOpenSSL).PassThrough := False;
+  IdSMTP1.Username := 'YOUR_SMTP_USERNAME';
+  IdSMTP1.Password := 'YOUR_SMTP_PASSWORD';
+  IdSMTP1.Host := 'send.ahasend.com';
+  IdSMTP1.Port := 587;
+  IdSMTP1.AuthType := satNone;
+  IdSMTP1.UseTLS := utUseExplicitTLS;
+  IdSMTP1.UseEhlo := True;
+
+  // Create message
+  IdMessage := TIdMessage.Create(nil);
+  try
+    IdMessage.From.Address := 'test@yourdomain.com';
+    IdMessage.Recipients.Add.Address := 'test@example.com';
+    IdMessage.Subject := 'Sandbox Bounce Test';
+    IdMessage.Body.Text := 'This email simulates a bounce for webhook testing.';
+
+    // Enable sandbox mode with bounce simulation
+    IdMessage.ExtraHeaders.Values['AhaSend-Sandbox'] := 'true';
+    IdMessage.ExtraHeaders.Values['AhaSend-Sandbox-Result'] := 'bounce';
+
+    // Send the email
+    IdSMTP1.Connect;
+    try
+      if IdSMTP1.Authenticate then
+      begin
+        IdSMTP1.SendCmd('AUTH PLAIN ' + IdEncoderMIME1.EncodeString(#0 + IdSMTP1.Username + #0 + IdSMTP1.Password));
+        IdSMTP1.Send(IdMessage);
+        ShowMessage('Sandbox bounce test sent - check webhooks!');
+      end;
+    finally
+      IdSMTP1.Disconnect;
+    end;
+  finally
+    IdMessage.Free;
+  end;
+end;
+```
+
+```pascal Error Handling with Try-Except
+procedure TForm1.SendEmailWithErrorHandling;
+var
+  IdMessage: TIdMessage;
+  MaxRetries, RetryCount: Integer;
+  Success: Boolean;
+begin
+  MaxRetries := 3;
+  RetryCount := 0;
+  Success := False;
+
+  // Configure SMTP component
+  IdSMTP1.IOHandler := IdSSL1;
+  (IdSMTP1.IOHandler as TIdSSLIOHandlerSocketOpenSSL).PassThrough := False;
+  IdSMTP1.Username := 'YOUR_SMTP_USERNAME';
+  IdSMTP1.Password := 'YOUR_SMTP_PASSWORD';
+  IdSMTP1.Host := 'send.ahasend.com';
+  IdSMTP1.Port := 587;
+  IdSMTP1.AuthType := satNone;
+  IdSMTP1.UseTLS := utUseExplicitTLS;
+  IdSMTP1.UseEhlo := True;
+
+  while (not Success) and (RetryCount < MaxRetries) do
+  begin
+    Inc(RetryCount);
+
+    IdMessage := TIdMessage.Create(nil);
+    try
+      IdMessage.From.Address := 'hello@yourdomain.com';
+      IdMessage.Recipients.Add.Address := 'user@example.com';
+      IdMessage.Subject := 'Test with Retry Logic';
+      IdMessage.Body.Text := 'This email will retry on failure.';
+
+      try
+        IdSMTP1.Connect;
+        try
+          if IdSMTP1.Authenticate then
+          begin
+            IdSMTP1.SendCmd('AUTH PLAIN ' + IdEncoderMIME1.EncodeString(#0 + IdSMTP1.Username + #0 + IdSMTP1.Password));
+            IdSMTP1.Send(IdMessage);
+            Success := True;
+            ShowMessage(Format('Email sent successfully on attempt %d', [RetryCount]));
+          end;
+        finally
+          IdSMTP1.Disconnect;
+        end;
+      except
+        on E: EIdSMTPReplyError do
+        begin
+          if E.ErrorCode >= 500 then
+            Break // Don't retry permanent failures
+          else
+            ShowMessage(Format('SMTP error on attempt %d: %s', [RetryCount, E.Message]));
+        end;
+        on E: Exception do
+        begin
+          ShowMessage(Format('Unexpected error on attempt %d: %s', [RetryCount, E.Message]));
+          if RetryCount < MaxRetries then
+            Sleep(1000 * RetryCount); // Exponential backoff
+        end;
+      end;
+    finally
+      IdMessage.Free;
+    end;
+  end;
+
+  if not Success then
+    ShowMessage(Format('Failed to send email after %d attempts', [MaxRetries]));
+end;
+```
+
+</CodeGroup>
+
+<Info>
+**Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
+</Info>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Indy Project Documentation" icon="book" href="https://www.indyproject.org/">
+    Official Indy networking components documentation
+  </Card>
+  <Card title="Delphi Documentation" icon="book" href="https://docwiki.embarcadero.com/">
+    Comprehensive Delphi programming guide
+  </Card>
+  <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from our engineering team
+  </Card>
+</CardGroup>
+

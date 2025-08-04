@@ -1,4 +1,328 @@
 ---
 title: "Sandbox Mode"
-description: "This is the introduction to the documentation"
+sidebarTitle: "Sandbox Mode"
+description: "Test your email integration safely with AhaSend's sandbox mode - simulate email sending without delivery and webhook testing at zero cost"
+icon: "flask"
 ---
+
+Sandbox mode lets you simulate the entire email sending process without actually delivering emails to recipients. It's the perfect solution for testing your email integration safely, testing webhook workflows, and developing email features without worrying about costs or accidental sends.
+
+<Info>
+**Cost-Free Testing:** Sandbox emails are completely free and don't count toward your monthly email credits, no matter how many you send during development and testing.
+</Info>
+
+## What is Sandbox Mode?
+
+When you send an email using sandbox mode, AhaSend processes it exactly like a production email - it goes through validation, parsing, and triggers all relevant webhooks - but stops just before attempting actual delivery. This makes it ideal for:
+
+- **Development environments** where you need to test email functionality
+- **Staging environments** to verify integrations before going live
+- **Automated testing** in CI/CD pipelines
+- **Webhook testing** to ensure your event handling works correctly
+- **Template testing** to verify email content and formatting
+
+<CardGroup cols={2}>
+  <Card title="What Happens in Sandbox" icon="check">
+    ✅ Email is validated and processed<br />
+    ✅ Webhooks are triggered<br />
+    ✅ Messages appear in your dashboard logs<br />
+    ✅ No delivery attempts are made<br />
+    ✅ Completely free - no credit usage
+  </Card>
+  <Card title="Perfect For" icon="bullseye">
+    🧪 **Development testing**<br />
+    🔗 **Webhook integration testing**<br />
+    🤖 **Automated test suites**<br />
+    📧 **Template validation**<br />
+    🚀 **Staging environment verification**
+  </Card>
+</CardGroup>
+
+## Ways to Use Sandbox Mode
+
+There are three flexible approaches to using sandbox mode, depending on your testing needs:
+
+<AccordionGroup>
+  <Accordion title="1. Dedicated Sandbox Credentials" icon="key">
+    Create credentials that **always** operate in sandbox mode. Perfect for dedicated testing environments.
+
+    - Any email sent with these credentials is automatically simulated
+    - Prevents accidental production sends from test environments
+    - Clear separation between testing and production
+    - Best for development and staging environments
+  </Accordion>
+
+  <Accordion title="2. Switchable Credential Mode" icon="toggle-on">
+    Change existing credentials between Production and Sandbox mode as needed.
+
+    - Toggle credentials between modes in your dashboard
+    - Useful for credentials shared across environments
+    - Immediate effect when mode is changed
+    - Flexibility to adapt to current testing needs
+  </Accordion>
+
+  <Accordion title="3. Production Credentials + Headers" icon="code">
+    Use production credentials but add special headers to individual emails for sandbox testing.
+
+    - Add `AhaSend-Sandbox: true` header to any email
+    - Perfect for one-off testing or selective simulation
+    - No credential configuration changes needed
+    - Fine-grained control over individual sends
+  </Accordion>
+</AccordionGroup>
+
+## Creating Sandbox Credentials
+
+<Steps>
+  <Step title="Access Credentials Dashboard" icon="user">
+    1. **Log in** to your [AhaSend Dashboard](https://dash.ahasend.com)
+    2. **Navigate** to the **Credentials** section
+    3. **Click** the **"Create Credential"** button
+  </Step>
+
+  <Step title="Configure Sandbox Credential" icon="gear">
+    **Select Credential Type:**
+    - Choose **"SMTP"** for SMTP credentials
+
+    **Choose a Descriptive Name:**
+    - Use clear naming like "Development Sandbox SMTP" or "Testing Environment"
+    - Include environment info to avoid confusion later
+
+    **Enable Sandbox Mode:**
+    - **Check the "Sandbox" box** to create a dedicated sandbox credential
+    - This ensures the credential always operates in sandbox mode
+  </Step>
+
+  <Step title="Save and Use" icon="floppy-disk">
+    1. **Click** "Create Credential" to generate your sandbox credentials
+    2. **Copy** the username and password
+    3. **Use these credentials** in your test environment exactly like production credentials
+
+    <Tip>
+    **Environment Separation:** Use sandbox credentials in development/staging and production credentials only in live environments for clear separation.
+    </Tip>
+  </Step>
+</Steps>
+
+## Switching Credential Modes
+
+You can easily change existing credentials between Production and Sandbox modes:
+
+<Steps>
+  <Step title="Find Your Credential" icon="magnifying-glass">
+    1. **Go to** the **Credentials** tab in your dashboard
+    2. **Find** the credential you want to modify
+    3. **Click** on the credential to open its settings
+  </Step>
+
+  <Step title="Change the Mode" icon="toggle">
+    1. **Locate** the **Mode** field in the credential settings
+    2. **Select** either **"Sandbox"** or **"Production"** from the dropdown
+    3. **Click** "Save Changes" to apply the new mode
+
+    <Warning>
+    **Mode Effects:** Switching to sandbox stops actual delivery, while switching to production enables real email sending and credit usage.
+    </Warning>
+  </Step>
+</Steps>
+
+## Using Headers for Sandbox Mode
+
+For maximum flexibility, you can use production credentials and control sandbox behavior with email headers:
+
+### SMTP Header Method
+
+Add the `AhaSend-Sandbox` header to your email like any other header:
+
+```plaintext
+From: hello@yourdomain.com
+To: test@example.com
+Subject: Test Email
+AhaSend-Sandbox: true
+Content-Type: text/plain
+
+This email will be processed in sandbox mode.
+```
+
+### API Header Method
+
+Include the header in your API request's `content.headers`:
+
+```json
+{
+  "from": {
+    "name": "My App",
+    "email": "hello@yourdomain.com"
+  },
+  "recipients": [
+    {
+      "name": "Test User",
+      "email": "test@example.com"
+    }
+  ],
+  "content": {
+    "subject": "Sandbox Test",
+    "text_body": "Testing sandbox mode via API.",
+    "headers": {
+      "AhaSend-Sandbox": "true"
+    }
+  }
+}
+```
+
+<Note>
+**Header Priority:** When AhaSend sees the `AhaSend-Sandbox: true` header, it processes the email in sandbox mode regardless of the credential type used for authentication.
+</Note>
+
+## Controlling Simulated Outcomes
+
+Test how your application handles different delivery scenarios by controlling the simulated outcome:
+
+### Available Outcomes
+
+Use the `AhaSend-Sandbox-Result` header to specify the simulated result:
+
+- **`deliver`** - Simulates successful delivery (default)
+- **`bounce`** - Simulates a hard bounce
+- **`defer`** - Simulates temporary delivery deferral
+- **`fail`** - Simulates permanent delivery failure
+- **`suppress`** - Simulates suppression list blocking
+
+### Examples
+
+<CodeGroup>
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: test@example.com
+Subject: Test Bounce Handling
+AhaSend-Sandbox: true
+AhaSend-Sandbox-Result: bounce
+Content-Type: text/plain
+
+This email will simulate a bounce for testing.
+```
+
+```json API Example
+{
+  "from": {
+    "name": "My App",
+    "email": "hello@yourdomain.com"
+  },
+  "recipients": [
+    {
+      "name": "Test User",
+      "email": "test@example.com"
+    }
+  ],
+  "content": {
+    "subject": "Test Deferral Handling",
+    "text_body": "Testing deferral simulation.",
+    "headers": {
+      "AhaSend-Sandbox": "true",
+      "AhaSend-Sandbox-Result": "defer"
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+<Info>
+**Webhook Testing:** Each simulated outcome triggers the appropriate webhook events, allowing you to test your entire event handling pipeline safely.
+</Info>
+
+## Testing Webhooks
+
+Sandbox mode is perfect for testing webhook integrations:
+
+<AccordionGroup>
+  <Accordion title="Webhook Events Still Fire" icon="webhook">
+    - All webhook events are triggered normally in sandbox mode
+    - Test delivery confirmations, bounces, opens, and clicks
+    - Verify your webhook endpoint receives correct payloads
+    - No difference in webhook behavior between sandbox and production
+  </Accordion>
+
+  <Accordion title="Test Different Scenarios" icon="list-check">
+    Use `AhaSend-Sandbox-Result` to test various outcomes:
+    - **Delivery success** webhooks with `deliver`
+    - **Bounce handling** webhooks with `bounce`
+    - **Retry logic** with `defer` simulations
+    - **Failure processing** with `fail` outcomes
+    - **Suppression handling** with `suppress` results
+  </Accordion>
+
+  <Accordion title="Safe Integration Testing" icon="shield-check">
+    - Test webhook endpoints without affecting real users
+    - Validate webhook signature verification
+    - Test error handling and retry mechanisms
+    - Ensure proper event processing in your application
+  </Accordion>
+</AccordionGroup>
+
+## Benefits
+
+<CardGroup cols={3}>
+  <Card title="Cost-Free" icon="piggy-bank">
+    No credit usage regardless of volume sent in sandbox mode
+  </Card>
+  <Card title="Safe Testing" icon="shield">
+    Never accidentally email real users during development
+  </Card>
+  <Card title="Realistic Simulation" icon="microscope">
+    Full processing pipeline without actual delivery
+  </Card>
+  <Card title="Webhook Testing" icon="webhook">
+    Complete event simulation for integration testing
+  </Card>
+  <Card title="Flexible Control" icon="sliders">
+    Multiple ways to enable and control sandbox behavior
+  </Card>
+  <Card title="CI/CD Ready" icon="robot">
+    Perfect for automated testing pipelines
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Emails Still Being Delivered" icon="triangle-exclamation">
+    **Check these settings:**
+    - Verify credential is in Sandbox mode (check dashboard)
+    - Confirm `AhaSend-Sandbox: true` header is properly set
+    - Ensure you're using the correct sandbox credentials
+    - Check for typos in header names or values
+  </Accordion>
+
+  <Accordion title="Webhooks Not Firing" icon="webhook">
+    **Troubleshooting steps:**
+    - Verify webhook URL is correctly configured
+    - Check webhook endpoint is accessible and responding
+    - Confirm webhook signature verification is working
+    - Test with simple sandbox send to verify basic functionality
+  </Accordion>
+
+  <Accordion title="Simulated Outcomes Not Working" icon="vial">
+    **Common issues:**
+    - `AhaSend-Sandbox-Result` header must be used with sandbox mode
+    - Check header value spelling (`deliver`, `bounce`, `defer`, `fail`, `suppress`)
+    - Ensure both sandbox and result headers are properly formatted
+    - Verify your webhook handler processes different event types
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Special Headers" icon="terminal" href="/smtp/special-headers">
+    Discover other useful headers for email customization
+  </Card>
+  <Card title="Send with SMTP" icon="envelope" href="/smtp/php">
+    Send emails with SMTP credentials
+  </Card>
+</CardGroup>
+
+<Tip>
+**Pro Tip:** Set up dedicated sandbox credentials for each environment (development, staging, testing) and use descriptive names to avoid confusion. Include sandbox testing in your deployment pipeline to catch integration issues early.
+</Tip>

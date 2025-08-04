@@ -39,14 +39,28 @@
               "smtp/credentials",
               "smtp/sandbox",
               "smtp/special-headers",
-              "smtp/php",
-              "smtp/golang",
-              "smtp/cli",
-              "smtp/nodejs",
-              "smtp/python",
-              "smtp/ruby",
-              "smtp/delphi",
-              "smtp/dotnet"
+              {
+                "group": "Code examples",
+                "icon": "code",
+                "pages": [
+                  "smtp/cli",
+                  "smtp/php",
+                  "smtp/golang",
+                  "smtp/nodejs",
+                  "smtp/python",
+                  "smtp/ruby",
+                  "smtp/dotnet",
+                  "smtp/delphi"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Sending with API",
+            "pages": [
+              "api/credentials",
+              "api/sandbox",
+              "api/send-email"
             ]
           },
           {
@@ -57,20 +71,11 @@
             ]
           },
           {
-            "group": "Sending with API",
-            "pages": [
-              "api/send-email",
-              "api/send-email-with-template",
-              "api/sandbox"
-            ]
-          },
-          {
             "group": "Webhooks",
             "pages": [
               "webhooks/index",
               "webhooks/events",
               "webhooks/security",
-              "webhooks/payload",
               "webhooks/faq"
             ]
           },
@@ -80,7 +85,6 @@
               "routing/index",
               "routing/deduplication",
               "routing/security",
-              "routing/payload",
               "routing/faq"
             ]
           },
@@ -115,16 +119,22 @@
         "icon": "square-terminal",
         "groups": [
           {
-            "group": "API reference",
+            "group": "Overview",
             "pages": [
               "api-reference/index",
               "api-reference/authentication",
               "api-reference/scopes",
               "api-reference/rate-limits",
               "api-reference/idempotency",
-              "api-reference/errors",
+              "api-reference/errors"
+            ]
+          },
+          {
+            "group": "API reference",
+            "pages": [
               {
                 "group": "Messages",
+                "icon": "envelope",
                 "pages": [
                   "api-reference/messages/create-message",
                   "api-reference/messages/get-messages",
@@ -133,6 +143,7 @@
               },
               {
                 "group": "Suppressions",
+                "icon": "ban",
                 "pages": [
                   "api-reference/suppressions/create-suppression",
                   "api-reference/suppressions/get-suppressions",
@@ -142,6 +153,7 @@
               },
               {
                 "group": "SMTP Credentials",
+                "icon": "user-shield",
                 "pages": [
                   "api-reference/smtp-credentials/create-smtp-credential",
                   "api-reference/smtp-credentials/get-smtp-credential",
@@ -151,6 +163,7 @@
               },
               {
                 "group": "Webhooks",
+                "icon": "webhook",
                 "pages": [
                   "api-reference/webhooks/create-webhook",
                   "api-reference/webhooks/get-webhook",
@@ -161,6 +174,7 @@
               },
               {
                 "group": "Routes",
+                "icon": "route",
                 "pages": [
                   "api-reference/routes/create-route",
                   "api-reference/routes/get-route",
@@ -171,6 +185,7 @@
               },
               {
                 "group": "Domains",
+                "icon": "globe",
                 "pages": [
                   "api-reference/domains/create-domain",
                   "api-reference/domains/get-domain",
@@ -180,6 +195,7 @@
               },
               {
                 "group": "Accounts",
+                "icon": "building",
                 "pages": [
                   "api-reference/accounts/get-account",
                   "api-reference/accounts/update-account",
@@ -190,6 +206,7 @@
               },
               {
                 "group": "Reports",
+                "icon": "chart-line",
                 "pages": [
                   "api-reference/reports/get-deliverability-report",
                   "api-reference/reports/get-bounce-report",
@@ -198,6 +215,7 @@
               },
               {
                 "group": "API Keys",
+                "icon": "key",
                 "pages": [
                   "api-reference/api-keys/create-api-key",
                   "api-reference/api-keys/get-api-key",
@@ -208,6 +226,7 @@
               },
               {
                 "group": "Utility endpoints",
+                "icon": "bolt",
                 "pages": [
                   "api-reference/utility/ping"
                 ]
@@ -222,6 +241,7 @@
               "api-reference/webhooks/retry-policy",
               {
                 "group": "Message Events",
+                "icon": "envelope",
                 "pages": [
                   "api-reference/webhooks/message.reception",
                   "api-reference/webhooks/message.delivered",
@@ -235,12 +255,14 @@
               },
               {
                 "group": "Suppression Events",
+                "icon": "ban",
                 "pages": [
                   "api-reference/webhooks/suppression.created"
                 ]
               },
               {
                 "group": "Domain Events",
+                "icon": "globe",
                 "pages": [
                   "api-reference/webhooks/domain.dns_error"
                 ]
@@ -249,6 +271,7 @@
           },
           {
             "group": "Message Routing",
+            "icon": "route",
             "pages": [
               "api-reference/routes/index",
               "api-reference/routes/security",

@@ -1,4 +1,395 @@
 ---
 title: "Send emails from the CLI"
-description: ""
+sidebarTitle: "CLI (Swaks)"
+description: "Learn how to send emails using AhaSend SMTP from the command line with Swaks (Swiss Army Knife for SMTP)"
+icon: "terminal"
 ---
+
+# Send Emails from the Command Line with Swaks
+
+Send emails through AhaSend's SMTP servers directly from your terminal using Swaks, a powerful command-line tool designed for testing and debugging SMTP servers. Perfect for scripting, automation, and troubleshooting email delivery issues.
+
+<Info>
+**What is Swaks?** Swaks (Swiss Army Knife for SMTP) is a versatile, scriptable tool for testing SMTP servers and sending emails from the command line. It supports TLS encryption, various authentication methods, and is designed as a diagnostic tool rather than for high-volume sending.
+</Info>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<AccordionGroup>
+  <Accordion title="System Requirements" icon="server">
+    - **Swaks installed** on your system
+    - Command line access (Terminal, Command Prompt, etc.)
+    - Basic familiarity with command-line tools
+  </Accordion>
+
+  <Accordion title="AhaSend Setup" icon="envelope">
+    - **Domain verified** in your AhaSend account
+    - **SMTP credentials** created (username and password)
+    - Access to your AhaSend dashboard for credential management
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
+</Info>
+
+## Installation
+
+Install Swaks using your system's package manager:
+
+<CodeGroup>
+
+```bash Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install swaks
+```
+
+```bash CentOS/RHEL/Fedora
+# CentOS/RHEL
+sudo yum install swaks
+
+# Fedora
+sudo dnf install swaks
+```
+
+```bash macOS (Homebrew)
+brew install swaks
+```
+
+```bash Windows (Chocolatey)
+choco install swaks
+```
+
+</CodeGroup>
+
+## Connection Settings
+
+Use these settings for all Swaks commands with AhaSend:
+
+<CardGroup cols={2}>
+  <Card title="Primary Server" icon="server">
+    **Host:** `send.ahasend.com`
+    **Ports:** 587 (recommended), 25, 2525
+    **Security:** TLS (--tls flag)
+    **Authentication:** Plain (--auth plain)
+  </Card>
+  <Card title="US Server" icon="flag-usa">
+    **Host:** `send-us.ahasend.com`
+    **Ports:** 587 (recommended), 25, 2525
+    **Security:** TLS (--tls flag)
+    **Authentication:** Plain (--auth plain)
+  </Card>
+</CardGroup>
+
+## Basic Email Examples
+
+<CodeGroup>
+
+```bash Plain Text Email
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Welcome to our platform!' \
+  --body "Thanks for signing up. We're excited to have you!"
+```
+
+```bash HTML Email
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Welcome to our platform!' \
+  --body "<html><body><h1>Welcome!</h1><p>Thanks for signing up. We're <strong>excited</strong> to have you!</p></body></html>" \
+  --add-header "Content-Type: text/html"
+```
+
+```bash With Attachment
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Your Invoice is Ready' \
+  --body "Please find your invoice attached to this email." \
+  --attach @/path/to/invoice.pdf
+```
+
+</CodeGroup>
+
+## Advanced Examples
+
+<CodeGroup>
+
+```bash Multiple Recipients
+swaks \
+  --from hello@yourdomain.com \
+  --to user1@example.com,user2@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Newsletter Update' \
+  --body "This is our latest newsletter update."
+```
+
+```bash With CC and BCC
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --cc manager@yourdomain.com \
+  --bcc analytics@yourdomain.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Project Update' \
+  --body "Here's the latest project update."
+```
+
+```bash Multiple Attachments
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Documents Package' \
+  --body "Please find the requested documents attached." \
+  --attach @/path/to/document1.pdf \
+  --attach @/path/to/document2.xlsx
+```
+
+</CodeGroup>
+
+## Using Special Headers
+
+Add AhaSend's special headers to control tracking, retention, and other features:
+
+<CodeGroup>
+
+```bash With Tracking Headers
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Newsletter with Tracking' \
+  --add-header "ahasend-track-opens: true" \
+  --add-header "ahasend-track-clicks: true" \
+  --add-header "ahasend-tags: newsletter,cli,swaks" \
+  --body "<html><body><h1>Newsletter</h1><p>Check out our <a href='https://yourdomain.com/features'>latest features</a>!</p></body></html>" \
+  --add-header "Content-Type: text/html"
+```
+
+```bash With Retention Headers
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Temporary Notification' \
+  --add-header "ahasend-message-retention: 7" \
+  --add-header "ahasend-message-data-retention: 1" \
+  --body "This is a temporary notification that will be automatically deleted."
+```
+
+```bash Complete Example
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Product Update with Tracking' \
+  --add-header "ahasend-track-opens: true" \
+  --add-header "ahasend-track-clicks: true" \
+  --add-header "ahasend-tags: product-update,announcement,cli" \
+  --add-header "ahasend-message-retention: 30" \
+  --add-header "ahasend-message-data-retention: 7" \
+  --body "<html><body><h1>Product Updates</h1><p>We've launched <a href='https://yourdomain.com/new-features'>exciting new features</a>!</p></body></html>" \
+  --add-header "Content-Type: text/html"
+```
+
+</CodeGroup>
+
+## Testing with Sandbox Mode
+
+Use sandbox mode to safely test your email integration:
+
+<CodeGroup>
+
+```bash Sandbox Test
+swaks \
+  --from hello@yourdomain.com \
+  --to test@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Sandbox Test Email' \
+  --add-header "AhaSend-Sandbox: true" \
+  --add-header "AhaSend-Sandbox-Result: deliver" \
+  --body "This email is sent in sandbox mode for testing."
+```
+
+```bash Sandbox Bounce Test
+swaks \
+  --from hello@yourdomain.com \
+  --to test@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Sandbox Bounce Test' \
+  --add-header "AhaSend-Sandbox: true" \
+  --add-header "AhaSend-Sandbox-Result: bounce" \
+  --body "This email simulates a bounce for webhook testing."
+```
+
+```bash Sandbox with Verbose Output
+swaks \
+  --from hello@yourdomain.com \
+  --to test@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Verbose Sandbox Test' \
+  --add-header "AhaSend-Sandbox: true" \
+  --add-header "AhaSend-Sandbox-Result: deliver" \
+  --body "Testing with verbose output enabled." \
+  --show-data \
+  --show-raw-text
+```
+
+</CodeGroup>
+
+<Info>
+**Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
+</Info>
+
+## Scripting and Automation
+
+### Shell Script Example
+
+```bash Email Script Example
+#!/bin/bash
+
+# Configuration
+SMTP_SERVER="send.ahasend.com"
+SMTP_PORT="587"
+SMTP_USERNAME="YOUR_SMTP_USERNAME"
+SMTP_PASSWORD="YOUR_SMTP_PASSWORD"
+FROM_EMAIL="hello@yourdomain.com"
+
+# Function to send email
+send_email() {
+    local to_email="$1"
+    local subject="$2"
+    local body="$3"
+
+    swaks \
+        --from "$FROM_EMAIL" \
+        --to "$to_email" \
+        --server "$SMTP_SERVER" \
+        --port "$SMTP_PORT" \
+        --auth plain \
+        --tls \
+        --auth-user "$SMTP_USERNAME" \
+        --auth-password "$SMTP_PASSWORD" \
+        --header "Subject: $subject" \
+        --body "$body"
+}
+
+# Send notification email
+send_email "admin@yourdomain.com" "System Alert" "The backup process has completed successfully."
+
+# Send welcome email
+send_email "newuser@example.com" "Welcome!" "Thanks for joining our platform."
+```
+
+### Environment Variables
+
+For security, use environment variables for credentials:
+
+```bash Environment Setup
+# Set environment variables
+export AHASEND_SMTP_USERNAME="your_smtp_username"
+export AHASEND_SMTP_PASSWORD="your_smtp_password"
+export AHASEND_FROM_EMAIL="hello@yourdomain.com"
+
+# Use in swaks command
+swaks \
+  --from "$AHASEND_FROM_EMAIL" \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 587 \
+  --auth plain \
+  --tls \
+  --auth-user "$AHASEND_SMTP_USERNAME" \
+  --auth-password "$AHASEND_SMTP_PASSWORD" \
+  --header 'Subject: Secure Email' \
+  --body "This email uses environment variables for credentials."
+```
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Swaks Documentation" icon="book" href="http://www.jetmore.org/john/code/swaks/">
+    Official Swaks documentation and manual
+  </Card>
+  <Card title="SMTP Testing Guide" icon="flask" href="/smtp/sandbox">
+    Complete guide to testing email delivery
+  </Card>
+  <Card title="AhaSend SMTP Settings" icon="server" href="/smtp/credentials">
+    SMTP server configuration and credentials
+  </Card>
+  <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from our engineering team
+  </Card>
+</CardGroup>
+
+<Tip>
+**Pro Tip:** Start with sandbox mode and basic commands before building complex automation. Use environment variables for credentials and always test scripts thoroughly before production use.
+</Tip>

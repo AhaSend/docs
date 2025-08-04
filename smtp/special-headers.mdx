@@ -1,4 +1,302 @@
 ---
 title: "Special Email Headers"
-description: "This is the introduction to the documentation"
+sidebarTitle: "Special Headers"
+description: "Customize AhaSend's behavior with special email headers for tracking, sandbox mode, retention, and message tagging"
+icon: "heading"
 ---
+
+AhaSend supports special email headers that allow you to override default settings and customize email behavior on a per-message basis. These headers give you fine-grained control over tracking, testing, data retention, and message organization without changing your account-wide settings.
+
+<Info>
+**Header Usage:** All AhaSend special headers are removed before email delivery and are never visible to recipients. They're used only to control AhaSend's processing behavior.
+</Info>
+
+## Available Special Headers
+
+<CardGroup cols={2}>
+  <Card title="Tracking Control" icon="chart-line">
+    Override open and click tracking settings for individual emails
+  </Card>
+  <Card title="Sandbox Testing" icon="flask">
+    Control sandbox mode behavior and simulated outcomes
+  </Card>
+  <Card title="Data Retention" icon="database">
+    Customize data retention policies per email
+  </Card>
+  <Card title="Message Tagging" icon="tags">
+    Add custom tags for organization and filtering
+  </Card>
+</CardGroup>
+
+## Tracking Headers
+
+Control email tracking behavior on a per-message basis, overriding your account-wide settings.
+
+<Warning>
+**Privacy Considerations:** Email tracking has privacy implications. Many email clients block remote content loading, and some providers prefetch content, which can lead to inaccurate tracking results.
+</Warning>
+
+### Open Tracking Header
+**Header:** `ahasend-track-opens`<br />
+**Values:** `true` | `false`<br />
+**Purpose:** Enable or disable open tracking for individual emails
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: user@example.com
+Subject: Newsletter
+ahasend-track-opens: true
+Content-Type: text/html
+
+<html>
+<body>
+<h1>Your Newsletter</h1>
+<p>This email will track opens even if account-wide tracking is disabled.</p>
+</body>
+</html>
+```
+
+### Click Tracking Header
+
+**Header:** `ahasend-track-clicks`<br />
+**Values:** `true` | `false`<br />
+**Purpose:** Enable or disable click tracking for individual emails
+
+<Note>
+**Click Tracking Requirements:** Your account must be manually verified to use click tracking. Only HTML emails with `http://` and `https://` links are supported.
+</Note>
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: user@example.com
+Subject: Product Update
+ahasend-track-clicks: true
+Content-Type: text/html
+
+<html>
+<body>
+<h1>New Product Features</h1>
+<p>Check out our <a href="https://example.com/features">latest features</a>!</p>
+<p>Excluded link: <a href="https://example.com/unsubscribe" data-as-no-track>Unsubscribe</a></p>
+</body>
+</html>
+```
+
+### Excluding Individual Links
+
+To exclude specific links from click tracking while keeping it enabled for the email, add the `data-as-no-track` attribute:
+
+```html
+<a href="https://example.com/unsubscribe" data-as-no-track>Unsubscribe</a>
+```
+
+## Sandbox Headers
+
+Control sandbox mode behavior for testing without affecting real email delivery.
+
+### Sandbox Mode Header
+
+**Header:** `AhaSend-Sandbox`<br />
+**Values:** `true` | `1`<br />
+**Purpose:** Enable sandbox mode for individual emails, even with production credentials
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: test@example.com
+Subject: Test Email
+AhaSend-Sandbox: true
+Content-Type: text/plain
+
+This email will be processed in sandbox mode and not delivered.
+```
+
+### Sandbox Result Header
+
+**Header:** `AhaSend-Sandbox-Result`<br />
+**Values:** `deliver` | `bounce` | `defer` | `fail` | `suppress`<br />
+**Purpose:** Control the simulated outcome for sandbox emails
+
+<AccordionGroup>
+  <Accordion title="Available Outcomes" icon="list">
+    - **`deliver`** - Simulates successful delivery (default)
+    - **`bounce`** - Simulates a hard bounce
+    - **`defer`** - Simulates temporary delivery deferral
+    - **`fail`** - Simulates permanent delivery failure
+    - **`suppress`** - Simulates suppression list blocking
+  </Accordion>
+</AccordionGroup>
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: test@example.com
+Subject: Bounce Test
+AhaSend-Sandbox: true
+AhaSend-Sandbox-Result: bounce
+Content-Type: text/plain
+
+This email will simulate a bounce for testing error handling.
+```
+
+## Retention Headers
+
+Customize data retention policies for individual emails, overriding your account defaults.
+
+
+### Message Retention Headers
+
+AhaSend provides two types of retention control for different aspects of your email data:
+
+<AccordionGroup>
+  <Accordion title="Message Metadata & Delivery Log Retention" icon="chart-line">
+    **Header:** `ahasend-message-retention`<br />
+    **Values:** 1-30 days<br />
+    **Purpose:** Control how long metadata and delivery logs are retained
+
+    Includes delivery status, timestamps, recipient information, and tracking data.
+  </Accordion>
+
+  <Accordion title="Message Data Retention" icon="envelope">
+    **Header:** `ahasend-message-data-retention`<br />
+    **Values:** 0-30 days<br />
+    **Purpose:** Control how long the actual email content is retained
+
+    Includes email body, attachments, and complete message content. Set to 0 for immediate deletion after processing.
+  </Accordion>
+</AccordionGroup>
+
+### Retention Examples
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: user@example.com
+Subject: Sensitive Document
+ahasend-message-retention: 7
+ahasend-message-data-retention: 0
+Content-Type: text/plain
+
+This email's metadata will be retained for 7 days, but content will be deleted immediately after processing.
+```
+
+### Retention Use Cases
+
+<CardGroup cols={1}>
+  <Card title="High Security" icon="shield">
+    For emails containing sensitive data you can disable data retention to prevent it from being stored in our database:
+    - `ahasend-message-retention`: 1-3 days
+    - `ahasend-message-data-retention`: 0 days
+
+    **Use for:** Sensitive communications, financial data, personal information
+  </Card>
+</CardGroup>
+
+## Message Tags Header
+
+Add custom tags to emails for organization, filtering, and analytics.
+
+**Header:** `ahasend-tags`<br />
+**Format:** Comma-separated list of tags<br />
+**Limits:**<br />
+- Maximum 10 tags per email
+- Each tag maximum 64 characters
+- Tags are case-sensitive
+
+<Tip>
+**Pro Tip:** Use tags consistently across your emails to build powerful filtering and analytics. Start with basic categories like email type and campaign, then expand based on your tracking needs.
+</Tip>
+### Tag Usage Examples
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: user@example.com
+Subject: Welcome Email
+ahasend-tags: welcome,onboarding,new-user
+Content-Type: text/html
+
+<html>
+<body>
+<h1>Welcome to our platform!</h1>
+<p>Get started with your account setup.</p>
+</body>
+</html>
+```
+
+### Tag Best Practices
+
+<AccordionGroup>
+  <Accordion title="Naming Conventions" icon="tag">
+    - Use lowercase with hyphens: `welcome-series`, `product-update`
+    - Be descriptive: `password-reset` vs `reset`
+    - Use consistent naming across campaigns
+    - Consider hierarchical tags: `email-type:welcome`, `campaign:q1-2024`
+  </Accordion>
+
+  <Accordion title="Organization Strategies" icon="folder">
+    - **Campaign tracking:** `campaign:black-friday`, `campaign:welcome-series`
+    - **Email types:** `transactional`, `marketing`, `notification`
+    - **User segments:** `premium-users`, `trial-users`, `enterprise`
+    - **Content categories:** `product-updates`, `security-alerts`, `newsletters`
+  </Accordion>
+</AccordionGroup>
+
+## Combining Headers
+
+You can use multiple special headers together for comprehensive email customization:
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: test@example.com
+Subject: Comprehensive Test
+AhaSend-Sandbox: true
+AhaSend-Sandbox-Result: deliver
+ahasend-track-opens: true
+ahasend-track-clicks: false
+ahasend-tags: test,integration,staging
+ahasend-message-retention: 3
+ahasend-message-data-retention: 1
+Content-Type: text/html
+
+<html>
+<body>
+<h1>Test Email</h1>
+<p>This email combines multiple headers for comprehensive testing.</p>
+<a href="https://example.com">Test Link</a>
+</body>
+</html>
+```
+
+## Header Reference Summary
+
+<AccordionGroup>
+  <Accordion title="Tracking Headers" icon="chart-line">
+    - `ahasend-track-opens`: `true` | `false` - Control open tracking
+    - `ahasend-track-clicks`: `true` | `false` - Control click tracking
+    - Use `data-as-no-track` attribute to exclude individual links from click tracking
+  </Accordion>
+
+  <Accordion title="Sandbox Headers" icon="flask">
+    - `AhaSend-Sandbox`: `true` | `1` - Enable sandbox mode
+    - `AhaSend-Sandbox-Result`: `deliver` | `bounce` | `defer` | `fail` | `suppress` - Control simulated outcome
+  </Accordion>
+
+  <Accordion title="Data Management Headers" icon="database">
+    - `ahasend-message-retention`: Number (1-30) - Metadata & delivery log retention in days
+    - `ahasend-message-data-retention`: Number (0-30) - Email content retention in days
+    - `ahasend-tags`: Comma-separated list - Message tags (max 10 tags, 64 chars each)
+  </Accordion>
+</AccordionGroup>
+
+## Important Notes
+
+<CardGroup cols={2}>
+  <Card title="Header Processing" icon="gear">
+    🗸 All AhaSend headers are removed before delivery<br />
+    🗸 Recipients never see these special headers<br />
+    🗸 Headers only affect AhaSend's processing behavior
+  </Card>
+
+  <Card title="Priority & Overrides" icon="arrow-up">
+    🗸 Per-email headers override account settings<br />
+    🗸 Headers take effect immediately<br />
+    🗸 Sandbox headers work with any credential type
+  </Card>
+</CardGroup>

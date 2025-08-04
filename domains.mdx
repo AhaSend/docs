@@ -1,0 +1,308 @@
+---
+title: "Domain Setup"
+sidebarTitle: "Domains"
+description: "Set up and verify your sending domains for optimal email deliverability with AhaSend"
+icon: "globe"
+---
+
+Setting up your domain correctly is **essential** for email deliverability. This guide walks you through adding and verifying your domain with AhaSend to ensure your emails reach the inbox, not the spam folder.
+
+<Warning>
+**Domain verification is required** before you can send any emails through AhaSend. Unverified domains cannot send emails and will result in API errors.
+</Warning>
+
+## Why Domain Setup Matters
+
+Email receivers use multiple authentication methods to verify that emails are legitimate. When you properly configure your domain with AhaSend, you're telling receiving servers that:
+
+1. **You own the domain** and have the rights to send emails from it
+2. **You've authorized AhaSend** to send emails on behalf of your domain
+3. **Your emails are authentic** and not spoofed or malicious
+
+Without proper domain setup, your emails will either be **rejected outright** or **land in spam folders**, significantly impacting your delivery rates.
+
+<Tip>
+**Subdomain recommendation:** Use a subdomain like `email.yourcompany.com` instead of your main domain for transactional emails. This isolates your transactional email reputation from marketing campaigns.
+</Tip>
+
+## Prerequisites
+
+Before setting up your domain, make sure you have:
+
+- **Access to your DNS provider** (usually your hosting provider or domain registrar)
+- **An AhaSend account** with verified email address
+- **The domain or subdomain** you want to use for sending emails
+
+<Steps>
+  <Step title="Add Your Domain" icon="plus">
+    Start by adding your domain to your AhaSend account:
+
+    1. **Log in to your [AhaSend Dashboard](https://dash.ahasend.com)**
+    2. **Navigate to Domains** in the sidebar
+    3. **Click "Add Domain"**
+    4. **Enter your domain name** (e.g., `email.yourcompany.com`)
+    5. **Click "Create Domain"**
+
+    You'll be redirected to the domain details page where you can see all required DNS records.
+
+    <Info>
+    **API Alternative:** You can also add domains programmatically using our [Domains API](/api-reference/domains/create-domain).
+    </Info>
+  </Step>
+
+  <Step title="Configure DNS Records" icon="gear">
+    Add the following DNS records to your domain. All records are provided in your domain details page with exact values for your domain.
+
+    <AccordionGroup>
+      <Accordion title="SPF Record (Required)" icon="shield-check">
+        **Sender Policy Framework (SPF)** authorizes AhaSend to send emails on your domain's behalf.
+
+        **Record Type:** `TXT`
+        **Purpose:** Prevents email spoofing by specifying authorized sending servers
+
+        ```
+        Name: @ (or your subdomain)
+        Type: TXT
+        Value: v=spf1 include:_spf.ahasend.com ~all
+        ```
+
+        <Warning>
+        If you already have an SPF record, **do not create a duplicate**. Instead, add `include:_spf.ahasend.com` to your existing SPF record before the final mechanism (`~all` or `-all`).
+        </Warning>
+      </Accordion>
+
+      <Accordion title="DKIM Record (Required)" icon="signature">
+        **DomainKeys Identified Mail (DKIM)** cryptographically signs your emails to verify authenticity.
+
+        **Record Type:** `TXT`
+        **Purpose:** Prevents email tampering and confirms sender identity
+
+        ```
+        Name: [unique-selector]._domainkey
+        Type: TXT
+        Value: [unique DKIM public key]
+        ```
+
+        <Note>
+        The exact DKIM record name and value are unique for each domain and provided in your dashboard. Copy them exactly as shown.
+        </Note>
+      </Accordion>
+
+      <Accordion title="DMARC Record (Required)" icon="shield-halved">
+        **Domain-based Message Authentication, Reporting and Conformance (DMARC)** provides policy guidance for email authentication failures.
+
+        **Record Type:** `TXT`
+        **Purpose:** Protects your domain from email spoofing and phishing attacks
+
+        ```
+        Name: _dmarc
+        Type: TXT
+        Value: v=DMARC1; p=quarantine; rua=mailto:dmarc@ahasend.com
+        ```
+
+        <Info>
+        This DMARC policy tells receiving servers to quarantine emails that fail authentication and send reports to AhaSend for monitoring.
+        </Info>
+      </Accordion>
+
+      <Accordion title="Return-Path Record (Highly Recommended)" icon="reply">
+        **Return-Path** specifies where bounce messages and delivery notifications should be sent.
+
+        **Record Type:** `CNAME`
+        **Purpose:** Improves deliverability by providing a communication channel for bounce handling
+
+        ```
+        Name: bounces (or your specified subdomain)
+        Type: CNAME
+        Value: bounces.ahasend.com
+        ```
+
+        <Tip>
+        While not strictly required, the Return-Path record significantly improves deliverability by allowing AhaSend to properly handle bounces and feedback loops.
+        </Tip>
+      </Accordion>
+
+      <Accordion title="Email Tracking Record (Optional)" icon="chart-line">
+        **Tracking Domain** ensures tracking URLs in your emails come from your domain instead of AhaSend's.
+
+        **Record Type:** `CNAME`
+        **Purpose:** Improves deliverability and maintains brand consistency for tracked links
+
+        ```
+        Name: track (or your specified subdomain)
+        Type: CNAME
+        Value: track.ahasend.com
+        ```
+
+        <Note>
+        Email tracking is **disabled by default** and must be explicitly enabled in your account settings, even if you configure the tracking domain.
+        </Note>
+      </Accordion>
+
+      <Accordion title="MX Record (Recommended)" icon="envelope">
+        **Mail Exchanger (MX)** specifies the mail server responsible for receiving emails for your domain.
+
+        **Record Type:** `MX`
+        **Purpose:** Required for receiving emails, recommended for better sending reputation
+
+        ```
+        Name: @ (or your subdomain)
+        Type: MX
+        Priority: 10
+        Value: mx.ahasend.com
+        ```
+
+        <Info>
+        While not required for sending emails, some receiving servers penalize domains without MX records. Adding this record improves overall deliverability.
+        </Info>
+      </Accordion>
+    </AccordionGroup>
+  </Step>
+
+  <Step title="Wait for DNS Propagation" icon="clock">
+    DNS changes can take time to propagate across the internet:
+
+    - **Typical time:** 5-30 minutes
+    - **Maximum time:** Up to 48 hours
+    - **Check status:** Use online DNS checkers to verify your records are live
+
+    <Tip>
+    **Pro tip:** Use tools like [DNS Checker](https://dnschecker.org/) or [What's My DNS](https://www.whatsmydns.net/) to verify your records have propagated globally.
+    </Tip>
+  </Step>
+
+  <Step title="Verify Your Domain" icon="check-circle">
+    Once your DNS records are live, verify your domain in AhaSend:
+
+    1. **Return to your domain details page** in the dashboard
+    2. **Click "Check DNS"** to run verification
+    3. **Wait for confirmation** - this usually takes just a few seconds
+    4. **Look for the green checkmarks** next to each record type
+
+    <Check>
+    **Success!** When all records show green checkmarks, your domain is verified and ready to send emails.
+    </Check>
+
+    <Warning>
+    If verification fails, double-check that:
+    - All DNS records are added exactly as shown
+    - DNS changes have had time to propagate
+    - You don't have conflicting DNS records
+    </Warning>
+  </Step>
+</Steps>
+
+## DNS Provider Guides
+
+Need help adding DNS records? Here are guides for popular providers:
+
+<CardGroup cols={3}>
+  <Card title="Cloudflare" icon="cloud" href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/">
+    Manage DNS records in Cloudflare dashboard
+  </Card>
+  <Card title="GoDaddy" icon="globe" href="https://www.godaddy.com/help/add-a-txt-record-19232">
+    Add TXT and CNAME records in GoDaddy
+  </Card>
+  <Card title="Namecheap" icon="dollar-sign" href="https://www.namecheap.com/support/knowledgebase/article.aspx/317/2237/how-do-i-add-txtspfdkimdmarc-records-for-my-domain/">
+    Configure email authentication records
+  </Card>
+  <Card title="Route 53" icon="aws" href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html">
+    AWS Route 53 record management
+  </Card>
+  <Card title="Google Domains" icon="google" href="https://support.google.com/domains/answer/3251147">
+    Add DNS records in Google Domains
+  </Card>
+  <Card title="Other Providers" icon="question" href="mailto:support@ahasend.com">
+    Contact support for help with your DNS provider
+  </Card>
+</CardGroup>
+
+## Manage Domains with API
+
+For programmatic domain management, use our comprehensive Domains API:
+
+<CardGroup cols={2}>
+  <Card title="Create Domain" icon="plus" href="/api-reference/domains/create-domain">
+    Add new domains programmatically
+  </Card>
+  <Card title="List Domains" icon="list" href="/api-reference/domains/get-domains">
+    Retrieve all your configured domains
+  </Card>
+  <Card title="Get Domain Details" icon="check" href="/api-reference/domains/get-domain">
+    Check domain verification status
+  </Card>
+  <Card title="Delete Domain" icon="trash" href="/api-reference/domains/delete-domain">
+    Remove domains from your account
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="DNS Records Not Verifying">
+    **Common causes and solutions:**
+
+    - **Wait longer:** DNS propagation can take up to 48 hours
+    - **Check record values:** Ensure exact copy-paste from dashboard (no extra spaces)
+    - **Verify record type:** TXT records for SPF/DKIM/DMARC, CNAME for others
+    - **Remove duplicates:** Don't create multiple SPF records
+    - **Check with DNS tools:** Use online DNS checkers to verify records are live
+  </Accordion>
+
+  <Accordion title="Existing SPF Record Conflicts">
+    **If you already have an SPF record:**
+
+    1. **Don't create a duplicate** - domains can only have one SPF record
+    2. **Modify your existing record** by adding `include:_spf.ahasend.com`
+    3. **Place it before the final mechanism** (`~all` or `-all`)
+
+    Example:
+    ```
+    OLD: v=spf1 include:_spf.google.com ~all
+    NEW: v=spf1 include:_spf.google.com include:_spf.ahasend.com ~all
+    ```
+  </Accordion>
+
+  <Accordion title="Subdomain vs Root Domain">
+    **Understanding the difference:**
+
+    - **Root domain:** `yourcompany.com` (affects all subdomains)
+    - **Subdomain:** `email.yourcompany.com` (isolated setup)
+
+    **For subdomains:** Add all DNS records to the specific subdomain, not the root domain.
+  </Accordion>
+
+  <Accordion title="Still Having Issues?">
+    **We're here to help:**
+
+    - **Check our status page** for any ongoing DNS issues
+    - **Contact support** at [support@ahasend.com](mailto:support@ahasend.com)
+    - **Include your domain name** and specific error messages
+    - **Attach screenshots** of your DNS configuration if helpful
+
+    Our engineering team typically responds within a few hours!
+  </Accordion>
+</AccordionGroup>
+
+## What's Next?
+
+Once your domain is verified, you're ready to start sending emails:
+
+<CardGroup cols={2}>
+  <Card title="Send Your First Email" icon="paper-plane" href="/quickstart">
+    Follow our quickstart guide to send emails via API or SMTP
+  </Card>
+  <Card title="Create SMTP Credentials" icon="user-plus" href="/smtp/credentials">
+    Generate credentials for your applications
+  </Card>
+  <Card title="Create API Keys" icon="key" href="/api/credentials">
+    Track email delivery and engagement events
+  </Card>
+  <Card title="Enable Tracking" icon="chart-line" href="/tracking/open-tracking">
+    Monitor opens and clicks on your emails
+  </Card>
+</CardGroup>
+
+<Info>
+**Domain setup complete?** Your domain is now ready to send emails through AhaSend. Test it out with our [quickstart guide](/quickstart) to send your first email!
+</Info>

@@ -1,4 +1,396 @@
 ---
 title: "Sending emails in Node.js"
-description: "This is the introduction to the documentation"
+sidebarTitle: "Node.js"
+description: "Learn how to send emails using AhaSend SMTP with Node.js and Nodemailer, the most popular email library for Node.js"
+icon: "node-js"
 ---
+
+# Sending Emails with SMTP in Node.js
+
+Send emails through AhaSend's SMTP servers using Node.js with Nodemailer, the most popular and feature-rich email library for Node.js. This guide covers everything from basic setup to advanced features like attachments and custom headers.
+
+<Info>
+**Why Nodemailer?** Node.js doesn't have built-in SMTP support, but Nodemailer provides a powerful, well-maintained solution with extensive features including HTML emails, attachments, embedded images, and robust error handling.
+</Info>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<AccordionGroup>
+  <Accordion title="System Requirements" icon="server">
+    - **Node.js installed** on your system ([Download Node.js](https://nodejs.org/))
+    - **npm** or **yarn** package manager
+    - Basic knowledge of JavaScript and Node.js
+  </Accordion>
+
+  <Accordion title="AhaSend Setup" icon="envelope">
+    - **Domain verified** in your AhaSend account
+    - **SMTP credentials** created (username and password)
+    - Access to your AhaSend dashboard for credential management
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
+</Info>
+
+## Installation
+
+Install Nodemailer in your Node.js project:
+
+<CodeGroup>
+
+```bash npm
+npm install nodemailer
+```
+
+```bash yarn
+yarn add nodemailer
+```
+
+```bash pnpm
+pnpm add nodemailer
+```
+
+</CodeGroup>
+
+For TypeScript projects, also install type definitions:
+
+```bash TypeScript Support
+npm install --save-dev @types/nodemailer
+```
+
+## Connection Settings
+
+Use these settings for all Nodemailer configurations with AhaSend:
+
+<CardGroup cols={2}>
+  <Card title="Primary Server" icon="server">
+    **Host:** `send.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS (requireTLS: true)<br />
+    **Authentication:** Required
+  </Card>
+  <Card title="US Server" icon="flag-usa">
+    **Host:** `send-us.ahasend.com`<br />
+    **Ports:** 587 (recommended), 25, 2525<br />
+    **Security:** STARTTLS (requireTLS: true)<br />
+    **Authentication:** Required
+  </Card>
+</CardGroup>
+
+## Basic Email Examples
+
+<CodeGroup>
+
+```javascript Plain Text Email
+const nodemailer = require('nodemailer');
+
+// Create transporter
+const transporter = nodemailer.createTransporter({
+    host: 'send.ahasend.com',
+    port: 587,
+    requireTLS: true, // Force TLS
+    auth: {
+        user: 'YOUR_SMTP_USERNAME',
+        pass: 'YOUR_SMTP_PASSWORD'
+    }
+});
+
+// Email options
+const mailOptions = {
+    from: '"Your Company" <hello@yourdomain.com>',
+    to: 'user@example.com',
+    subject: 'Welcome to our platform!',
+    text: 'Thanks for signing up. We\'re excited to have you!'
+};
+
+// Send email
+transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+        return console.log('Error:', error);
+    }
+    console.log('Email sent successfully!');
+    console.log('Message ID:', info.messageId);
+});
+```
+
+```javascript HTML Email
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransporter({
+    host: 'send.ahasend.com',
+    port: 587,
+    requireTLS: true,
+    auth: {
+        user: 'YOUR_SMTP_USERNAME',
+        pass: 'YOUR_SMTP_PASSWORD'
+    }
+});
+
+const mailOptions = {
+    from: '"Your Company" <hello@yourdomain.com>',
+    to: 'user@example.com',
+    subject: 'Welcome to our platform!',
+    html: `
+        <html>
+        <body>
+            <h1>Welcome!</h1>
+            <p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>
+            <p><a href="https://yourdomain.com/get-started">Get Started</a></p>
+        </body>
+        </html>
+    `,
+    text: 'Welcome! Thanks for signing up. Visit https://yourdomain.com/get-started to get started.' // Fallback
+};
+
+transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+        return console.log('Error:', error);
+    }
+    console.log('HTML email sent successfully!');
+    console.log('Message ID:', info.messageId);
+});
+```
+
+```javascript With Attachments
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransporter({
+    host: 'send.ahasend.com',
+    port: 587,
+    requireTLS: true,
+    auth: {
+        user: 'YOUR_SMTP_USERNAME',
+        pass: 'YOUR_SMTP_PASSWORD'
+    }
+});
+
+const mailOptions = {
+    from: '"Your Company" <hello@yourdomain.com>',
+    to: 'user@example.com',
+    subject: 'Your Invoice is Ready',
+    html: `
+        <html>
+        <body>
+            <h1>Invoice Attached</h1>
+            <p>Please find your invoice attached to this email.</p>
+        </body>
+        </html>
+    `,
+    attachments: [
+        {
+            filename: 'invoice.pdf',
+            path: '/path/to/invoice.pdf'
+        },
+        {
+            filename: 'terms.pdf',
+            path: '/path/to/terms.pdf'
+        }
+    ]
+};
+
+transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+        return console.log('Error:', error);
+    }
+    console.log('Email with attachments sent successfully!');
+    console.log('Message ID:', info.messageId);
+});
+```
+
+</CodeGroup>
+<Tip>
+**Pro Tip:** Use [connection pooling](https://nodemailer.com/smtp/pooled/) for bulk emails, always provide both HTML and text versions, and implement proper error handling with retry logic. Start with sandbox mode during development and use environment variables for credentials.
+</Tip>
+
+
+## Testing with Sandbox Mode
+
+Use sandbox mode to safely test your Node.js email integration:
+
+<CodeGroup>
+
+```javascript Sandbox Test
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransporter({
+    host: 'send.ahasend.com',
+    port: 587,
+    requireTLS: true,
+    auth: {
+        user: 'YOUR_SMTP_USERNAME',
+        pass: 'YOUR_SMTP_PASSWORD'
+    }
+});
+
+const mailOptions = {
+    from: '"Test Sender" <test@yourdomain.com>',
+    to: 'test@example.com',
+    subject: 'Sandbox Test Email',
+    headers: {
+        'AhaSend-Sandbox': 'true',
+        'AhaSend-Sandbox-Result': 'deliver'
+    },
+    text: 'This email is sent in sandbox mode for testing.'
+};
+
+transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+        return console.log('Error:', error);
+    }
+    console.log('Sandbox email sent successfully!');
+    console.log('Message ID:', info.messageId);
+});
+```
+
+```javascript Sandbox Bounce Test
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransporter({
+    host: 'send.ahasend.com',
+    port: 587,
+    requireTLS: true,
+    auth: {
+        user: 'YOUR_SMTP_USERNAME',
+        pass: 'YOUR_SMTP_PASSWORD'
+    }
+});
+
+const mailOptions = {
+    from: '"Test Sender" <test@yourdomain.com>',
+    to: 'test@example.com',
+    subject: 'Sandbox Bounce Test',
+    headers: {
+        'AhaSend-Sandbox': 'true',
+        'AhaSend-Sandbox-Result': 'bounce'
+    },
+    html: `
+        <html>
+        <body>
+            <h1>Bounce Test</h1>
+            <p>This email simulates a bounce for webhook testing.</p>
+        </body>
+        </html>
+    `
+};
+
+transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+        return console.log('Error:', error);
+    }
+    console.log('Sandbox bounce test sent - check webhooks!');
+    console.log('Message ID:', info.messageId);
+});
+```
+
+```javascript Async/Await Pattern
+const nodemailer = require('nodemailer');
+
+async function sendSandboxEmail() {
+    const transporter = nodemailer.createTransporter({
+        host: 'send.ahasend.com',
+        port: 587,
+        requireTLS: true,
+        auth: {
+            user: 'YOUR_SMTP_USERNAME',
+            pass: 'YOUR_SMTP_PASSWORD'
+        }
+    });
+
+    const mailOptions = {
+        from: '"Test Sender" <test@yourdomain.com>',
+        to: 'test@example.com',
+        subject: 'Async Sandbox Test',
+        headers: {
+            'AhaSend-Sandbox': 'true',
+            'AhaSend-Sandbox-Result': 'deliver'
+        },
+        text: 'Testing with async/await pattern.'
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Async sandbox email sent successfully!');
+        console.log('Message ID:', info.messageId);
+        return info;
+    } catch (error) {
+        console.error('Failed to send sandbox email:', error);
+        throw error;
+    }
+}
+
+sendSandboxEmail();
+```
+
+</CodeGroup>
+
+<Info>
+**Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
+</Info>
+
+## Environment Variables & Best Practices
+
+### Using Environment Variables
+<CodeGroup>
+```javascript Nodemailer with environment variables
+const nodemailer = require('nodemailer');
+require('dotenv').config(); // npm install dotenv
+
+const transporter = nodemailer.createTransporter({
+    host: process.env.SMTP_HOST || 'send.ahasend.com',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    requireTLS: true,
+    auth: {
+        user: process.env.SMTP_USERNAME,
+        pass: process.env.SMTP_PASSWORD
+    }
+});
+
+// Validate required environment variables
+if (!process.env.SMTP_USERNAME || !process.env.SMTP_PASSWORD) {
+    console.error('Missing required environment variables');
+    console.error('Set: SMTP_USERNAME, SMTP_PASSWORD');
+    process.exit(1);
+}
+
+const mailOptions = {
+    from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
+    to: 'user@example.com',
+    subject: 'Environment Test',
+    text: 'This email uses environment variables for configuration.'
+};
+
+transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+        return console.log('Error:', error);
+    }
+    console.log('Email sent using environment variables!');
+});
+```
+
+```bash .env configuration
+# SMTP Configuration
+SMTP_HOST=send.ahasend.com
+SMTP_PORT=587
+SMTP_USERNAME=your_smtp_username
+SMTP_PASSWORD=your_smtp_password
+
+# Email Configuration
+FROM_NAME=Your Company
+FROM_EMAIL=hello@yourdomain.com
+```
+
+</CodeGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Nodemailer Documentation" icon="book" href="https://nodemailer.com/">
+    Official Nodemailer documentation and examples
+  </Card>
+  <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from our engineering team
+  </Card>
+</CardGroup>

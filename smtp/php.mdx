@@ -1,4 +1,431 @@
 ---
 title: "Sending emails in PHP"
-description: "This is the introduction to the documentation"
+sidebarTitle: "PHP"
+description: "Learn how to send emails using AhaSend SMTP with PHP, including PHPMailer, Symfony Mailer, and Laravel configuration"
+icon: "php"
 ---
+
+Send emails through AhaSend's SMTP servers using PHP with popular libraries like PHPMailer and Symfony Mailer. This guide covers everything from basic setup to advanced features like attachments and HTML content.
+
+<Warning>
+**Avoid Native mail() Function:** PHP's built-in `mail()` function is limited - it only works with localhost SMTP servers, doesn't support authentication or attachments, and makes HTML emails difficult to implement. Use the recommended libraries below instead.
+</Warning>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<AccordionGroup>
+  <Accordion title="System Requirements" icon="server">
+    - **PHP installed** on your system ([Download PHP](https://www.php.net/downloads))
+    - **Composer** for package management ([Install Composer](https://getcomposer.org/))
+    - Basic knowledge of PHP and command line usage
+  </Accordion>
+
+  <Accordion title="AhaSend Setup" icon="envelope">
+    - **Domain verified** in your AhaSend account
+    - **SMTP credentials** created (username and password)
+    - Access to your AhaSend dashboard for credential management
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
+</Info>
+
+## Connection Settings
+
+Use these settings for all Go SMTP configurations with AhaSend:
+
+<CardGroup cols={2}>
+  <Card title="Primary Server" icon="server">
+    **Host:** `send.ahasend.com`
+    **Ports:** 587 (recommended), 25, 2525
+    **Security:** STARTTLS
+    **Authentication:** Required
+  </Card>
+  <Card title="US Server" icon="flag-usa">
+    **Host:** `send-us.ahasend.com`
+    **Ports:** 587 (recommended), 25, 2525
+    **Security:** STARTTLS
+    **Authentication:** Required
+  </Card>
+</CardGroup>
+
+## PHPMailer Integration
+
+PHPMailer is the most popular and feature-rich PHP email library, supporting HTML messages, attachments, and advanced SMTP features.
+
+### Installation
+
+Install PHPMailer using Composer:
+
+```bash
+composer require phpmailer/phpmailer
+```
+
+### Basic Email Example
+
+<CodeGroup>
+
+```php Basic PHPMailer Example
+<?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+require 'vendor/autoload.php';
+
+$mail = new PHPMailer(true);
+
+try {
+    // Server settings
+    $mail->isSMTP();
+    $mail->Host       = 'send.ahasend.com';
+    $mail->SMTPAuth   = true;
+    $mail->Username   = 'YOUR_SMTP_USERNAME';
+    $mail->Password   = 'YOUR_SMTP_PASSWORD';
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port       = 587;
+
+    // Recipients
+    $mail->setFrom('hello@yourdomain.com', 'Your App Name');
+    $mail->addAddress('user@example.com', 'John Doe');
+
+    // Content
+    $mail->isHTML(true);
+    $mail->Subject = 'Welcome to our platform!';
+    $mail->Body    = '<h1>Welcome!</h1><p>Thanks for signing up.</p>';
+    $mail->AltBody = 'Welcome! Thanks for signing up.';
+
+    $mail->send();
+    echo 'Email sent successfully!';
+} catch (Exception $e) {
+    echo "Failed to send email: {$mail->ErrorInfo}";
+}
+?>
+```
+
+```php With Attachments
+<?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+require 'vendor/autoload.php';
+
+$mail = new PHPMailer(true);
+
+try {
+    // Server settings
+    $mail->isSMTP();
+    $mail->Host       = 'send.ahasend.com';
+    $mail->SMTPAuth   = true;
+    $mail->Username   = 'YOUR_SMTP_USERNAME';
+    $mail->Password   = 'YOUR_SMTP_PASSWORD';
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port       = 587;
+
+    // Recipients
+    $mail->setFrom('hello@yourdomain.com', 'Your App Name');
+    $mail->addAddress('user@example.com', 'John Doe');
+    $mail->addReplyTo('support@yourdomain.com', 'Support');
+
+    // Attachments
+    $mail->addAttachment('/path/to/document.pdf', 'Invoice.pdf');
+    $mail->addAttachment('/path/to/image.jpg');
+
+    // Content
+    $mail->isHTML(true);
+    $mail->Subject = 'Your Invoice is Ready';
+    $mail->Body    = '<h1>Invoice Attached</h1><p>Please find your invoice attached.</p>';
+    $mail->AltBody = 'Your invoice is attached to this email.';
+
+    $mail->send();
+    echo 'Email with attachment sent successfully!';
+} catch (Exception $e) {
+    echo "Failed to send email: {$mail->ErrorInfo}";
+}
+?>
+```
+
+</CodeGroup>
+
+### PHPMailer with Special Headers
+
+Add AhaSend's special headers for tracking, sandbox mode, and more:
+
+```php PHPMailer with Headers
+<?php
+$mail = new PHPMailer(true);
+
+try {
+    // SMTP configuration (same as above)
+    $mail->isSMTP();
+    $mail->Host = 'send.ahasend.com';
+    $mail->SMTPAuth = true;
+    $mail->Username = 'YOUR_SMTP_USERNAME';
+    $mail->Password = 'YOUR_SMTP_PASSWORD';
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port = 587;
+
+    // Recipients and content
+    $mail->setFrom('hello@yourdomain.com', 'Your App Name');
+    $mail->addAddress('user@example.com', 'John Doe');
+
+    // Add special headers
+    $mail->addCustomHeader('ahasend-track-opens', 'true');
+    $mail->addCustomHeader('ahasend-track-clicks', 'true');
+    $mail->addCustomHeader('ahasend-tags', 'welcome,onboarding,php');
+
+    // For sandbox testing:
+    // $mail->addCustomHeader('AhaSend-Sandbox', 'true');
+
+    $mail->isHTML(true);
+    $mail->Subject = 'Welcome to our platform!';
+    $mail->Body = '<h1>Welcome!</h1><p>Click <a href="https://yourdomain.com">here to get started</a>.</p>';
+
+    $mail->send();
+    echo 'Email sent with tracking enabled!';
+} catch (Exception $e) {
+    echo "Error: {$mail->ErrorInfo}";
+}
+?>
+```
+
+## Symfony Mailer Integration
+
+Symfony Mailer is a modern, powerful email library that's part of the Symfony ecosystem and used by Laravel.
+
+### Installation
+
+Install Symfony Mailer using Composer:
+
+```bash
+composer require symfony/mailer
+```
+
+### Basic Examples
+
+<CodeGroup>
+
+```php Basic Symfony Mailer
+<?php
+use Symfony\Component\Mailer\Transport;
+use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mime\Email;
+
+require 'vendor/autoload.php';
+
+// Create transport using DSN
+$dsn = 'smtp://YOUR_SMTP_USERNAME:YOUR_SMTP_PASSWORD@send.ahasend.com:587';
+$transport = Transport::fromDsn($dsn);
+$mailer = new Mailer($transport);
+
+// Create email
+$email = (new Email())
+    ->from('hello@yourdomain.com')
+    ->to('user@example.com')
+    ->subject('Welcome to our platform!')
+    ->text('Welcome! Thanks for signing up.')
+    ->html('<h1>Welcome!</h1><p>Thanks for signing up.</p>');
+
+try {
+    $mailer->send($email);
+    echo 'Email sent successfully!';
+} catch (Exception $e) {
+    echo 'Failed to send email: ' . $e->getMessage();
+}
+?>
+```
+
+```php With Headers & Attachments
+<?php
+use Symfony\Component\Mailer\Transport;
+use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mime\Email;
+
+require 'vendor/autoload.php';
+
+$dsn = 'smtp://YOUR_SMTP_USERNAME:YOUR_SMTP_PASSWORD@send.ahasend.com:587';
+$transport = Transport::fromDsn($dsn);
+$mailer = new Mailer($transport);
+
+$email = (new Email())
+    ->from('hello@yourdomain.com')
+    ->to('user@example.com')
+    ->subject('Your Invoice')
+    ->html('<h1>Invoice Attached</h1><p>Please find your invoice attached.</p>')
+    ->attachFromPath('/path/to/document.pdf', 'Invoice.pdf');
+
+// Add custom headers
+$email->getHeaders()
+    ->addTextHeader('ahasend-track-opens', 'true')
+    ->addTextHeader('ahasend-track-clicks', 'true')
+    ->addTextHeader('ahasend-tags', 'invoice,billing');
+
+$mailer->send($email);
+echo 'Email with attachment sent!';
+?>
+```
+
+</CodeGroup>
+
+## Laravel Configuration
+
+Laravel uses Symfony Mailer internally. Configure AhaSend SMTP by updating your `.env` file:
+
+### Environment Configuration
+
+```env Laravel .env Configuration
+MAIL_MAILER=smtp
+MAIL_HOST=send.ahasend.com
+MAIL_PORT=587
+MAIL_USERNAME=YOUR_SMTP_USERNAME
+MAIL_PASSWORD=YOUR_SMTP_PASSWORD
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=hello@yourdomain.com
+MAIL_FROM_NAME="Your App Name"
+```
+
+### Sending Emails in Laravel
+
+<CodeGroup>
+
+```php Basic Laravel Mail
+<?php
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Mail\Message;
+
+// Send a simple email
+Mail::raw('Welcome! Thanks for signing up.', function (Message $message) {
+    $message->to('user@example.com', 'John Doe')
+            ->subject('Welcome to our platform!');
+});
+
+echo 'Email sent successfully!';
+?>
+```
+
+```php Laravel with Custom Headers
+<?php
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Mail\Message;
+
+Mail::raw('Welcome! Thanks for signing up.', function (Message $message) {
+    $message->to('user@example.com', 'John Doe')
+            ->subject('Welcome to our platform!')
+            ->getHeaders()
+            ->addTextHeader('ahasend-track-opens', 'true')
+            ->addTextHeader('ahasend-track-clicks', 'true')
+            ->addTextHeader('ahasend-tags', 'welcome,laravel');
+});
+
+echo 'Email sent with tracking enabled!';
+?>
+```
+
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Error Handling" icon="triangle-exclamation">
+    **Always use try-catch blocks:**
+    - Wrap email sending in try-catch statements
+    - Log errors for debugging
+    - Provide user-friendly error messages
+    - Consider retry mechanisms for temporary failures
+  </Accordion>
+
+  <Accordion title="Security Considerations" icon="shield">
+    **Protect your credentials:**
+    - Store SMTP credentials in environment variables
+    - Never commit credentials to version control
+    - Use different credentials for different environments
+    - Regularly rotate SMTP passwords
+  </Accordion>
+
+  <Accordion title="Performance Optimization" icon="gauge">
+    **Optimize for better performance:**
+    - Use queue systems for bulk emails (Laravel Queues, etc.)
+    - Reuse SMTP connections when sending multiple emails
+    - Consider async sending for non-critical emails
+    - Monitor sending rates to avoid limits
+  </Accordion>
+</AccordionGroup>
+
+## Testing with Sandbox Mode
+
+Use sandbox mode to test your PHP email integration safely:
+
+```php Sandbox Testing Examples
+<?php
+// PHPMailer sandbox
+$mail->addCustomHeader('AhaSend-Sandbox', 'true');
+$mail->addCustomHeader('AhaSend-Sandbox-Result', 'deliver'); // or 'bounce', 'defer', etc.
+
+// Symfony Mailer sandbox
+$email->getHeaders()
+    ->addTextHeader('AhaSend-Sandbox', 'true')
+    ->addTextHeader('AhaSend-Sandbox-Result', 'deliver');
+
+// Laravel sandbox
+$message->getHeaders()
+    ->addTextHeader('AhaSend-Sandbox', 'true')
+    ->addTextHeader('AhaSend-Sandbox-Result', 'deliver');
+?>
+```
+
+<Info>
+**Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
+</Info>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Authentication Failures" icon="key">
+    **Common authentication issues:**
+    - Verify SMTP username and password are correct
+    - Ensure you're using SMTP credentials, not your dashboard login
+    - Check that credentials haven't expired
+    - Confirm domain is verified in AhaSend
+  </Accordion>
+
+  <Accordion title="Connection Problems" icon="wifi">
+    **Network and connection issues:**
+    - Try different ports: 587 (recommended), 25, or 2525
+    - Ensure STARTTLS is enabled, not SSL
+    - Check firewall settings aren't blocking SMTP
+    - Verify server allows outbound SMTP connections
+  </Accordion>
+
+  <Accordion title="Laravel-Specific Issues" icon="laravel">
+    **Laravel configuration problems:**
+    - Clear config cache: `php artisan config:clear`
+    - Verify .env file syntax (no spaces around equals signs)
+    - Check mail configuration: `php artisan config:show mail`
+    - Test with `php artisan tinker` for debugging
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="PHPMailer Documentation" icon="book" href="https://github.com/PHPMailer/PHPMailer">
+    Official PHPMailer documentation and examples
+  </Card>
+  <Card title="Symfony Mailer Documentation" icon="book" href="https://symfony.com/doc/current/mailer.html">
+    Complete Symfony Mailer documentation
+  </Card>
+  <Card title="Laravel Mail Documentation" icon="book" href="https://laravel.com/docs/mail">
+    Laravel's email sending documentation
+  </Card>
+  <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">
+    Get help from our engineering team
+  </Card>
+</CardGroup>
+
+<Tip>
+**Pro Tip:** Start with sandbox mode when developing, use environment variables for credentials, and always provide both HTML and plain text versions of your emails for better compatibility.
+</Tip>
