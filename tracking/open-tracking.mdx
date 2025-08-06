@@ -1,0 +1,289 @@
+---
+title: "Open Tracking"
+sidebarTitle: "Open Tracking"
+description: "Track email opens with AhaSend's open tracking feature - understand engagement, limitations, and implementation across SMTP and API"
+icon: "envelope-open"
+---
+
+Open tracking allows you to monitor when recipients open your emails by embedding an invisible tracking pixel. This feature provides valuable insights into email engagement, though it comes with inherent accuracy limitations that are important to understand.
+
+<Warning>
+**Accuracy Limitations:** Open tracking is inherently inaccurate due to email client behavior, bot activity, and privacy features. Use open tracking data as approximate engagement indicators rather than precise metrics.
+</Warning>
+
+## How Open Tracking Works
+
+Open tracking works by embedding a tiny, invisible 1x1 pixel image at the end of your HTML emails. When a recipient opens the email and their email client loads images, it makes a request to AhaSend's servers to fetch this tracking pixel, which registers as an "open" event.
+
+<AccordionGroup>
+  <Accordion title="The Tracking Process" icon="chart-line">
+    1. **Pixel Insertion:** AhaSend automatically adds an invisible tracking pixel to HTML emails
+    2. **Email Delivery:** Email is delivered to the recipient's inbox
+    3. **Email Opened:** Recipient opens the email in their email client
+    4. **Image Loading:** Email client attempts to load images (including the tracking pixel)
+    5. **Open Recorded:** When the pixel loads, AhaSend records an open event
+    6. **Analytics Updated:** Open data appears in your dashboard and webhooks
+  </Accordion>
+
+  <Accordion title="Tracking Pixel Details" icon="image">
+    - **Size:** 1x1 pixel (invisible to recipients)
+    - **Location:** Automatically inserted at the end of HTML emails
+    - **Format:** Transparent image served from AhaSend's servers
+    - **Requirements:** HTML email format (not available for plain text)
+    - **Privacy:** Removed before email delivery, never visible to recipients
+  </Accordion>
+</AccordionGroup>
+
+### Common Accuracy Issues
+
+<AccordionGroup>
+  <Accordion title="False Negatives (Missed Opens)" icon="eye-slash">
+    **Common causes of untracked opens:**
+    - Email clients with images disabled by default (Gmail, Outlook, Apple Mail)
+    - Recipients reading emails in plain text mode
+    - Email service providers filtering out tracking pixels
+    - Privacy-focused email clients blocking external images
+    - Corporate firewalls blocking image requests
+
+    **Impact:** Actual open rates are likely higher than reported
+  </Accordion>
+
+  <Accordion title="False Positives (Inflated Opens)" icon="robot">
+    **Common causes of inflated opens:**
+    - Email security scanners and bot activity
+    - Email client prefetching images
+    - Preview pane functionality triggering opens
+    - Automated email processing systems
+    - Anti-virus software scanning email content
+
+    **Impact:** Reported open rates may be higher than actual human engagement
+  </Accordion>
+
+  <Accordion title="Timing Considerations" icon="clock">
+    **Open detection timing:**
+    - Opens may be delayed if images load slowly
+    - Some clients cache images, preventing multiple open detection
+    - Network issues can delay or prevent tracking
+    - Mobile clients may load images differently than desktop
+  </Accordion>
+</AccordionGroup>
+
+## Privacy Considerations
+
+Open tracking has significant privacy implications that you should consider:
+
+<Warning>
+**Privacy Compliance:** Ensure your use of open tracking complies with applicable privacy laws (GDPR, CCPA, etc.) in your jurisdiction. Consider disclosing tracking in your privacy policy.
+</Warning>
+
+### Privacy Impact
+
+<AccordionGroup>
+  <Accordion title="Information Collected" icon="database">
+    When someone opens a tracked email, AhaSend may collect:
+    - **Timestamp:** When the email was opened
+    - **IP Address:** Recipient's approximate location
+    - **User Agent:** Email client and device information
+    - **Open Count:** How many times the email was opened
+  </Accordion>
+
+  <Accordion title="Recipient Awareness" icon="eye">
+    **Recipients typically cannot see:**
+    - The tracking pixel (invisible 1x1 image)
+    - That their opens are being tracked
+    - What information is being collected
+
+    **Recipients may notice:**
+    - External image loading warnings in some clients
+    - Slight delay when opening emails with tracking
+  </Accordion>
+
+  <Accordion title="Opt-out Considerations" icon="shield">
+    **Recipients can avoid tracking by:**
+    - Disabling image loading in their email client
+    - Using email clients with built-in privacy protection
+    - Reading emails in plain text mode
+    - Using browser extensions that block tracking pixels
+  </Accordion>
+</AccordionGroup>
+
+## Enabling Open Tracking
+
+Open tracking can be controlled at different levels depending on how you send emails:
+
+### Account-Wide Settings
+
+Configure your default open tracking preference in your AhaSend dashboard:
+
+1. Navigate to **[Account Settings](https://dash.ahasend.com/account/-/settings)** in your dashboard
+2. Toggle **Open Tracking** on or off
+3. This setting applies to all emails unless overridden per message
+
+### Per-Message Override
+
+Override account settings for individual emails using different methods:
+
+## SMTP with Special Headers
+
+For SMTP email sending, use the `ahasend-track-opens` header to control tracking:
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: user@example.com
+Subject: Newsletter with Open Tracking
+ahasend-track-opens: true
+Content-Type: text/html
+
+<html>
+<body>
+<h1>Your Newsletter</h1>
+<p>This email will track opens even if account-wide tracking is disabled.</p>
+</body>
+</html>
+```
+
+<Note>
+**Header Details:** The `ahasend-track-opens` header accepts `true` or `false` values and overrides your account-wide open tracking setting for individual emails.
+</Note>
+
+For complete SMTP header documentation, see [Special Email Headers](/smtp/special-headers).
+
+## API v2 Implementation
+
+API v2 (`/v2/accounts/{account_id}/messages`) provides native support for tracking configuration:
+
+```json API v2 Example
+{
+  "from": {
+    "email": "hello@yourdomain.com",
+    "name": "Your Company"
+  },
+  "recipients": [
+    {
+      "email": "user@example.com",
+      "name": "John Doe"
+    }
+  ],
+  "subject": "Newsletter with Open Tracking",
+  "html_content": "<h1>Newsletter</h1><p>This email will track opens.</p>",
+  "tracking": {
+    "open": true
+  }
+}
+```
+
+<Info>
+**API v2 Advantage:** API v2 provides dedicated `tracking` field at the root level, making it easier to manage tracking settings without dealing with custom headers.
+</Info>
+
+For complete API v2 documentation, see [Send Emails using the API](/api-reference/messages/create-message).
+
+## API v1 Implementation
+
+For API v1 (`/v1/email/send`), include tracking headers in the `content.headers` field:
+
+```json API v1 Example
+{
+  "from": {
+    "name": "Your Company",
+    "email": "hello@yourdomain.com"
+  },
+  "recipients": [
+    {
+      "name": "John Doe",
+      "email": "user@example.com"
+    }
+  ],
+  "content": {
+    "subject": "Newsletter with Tracking",
+    "html_body": "<h1>Newsletter</h1><p>Track opens for this email.</p>",
+    "headers": {
+      "ahasend-track-opens": "true"
+    }
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Realistic Expectations" icon="chart-line">
+    **Set appropriate expectations:**
+    - Open rates are estimates, not precise measurements
+    - Focus on trends rather than absolute numbers
+    - Combine with other metrics (clicks, conversions) for full picture
+    - Account for 20-50% of opens potentially going untracked
+  </Accordion>
+
+  <Accordion title="Privacy and Compliance" icon="shield">
+    **Respect recipient privacy:**
+    - Disclose tracking in your privacy policy
+    - Consider providing opt-out mechanisms
+    - Comply with GDPR, CCPA, and other privacy regulations
+    - Be transparent about data collection in your communications
+  </Accordion>
+
+  <Accordion title="Technical Implementation" icon="code">
+    **Optimize tracking implementation:**
+    - Always provide both HTML and plain text versions
+    - Don't rely solely on open tracking for critical business logic
+    - Use tracking to inform engagement strategies, not absolute decisions
+    - Test tracking behavior across different email clients
+  </Accordion>
+
+  <Accordion title="Data Interpretation" icon="magnifying-glass">
+    **Analyze tracking data effectively:**
+    - Look for engagement patterns over time
+    - Compare relative performance between campaigns
+    - Use A/B testing to understand what drives engagement
+    - Segment data by email client, device, or recipient characteristics
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Opens Not Being Tracked" icon="triangle-exclamation">
+    **Common causes:**
+    - Open tracking disabled in account settings
+    - `ahasend-track-opens: false` header set
+    - Plain text emails (tracking requires HTML)
+    - Recipients have images disabled
+    - Email service provider filtering tracking pixels
+
+    **Solutions:**
+    - Verify account-wide tracking settings
+    - Check per-message tracking headers
+    - Ensure emails have HTML content
+    - Test with different email providers
+  </Accordion>
+
+  <Accordion title="Inconsistent Open Data" icon="chart-line">
+    **Possible reasons:**
+    - Mixed HTML/plain text email sending
+    - Different tracking settings across campaigns
+    - Varying recipient email client behavior
+    - Bot activity or automated scanning
+
+    **Improvements:**
+    - Standardize email format (HTML with plain text fallback)
+    - Use consistent tracking settings
+    - Filter bot activity where possible
+    - Focus on engagement trends rather than absolute numbers
+  </Accordion>
+
+  <Accordion title="Privacy Concerns" icon="shield-xmark">
+    **Address privacy issues:**
+    - Review privacy policy to include tracking disclosure
+    - Implement opt-out mechanisms if required
+    - Consider regional privacy law requirements
+    - Provide transparency about data collection
+
+    **Implementation:**
+    - Add privacy disclosure to email footers
+    - Create preference center for tracking opt-outs
+    - Document data retention policies
+    - Ensure GDPR/CCPA compliance where applicable
+  </Accordion>
+</AccordionGroup>
+

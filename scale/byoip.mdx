@@ -1,0 +1,103 @@
+---
+title: "Bring Your Own IP (BYOIP)"
+sidebarTitle: "Bring Your Own IP"
+description: "Use your own IP addresses for email sending with custom VPS infrastructure"
+icon: "server"
+---
+
+Use your own IP addresses for outgoing email by providing a VPS that holds your dedicated IP addresses. This gives you complete control over your sending infrastructure and IP reputation.
+
+<Tip>
+**Enterprise Feature:** Bring Your Own IP is available exclusively on Enterprise plans. [Contact our sales team](https://ahasend.com/contact) to discuss setup and pricing.
+</Tip>
+
+<Warning>
+**Advanced Setup:** BYOIP comes with unique challenges similar to dedicated IP management. Ensure you understand IP reputation, deliverability requirements, and maintenance responsibilities before proceeding.
+</Warning>
+
+## Requirements
+
+Before requesting BYOIP setup, prepare the following infrastructure:
+
+### VPS Specifications
+
+**Minimum Server Requirements:**
+- **Operating System:** Ubuntu (latest LTS recommended)
+- **CPU:** 2 cores minimum
+- **RAM:** 4GB minimum
+- **Storage:** Minimal disk space required
+- **Location:** Provider that allows outgoing port 25 traffic
+
+### Network Configuration
+
+**Required Network Access:**
+- **Ingress Traffic:** Allow port 22 (SSH) and 5000 from our IPs (we'll provide them to you)
+- **Egress Traffic:** Allow all outbound traffic on port 25 (SMTP)
+- **Public IP:** Static public IP address for AhaSend connection
+
+### Access Requirements
+
+**SSH Configuration:**
+- **SSH Access:** Root or sudo access for configuration
+- **SSH Key:** Add AhaSend's public SSH key (provided via email)
+- **Security:** Secure SSH configuration with key-based authentication
+
+## Setup Process
+
+<Steps>
+  <Step title="Prepare Infrastructure" icon="server">
+    **Set up your VPS and network:**
+    1. **Deploy** Ubuntu VPS with required specifications
+    2. **Configure** network firewall rules
+    3. **Secure** SSH access and obtain public IP address
+  </Step>
+
+  <Step title="Contact AhaSend" icon="envelope">
+    **Provide configuration details:**
+
+    Send us the following information:
+    - **VPS Public IP:** The IP address we can use to connect
+    - **Sending IPs:** List of IP addresses you want to use for sending
+    - **Volume Requirements:** Expected email volume and usage patterns
+  </Step>
+
+  <Step title="Configuration & Testing" icon="gear">
+    **AhaSend completes setup:**
+    1. **SSH Key Exchange:** We'll send our public SSH key via email
+    2. **Server Configuration:** Our team configures your VPS (up to 7 business days)
+    3. **IP Integration:** Your IP addresses are added to your AhaSend account
+    4. **Testing:** Verify configuration and sending functionality
+  </Step>
+</Steps>
+
+## Important Considerations
+
+<AccordionGroup>
+  <Accordion title="IP Reputation Management" icon="chart-line">
+    **Managed by AhaSend or customer (depending on agreement):**
+    - **Warm-up Process:** Gradually increase sending volume on new IPs
+    - **List Hygiene:** Maintain clean recipient lists to avoid bounces
+    - **Monitoring:** Track deliverability metrics and reputation scores
+    - **Blacklist Management:** Handle any blacklist issues promptly
+
+    <Note>
+    **Flexible Management:** IP reputation can be managed by our team or handled by your organization based on your service agreement and preferences.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Infrastructure Maintenance" icon="wrench">
+    **Ongoing requirements:**
+    - **VPS Uptime:** Maintain server availability and performance
+    - **Security Updates:** Keep system updated and secure
+    - **Network Monitoring:** Ensure connectivity and port availability
+    - **Backup Planning:** Implement appropriate backup strategies
+  </Accordion>
+
+  <Accordion title="Deliverability Challenges" icon="triangle-exclamation">
+    **Potential issues:**
+    - **Cold IP Reputation:** New IPs require careful warming
+    - **Provider Restrictions:** Some ISPs may be more restrictive
+    - **Volume Limitations:** Start with lower volumes and scale gradually
+    - **Technical Expertise:** Requires understanding of email infrastructure
+  </Accordion>
+</AccordionGroup>

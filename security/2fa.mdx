@@ -1,4 +1,112 @@
 ---
-title: "Two-factor Authentication"
-description: "This is the introduction to the documentation"
+title: "Two-Factor Authentication (2FA)"
+sidebarTitle: "Two-Factor Authentication"
+description: "Secure your AhaSend account with time-based one-time passwords (TOTP) using authenticator apps"
+icon: "shield-check"
 ---
+
+Add an extra layer of security to your AhaSend account with Two-Factor Authentication (2FA). After entering your password, you'll need a time-based code from your smartphone's authenticator app, making your account significantly more secure against unauthorized access.
+
+<Info>
+**Enhanced Security:** Even if someone obtains your password, they cannot access your account without your physical device and authenticator app.
+</Info>
+
+## Why Enable 2FA?
+
+Your AhaSend account controls critical email infrastructure and sensitive data. 2FA provides essential protection by requiring two forms of authentication:
+
+1. **Something you know** - Your password
+2. **Something you have** - Your smartphone with the authenticator app
+
+## Setting Up 2FA
+
+<Steps>
+  <Step title="Access Security Settings" icon="gear">
+    **Navigate to your account security options:**
+    1. **Log in** to your AhaSend dashboard
+    2. **Go to** your **[Profile](https://dash.ahasend.com//profile)**
+    3. **Click** "Enable Two-Factor Authentication"
+  </Step>
+
+  <Step title="Install Authenticator App" icon="mobile">
+    **Download a TOTP authenticator app on your smartphone:**
+
+    **Recommended Apps:**
+    - **Google Authenticator** (iOS/Android)
+    - **Microsoft Authenticator** (iOS/Android)
+    - **Twilio Authy** (iOS/Android)
+    - **1Password** (with TOTP support)
+  </Step>
+
+  <Step title="Link Your Account" icon="link">
+    **Connect AhaSend to your authenticator app:**
+
+    **Option 1: QR Code (Recommended)**
+    1. **Open** your authenticator app
+    2. **Tap** the "+" or "Add Account" button
+    3. **Select** "Scan QR Code"
+    4. **Point** your camera at the QR code on screen
+
+    **Option 2: Manual Entry**
+    1. **Choose** "Enter setup key" in your app
+    2. **Enter** "AhaSend" as the account name
+    3. **Copy** the secret key from the setup page
+    4. **Paste** the key into your authenticator app
+  </Step>
+
+  <Step title="Verify Setup" icon="check">
+    **Confirm your authenticator is working:**
+    1. **Check** the 6-digit code in your authenticator app
+    2. **Enter** the current code in the verification field
+    3. **Click** "Verify" to confirm
+
+    <Tip>
+    **Timing:** TOTP codes refresh every 30 seconds. If a code expires, wait for the new one to generate.
+    </Tip>
+  </Step>
+
+  <Step title="Save Recovery Codes" icon="key">
+    **Secure your backup codes (Critical Step):**
+    1. **Copy** all recovery codes displayed
+    2. **Store** them in a secure password manager or safe location
+    3. **Do not** store them only on your phone
+    4. **Confirm** you've saved them to complete setup
+
+    <Warning>
+    **Essential Backup:** Recovery codes are your only way to access your account if you lose your phone. Each code can only be used once.
+    </Warning>
+  </Step>
+</Steps>
+
+## Login Process with 2FA Enabled
+
+Once 2FA is active, your login process includes an additional step:
+
+<Steps>
+  <Step title="Enter Credentials" icon="user">
+    **Standard login:**
+    - Enter your email address and password
+    - Click "Sign In"
+  </Step>
+
+  <Step title="Provide 2FA Code" icon="mobile">
+    **Enter authenticator code:**
+    1. **Open** your authenticator app
+    2. **Find** the current 6-digit code for AhaSend
+    3. **Enter** the code in the 2FA prompt
+    4. **Submit** to complete login
+  </Step>
+</Steps>
+
+## Using Recovery Codes
+
+If you lose access to your authenticator app:
+
+1. **Click** "Use recovery code" on the 2FA login prompt
+2. **Enter** one of your saved recovery codes
+3. **Complete** login and immediately set up 2FA on a new device
+4. **Generate** new recovery codes (old ones become invalid)
+
+<Note>
+**One-Time Use:** Each recovery code can only be used once. After using a code, it becomes invalid permanently.
+</Note>

@@ -1,4 +1,127 @@
 ---
 title: "OpenID Connect SSO"
-description: "This is the introduction to the documentation"
+sidebarTitle: "Single Sign-On"
+description: "Enable team login through your organization's identity provider with OpenID Connect SSO"
+icon: "key-skeleton"
 ---
+
+Allow your team members to log in using your organization's existing identity provider such as Microsoft Entra ID (Azure AD), Google Workspace, Okta, Authentik, or Zitadel.
+
+<Tip>
+**Enterprise Feature:** OpenID Connect SSO is available exclusively on Enterprise plans. [Contact our sales team](https://ahasend.com/contact) to upgrade your account.
+</Tip>
+
+<Info>
+**Account Owner Access:** Only the account owner can configure SSO and bypass it when necessary. Team members must use SSO once enabled.
+</Info>
+
+## Configuration
+
+Configure SSO in your account settings as the account owner:
+
+<Steps>
+  <Step title="Enable SSO" icon="toggle-on">
+    **Navigate to SSO settings:**
+    1. **Go to** **Account Settings** in your dashboard
+    2. **Scroll to** **OpenID Connect SSO** section
+    3. **Check** "Enable OpenID Connect SSO"
+  </Step>
+
+  <Step title="Configure Identity Provider" icon="gear">
+    **Enter your IdP details:**
+
+    **Required Configuration:**
+    - **Configuration Type:** PKCE (recommended) or Client Credentials
+    - **Domain:** Comma-separated email domains (e.g., `yourcompany.com`)
+    - **Issuer URL:** Base URL from your IdP (e.g., `https://iam.company.com`)
+    - **Client ID:** Provided by your identity provider
+    - **Client Secret:** Provided by your identity provider
+
+    **Optional Settings:**
+    - **Requested Scopes:** Space-separated scopes (defaults: `openid email profile`)
+    - **Authorization Endpoint:** e.g., `https://iam.company.com/oauth/v2/authorize`
+    - **Token Endpoint:** e.g., `https://iam.company.com/oauth/v2/token`
+    - **Userinfo Endpoint:** e.g., `https://iam.company.com/oauth/v2/userinfo`
+    - **JWKS URI:** e.g., `https://iam.company.com/oauth/v2/keys`
+  </Step>
+
+  <Step title="Validate and Activate" icon="check">
+    **Complete SSO setup:**
+    1. **Save** your configuration
+    2. **System validates** the settings automatically
+    3. **SSO activates** if validation is successful
+  </Step>
+</Steps>
+
+## How SSO Works
+
+Once OpenID Connect SSO is activated:
+
+**Team Member Access:**
+- **Must use SSO:** All team members must sign in through your identity provider
+- **No regular login:** Standard AhaSend login credentials are disabled
+- **Access denied:** Password reset requests are blocked for team members
+
+**Account Owner Access:**
+- **SSO bypass:** Can still use regular AhaSend credentials
+- **Password reset:** Can request password resets when needed
+- **Full control:** Can disable SSO if necessary
+
+<Warning>
+**Team Access:** Only users explicitly added as team members can access the account after SSO is enabled.
+</Warning>
+
+## Supported Identity Providers
+
+<CardGroup cols={2}>
+  <Card title="Microsoft Entra ID" icon="microsoft">
+    **Azure Active Directory**
+
+    Popular enterprise identity provider with comprehensive features
+  </Card>
+
+  <Card title="Google Workspace" icon="google">
+    **Google Cloud Identity**
+
+    Integrated with Gmail and Google services
+  </Card>
+
+  <Card title="Okta" icon="shield-check">
+    **Enterprise SSO Platform**
+
+    Dedicated identity and access management
+  </Card>
+
+  <Card title="Self-Hosted Options" icon="server">
+    **Authentik, Zitadel**
+
+    Open-source identity providers you can host yourself
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Microsoft Entra ID Configuration" icon="microsoft">
+    **Common setup issues:**
+    - **Enable** "Allow public client flows" in app registration
+    - **Set platform** to "Mobile and desktop applications" (not Web or Single-page)
+    - **Verify** redirect URLs match AhaSend's requirements
+  </Accordion>
+
+  <Accordion title="Team Member Access Issues" icon="user-slash">
+    **Login problems:**
+    - **Verify** user is added as team member in AhaSend
+    - **Check** email domain matches configured domains
+    - **Confirm** user exists in your identity provider
+    - **Test** SSO configuration with account owner first
+  </Accordion>
+
+  <Accordion title="Configuration Validation Errors" icon="triangle-exclamation">
+    **Setup validation fails:**
+    - **Double-check** all endpoint URLs are accessible
+    - **Verify** client ID and secret are correct
+    - **Ensure** identity provider is properly configured
+    - **Test** JWKS URI returns valid JSON
+  </Accordion>
+</AccordionGroup>

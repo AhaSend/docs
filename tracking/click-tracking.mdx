@@ -1,0 +1,262 @@
+---
+title: "Click Tracking"
+sidebarTitle: "Click Tracking"
+description: "Track link clicks in your emails with AhaSend's click tracking feature - understand how it works, requirements, and implementation across SMTP and API"
+icon: "arrow-pointer"
+---
+
+Click tracking allows you to monitor when recipients click links in your emails by automatically rewriting URLs to redirect through AhaSend's tracking servers. This feature provides valuable insights into email engagement and recipient behavior.
+
+## How Click Tracking Works
+
+Click tracking works by automatically rewriting all eligible links in your HTML emails to redirect through AhaSend's tracking servers. When a recipient clicks a tracked link, they're briefly redirected through AhaSend's servers before being sent to the original destination, allowing the click to be recorded.
+
+<AccordionGroup>
+  <Accordion title="The Tracking Process" icon="link">
+    1. **Link Detection:** AhaSend scans HTML emails for eligible links
+    2. **URL Rewriting:** Original URLs are replaced with AhaSend tracking URLs
+    3. **Email Delivery:** Email is delivered with rewritten tracking links
+    4. **Link Clicked:** Recipient clicks on a link in the email
+    5. **Redirect & Track:** AhaSend records the click and redirects to original URL
+    6. **Analytics Updated:** Click data appears in your dashboard and webhooks
+  </Accordion>
+
+  <Accordion title="Link Requirements" icon="code">
+    **Eligible links must be:**
+    - Wrapped in HTML `<a>` tags with `href` attribute
+    - Use `http://` or `https://` protocol
+    - Properly formatted with quoted URLs
+    - No spaces around the `=` in href attribute
+
+    **Examples of valid links:**
+    - `<a href="https://example.com">Click here</a>`
+    - `<a href="http://www.example.com/page">Visit page</a>`
+    - `<a target="_blank" href="https://example.com">Open in new tab</a>`
+  </Accordion>
+</AccordionGroup>
+
+### Common Accuracy Issues
+
+<AccordionGroup>
+  <Accordion title="Links Not Tracked" icon="link-slash">
+    **Common causes of untracked clicks:**
+    - Links missing `http://` or `https://` protocol
+    - Malformed HTML anchor tags
+    - Links embedded in custom template variables
+    - Plain text emails (tracking requires HTML)
+    - Links with `data-as-no-track` attribute
+
+    **Impact:** Actual click rates may be higher than reported
+  </Accordion>
+
+  <Accordion title="Invalid Link Formats" icon="triangle-exclamation">
+    **These formats will NOT be tracked:**
+    - `<a href="example.com">Link</a>` (missing protocol)
+    - `<a href="www.example.com">Link</a>` (missing protocol)
+    - `<a href= "https://example.com">Link</a>` (space before quote)
+    - `<a href = "https://example.com">Link</a>` (spaces around =)
+    - `<a href="{{ url_variable }}">Link</a>` (custom variable only)
+  </Accordion>
+
+  <Accordion title="Email Client Variations" icon="devices">
+    **Click behavior varies by client:**
+    - Some clients pre-fetch links, inflating click counts
+    - Mobile clients may handle redirects differently
+    - Corporate firewalls may block tracking redirects
+    - Email security scanners may trigger false clicks
+  </Accordion>
+</AccordionGroup>
+
+## Privacy Considerations
+
+Click tracking has significant privacy implications that you should consider:
+
+<Warning>
+**Privacy Compliance:** Ensure your use of click tracking complies with applicable privacy laws (GDPR, CCPA, etc.) in your jurisdiction. Consider disclosing tracking in your privacy policy.
+</Warning>
+
+### Privacy Impact
+
+<AccordionGroup>
+  <Accordion title="Information Collected" icon="database">
+    When someone clicks a tracked link, AhaSend may collect:
+    - **Timestamp:** When the link was clicked
+    - **IP Address:** Recipient's approximate location
+    - **User Agent:** Browser and device information
+    - **Original URL:** The destination they were trying to reach
+    - **Click Count:** How many times the link was clicked
+  </Accordion>
+
+  <Accordion title="Recipient Awareness" icon="eye">
+    **Recipients may notice:**
+    - Brief redirect through AhaSend's tracking domain
+    - Different URL in browser address bar during redirect
+    - Slight delay before reaching final destination
+
+    **Recipients typically cannot see:**
+    - That their clicks are being tracked
+    - What information is being collected
+    - Analytics and reporting data
+  </Accordion>
+
+  <Accordion title="Opt-out Considerations" icon="shield">
+    **Recipients can avoid tracking by:**
+    - Disabling JavaScript in their browser
+    - Using privacy-focused browsers or extensions
+    - Reading emails in plain text mode
+    - Manually copying/pasting URLs instead of clicking
+  </Accordion>
+</AccordionGroup>
+
+## Enabling Click Tracking
+
+Click tracking can be controlled at different levels depending on how you send emails:
+
+### Account-Wide Settings
+
+Configure your default click tracking preference in your AhaSend dashboard:
+
+1. Navigate to **[Account Settings](https://dash.ahasend.com/account/-/settings)** in your dashboard
+2. Toggle **Click Tracking** on or off
+3. This setting applies to all emails unless overridden per message
+
+### Per-Message Override
+
+Override account settings for individual emails using different methods:
+
+## SMTP with Special Headers
+
+For SMTP email sending, use the `ahasend-track-clicks` header to control tracking:
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: user@example.com
+Subject: Product Update with Click Tracking
+ahasend-track-clicks: true
+Content-Type: text/html
+
+<html>
+<body>
+<h1>New Product Features</h1>
+<p>Check out our <a href="https://example.com/features">latest features</a>!</p>
+<p>Excluded link: <a href="https://example.com/unsubscribe" data-as-no-track>Unsubscribe</a></p>
+</body>
+</html>
+```
+
+<Note>
+**Header Details:** The `ahasend-track-clicks` header accepts `true` or `false` values and overrides your account-wide click tracking setting for individual emails.
+</Note>
+
+For complete SMTP header documentation, see [Special Email Headers](/smtp/special-headers).
+
+## API v2 Implementation
+
+API v2 (`/v2/accounts/{account_id}/messages`) provides native support for tracking configuration:
+
+```json API v2 Example
+{
+  "from": {
+    "email": "hello@yourdomain.com",
+    "name": "Your Company"
+  },
+  "recipients": [
+    {
+      "email": "user@example.com",
+      "name": "John Doe"
+    }
+  ],
+  "subject": "Newsletter with Click Tracking",
+  "html_content": "<h1>Newsletter</h1><p>Visit our <a href=\"https://example.com\">website</a> for more info!</p>",
+  "tracking": {
+    "click": true
+  }
+}
+```
+
+<Info>
+**API v2 Advantage:** API v2 provides dedicated `tracking` field at the root level, making it easier to manage tracking settings without dealing with custom headers.
+</Info>
+
+For complete API v2 documentation, see [Send Emails using the API](/api-reference/messages/create-message).
+
+## API v1 Implementation
+
+For API v1 (`/v1/email/send`), include tracking headers in the `content.headers` field:
+
+```json API v1 Example
+{
+  "from": {
+    "name": "Your Company",
+    "email": "hello@yourdomain.com"
+  },
+  "recipients": [
+    {
+      "name": "John Doe",
+      "email": "user@example.com"
+    }
+  ],
+  "content": {
+    "subject": "Newsletter with Click Tracking",
+    "html_body": "<h1>Newsletter</h1><p>Check out our <a href=\"https://example.com/offers\">special offers</a>!</p>",
+    "headers": {
+      "ahasend-track-clicks": "true"
+    }
+  }
+}
+```
+
+## Excluding Individual Links
+
+To exclude specific links from click tracking while keeping it enabled for the email, add the `data-as-no-track` attribute:
+
+```html HTML Example
+<p>
+  Tracked link: <a href="https://example.com/product">View Product</a>
+</p>
+<p>
+  Untracked link: <a href="https://example.com/unsubscribe" data-as-no-track>Unsubscribe</a>
+</p>
+```
+
+<Tip>
+**Use Case:** Commonly used for unsubscribe links, privacy policy links, or other administrative links where tracking isn't needed or desired.
+</Tip>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Link Formatting" icon="code">
+    **Ensure proper link structure:**
+    - Always include `http://` or `https://` protocol
+    - Use proper HTML anchor tag formatting
+    - Avoid spaces in href attribute formatting
+    - Test links across different email clients
+    - Use absolute URLs rather than relative paths
+  </Accordion>
+
+  <Accordion title="Privacy and Compliance" icon="shield">
+    **Respect recipient privacy:**
+    - Disclose click tracking in your privacy policy
+    - Consider providing opt-out mechanisms
+    - Comply with GDPR, CCPA, and other privacy regulations
+    - Be transparent about data collection purposes
+  </Accordion>
+
+  <Accordion title="Link Strategy" icon="bullseye">
+    **Optimize link placement and content:**
+    - Use clear, descriptive link text
+    - Place important links prominently in email content
+    - Avoid too many tracked links in a single email
+    - Use `data-as-no-track` for administrative links
+    - Test link functionality before sending campaigns
+  </Accordion>
+
+  <Accordion title="Data Analysis" icon="chart-line">
+    **Analyze click data effectively:**
+    - Focus on engagement trends over time
+    - Compare click performance between campaigns
+    - Segment data by recipient characteristics
+    - Use A/B testing to optimize link placement and content
+  </Accordion>
+</AccordionGroup>

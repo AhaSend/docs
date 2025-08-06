@@ -1,4 +1,247 @@
 ---
-title: "Email retention on AhaSend"
-description: "This is the introduction to the documentation"
+title: "Data Retention"
+sidebarTitle: "Data Retention"
+description: "Customize how long AhaSend retains your email data and metadata to meet compliance requirements and privacy policies"
+icon: "clock"
 ---
+
+AhaSend retains message data and metadata for 30 days by default to support email delivery tracking, auditing, and troubleshooting. You can customize these retention periods to comply with legal requirements or privacy policies, especially when handling sensitive information like financial, health, or legal data.
+
+<Info>
+**Compliance Ready:** Customize retention periods to meet regulatory requirements for your industry.
+</Info>
+
+## Message Data vs Metadata
+
+Understanding the difference between data and metadata helps you set appropriate retention policies:
+
+<AccordionGroup>
+  <Accordion title="Message Metadata" icon="tag">
+    **Minimal tracking information kept for delivery monitoring:**
+    - Message ID and email subject
+    - From and recipient email addresses
+    - Message direction (outbound/inbound)
+    - Delivery status (received, delivered, bounced, failed)
+    - Delivery attempt logs and timestamps
+
+    **Retention:** Minimum 1 day, maximum 30 days
+  </Accordion>
+
+  <Accordion title="Message Data" icon="envelope">
+    **Complete email content and details:**
+    - All email headers
+    - HTML and plain text body content
+    - File attachments
+    - Full message payload
+
+    **Retention:** 0-30 days (can be completely disabled)
+  </Accordion>
+</AccordionGroup>
+
+## Account-Wide Settings
+
+Configure default retention periods for your entire account:
+
+<Steps>
+  <Step title="Access Retention Settings" icon="gear">
+    1. **Log in** to your [AhaSend Dashboard](https://dash.ahasend.com)
+    2. **Navigate** to **[Account Settings](https://dash.ahasend.com/account/-/settings)**
+    3. **Find** the **Retention Policy** section
+  </Step>
+
+  <Step title="Set Default Periods" icon="calendar">
+    **Configure retention periods:**
+    - **Message Metadata:** 1-30 days (default: 30 days)
+    - **Message Data:** 0-30 days (default: 30 days)
+
+    <Warning>
+    **Minimum Requirements:** Message metadata requires at least 1 day retention for delivery tracking. Message data can be set to 0 days for immediate deletion.
+    </Warning>
+  </Step>
+
+  <Step title="Save Changes" icon="check">
+    **Apply settings** to all future emails sent through your account.
+
+    <Note>
+    **Existing Data:** Changes only affect new emails. Previously sent emails retain their original retention settings.
+    </Note>
+  </Step>
+</Steps>
+
+## Per-Message Overrides
+
+Override account defaults for specific emails using special headers:
+
+### SMTP Headers
+
+When sending via SMTP, add these headers to individual emails:
+
+```plaintext
+ahasend-metadata-retention: 7
+ahasend-data-retention: 0
+```
+
+<AccordionGroup>
+  <Accordion title="ahasend-metadata-retention" icon="tag">
+    **Controls metadata retention period:**
+    - **Value:** Integer between 1 and 30 (days)
+    - **Purpose:** Set how long delivery tracking data is kept
+    - **Example:** `ahasend-metadata-retention: 7` (keep for 7 days)
+  </Accordion>
+
+  <Accordion title="ahasend-data-retention" icon="envelope">
+    **Controls full email data retention:**
+    - **Value:** Integer between 0 and 30 (days)
+    - **Purpose:** Set how long complete email content is stored
+    - **Example:** `ahasend-data-retention: 0` (delete immediately)
+  </Accordion>
+</AccordionGroup>
+
+### API v1 Implementation
+
+For API v1, include retention headers in your message payload:
+
+```json
+{
+  "from": {
+    "email": "hello@yourdomain.com",
+    "name": "Your Company"
+  },
+  "recipients": [
+    {
+      "email": "user@example.com",
+      "name": "John Doe"
+    }
+  ],
+  "content": {
+    "subject": "Sensitive Information",
+    "text_body": "This email contains sensitive data.",
+    "headers": {
+      "ahasend-metadata-retention": "1",
+      "ahasend-data-retention": "0"
+    }
+  }
+}
+```
+
+### API v2 Implementation
+
+For API v2, use the dedicated retention fields:
+
+```json
+{
+  "from": {
+    "email": "hello@yourdomain.com",
+    "name": "Your Company"
+  },
+  "recipients": [
+    {
+      "email": "user@example.com",
+      "name": "John Doe"
+    }
+  ],
+  "subject": "Sensitive Information",
+  "text_content": "This email contains sensitive data.",
+  "retention": {
+    "metadata": 1,
+    "data": 0
+  }
+}
+```
+
+<Info>
+**Full API v2 Documentation:** See the [Create Message API reference](/api-reference/messages/create-message) for complete documentation on all available fields and options.
+</Info>
+
+<Note>
+**Header Removal:** Retention headers are automatically removed before email delivery and never visible to recipients.
+</Note>
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Financial Services" icon="building-columns">
+    **Compliance Requirements:**
+    - Short retention for sensitive financial data
+    - Metadata retention for audit trails
+
+    **Recommended Settings:**
+    - Metadata: 7-30 days
+    - Data: 0-1 days for sensitive emails
+  </Accordion>
+
+  <Accordion title="Healthcare" icon="user-doctor">
+    **HIPAA Compliance:**
+    - Minimal retention of patient information
+    - Quick deletion of medical data
+
+    **Recommended Settings:**
+    - Metadata: 1-7 days
+    - Data: 0 days for patient emails
+  </Accordion>
+
+  <Accordion title="Marketing" icon="bullhorn">
+    **Campaign Tracking:**
+    - Longer retention for analytics
+    - Full content for A/B testing
+
+    **Recommended Settings:**
+    - Metadata: 30 days
+    - Data: 30 days
+  </Accordion>
+
+  <Accordion title="Transactional" icon="receipt">
+    **Order Confirmations:**
+    - Medium retention for customer service
+    - Balance between utility and privacy
+
+    **Recommended Settings:**
+    - Metadata: 30 days
+    - Data: 7-14 days
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Compliance Strategy" icon="shield-check">
+    **Develop a Retention Policy:**
+    - Review legal requirements for your industry
+    - Consider customer privacy expectations
+    - Document your retention decisions
+    - Regularly audit and update policies
+
+    **Implementation Tips:**
+    - Start with shorter periods and extend if needed
+    - Use per-message overrides for sensitive content
+    - Monitor compliance with internal policies
+  </Accordion>
+
+  <Accordion title="Operational Considerations" icon="gear">
+    **Balance Compliance and Functionality:**
+    - Keep metadata longer for delivery troubleshooting
+    - Delete sensitive data quickly while retaining delivery records
+    - Consider customer service needs for support queries
+
+    **Monitoring:**
+    - Track delivery issues that may require message data
+    - Review retention effectiveness regularly
+    - Adjust policies based on operational needs
+  </Accordion>
+</AccordionGroup>
+
+## Related Documentation
+
+<CardGroup cols={3}>
+  <Card title="Special Headers" icon="list" href="/smtp/special-headers">
+    Complete reference for SMTP headers including retention
+  </Card>
+
+  <Card title="API Reference" icon="code" href="/api-reference/messages/create-message">
+    API documentation for setting retention in message requests
+  </Card>
+
+  <Card title="Account Settings" icon="gear" href="/account/settings">
+    Configure default retention policies in your dashboard
+  </Card>
+</CardGroup>

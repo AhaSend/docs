@@ -1,4 +1,362 @@
 ---
-title: "Email retention on S3"
-description: "This is the introduction to the documentation"
+title: "S3 Object Storage"
+sidebarTitle: "S3 Object Storage"
+description: "Archive your email messages and delivery logs to S3-compatible object storage for long-term retention and compliance"
+icon: "aws"
 ---
+
+Archive your email messages and delivery logs to any S3-compatible object storage service for long-term retention beyond AhaSend's 30-day limit. This feature is essential for legal compliance, audit requirements, and internal retention policies that require extended email archiving.
+
+<Tip>
+**Enterprise Feature:** S3 Object Storage archiving is available exclusively on Enterprise plans. [Contact our sales team](https://ahasend.com/contact) to upgrade your account.
+</Tip>
+
+<Info>
+**Extended Compliance:** While AhaSend retains message data for up to 30 days, S3 archiving provides unlimited retention for industries with strict compliance requirements.
+</Info>
+
+## Why Use S3 Archiving?
+
+S3-compatible object storage provides a cost-effective solution for long-term email archiving:
+
+<CardGroup cols={2}>
+  <Card title="Legal Compliance" icon="scale-balanced">
+    Meet regulatory requirements for email retention in finance, healthcare, and legal industries
+  </Card>
+  <Card title="Cost-Effective Storage" icon="piggy-bank">
+    Store unlimited email data at low cost with S3-compatible providers
+  </Card>
+  <Card title="Complete Control" icon="shield-check">
+    Maintain full ownership and control over your archived email data
+  </Card>
+  <Card title="Easy Retrieval" icon="magnifying-glass">
+    Organized directory structure makes finding specific emails simple
+  </Card>
+</CardGroup>
+
+## Requirements
+
+Before enabling S3 archiving, ensure you meet these prerequisites:
+
+<AccordionGroup>
+  <Accordion title="AhaSend Configuration" icon="gear">
+    **Message Data Retention Requirements:**
+    - Message data retention must be enabled in your AhaSend account
+    - Minimum 1-day retention required for AhaSend to process and archive messages
+    - Configure retention periods in your [account settings](/retention#account-wide-settings)
+
+    <Note>
+    **Why 1-Day Minimum:** AhaSend needs time to process messages and transfer them to your S3 storage before local deletion.
+    </Note>
+  </Accordion>
+
+  <Accordion title="S3-Compatible Storage" icon="database">
+    **Supported Storage Providers:**
+    - **Amazon AWS S3** - The original and most feature-complete option
+    - **Backblaze B2** - Cost-effective alternative with S3-compatible API
+    - **DigitalOcean Spaces** - Developer-friendly with predictable pricing
+    - **Wasabi** - High-performance storage with unlimited egress
+    - **MinIO** - Self-hosted S3-compatible storage solution
+
+    **Required Credentials:**
+    - S3 endpoint URL (HTTPS recommended for security)
+    - Bucket name (must be pre-created)
+    - Access key and secret key with write permissions
+  </Accordion>
+</AccordionGroup>
+
+## Setting Up S3 Archiving
+
+Configure S3 archiving in your AhaSend account settings:
+
+<Steps>
+  <Step title="Create S3 Bucket" icon="bucket">
+    **Set up your storage bucket:**
+    1. **Create a new bucket** in your S3-compatible storage provider
+    2. **Configure permissions** to allow write access for your credentials
+    3. **Note the bucket name** and endpoint URL for configuration
+
+    <Tip>
+    **Bucket Naming:** Use descriptive names like `company-email-archive` or `ahasend-messages-2024` for easy identification.
+    </Tip>
+  </Step>
+
+  <Step title="Generate Access Credentials" icon="key">
+    **Obtain S3 credentials from your provider:**
+    - **Access Key ID** - Identifies your account/user
+    - **Secret Access Key** - Authenticates API requests
+    - **Endpoint URL** - Provider-specific S3 API endpoint
+
+    <Warning>
+    **Security:** Use dedicated credentials with minimal permissions (write-only to your archive bucket).
+    </Warning>
+  </Step>
+
+  <Step title="Configure AhaSend" icon="gear">
+    **Enable S3 archiving in your AhaSend dashboard:**
+    1. **Navigate** to **Account Settings** → **S3 Retention**
+    2. **Enter configuration details:**
+       - **Endpoint URL:** Your provider's S3 API endpoint (use HTTPS)
+       - **Bucket Name:** Name of your pre-created bucket
+       - **Access Key:** Your S3 access key ID
+       - **Secret Key:** Your S3 secret access key
+    3. **Test the connection** to verify configuration
+    4. **Save settings** to enable archiving
+  </Step>
+
+  <Step title="Verify Setup" icon="check">
+    **Confirm archiving is working:**
+    1. **Send a test email** through AhaSend
+    2. **Wait for processing** (typically within hours)
+    3. **Check your S3 bucket** for archived files
+    4. **Verify file structure** matches expected format
+  </Step>
+</Steps>
+
+## File Organization Structure
+
+AhaSend organizes archived messages in a logical directory structure for easy navigation and retrieval:
+
+### Directory Pattern
+
+```
+RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID.eml
+RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID.logs.csv
+```
+
+### Email Address Formatting
+
+Special characters in email addresses are replaced for S3 compatibility:
+
+**Character Replacements:**
+- `@` symbol becomes `_AT_`
+- `+` symbol becomes `_PLUS_`
+
+**Examples:**
+- `john@example.com` becomes `john_AT_example.com`
+- `support@mycompany.org` becomes `support_AT_mycompany.org`
+- `user+tag@example.com` becomes `user_PLUS_tag_AT_example.com`
+- `sales+leads@company.org` becomes `sales_PLUS_leads_AT_company.org`
+
+### Complete Example Structure
+
+```
+my-email-archive/
+├── john_AT_example.com/
+│   ├── 2024-01-15/
+│   │   ├── msg_abc123.eml
+│   │   └── msg_abc123.logs.csv
+│   └── 2024-01-16/
+│       ├── msg_def456.eml
+│       └── msg_def456.logs.csv
+├── support_AT_mycompany.org/
+│   └── 2024-01-15/
+│       ├── msg_ghi789.eml
+│       └── msg_ghi789.logs.csv
+└── user_PLUS_tag_AT_example.com/
+    └── 2024-01-15/
+        ├── msg_jkl012.eml
+        └── msg_jkl012.logs.csv
+```
+
+## Archived File Formats
+
+AhaSend saves two types of files for each message:
+
+<AccordionGroup>
+  <Accordion title="Message Data (.eml)" icon="envelope">
+    **Complete email content in standard EML format:**
+    - All email headers (From, To, Subject, Date, etc.)
+    - HTML body content
+    - Plain text body content
+    - All file attachments (base64 encoded)
+    - Original message structure preserved
+
+    **Benefits:**
+    - Industry-standard format readable by most email clients
+    - Contains complete message for legal/audit purposes
+    - Can be imported into email clients for viewing
+  </Accordion>
+
+  <Accordion title="Delivery Logs (.logs.csv)" icon="list">
+    **Detailed delivery attempt history in CSV format:**
+    - Timestamp of each delivery attempt
+    - Event type (Delivery, Bounce, Transient Failure, etc.)
+    - Complete server response messages
+    - Chronological record of all delivery events
+
+    **Example CSV content:**
+    ```csv
+    "2024/06/18 16:07:15","Delivery","OK 1718732564 - Message delivered successfully"
+    "2024/06/17 11:52:52","Bounce","The email account does not exist. Please check the recipient's email address"
+    "2024/06/13 13:00:31","TransientFailure","The recipient's inbox is out of storage space"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Provider-Specific Configuration
+
+<AccordionGroup>
+  <Accordion title="Amazon AWS S3" icon="aws">
+    **Configuration:**
+    - **Endpoint:** `https://s3.[region].amazonaws.com`
+    - **Bucket:** Your S3 bucket name
+    - **Credentials:** IAM user with S3 write permissions
+
+    **Example Endpoint URLs:**
+    - US East: `https://s3.us-east-1.amazonaws.com`
+    - EU West: `https://s3.eu-west-1.amazonaws.com`
+
+    **IAM Policy Example:**
+    ```json
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": ["s3:PutObject"],
+          "Resource": "arn:aws:s3:::your-bucket-name/*"
+        }
+      ]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Backblaze B2" icon="database">
+    **Configuration:**
+    - **Endpoint:** `https://s3.[region].backblazeb2.com`
+    - **Bucket:** Your B2 bucket name
+    - **Credentials:** Application keys with write access
+
+    **Benefits:**
+    - Cost-effective storage pricing
+    - Free egress for the first 1GB per day
+    - S3-compatible API
+  </Accordion>
+
+  <Accordion title="DigitalOcean Spaces" icon="digital-ocean">
+    **Configuration:**
+    - **Endpoint:** `https://[region].digitaloceanspaces.com`
+    - **Bucket:** Your Spaces name
+    - **Credentials:** Spaces access keys
+
+    **Example Endpoints:**
+    - New York: `https://nyc3.digitaloceanspaces.com`
+    - San Francisco: `https://sfo3.digitaloceanspaces.com`
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Storage Management" icon="database">
+    **Optimize costs and organization:**
+    - Use lifecycle policies to transition older data to cheaper storage tiers
+    - Implement bucket versioning for data protection
+    - Set up cross-region replication for critical archives
+    - Monitor storage usage and costs regularly
+
+    **Example Lifecycle Policy:**
+    - Transition to Infrequent Access after 30 days
+    - Move to Glacier after 1 year
+    - Delete after legal retention period expires
+  </Accordion>
+
+  <Accordion title="Security Considerations" icon="shield">
+    **Protect your archived data:**
+    - Use HTTPS endpoints for all API communications
+    - Enable bucket encryption at rest
+    - Implement least-privilege access policies
+    - Regular audit of access logs and permissions
+    - Consider bucket policies to restrict access by IP
+
+    **Access Control:**
+    - Create dedicated IAM users/keys for AhaSend integration
+    - Rotate access keys periodically
+    - Monitor for unauthorized access attempts
+  </Accordion>
+
+  <Accordion title="Compliance Strategy" icon="scale-balanced">
+    **Meet regulatory requirements:**
+    - Document your retention policies and procedures
+    - Implement automated deletion based on legal requirements
+    - Maintain audit trails of data access and modifications
+    - Consider legal hold processes for litigation
+
+    **Retention Planning:**
+    - Define retention periods by message type or sender
+    - Implement automated cleanup processes
+    - Document compliance procedures for auditors
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Connection Issues" icon="plug">
+    **Common configuration problems:**
+    - **Invalid endpoint URL:** Verify the correct S3 endpoint for your provider and region
+    - **Incorrect credentials:** Double-check access key and secret key
+    - **Bucket permissions:** Ensure write access is granted to your credentials
+    - **Network connectivity:** Test HTTPS connectivity to the endpoint
+
+    **Testing Connection:**
+    ```bash
+    # Test endpoint connectivity
+    curl -I https://your-s3-endpoint.com
+
+    # Verify bucket access with AWS CLI
+    aws s3 ls s3://your-bucket-name --endpoint-url=https://your-endpoint
+    ```
+  </Accordion>
+
+  <Accordion title="Missing Archives" icon="question">
+    **Why messages might not be archived:**
+    - **Retention disabled:** Message data retention must be enabled
+    - **Insufficient retention period:** Minimum 1-day retention required
+    - **S3 configuration errors:** Check endpoint, credentials, and bucket name
+    - **Processing delays:** Archives typically appear within hours, not immediately
+
+    **Verification Steps:**
+    1. Check message data retention settings
+    2. Verify S3 configuration in account settings
+    3. Review AhaSend logs for archiving errors
+    4. Test with a new email to confirm setup
+  </Accordion>
+
+  <Accordion title="File Access Issues" icon="key">
+    **Problems accessing archived files:**
+    - **Permission errors:** Verify read access to your S3 bucket
+    - **File path confusion:** Remember `@` becomes `_AT_` and `+` becomes `_PLUS_` in directory names
+    - **Date format:** Ensure you're using YYYY-MM-DD format
+    - **Case sensitivity:** S3 object names are case-sensitive
+
+    **File Retrieval Examples:**
+    ```bash
+    # Download specific message (standard email)
+    aws s3 cp s3://your-bucket/john_AT_example.com/2024-01-15/msg_abc123.eml ./
+
+    # Download message with + character in email
+    aws s3 cp s3://your-bucket/user_PLUS_tag_AT_example.com/2024-01-15/msg_def456.eml ./
+
+    # List all messages for a recipient
+    aws s3 ls s3://your-bucket/john_AT_example.com/ --recursive
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Documentation
+
+<CardGroup cols={3}>
+  <Card title="Data Retention" icon="clock" href="/retention">
+    Configure message retention periods and policies
+  </Card>
+
+  <Card title="Account Settings" icon="gear" href="/account/settings">
+    Manage S3 archiving configuration in your dashboard
+  </Card>
+
+  <Card title="Compliance Guide" icon="scale-balanced" href="/compliance">
+    Best practices for meeting regulatory requirements
+  </Card>
+</CardGroup>

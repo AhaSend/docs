@@ -56,7 +56,7 @@
             ]
           },
           {
-            "group": "Sending with API",
+            "group": "Sending with the API",
             "pages": [
               "api/credentials",
               "api/sandbox",
@@ -71,21 +71,10 @@
             ]
           },
           {
-            "group": "Webhooks",
+            "group": "Integrations",
             "pages": [
-              "webhooks/index",
-              "webhooks/events",
-              "webhooks/security",
-              "webhooks/faq"
-            ]
-          },
-          {
-            "group": "Email Routing",
-            "pages": [
-              "routing/index",
-              "routing/deduplication",
-              "routing/security",
-              "routing/faq"
+              "integrations/webhooks",
+              "integrations/routing"
             ]
           },
           {
@@ -108,13 +97,14 @@
             "group": "Scaling up",
             "pages": [
               "scale/dedicated-ips",
-              "scale/ip-pools"
+              "scale/ip-pools",
+              "scale/byoip"
             ]
           }
         ]
       },
       {
-        "dropdown": "API References",
+        "dropdown": "API v2 Reference",
         "description": "API Usage and Reference",
         "icon": "square-terminal",
         "groups": [

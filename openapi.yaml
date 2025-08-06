@@ -255,6 +255,10 @@ components:
           type: string
           format: date-time
           description: When the API key was last updated
+        last_used_at:
+          type: string
+          format: date-time
+          description: When the API key was last used (updates every 5-10 minutes)
         account_id:
           type: string
           format: uuid
@@ -474,6 +478,41 @@ components:
         content_type: "image/png"
         file_name: "pixel.png"
 
+    Tracking:
+      type: object
+      nullable: true
+      properties:
+        open:
+          type: boolean
+          nullable: true
+          description: Whether to track opens
+        click:
+          type: boolean
+          nullable: true
+          description: Whether to track clicks
+      example:
+        open: true
+        click: true
+
+    Retention:
+      type: object
+      nullable: true
+      properties:
+        metadata:
+          type: integer
+          nullable: true
+          description: Number of days to retain metadata
+          minimum: 1
+          maximum: 30
+        data:
+          type: integer
+          nullable: true
+          description: Number of days to retain data
+          minimum: 0
+          maximum: 30
+      example:
+        metadata: 1
+        data: 0
     MessageSchedule:
       type: object
       properties:
@@ -546,22 +585,12 @@ components:
           type: string
           enum: [deliver, bounce, defer, fail, suppress]
           description: The result of the sandbox send
-        track_opens:
-          type: boolean
-          description: Overrides account-wide open tracking setting for this message
-        track_clicks:
-          type: boolean
-          description: Overrides account-wide click tracking setting for this message
-        metadata_retention:
-          type: integer
-          minimum: 1
-          maximum: 30
-          description: Number of days, overrides the account-wide metadata retention setting for this message
-        data_retention:
-          type: integer
-          minimum: 0
-          maximum: 30
-          description: Number of days, overrides the account-wide data retention setting for this message
+        tracking:
+          $ref: '#/components/schemas/Tracking'
+          description: Tracking settings for the message, overrides default account settings
+        retention:
+          $ref: '#/components/schemas/Retention'
+          description: Retention settings for the message, overrides default account settings
         schedule:
           $ref: '#/components/schemas/MessageSchedule'
           description: Schedule for message delivery
@@ -2274,8 +2303,8 @@ paths:
         **Validation Requirements:**
         - Either `text_content` or `html_content` is required
         - `from.email` must be from a domain you own with valid DNS records
-        - `metadata_retention` must be between 1 and 30 days
-        - `data_retention` must be between 0 and 30 days
+        - `retention.metadata` must be between 1 and 30 days
+        - `retention.data` must be between 0 and 30 days
         - If `reply_to` is provided, do not include `reply-to` in headers
         - `message-id` header will be ignored and automatically generated
         - Schedule times must be in RFC3339 format

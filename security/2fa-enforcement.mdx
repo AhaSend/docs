@@ -1,4 +1,129 @@
 ---
-title: "2FA enforcement"
-description: "This is the introduction to the documentation"
+title: "2FA Enforcement"
+sidebarTitle: "2FA Enforcement"
+description: "Require all team members to enable two-factor authentication before accessing your AhaSend account"
+icon: "shield-exclamation"
 ---
+
+Enforce Two-Factor Authentication (2FA) for all team members accessing your AhaSend account. When enabled, every user must set up 2FA on their individual profile before they can access your account dashboard or features.
+
+<Info>
+**Account Owner Only:** Only the account owner can enable 2FA enforcement. This setting affects all team members and requires careful planning.
+</Info>
+
+## What is 2FA Enforcement?
+
+2FA enforcement is an account-level security setting that mandates all team members use two-factor authentication. Think of it as adding a second lock to a shared door - everyone needs both the key (password) and the code (2FA) to enter.
+
+**Key Behavior:**
+- **Immediate requirement:** Team members without 2FA are prompted to set it up upon next access
+- **Access blocked:** No account features available until 2FA is configured
+- **Per-account setting:** Enforcement applies only to the specific account where it's enabled
+
+## Prerequisites
+
+Before enabling 2FA enforcement, the account owner must:
+
+<Steps>
+    <Step title="Enable Personal 2FA" icon="user-shield">
+    **Set up 2FA on your own profile first:**
+
+    Follow the complete [2FA setup guide](/security/2fa) to enable Two-Factor Authentication on your personal account, including saving recovery codes.
+
+    <Warning>
+    **Required First Step:** You cannot enforce 2FA for others without having it enabled on your own profile.
+    </Warning>
+  </Step>
+</Steps>
+
+## Enabling 2FA Enforcement
+
+Once your personal 2FA is active, enable enforcement for your team:
+
+<Steps>
+  <Step title="Access Account Settings" icon="gear">
+    **Navigate to account-level security settings:**
+    1. **Log in** to your AhaSend dashboard as the account owner
+    2. **Go to** **[Account Settings](https://dash.ahasend.com/account/-/settings)**
+    3. Scroll to the **Security** section
+  </Step>
+
+  <Step title="Enable Enforcement" icon="toggle-on">
+    **Activate the enforcement setting:**
+    1. **Find** "Enforce Two-Factor Authentication" option
+    2. **Toggle** or check the box to enable
+    3. **Save** changes to activate immediately
+
+    <Note>
+    **Immediate Effect:** Enforcement takes effect immediately for all team members.
+    </Note>
+  </Step>
+</Steps>
+
+## What Happens to Team Members
+
+When 2FA enforcement is enabled, team members experience the following:
+
+### First Access After Enforcement
+- **2FA Already Enabled:** Normal access to account dashboard
+- **2FA Not Enabled:** Redirected to profile settings with setup requirement
+
+### Setup Process
+1. **Clear messaging** explains 2FA is now required for account access
+2. **Guided setup** walks through 2FA configuration
+3. **Access blocked** until 2FA setup is completed successfully
+
+<Tip>
+**Team Communication:** Notify your team before enabling enforcement to avoid access disruptions during critical operations.
+</Tip>
+
+## Multiple Account Scenarios
+
+It's common for users, especially agencies or consultants, to be members of multiple AhaSend accounts. **The 2FA enforcement setting is specific to each individual account.**
+
+This means that enabling 2FA enforcement on one account does not automatically force a user to enable 2FA to access other accounts they are members of, unless those other accounts also have 2FA enforcement enabled.
+
+## Why Enforce 2FA?
+
+Mandatory 2FA provides critical security benefits for team accounts:
+
+<AccordionGroup>
+  <Accordion title="Prevent Unauthorized Access" icon="lock">
+    **Protection against compromised passwords:**
+    - Stolen credentials alone cannot access your account
+    - Requires physical device access for the second factor
+    - Significantly reduces breach risk from password attacks
+  </Accordion>
+
+  <Accordion title="Protect Critical Infrastructure" icon="server">
+    **Safeguard your email operations:**
+    - Prevents unauthorized changes to sending configurations
+    - Protects sensitive recipient data and email content
+    - Maintains your domain's sending reputation
+  </Accordion>
+
+  <Accordion title="Compliance Requirements" icon="scale-balanced">
+    **Meet security standards:**
+    - Required for many industry regulations
+    - Demonstrates security best practices to auditors
+    - Reduces liability from security incidents
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Implementation Planning" icon="calendar">
+    **Smooth enforcement rollout:**
+    - **Advance notice:** Inform team members before enabling
+    - **Support availability:** Be ready to help with setup issues
+    - **Timing consideration:** Avoid enabling during critical campaigns
+  </Accordion>
+
+  <Accordion title="Team Communication" icon="users">
+    **Keep your team informed:**
+    - Explain the security benefits of 2FA enforcement
+    - Provide links to 2FA setup documentation
+    - Share best practices for recovery code storage
+  </Accordion>
+</AccordionGroup>
