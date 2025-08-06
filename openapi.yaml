@@ -691,6 +691,24 @@ components:
             $ref: '#/components/schemas/CreateSingleMessageResponse'
           description: List of messages and their statuses
 
+    DeliveryEvent:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: Timestamp of the delivery event
+        log:
+          type: string
+          description: Log message for the delivery event
+        status:
+          type: string
+          description: Status of the delivery event
+      required:
+        - time
+        - log
+        - status
+
     Message:
       type: object
       properties:
@@ -698,10 +716,6 @@ components:
           type: string
           enum: [message]
           description: Object type identifier
-        id:
-          type: integer
-          format: int64
-          description: Message ID
         created_at:
           type: string
           format: date-time
@@ -734,14 +748,81 @@ components:
         bounce_classification:
           type: string
           description: Classification of bounce if applicable
+        delivery_attempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryEvent'
+          description: List of delivery attempts for this message
+        message_id:
+          type: string
+          description: Message-ID header value
+        api_id:
+          type: string
+          format: uuid
+          description: API-generated message ID
+        ahasend_id:
+          type: string
+          description: Internal AhaSend message ID
+        subject:
+          type: string
+          description: Message subject
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the message
+        sender:
+          type: string
+          format: email
+          description: Sender email address
+        recipient:
+          type: string
+          format: email
+          description: Recipient email address
+        status:
+          type: string
+          description: Current message status
+        num_attempts:
+          type: integer
+          description: Number of delivery attempts
+        click_count:
+          type: integer
+          description: Number of clicks tracked for this message
+        open_count:
+          type: integer
+          description: Number of opens tracked for this message
+        reference_message_id:
+          type: integer
+          format: int64
+          description: ID of the original message (for bounce messages)
+        domain_id:
+          type: string
+          format: uuid
+          description: Domain ID this message was sent from
+        account_id:
+          type: string
+          format: uuid
+          description: Account ID this message belongs to
       required:
         - object
-        - id
         - created_at
         - updated_at
         - retain_until
         - direction
         - is_bounce_notification
+        - delivery_attempts
+        - message_id
+        - ahasend_id
+        - subject
+        - tags
+        - sender
+        - recipient
+        - status
+        - num_attempts
+        - click_count
+        - open_count
+        - domain_id
+        - account_id
 
     PaginatedMessagesResponse:
       type: object
