@@ -105,7 +105,7 @@
         ]
       },
       {
-        "dropdown": "API v2 Reference",
+        "dropdown": "API Reference",
         "description": "API Usage and Reference",
         "icon": "square-terminal",
         "groups": [
@@ -262,12 +262,17 @@
           },
           {
             "group": "Message Routing",
-            "icon": "route",
             "pages": [
               "api-reference/routes/index",
               "api-reference/routes/security",
               "api-reference/routes/retry-policy",
               "api-reference/routes/route.message"
+            ]
+          },
+          {
+            "group": "API v1 (legacy)",
+            "pages": [
+              "api-reference/v1/index"
             ]
           }
         ]

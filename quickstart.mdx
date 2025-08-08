@@ -21,7 +21,7 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
   <Step title="Add & Configure Domain" icon="globe">
     Before you can send emails, you need to add and verify your domain:
 
-    1. **Add your domain** in your dashboard under "Domains"
+    1. **Add your domain** in your dashboard under [Domains](https://dash.ahasend.com/account/-/settings/domains)
     2. **Add the DNS records** provided by AhaSend to your domain's DNS settings
     3. **Wait for verification** (usually takes a few minutes)
 
@@ -77,7 +77,7 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
     **After sending:**
     1. **Check your inbox** - Your test email should arrive within seconds
     2. **Check the Messages page** in your dashboard to see delivery status
-    3. **Look for a 200 response** with a message ID
+    3. **Look for a 202 response** with a message ID
 
     <Check>
     **Success!** See your email in both your inbox and the Messages page? You're all set up! 🎉
@@ -94,7 +94,7 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
 Send emails using our modern HTTP API. Perfect for web applications and microservices.
 
 <Info>
-**API Version Note:** These examples use API v1 to keep things simple and easier to get started with. If you need more powerful features like templates, advanced tracking, or bulk sending, check out our [API v2 documentation](/api-reference/messages/create-message).
+**API Version Note:** These examples use our latest API v2, which provides the most powerful features including advanced tracking, bulk sending, and better error handling. For simpler use cases, you can also use our [API v1](/api-reference/v1).
 </Info>
 
 ### Basic Email
@@ -102,9 +102,9 @@ Send emails using our modern HTTP API. Perfect for web applications and microser
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.ahasend.com/v1/email/send \
+curl -X POST https://api.ahasend.com/v2/accounts/{account_id}/messages \
   -H "Content-Type: application/json" \
-  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
     "from": {
       "name": "My App",
@@ -116,11 +116,9 @@ curl -X POST https://api.ahasend.com/v1/email/send \
         "email": "john@example.com"
       }
     ],
-    "content": {
-      "subject": "Welcome to My App!",
-      "text_body": "Thanks for signing up. We'\''re excited to have you!",
-      "html_body": "<h1>Welcome!</h1><p>Thanks for signing up. We'\''re <strong>excited</strong> to have you!</p>"
-    }
+    "subject": "Welcome to My App!",
+    "text_content": "Thanks for signing up. We'\''re excited to have you!",
+    "html_content": "<h1>Welcome!</h1><p>Thanks for signing up. We'\''re <strong>excited</strong> to have you!</p>"
   }'
 ```
 
@@ -140,17 +138,15 @@ const sendEmail = async () => {
           email: 'john@example.com'
         }
       ],
-      content: {
-        subject: 'Welcome to My App!',
-        text_body: 'Thanks for signing up. We\'re excited to have you!',
-        html_body: '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
-      }
+      subject: 'Welcome to My App!',
+      text_content: 'Thanks for signing up. We\'re excited to have you!',
+      html_content: '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
     };
 
-    const response = await axios.post('https://api.ahasend.com/v1/email/send', email, {
+    const response = await axios.post('https://api.ahasend.com/v2/accounts/{account_id}/messages', email, {
       headers: {
         'Content-Type': 'application/json',
-        'X-Api-Key': 'YOUR_API_KEY'
+        'Authorization': 'Bearer YOUR_API_KEY'
       }
     });
 
@@ -167,10 +163,10 @@ sendEmail();
 import requests
 
 def send_email():
-    url = 'https://api.ahasend.com/v1/email/send'
+    url = 'https://api.ahasend.com/v2/accounts/{account_id}/messages'
     headers = {
         'Content-Type': 'application/json',
-        'X-Api-Key': 'YOUR_API_KEY'
+        'Authorization': 'Bearer YOUR_API_KEY'
     }
     email = {
         'from': {
@@ -183,16 +179,14 @@ def send_email():
                 'email': 'john@example.com'
             }
         ],
-        'content': {
-            'subject': 'Welcome to My App!',
-            'text_body': 'Thanks for signing up. We\'re excited to have you!',
-            'html_body': '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
-        }
+        'subject': 'Welcome to My App!',
+        'text_content': 'Thanks for signing up. We\'re excited to have you!',
+        'html_content': '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
     }
 
     response = requests.post(url, json=email, headers=headers)
 
-    if response.status_code == 200:
+    if response.status_code == 202:
         print('Email sent:', response.json())
     else:
         print('Error:', response.json())
@@ -213,23 +207,21 @@ $email = [
             'email' => 'john@example.com'
         ]
     ],
-    'content' => [
-        'subject' => 'Welcome to My App!',
-        'text_body' => 'Thanks for signing up. We\'re excited to have you!',
-        'html_body' => '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
-    ]
+    'subject' => 'Welcome to My App!',
+    'text_content' => 'Thanks for signing up. We\'re excited to have you!',
+    'html_content' => '<h1>Welcome!</h1><p>Thanks for signing up. We\'re <strong>excited</strong> to have you!</p>'
 ];
 
 $options = [
     'http' => [
-        'header' => "Content-type: application/json\r\nX-Api-Key: YOUR_API_KEY",
+        'header' => "Content-type: application/json\r\nAuthorization: Bearer YOUR_API_KEY",
         'method' => 'POST',
         'content' => json_encode($email)
     ]
 ];
 
 $context = stream_context_create($options);
-$response = file_get_contents('https://api.ahasend.com/v1/email/send', false, $context);
+$response = file_get_contents('https://api.ahasend.com/v2/accounts/{account_id}/messages', false, $context);
 
 var_export($response, true);
 ?>
@@ -246,20 +238,16 @@ import (
 )
 
 type Email struct {
-    From       Contact   `json:"from"`
-    Recipients []Contact `json:"recipients"`
-    Content    Content   `json:"content"`
+    From        Contact   `json:"from"`
+    Recipients  []Contact `json:"recipients"`
+    Subject     string    `json:"subject"`
+    TextContent string    `json:"text_content"`
+    HTMLContent string    `json:"html_content"`
 }
 
 type Contact struct {
     Name  string `json:"name"`
     Email string `json:"email"`
-}
-
-type Content struct {
-    Subject  string `json:"subject"`
-    TextBody string `json:"text_body"`
-    HTMLBody string `json:"html_body"`
 }
 
 func main() {
@@ -274,18 +262,16 @@ func main() {
                 Email: "john@example.com",
             },
         },
-        Content: Content{
-            Subject:  "Welcome to My App!",
-            TextBody: "Thanks for signing up. We're excited to have you!",
-            HTMLBody: "<h1>Welcome!</h1><p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>",
-        },
+        Subject:     "Welcome to My App!",
+        TextContent: "Thanks for signing up. We're excited to have you!",
+        HTMLContent: "<h1>Welcome!</h1><p>Thanks for signing up. We're <strong>excited</strong> to have you!</p>",
     }
 
     jsonData, _ := json.Marshal(email)
 
-    req, _ := http.NewRequest("POST", "https://api.ahasend.com/v1/email/send", bytes.NewBuffer(jsonData))
+    req, _ := http.NewRequest("POST", "https://api.ahasend.com/v2/accounts/{account_id}/messages", bytes.NewBuffer(jsonData))
     req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("X-Api-Key", "YOUR_API_KEY")
+    req.Header.Set("Authorization", "Bearer YOUR_API_KEY")
 
     client := &http.Client{}
     resp, err := client.Do(req)
@@ -304,6 +290,7 @@ func main() {
 <Tip>
 **Replace the placeholders:**
 - `YOUR_API_KEY` with your actual API key from Step 4
+- `{account_id}` with your account ID from your dashboard
 - `hello@yourdomain.com` with your verified domain from Step 2
 - `john@example.com` with the recipient's email address
 </Tip>
@@ -464,17 +451,17 @@ func main() {
 Now that you've sent your first email, here's what to do next:
 
 <CardGroup cols={2}>
-  <Card title="Configure webhooks" icon="webhook" href="/webhooks">
-    **Track email events** like deliveries, opens, and clicks in real-time
+  <Card title="Set up Domains" icon="globe" href="/domains">
+    **Add and verify domains** for better deliverability and custom from addresses
   </Card>
-  <Card title="Enable tracking" icon="chart-line" href="/tracking/open-tracking">
-    **Monitor engagement** with open and click tracking for your emails
+  <Card title="Send with SMTP" icon="envelope" href="/smtp">
+    **Use SMTP credentials** to send emails through your existing email libraries
   </Card>
-  <Card title="Explore the API" icon="code" href="/api-reference">
-    **Advanced features** like templates, attachments, and bulk sending
+  <Card title="Send with API" icon="code" href="/api-reference/messages/create-message">
+    **Advanced API features** like templates, attachments, and bulk sending
   </Card>
-  <Card title="Security Setup" icon="shield-check" href="/security/2fa">
-    **Secure your account** with two-factor authentication and scoped credentials
+  <Card title="Sandbox SMTP" icon="flask" href="/smtp/sandbox">
+    **Test safely** with sandbox mode to avoid sending emails to real recipients
   </Card>
 </CardGroup>
 
@@ -485,7 +472,7 @@ Having issues? Here are the most common problems:
 <AccordionGroup>
   <Accordion title="401 Unauthorized Error">
     - Check that your API key is correct and properly formatted
-    - Make sure you're using the `X-Api-Key` header (not `Authorization`)
+    - Make sure you're using the `Authorization: Bearer` header format
     - Verify your API key has the correct scopes in your dashboard
   </Accordion>
 

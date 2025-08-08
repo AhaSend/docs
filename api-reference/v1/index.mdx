@@ -1,0 +1,440 @@
+---
+title: "API v1 Reference"
+sidebarTitle: "API v1 (Legacy)"
+description: "Legacy API v1 for sending emails - simple and straightforward"
+icon: "paper-plane"
+---
+
+<Warning>
+**API v1 is in maintenance mode.** We recommend using [API v2](/api-reference/messages/create-message) for new integrations as it offers better features, error handling, and will receive ongoing updates.
+</Warning>
+
+API v1 provides a simple way to send emails through AhaSend. It's designed for straightforward email sending without the advanced features available in v2.
+
+## Base URL
+
+```
+https://api.ahasend.com/v1
+```
+
+## Authentication
+
+All API requests must include your API key in the `X-Api-Key` header:
+
+```
+X-Api-Key: YOUR_API_KEY
+```
+
+<Info>
+Get your API key from your [AhaSend dashboard](https://dash.ahasend.com) under API Keys.
+</Info>
+
+## Send Email
+
+<Card title="POST /email/send" icon="paper-plane">
+Send emails to up to 100 recipients at once.
+</Card>
+
+### Request
+
+```bash
+POST https://api.ahasend.com/v1/email/send
+Content-Type: application/json
+X-Api-Key: YOUR_API_KEY
+```
+
+### Request Body
+
+```json
+{
+  "from": {
+    "email": "noreply@yourdomain.com",
+    "name": "Your App Name"
+  },
+  "recipients": [
+    {
+      "email": "user@example.com",
+      "name": "John Doe"
+    }
+  ],
+  "content": {
+    "subject": "Welcome to our service!",
+    "text_body": "Thanks for signing up!",
+    "html_body": "<h1>Welcome!</h1><p>Thanks for signing up!</p>"
+  }
+}
+```
+
+### Parameters
+
+<AccordionGroup>
+
+<Accordion title="from (required)">
+The sender information.
+
+- **email** (string, required): Sender email address from a verified domain
+- **name** (string, optional): Display name for the sender
+
+```json
+{
+  "email": "noreply@yourdomain.com",
+  "name": "Your App Name"
+}
+```
+</Accordion>
+
+<Accordion title="recipients (required)">
+Array of recipients (max 100).
+
+- **email** (string, required): Recipient email address
+- **name** (string, optional): Display name for the recipient
+
+```json
+[
+  {
+    "email": "user1@example.com",
+    "name": "John Doe"
+  },
+  {
+    "email": "user2@example.com",
+    "name": "Jane Smith"
+  }
+]
+```
+</Accordion>
+
+<Accordion title="content (required)">
+The email content and metadata.
+
+- **subject** (string, required): Email subject line
+- **text_body** (string, optional): Plain text content
+- **html_body** (string, optional): HTML content
+- **reply_to** (object, optional): Reply-to address (same format as `from`)
+- **headers** (object, optional): Custom email headers
+- **attachments** (array, optional): File attachments
+
+<Info>
+At least one of `text_body` or `html_body` must be provided.
+</Info>
+
+```json
+{
+  "subject": "Welcome!",
+  "text_body": "Welcome to our service!",
+  "html_body": "<h1>Welcome!</h1><p>Welcome to our service!</p>",
+  "reply_to": {
+    "email": "support@yourdomain.com",
+    "name": "Support Team"
+  },
+  "headers": {
+    "X-Custom-ID": "12345"
+  }
+}
+```
+</Accordion>
+
+<Accordion title="attachments (optional)">
+Array of file attachments.
+
+- **data** (string, required): File data (base64 encoded if `base64: true`)
+- **file_name** (string, required): Filename with extension
+- **content_type** (string, required): MIME type
+- **base64** (boolean, optional): Whether data is base64 encoded (default: false)
+- **content_id** (string, optional): Content ID for inline attachments
+
+```json
+{
+  "attachments": [
+    {
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+      "file_name": "pixel.png",
+      "content_type": "image/png",
+      "base64": true
+    }
+  ]
+}
+```
+</Accordion>
+
+</AccordionGroup>
+
+### Response
+
+#### 201 Success
+
+```json
+{
+  "success_count": 2,
+  "fail_count": 0,
+  "failed_recipients": [],
+  "errors": []
+}
+```
+
+<ResponseField name="success_count" type="integer">
+Number of messages queued for sending
+</ResponseField>
+
+<ResponseField name="fail_count" type="integer">
+Number of messages that failed to be queued
+</ResponseField>
+
+<ResponseField name="failed_recipients" type="array">
+List of email addresses that failed
+</ResponseField>
+
+<ResponseField name="errors" type="array">
+Detailed error messages for failed recipients
+</ResponseField>
+
+#### 400 Bad Request
+
+```json
+{
+  "status": "bad request"
+}
+```
+
+Common causes:
+- Missing required fields
+- Invalid email addresses
+- Domain not verified
+- Malformed request body
+
+#### 403 Access Denied
+
+```json
+{
+  "status": "invalid credentials"
+}
+```
+
+Common causes:
+- Invalid API key
+- Domain ownership issues
+- DNS configuration problems
+
+## Code Examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.ahasend.com/v1/email/send \
+  -H "Content-Type: application/json" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -d '{
+    "from": {
+      "email": "noreply@yourdomain.com",
+      "name": "Your App"
+    },
+    "recipients": [
+      {
+        "email": "user@example.com",
+        "name": "John Doe"
+      }
+    ],
+    "content": {
+      "subject": "Welcome!",
+      "text_body": "Welcome to our service!",
+      "html_body": "<h1>Welcome!</h1><p>Welcome to our service!</p>"
+    }
+  }'
+```
+
+```javascript Node.js
+const axios = require('axios');
+
+async function sendEmail() {
+  try {
+    const response = await axios.post('https://api.ahasend.com/v1/email/send', {
+      from: {
+        email: 'noreply@yourdomain.com',
+        name: 'Your App'
+      },
+      recipients: [
+        {
+          email: 'user@example.com',
+          name: 'John Doe'
+        }
+      ],
+      content: {
+        subject: 'Welcome!',
+        text_body: 'Welcome to our service!',
+        html_body: '<h1>Welcome!</h1><p>Welcome to our service!</p>'
+      }
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': 'YOUR_API_KEY'
+      }
+    });
+
+    console.log('Success:', response.data);
+  } catch (error) {
+    console.error('Error:', error.response?.data || error.message);
+  }
+}
+
+sendEmail();
+```
+
+```python Python
+import requests
+
+def send_email():
+    url = 'https://api.ahasend.com/v1/email/send'
+    headers = {
+        'Content-Type': 'application/json',
+        'X-Api-Key': 'YOUR_API_KEY'
+    }
+    data = {
+        'from': {
+            'email': 'noreply@yourdomain.com',
+            'name': 'Your App'
+        },
+        'recipients': [
+            {
+                'email': 'user@example.com',
+                'name': 'John Doe'
+            }
+        ],
+        'content': {
+            'subject': 'Welcome!',
+            'text_body': 'Welcome to our service!',
+            'html_body': '<h1>Welcome!</h1><p>Welcome to our service!</p>'
+        }
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+
+    if response.status_code == 201:
+        print('Success:', response.json())
+    else:
+        print('Error:', response.json())
+
+send_email()
+```
+
+```php PHP
+<?php
+$email = [
+    'from' => [
+        'email' => 'noreply@yourdomain.com',
+        'name' => 'Your App'
+    ],
+    'recipients' => [
+        [
+            'email' => 'user@example.com',
+            'name' => 'John Doe'
+        ]
+    ],
+    'content' => [
+        'subject' => 'Welcome!',
+        'text_body' => 'Welcome to our service!',
+        'html_body' => '<h1>Welcome!</h1><p>Welcome to our service!</p>'
+    ]
+];
+
+$options = [
+    'http' => [
+        'header' => "Content-Type: application/json\r\nX-Api-Key: YOUR_API_KEY",
+        'method' => 'POST',
+        'content' => json_encode($email)
+    ]
+];
+
+$context = stream_context_create($options);
+$response = file_get_contents('https://api.ahasend.com/v1/email/send', false, $context);
+
+echo $response;
+?>
+```
+
+```go Go
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+type Contact struct {
+    Email string `json:"email"`
+    Name  string `json:"name,omitempty"`
+}
+
+type Content struct {
+    Subject  string `json:"subject"`
+    TextBody string `json:"text_body,omitempty"`
+    HTMLBody string `json:"html_body,omitempty"`
+}
+
+type Email struct {
+    From       Contact   `json:"from"`
+    Recipients []Contact `json:"recipients"`
+    Content    Content   `json:"content"`
+}
+
+func main() {
+    email := Email{
+        From: Contact{
+            Email: "noreply@yourdomain.com",
+            Name:  "Your App",
+        },
+        Recipients: []Contact{
+            {
+                Email: "user@example.com",
+                Name:  "John Doe",
+            },
+        },
+        Content: Content{
+            Subject:  "Welcome!",
+            TextBody: "Welcome to our service!",
+            HTMLBody: "<h1>Welcome!</h1><p>Welcome to our service!</p>",
+        },
+    }
+
+    jsonData, _ := json.Marshal(email)
+
+    req, _ := http.NewRequest("POST", "https://api.ahasend.com/v1/email/send", bytes.NewBuffer(jsonData))
+    req.Header.Set("Content-Type", "application/json")
+    req.Header.Set("X-Api-Key", "YOUR_API_KEY")
+
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        fmt.Println("Error:", err)
+        return
+    }
+    defer resp.Body.Close()
+
+    fmt.Println("Status:", resp.Status)
+}
+```
+
+</CodeGroup>
+
+## Rate Limits
+
+- **Requests**: 100 requests per second
+- **Recipients**: Up to 100 recipients per request
+- **Burst**: 200 request burst allowed
+
+## Migration to API v2
+
+Consider upgrading to [API v2](/api-reference/messages/create-message) for:
+
+- **Better error handling** with detailed error codes
+- **Advanced features** like scheduling, templates, and tracking
+- **Improved authentication** with Bearer tokens and scopes
+- **Enhanced delivery options** with retry policies
+- **Real-time webhooks** for delivery status
+- **Ongoing feature development** and support
+
+## Support
+
+<Info>
+**Need help?** Email our team at [support@ahasend.com](mailto:support@ahasend.com) for API v1 questions.
+</Info>
