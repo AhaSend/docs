@@ -1,0 +1,357 @@
+---
+title: "Recipient Shield"
+sidebarTitle: "Recipient Shield"
+description: "Protect your sender reputation by automatically filtering toxic domains, temporary emails, and typo-squatted addresses"
+icon: "shield-halved"
+---
+
+Recipient Shield protects your sender reputation and prevents security threats by automatically rejecting emails to high-risk recipient addresses. This proactive security feature filters out toxic domains, temporary email addresses, and domains with common typos before messages are sent.
+
+<Info>
+**Sender Protection:** Recipient Shield helps maintain your sender reputation by preventing emails to known problematic domains that could damage your deliverability scores.
+</Info>
+
+## Why Use Recipient Shield?
+
+Your sender reputation directly impacts email deliverability. Sending to toxic, temporary, or typo-squatted domains can:
+
+- **Damage sender reputation** through high bounce rates and spam complaints
+- **Waste resources** on invalid or temporary recipients
+- **Enable fraud** by allowing bad actors to create fake accounts
+- **Expose users to attacks** through typo-squatted domains used for phishing
+
+## Protection Types
+
+Recipient Shield provides two distinct protection mechanisms:
+
+<CardGroup cols={2}>
+  <Card title="Toxic & Tempmail Filtering" icon="biohazard">
+    **200,000+ blocked domains**
+
+    Automatically reject emails to known toxic and temporary email domains
+  </Card>
+  <Card title="Typo Detection" icon="spell-check">
+    **Common misspellings blocked**
+
+    Prevent delivery to typo-squatted domains that attackers use for phishing
+  </Card>
+</CardGroup>
+
+---
+
+## Toxic & Temporary Email Filtering
+
+### What Are Toxic Domains?
+
+Toxic domains are email domains with low reputation scores that are frequently used by bad actors for:
+- **Phishing attacks** to steal user credentials
+- **Spam campaigns** that damage sender reputation
+- **Account takeover attempts** and other malicious activities
+- **Fraud and abuse** of trial offers and promotional codes
+
+### What Are Temporary Email Domains?
+
+Temporary email (tempmail) services provide disposable email addresses that users leverage to:
+- **Bypass trial limitations** by creating multiple accounts
+- **Generate fake accounts** on your platform
+- **Avoid legitimate communications** from your service
+- **Abuse promotional offers** and discount codes
+
+### How It Works
+
+When toxic and tempmail filtering is enabled:
+
+1. **Pre-send validation:** AhaSend checks each recipient domain against our database of 200,000+ known toxic and temporary email domains
+2. **Automatic rejection:** Matching domains are immediately rejected
+3. **Error response:** Your application receives a clear error message
+4. **Real-time updates:** Our blocklist is continuously updated with newly identified toxic domains
+
+<Note>
+**Database Updates:** Our toxic domain database is continuously updated based on threat intelligence from multiple sources, ensuring protection against emerging threats.
+</Note>
+
+### Rejection Response
+
+When an email is blocked due to toxic or tempmail domain:
+
+```plaintext
+553 Requested action not taken: recipient domain is toxic or tempmail
+```
+
+This error is returned via:
+- **SMTP:** During the RCPT TO command
+- **API:** In the response body with appropriate HTTP status code
+
+---
+
+## Typo Detection & Prevention
+
+### The Typo-Squatting Threat
+
+People make typing mistakes. They enter `gmil.com` instead of `gmail.com` or `outlok.com` instead of `outlook.com`. Attackers exploit these mistakes by:
+
+1. **Registering misspelled domains** of popular email providers
+2. **Accepting all incoming emails** to these domains
+3. **Harvesting sensitive information** from misdirected emails
+4. **Using collected data** for targeted phishing attacks
+
+### How Typo Detection Works
+
+When typo detection is enabled:
+
+1. **Pattern matching:** AhaSend identifies common misspellings of major email providers
+2. **Domain verification:** Checks if the recipient domain matches known typo patterns
+3. **Automatic blocking:** Prevents delivery to detected typo domains
+4. **User protection:** Shields your users from potential security threats
+
+### Common Typo Examples
+
+<AccordionGroup>
+  <Accordion title="Gmail Typos" icon="envelope">
+    Protected variations include:
+    - `gmil.com`, `gmai.com`, `gmial.com`
+    - `gmaill.com`, `gmailcom`, `gmail.co`
+    - `gmal.com`, `gmeil.com`, `gmail.cm`
+  </Accordion>
+
+  <Accordion title="Outlook/Hotmail Typos" icon="microsoft">
+    Protected variations include:
+    - `outlok.com`, `outlook.co`, `outlool.com`
+    - `hotmial.com`, `hotmal.com`, `hotmil.com`
+    - `hotmall.com`, `hotmai.com`, `hotmeil.com`
+  </Accordion>
+
+  <Accordion title="Yahoo Typos" icon="yahoo">
+    Protected variations include:
+    - `yaho.com`, `yahooo.com`, `yahoo.co`
+    - `yhoo.com`, `yaoo.com`, `yaho.com`
+    - `yahho.com`, `yahhoo.com`, `yahoo.cm`
+  </Accordion>
+</AccordionGroup>
+
+### Rejection Response
+
+When an email is blocked due to domain typo:
+
+```plaintext
+553 Requested action not taken: recipient domain has common a typo
+```
+
+<Tip>
+**User Experience:** Consider implementing client-side typo detection in your signup forms to catch these errors before submission, providing a better user experience while maintaining security.
+</Tip>
+
+---
+
+## Enabling Recipient Shield
+
+<Steps>
+  <Step title="Access Security Settings" icon="gear">
+    **Navigate to your account security options:**
+    1. **Log in** to your AhaSend dashboard
+    2. **Go to** **Account Settings** from the main menu
+    3. **Click** the **Security** tab in the sidebar
+  </Step>
+
+  <Step title="Configure Toxic Domain Filtering" icon="biohazard">
+    **Enable toxic and tempmail domain protection:**
+    1. **Locate** "Toxic & Tempmail Domain Filtering" section
+    2. **Toggle** the feature to "Enabled"
+    3. **Review** the description to understand the protection scope
+
+    <Info>
+    This will immediately begin blocking emails to our database of 200,000+ known toxic and temporary email domains.
+    </Info>
+  </Step>
+
+  <Step title="Configure Typo Detection" icon="spell-check">
+    **Enable typo-squatting protection:**
+    1. **Locate** "Domain Typo Detection" section
+    2. **Toggle** the feature to "Enabled"
+    3. **Review** the common typo patterns that will be blocked
+
+    <Warning>
+    Ensure your legitimate recipient domains don't match typo patterns before enabling this feature.
+    </Warning>
+  </Step>
+
+  <Step title="Save Configuration" icon="save">
+    **Apply your security settings:**
+    1. **Click** "Save Settings" at the bottom of the page
+    2. **Wait** for confirmation message
+    3. **Test** with a known toxic domain to verify activation
+
+    <Note>
+    Settings take effect immediately across all sending methods (SMTP and API).
+    </Note>
+  </Step>
+</Steps>
+
+## Implementation Considerations
+
+### Handling Rejections in Your Application
+
+When Recipient Shield blocks an email, your application should:
+
+<Tabs>
+  <Tab title="SMTP Integration">
+    ```python
+    import smtplib
+    from email.mime.text import MIMEText
+
+    def send_email(recipient):
+        try:
+            # Your SMTP sending code
+            server.send_message(msg)
+        except smtplib.SMTPRecipientsRefused as e:
+            error_message = str(e.recipients[recipient][1])
+
+            if "toxic or tempmail" in error_message:
+                # Handle toxic domain rejection
+                log_toxic_domain_attempt(recipient)
+                return "Invalid email domain. Please use a permanent email address."
+
+            elif "common a typo" in error_message:
+                # Handle typo detection
+                suggested = suggest_correction(recipient)
+                return f"Email domain appears to have a typo. Did you mean {suggested}?"
+
+            else:
+                # Handle other SMTP errors
+                raise
+    ```
+  </Tab>
+
+  <Tab title="API Integration">
+    ```javascript
+    async function sendEmail(recipient) {
+      try {
+        const response = await fetch('https://api.ahasend.com/v2/send', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to: recipient,
+            // ... other email parameters
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+
+          if (error.message.includes('toxic or tempmail')) {
+            // Handle toxic domain rejection
+            logToxicAttempt(recipient);
+            throw new Error('Please use a permanent email address');
+          }
+
+          if (error.message.includes('common a typo')) {
+            // Handle typo detection
+            const suggestion = suggestCorrection(recipient);
+            throw new Error(`Did you mean ${suggestion}?`);
+          }
+        }
+      } catch (error) {
+        // Handle errors appropriately
+        console.error('Email sending failed:', error);
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### User Experience Best Practices
+
+<AccordionGroup>
+  <Accordion title="Form Validation" icon="circle-check">
+    **Implement client-side validation:**
+    - Add real-time typo detection to signup forms
+    - Suggest corrections for common misspellings
+    - Warn users about temporary email addresses
+    - Provide clear error messages explaining why an email was rejected
+  </Accordion>
+
+  <Accordion title="Error Messaging" icon="comment">
+    **Provide helpful feedback:**
+    - Explain why the email address was rejected
+    - Suggest using a permanent email address for tempmail rejections
+    - Offer domain corrections for detected typos
+    - Avoid technical jargon in user-facing messages
+  </Accordion>
+
+  <Accordion title="Alternative Options" icon="rotate">
+    **Offer alternatives when appropriate:**
+    - Allow users to request manual review for false positives
+    - Provide a whitelist process for legitimate edge cases
+    - Consider implementing a warning instead of blocking for certain use cases
+  </Accordion>
+</AccordionGroup>
+
+## Benefits
+
+### Security Advantages
+
+<CardGroup cols={2}>
+  <Card title="Reputation Protection" icon="star">
+    Maintain high sender scores by avoiding problematic domains that generate bounces and complaints
+  </Card>
+
+  <Card title="Fraud Prevention" icon="shield-check">
+    Block fake account creation and trial abuse using temporary email addresses
+  </Card>
+
+  <Card title="User Safety" icon="user-shield">
+    Protect users from accidentally sending sensitive information to typo-squatted domains
+  </Card>
+
+  <Card title="Resource Optimization" icon="gauge-high">
+    Save sending resources by filtering invalid recipients before transmission
+  </Card>
+</CardGroup>
+
+### Operational Benefits
+
+- **Reduced bounce rates** from invalid or non-existent domains
+- **Lower complaint rates** by avoiding spam trap domains
+- **Improved deliverability** through better sender reputation
+- **Decreased fraud** from temporary email abuse
+- **Enhanced security posture** against phishing attacks
+
+## Monitoring and Analytics
+
+Track the effectiveness of Recipient Shield through:
+
+1. **Rejection logs:** Monitor blocked attempts in your application logs
+2. **Pattern analysis:** Identify trends in rejected domains
+3. **False positive tracking:** Review any legitimate domains incorrectly blocked
+4. **Security metrics:** Measure reduction in fraud and abuse
+
+<Tip>
+**Regular Review:** Periodically review rejection patterns to identify potential attacks or abuse campaigns targeting your service.
+</Tip>
+
+## FAQ
+
+<AccordionGroup>
+  <Accordion title="Can I whitelist specific domains?" icon="list">
+    Currently, Recipient Shield operates at the account level without domain-specific whitelisting. If you have legitimate use cases for domains being blocked, contact support for assistance.
+  </Accordion>
+
+  <Accordion title="How often is the toxic domain list updated?" icon="rotate">
+    Our toxic domain database is continuously updated based on threat intelligence from multiple sources. Updates are applied automatically without any action required from you.
+  </Accordion>
+
+  <Accordion title="Will this block legitimate corporate domains?" icon="building">
+    Recipient Shield is designed to minimize false positives by focusing on known toxic, temporary, and typo-squatted domains. Legitimate corporate domains are not affected.
+  </Accordion>
+
+  <Accordion title="Can I get a list of blocked domains?" icon="file-lines">
+    For security reasons, we don't provide the complete list of blocked domains. This prevents bad actors from finding domains not yet on the list.
+  </Accordion>
+
+  <Accordion title="Does this affect transactional emails?" icon="bolt">
+    Yes, Recipient Shield applies to all outgoing emails including transactional messages. This ensures comprehensive protection across all email types.
+  </Accordion>
+</AccordionGroup>
