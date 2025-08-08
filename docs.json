@@ -58,9 +58,9 @@
           {
             "group": "Sending with the API",
             "pages": [
-              "api/credentials",
-              "api/sandbox",
-              "api/send-email"
+              "send-api/credentials",
+              "send-api/sandbox",
+              "send-api/send-email"
             ]
           },
           {
@@ -90,6 +90,7 @@
               "security/2fa",
               "security/2fa-enforcement",
               "security/scoped-credentials",
+              "security/recipient-shield",
               "security/sso"
             ]
           },

@@ -8,7 +8,7 @@ icon: "server"
 AhaSend provides high-performance SMTP relay servers for sending transactional emails. Our SMTP infrastructure supports standard protocols and offers reliable email delivery with comprehensive error handling.
 
 <Info>
-**New to SMTP?** Check out our [SMTP credentials guide](/smtp/credentials) to get started, or try our [HTTP API](/api/send-email) for a more modern approach.
+**New to SMTP?** Check out our [SMTP credentials guide](/smtp/credentials) to get started, or try our [HTTP API](/send-api/send-email) for a more modern approach.
 </Info>
 
 ## Server Endpoints
@@ -79,7 +79,7 @@ Understanding AhaSend's SMTP limits helps you optimize your email sending:
     ```
 
     <Tip>
-    For bulk sending to more recipients, send multiple separate messages or use our [HTTP API](/api/send-email) with batch operations.
+    For bulk sending to more recipients, send multiple separate messages or use our [HTTP API](/send-api/send-email) with batch operations.
     </Tip>
   </Accordion>
 
@@ -148,7 +148,7 @@ AhaSend returns standard SMTP response codes with specific meanings:
 | `556` | **Invalid account or domain** - Account or sending domain not configured | Verify domain setup |
 
 <Warning>
-**553 email Rejection:** This response requires [domain protection](/security/protection) to be enabled in your account settings.
+**553 email Rejection:** This response is only returned if you enable [Recipient Shields](/security/recipient-shield) in your [Account Settings](https://dash.ahasend.com/account/-/settings).
 </Warning>
 
 ## Special Headers
@@ -247,5 +247,5 @@ Authentication: PLAIN
 </CardGroup>
 
 <Info>
-**Prefer HTTP API?** While SMTP is great for compatibility, our [HTTP API](/api/send-email) offers better performance, features, and error handling for modern applications.
+**Prefer HTTP API?** While SMTP is great for compatibility, our [HTTP API](/send-api/send-email) offers better performance, features, and error handling for modern applications.
 </Info>
