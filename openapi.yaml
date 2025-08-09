@@ -402,6 +402,7 @@ components:
           description: DNS records required for domain verification
         last_dns_check_at:
           type: string
+          nullable: string
           format: date-time
           description: When DNS records were last checked
         dns_valid:
@@ -477,14 +478,14 @@ components:
         name:
           type: string
           description: Display name for the recipient
-        substitution_data:
+        substitutions:
           type: object
           additionalProperties: true
           description: Substitution data for the recipient. Used with jinja2 templating language for dynamic content
       example:
         email: "user@example.com"
         name: "John Doe"
-        substitution_data:
+        substitutions:
           first_name: "John"
           order_id: "12345"
 
@@ -2312,7 +2313,8 @@ paths:
         Returns a list of messages for the account. Can be filtered by various parameters.
 
         **Query Parameters:**
-        - `sender`: Filter by sender email (required, must be from domain in API key scopes)
+        - `status`: Filter by comma-separated list of message statuses (any of 'Received', 'Delivered', 'Deferred', 'Bounced', 'Failed', 'Suppressed', 'Sandbox Delivered', 'Sandbox Deferred', 'Sandbox Failed', 'Sandbox Bounced', 'Sandbox Suppressed')
+        - `sender`: Filter by sender email (must be from domain in API key scopes)
         - `recipient`: Filter by recipient email
         - `subject`: Filter by subject text
         - `message_id_header`: Filter by message ID header (same ID returned by CreateMessage API)
@@ -2331,9 +2333,14 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: status
+          in: query
+          description: Filter by comma-separated list of message statuses
+          schema:
+            type: string
+          example: "Bounced,Failed"
         - name: sender
           in: query
-          required: true
           description: Sender email address (must be from domain in API key scopes)
           schema:
             type: string
