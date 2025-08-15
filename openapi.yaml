@@ -1766,7 +1766,7 @@ paths:
         - lang: bash
           label: CLI (Table)
           source: |
-            ahasend ping --output json
+            ahasend ping --output table
 
       responses:
         '200':
