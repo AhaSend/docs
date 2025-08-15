@@ -1758,6 +1758,16 @@ paths:
         - Utility
       security:
         - BearerAuth: []
+      x-code-samples:
+        - lang: bash
+          label: CLI (JSON)
+          source: |
+            ahasend ping --output json
+        - lang: bash
+          label: CLI (Table)
+          source: |
+            ahasend ping --output json
+
       responses:
         '200':
           description: Pong response
