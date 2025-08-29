@@ -18,10 +18,9 @@
     "strict": false
   },
   "navigation": {
-    "dropdowns": [
+    "tabs": [
       {
-        "dropdown": "Documentation",
-        "description": "Set up your account",
+        "tab": "Documentation",
         "icon": "book-open",
         "groups": [
           {
@@ -105,8 +104,7 @@
         ]
       },
       {
-        "dropdown": "API Reference",
-        "description": "API Usage and Reference",
+        "tab": "API Reference",
         "icon": "square-terminal",
         "groups": [
           {
@@ -278,8 +276,7 @@
         ]
       },
       {
-        "dropdown": "Changelog",
-        "description": "Updates and changes",
+        "tab": "Changelog",
         "icon": "clock-rotate-left",
         "pages": [
           "changelog"
