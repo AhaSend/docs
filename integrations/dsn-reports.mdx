@@ -1,0 +1,217 @@
+---
+title: "Delivery Status Notification Reports"
+sidebarTitle: "DSN Reports"
+description: "Generate RFC 3464 formatted bounce reports for enterprise compliance and monitoring"
+icon: "file-medical"
+---
+
+Automatically generate and send RFC 3464 formatted Delivery Status Notification (DSN) reports for bounced emails to designated recipients. This enterprise feature provides standardized bounce reporting for compliance, monitoring, and integration with email management systems.
+
+<Tip>
+**Enterprise Feature:** DSN Reports are available exclusively on Enterprise plans. [Contact our sales team](https://ahasend.com/contact) to upgrade your account.
+</Tip>
+
+<Info>
+**Standards Compliance:** DSN reports follow RFC 3464 specifications, ensuring compatibility with standard email management and monitoring systems.
+</Info>
+
+<Note>
+**Recommended Approach:** For most integrations, [webhooks](/integrations/webhooks) are the preferred method for handling bounce notifications as they provide real-time delivery and more detailed event data. DSN reports are specifically designed for integrating with legacy systems where webhooks are not feasible.
+</Note>
+
+## What Are DSN Reports?
+
+Delivery Status Notification reports are standardized email messages that provide detailed information about email delivery failures. When enabled, AhaSend automatically generates DSN reports for bounced emails and sends them to configured recipients.
+
+**DSN Reports Include:**
+- Original message headers and metadata
+- Detailed bounce reason and error codes
+- Timestamp and delivery attempt information
+- Recipient and sender information
+- RFC 3464 compliant formatting
+
+## Configuration
+
+Configure DSN reports through your account settings with optional domain-level overrides:
+
+<Steps>
+  <Step title="Enable Account-Level DSNs" icon="toggle-on">
+    **Configure global DSN settings:**
+    1. **Navigate** to **[Account Settings](https://dash.ahasend.com/account/-/settings)** in your dashboard
+    2. **Locate** the **"Delivery Status Notifications"** section
+    3. **Enable** "Send DSNs for bounced emails"
+    4. **Enter** the default recipient email address for DSN reports
+    5. **Save** your configuration
+  </Step>
+
+  <Step title="Configure Domain Overrides (Optional)" icon="globe">
+    **Set domain-specific DSN recipients:**
+    1. **Go to** your **[Domains](https://dash.ahasend.com/account/-/settings/domains)** page
+    2. **Click** on the domain you want to override the DSN recipient for.
+    4. **Click** the **Settings** button for the desired domain
+    3. **Enter** DSN recipient address for this domain
+    4. **Save** domain settings
+
+    <Note>
+    **Domain Override Behavior:** Domain-specific recipients replace the account-level default for emails sent from that domain.
+    </Note>
+  </Step>
+</Steps>
+
+## How DSN Reports Work
+
+Once configured, AhaSend automatically handles DSN generation and delivery:
+
+**Automatic Processing:**
+- **Bounce Detection:** AhaSend monitors all email delivery attempts
+- **DSN Generation:** Creates RFC 3464 compliant reports for bounced messages
+- **Recipient Selection:** Uses domain-specific recipient or account default
+- **Report Delivery:** Sends DSN report to configured recipient address
+
+**Recipient Priority:**
+1. **Domain-specific recipient** (if configured for the sending domain)
+2. **Account-level default recipient** (fallback for all domains)
+
+## Use Cases
+
+DSN reports serve various enterprise requirements:
+
+<CardGroup cols={2}>
+  <Card title="Compliance Monitoring" icon="scale-balanced">
+    **Regulatory requirements**
+
+    Meet industry compliance needs for bounce tracking and email delivery monitoring
+  </Card>
+  <Card title="System Integration" icon="gear">
+    **Automated processing**
+
+    Integrate bounce data with CRM, marketing automation, or monitoring systems
+  </Card>
+  <Card title="Delivery Analytics" icon="chart-line">
+    **Performance tracking**
+
+    Centralized bounce reporting for delivery performance analysis
+  </Card>
+  <Card title="Multi-Domain Management" icon="building">
+    **Enterprise organization**
+
+    Separate bounce reporting for different business units or brands
+  </Card>
+</CardGroup>
+
+## DSN Report Format
+
+DSN reports follow RFC 3464 specifications for standardized processing:
+
+**Report Structure:**
+- **Message headers:** Standard email headers with DSN identification
+- **Human-readable section:** Plain text summary of delivery failure
+- **Machine-readable section:** Structured data for automated processing
+- **Original message:** Headers and metadata from the bounced email
+
+**Example DSN Content:**
+- Bounce reason and error codes
+- Original recipient and sender addresses
+- Delivery attempt timestamps
+- Mail server response messages
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Recipient Configuration" icon="envelope">
+    **Optimize DSN recipient setup:**
+    - Use dedicated mailboxes for DSN processing
+    - Configure domain overrides for multi-brand organizations
+    - Ensure recipient addresses can handle high volumes
+    - Consider automated processing systems for DSN reports
+
+    **Recommended Setup:**
+    - Account default: `bounces@yourcompany.com`
+    - Marketing domain: `marketing-bounces@yourcompany.com`
+    - Transactional domain: `system-bounces@yourcompany.com`
+  </Accordion>
+
+  <Accordion title="Integration Strategy" icon="plug">
+    **Maximize DSN report value:**
+    - Implement automated parsing of RFC 3464 format
+    - Integrate with suppression list management
+    - Set up monitoring alerts for high bounce rates
+    - Archive DSN reports for compliance auditing
+
+    **Processing Considerations:**
+    - Parse machine-readable sections for structured data
+    - Extract bounce categories and error codes
+    - Update recipient lists based on permanent failures
+    - Track delivery patterns across domains
+  </Accordion>
+
+  <Accordion title="Volume Management" icon="gauge">
+    **Handle DSN report volumes:**
+    - Monitor DSN recipient mailbox capacity
+    - Implement rate limiting if necessary
+    - Set up backup recipients for redundancy
+    - Plan for high-volume sending periods
+
+    **Scaling Tips:**
+    - Use separate processing systems for high volumes
+    - Implement queue management for DSN processing
+    - Consider batch processing for efficiency
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="DSN Reports Not Received" icon="question">
+    **Common configuration issues:**
+    - **Verify DSN feature is enabled** in account settings
+    - **Check recipient email address** is valid and accessible
+    - **Confirm domain override settings** if using domain-specific recipients
+    - **Review bounce patterns** - DSNs are only generated for actual bounces
+
+    **Verification Steps:**
+    1. Check account settings for DSN configuration
+    2. Verify recipient mailbox is not full or blocking emails
+    3. Send test emails to invalid addresses to trigger bounces
+    4. Monitor recipient mailbox for incoming DSN reports
+  </Accordion>
+
+  <Accordion title="Incomplete DSN Data" icon="triangle-exclamation">
+    **DSN report content issues:**
+    - **RFC 3464 compliance** ensures standard formatting
+    - **Missing data** may indicate configuration problems
+    - **Parsing errors** require RFC 3464 compatible processors
+    - **Contact support** for persistent data issues
+
+    **Data Validation:**
+    - Verify DSN reports contain required RFC 3464 sections
+    - Check machine-readable portions for structured data
+    - Validate bounce reason codes and timestamps
+    - Review original message headers in DSN reports
+  </Accordion>
+
+  <Accordion title="High DSN Volumes" icon="circle-exclamation">
+    **Managing excessive bounce reports:**
+    - **Review sending practices** to reduce bounce rates
+    - **Implement list hygiene** to remove invalid addresses
+    - **Monitor recipient capacity** for DSN processing
+    - **Consider suppression management** to prevent repeated bounces
+
+    **Volume Reduction:**
+    - Clean recipient lists regularly
+    - Use email validation services
+    - Implement proper opt-in processes
+    - Monitor domain reputation and authentication
+  </Accordion>
+</AccordionGroup>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
+    Real-time notifications for all email events including bounces
+  </Card>
+  <Card title="Suppression Management" icon="ban" href="/api-reference/suppressions/get-suppressions">
+    Automatically handle bounces and maintain sender reputation
+  </Card>
+</CardGroup>
