@@ -1,0 +1,145 @@
+---
+title: Webhooks
+description: Configure and test webhook endpoints for real-time events
+icon: webhook
+---
+
+# Webhooks Command
+
+Manage webhook endpoints for receiving real-time email events.
+
+## Overview
+
+```bash
+ahasend webhooks [subcommand] [flags]
+```
+
+Available subcommands:
+- `list` - List all webhooks
+- `create` - Create a new webhook
+- `get` - Get webhook details
+- `update` - Update webhook configuration
+- `delete` - Delete a webhook
+- `listen` - Listen for webhook events (development)
+- `trigger` - Trigger test events (development)
+
+## List Webhooks
+
+```bash
+ahasend webhooks list
+```
+
+## Create Webhook
+
+```bash
+# Basic webhook
+ahasend webhooks create \
+  --url https://your-app.com/webhooks/ahasend \
+  --events message.delivered,message.bounced
+
+# With description
+ahasend webhooks create \
+  --url https://api.example.com/email-events \
+  --events message.delivered,message.opened,message.clicked \
+  --description "Production email event handler"
+
+# All events
+ahasend webhooks create \
+  --url https://app.example.com/webhooks \
+  --events all
+```
+
+### Available Events
+
+| Event | Description |
+|-------|-------------|
+| `message.reception` | Email received by AhaSend |
+| `message.delivered` | Email delivered to recipient |
+| `message.transient_error` | Temporary delivery failure |
+| `message.failed` | Permanent delivery failure |
+| `message.bounced` | Email bounced |
+| `message.suppressed` | Email suppressed |
+| `message.opened` | Email opened by recipient |
+| `message.clicked` | Link clicked in email |
+| `suppression.created` | New suppression added |
+| `domain.dns_error` | DNS resolution failure |
+
+## Get Webhook Details
+
+```bash
+ahasend webhooks get webhook_1234567890abcdef
+```
+
+## Update Webhook
+
+```bash
+# Update URL
+ahasend webhooks update webhook_1234567890abcdef \
+  --url https://new-api.example.com/webhooks
+
+# Update events
+ahasend webhooks update webhook_1234567890abcdef \
+  --events message.delivered,message.opened,message.clicked
+
+# Update both
+ahasend webhooks update webhook_1234567890abcdef \
+  --url https://api.example.com/v2/webhooks \
+  --events all \
+  --description "Updated webhook endpoint"
+```
+
+## Delete Webhook
+
+```bash
+# With confirmation prompt
+ahasend webhooks delete webhook_1234567890abcdef
+
+# Skip confirmation
+ahasend webhooks delete webhook_1234567890abcdef --force
+```
+
+## Listen for Events (Development)
+
+Create a local webhook listener for testing:
+
+```bash
+# Basic listener
+ahasend webhooks listen http://localhost:8080/webhook
+
+# Listen for specific events
+ahasend webhooks listen http://localhost:3000/events \
+  --events message.delivered,message.opened \
+  --port 3000
+
+# With custom headers
+ahasend webhooks listen http://localhost:3000/webhook \
+  --header "X-API-Key: your-secret-key" \
+  --verbose
+```
+
+## Trigger Test Events (Development)
+
+Manually trigger webhook events for testing:
+
+```bash
+# Trigger single event
+ahasend webhooks trigger webhook_1234567890abcdef \
+  --events message.delivered
+
+# Trigger multiple events
+ahasend webhooks trigger webhook_1234567890abcdef \
+  --events message.delivered,message.opened,message.clicked
+
+# Trigger all events
+ahasend webhooks trigger webhook_1234567890abcdef \
+  --all-events
+```
+
+<Note>
+The trigger command is only available in development environments for testing webhook integrations.
+</Note>
+
+## Next Steps
+
+- [Configure routes for inbound email](/cli/commands/routes)
+- [View statistics](/cli/commands/stats)

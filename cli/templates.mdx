@@ -1,0 +1,159 @@
+---
+title: Template System
+description: Using templates for personalized emails
+icon: file-code
+---
+
+# Template System
+
+The AhaSend CLI uses [Jinja2 templating](https://jinja.palletsprojects.com/en/3.1.x/templates/) for creating personalized emails.
+
+## Template Basics
+
+Use double curly braces for variable substitution:
+
+```html
+<!-- template.html -->
+<h1>Hello {{first_name}}!</h1>
+<p>Welcome to {{company_name}}.</p>
+<p>Your account type is: {{account_type}}</p>
+```
+
+## Substitution Types
+
+### Global Substitutions
+
+Applied to all recipients - use for company-wide data:
+
+```json
+{
+  "company_name": "ACME Corporation",
+  "support_email": "support@acme.com",
+  "year": "2024"
+}
+```
+
+```bash
+ahasend messages send \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --html-template template.html \
+  --global-substitutions company-data.json
+```
+
+### Recipient Substitutions
+
+Per-recipient data from CSV/JSON files:
+
+<Tabs>
+<Tab title="CSV Format">
+
+```csv
+email,first_name,account_type,balance
+john@example.com,John,premium,1234.56
+jane@example.com,Jane,basic,567.89
+```
+
+</Tab>
+<Tab title="JSON Format">
+
+```json
+[
+  {
+    "email": "john@example.com",
+    "substitution_data": {
+      "first_name": "John",
+      "account_type": "premium",
+      "balance": 1234.56
+    }
+  }
+]
+```
+
+</Tab>
+</Tabs>
+
+```bash
+ahasend messages send \
+  --from sender@example.com \
+  --recipients users.csv \
+  --html-template template.html \
+  --global-substitutions company-data.json
+```
+
+## Basic Examples
+
+### Simple Template
+
+```html
+<!-- welcome.html -->
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Welcome {{first_name}}!</h1>
+    <p>Thank you for joining {{company_name}}.</p>
+    <p>Your account type: {{account_type}}</p>
+    <p>Questions? Contact {{support_email}}</p>
+</body>
+</html>
+```
+
+### Conditional Content
+
+```html
+<!-- conditional.html -->
+<h1>Hello {{first_name}}!</h1>
+
+{% if account_type == "premium" %}
+    <p>Thank you for being a Premium member!</p>
+{% else %}
+    <p>Consider upgrading to Premium!</p>
+{% endif %}
+```
+
+### Lists and Loops
+
+```html
+<!-- order-confirmation.html -->
+<h1>Order Confirmation</h1>
+<p>Thank you, {{customer_name}}!</p>
+
+<table>
+    {% for item in items %}
+    <tr>
+        <td>{{item.name}}</td>
+        <td>{{item.quantity}}</td>
+        <td>${{item.price}}</td>
+    </tr>
+    {% endfor %}
+</table>
+```
+
+## Testing Templates
+
+Test templates using sandbox mode:
+
+```bash
+ahasend messages send \
+  --from test@example.com \
+  --to test@example.com \
+  --html-template template.html \
+  --global-substitutions test-data.json \
+  --sandbox
+```
+
+Then check the AhaSend dashboard to see the rendered message.
+
+## Best Practices
+
+1. **Use meaningful variable names**: `{{customer_first_name}}` not `{{fn}}`
+2. **Provide default values**: `{{name|default("Friend")}}`
+3. **Test with real data**: Use sandbox mode before sending
+4. **Keep templates simple**: Complex logic belongs in your application
+5. **Global vs recipient data**: Company info in global, personal info per recipient
+
+## Next Steps
+
+- [Learn about batch processing](/cli/batch-processing)
+- [Explore Jinja2 documentation](https://jinja.palletsprojects.com/en/3.1.x/templates/)
+- [View CLI examples](/cli/examples)

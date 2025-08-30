@@ -1,0 +1,314 @@
+---
+title: Quick Start
+description: Get started with the AhaSend CLI in minutes
+icon: play
+---
+
+# Quick Start
+
+This guide will help you send your first email using the AhaSend CLI in just a few minutes.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+1. [Installed the AhaSend CLI](/cli/installation)
+2. An AhaSend account ([sign up here](https://dash.ahasend.com/user/register))
+3. Your API key and Account ID from the [dashboard](https://dash.ahasend.com)
+
+## Step 1: Authentication
+
+First, authenticate with your AhaSend API credentials:
+
+```bash
+# Interactive login (recommended)
+ahasend auth login
+```
+
+You'll be prompted to enter:
+- Your API key
+- Your Account ID
+- A profile name (default: "default")
+
+<Tip>
+Your credentials are securely stored in `~/.ahasend/config.yaml` for future use.
+</Tip>
+
+Alternatively, provide credentials directly:
+
+```bash
+ahasend auth login --api-key YOUR_API_KEY --account-id YOUR_ACCOUNT_ID
+```
+
+Verify your authentication:
+
+```bash
+ahasend auth status
+```
+
+## Step 2: Add a Sending Domain
+
+Before sending emails, you need to add and verify a domain:
+
+```bash
+# Add your domain
+ahasend domains create example.com
+```
+
+This command will return DNS records that you need to configure, including SPF, DKIM, and DMARC records that must be added to your domain's DNS settings.
+
+After configuring your DNS records, verify the domain:
+
+```bash
+# Verify domain configuration
+ahasend domains verify example.com
+
+# Check verification status
+ahasend domains get example.com
+```
+
+<Note>
+DNS propagation can take up to 24 hours, but typically completes within minutes.
+</Note>
+
+## Step 3: Send Your First Email
+
+### Simple Text Email
+
+```bash
+ahasend messages send \
+  --from noreply@example.com \
+  --to recipient@email.com \
+  --subject "Hello from AhaSend CLI" \
+  --text "This is my first email sent using the AhaSend CLI!"
+```
+
+### HTML Email
+
+```bash
+ahasend messages send \
+  --from noreply@example.com \
+  --to recipient@email.com \
+  --subject "Welcome to AhaSend" \
+  --html "<h1>Welcome!</h1><p>Thank you for using AhaSend.</p>"
+```
+
+### Email with Both HTML and Text
+
+```bash
+ahasend messages send \
+  --from noreply@example.com \
+  --to recipient@email.com \
+  --subject "Welcome" \
+  --html "<h1>Welcome to AhaSend!</h1><p>We're glad you're here.</p>" \
+  --text "Welcome to AhaSend! We're glad you're here."
+```
+
+## Step 4: Test with Sandbox Mode
+
+Before sending real emails, test your integration using sandbox mode:
+
+```bash
+ahasend messages send \
+  --from noreply@example.com \
+  --to test@example.com \
+  --subject "Test Email" \
+  --text "This is a test email in sandbox mode" \
+  --sandbox
+```
+
+<Info>
+Sandbox mode simulates the entire email sending process without actually delivering emails. Perfect for testing!
+</Info>
+
+You can also simulate different outcomes:
+
+```bash
+# Simulate a bounce
+ahasend messages send \
+  --from noreply@example.com \
+  --to test@example.com \
+  --subject "Test Bounce" \
+  --text "Testing bounce scenario" \
+  --sandbox \
+  --sandbox-result bounce
+
+# Simulate successful delivery
+ahasend messages send \
+  --from noreply@example.com \
+  --to test@example.com \
+  --subject "Test Success" \
+  --text "Testing successful delivery" \
+  --sandbox \
+  --sandbox-result deliver
+```
+
+## Step 5: Send Batch Emails
+
+### Prepare Recipients File
+
+Create a CSV file with recipient data (`recipients.csv`):
+
+```csv
+email,name,first_name,company
+john@example.com,John Doe,John,ACME Corp
+jane@example.com,Jane Smith,Jane,Tech Inc
+alice@example.com,Alice Johnson,Alice,StartUp Ltd
+```
+
+### Create an HTML Template
+
+Create a template file (`welcome.html`):
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome {{first_name}}!</title>
+</head>
+<body>
+    <h1>Welcome to {{company}}, {{first_name}}!</h1>
+    <p>We're excited to have you on board.</p>
+    <p>Best regards,<br>The AhaSend Team</p>
+</body>
+</html>
+```
+
+### Send Batch Emails
+
+```bash
+ahasend messages send \
+  --from welcome@example.com \
+  --recipients recipients.csv \
+  --subject "Welcome to {{company}}" \
+  --html-template welcome.html \
+  --progress \
+  --show-metrics
+```
+
+The CLI will:
+- Send personalized emails to each recipient
+- Show a progress bar
+- Display performance metrics
+- Save any failed recipients for retry
+
+## Step 6: Monitor Your Emails
+
+### Check Delivery Statistics
+
+```bash
+# View today's statistics
+ahasend stats deliverability
+
+# View statistics for a date range
+ahasend stats deliverability \
+  --start-date 2024-01-01 \
+  --end-date 2024-01-31
+```
+
+### List Recent Messages
+
+```bash
+# List recent sent messages
+ahasend messages list
+
+# Filter by status
+ahasend messages list --status delivered
+```
+
+## Common Patterns
+
+### Using Different Output Formats
+
+```bash
+# Default table format
+ahasend domains list
+
+# JSON format for automation
+ahasend domains list --output json
+
+# CSV format for analysis
+ahasend stats deliverability --output csv > stats.csv
+```
+
+### Working with Multiple Environments
+
+```bash
+# Set up different profiles
+ahasend auth login --profile production
+ahasend auth login --profile staging
+
+# Use specific profile for commands
+ahasend messages send --profile staging \
+  --from test@staging.example.com \
+  --to dev@example.com \
+  --subject "Staging Test" \
+  --text "Testing staging environment"
+
+# Switch default profile
+ahasend auth switch production
+```
+
+### Adding Attachments
+
+```bash
+ahasend messages send \
+  --from noreply@example.com \
+  --to customer@example.com \
+  --subject "Your Invoice" \
+  --text "Please find your invoice attached." \
+  --attach invoice.pdf \
+  --attach receipt.pdf
+```
+
+### Scheduling Emails
+
+```bash
+# Schedule for a specific time
+ahasend messages send \
+  --from reminder@example.com \
+  --to user@example.com \
+  --subject "Reminder: Meeting Tomorrow" \
+  --text "Don't forget about our meeting at 2 PM." \
+  --schedule "2024-12-25T10:00:00Z"
+```
+
+## What's Next?
+
+Now that you've sent your first emails, explore more features:
+
+<CardGroup cols={2}>
+<Card title="Authentication" href="/cli/authentication" icon="key">
+  Learn about profiles and credential management
+</Card>
+<Card title="Message Commands" href="/cli/commands/messages" icon="envelope">
+  Explore all email sending options
+</Card>
+<Card title="Batch Processing" href="/cli/batch-processing" icon="layer-group">
+  Send high-volume emails efficiently
+</Card>
+<Card title="Templates" href="/cli/templates" icon="file-code">
+  Use templates for personalized emails
+</Card>
+</CardGroup>
+
+## Getting Help
+
+If you need help at any point:
+
+```bash
+# General help
+ahasend --help
+
+# Command-specific help
+ahasend messages send --help
+
+# Check current status
+ahasend auth status
+ahasend ping
+```
+
+For additional support:
+- [GitHub Issues](https://github.com/AhaSend/ahasend-cli/issues)
+- [API Documentation](/api-reference)
+- Email: support@ahasend.com

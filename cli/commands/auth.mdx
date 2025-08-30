@@ -1,0 +1,149 @@
+---
+title: Auth
+description: Manage authentication and profiles
+icon: user-shield
+---
+
+# Auth Command
+
+The `auth` command manages authentication credentials and profiles for the AhaSend CLI.
+
+## Overview
+
+```bash
+ahasend auth [subcommand] [flags]
+```
+
+Available subcommands:
+- `login` - Authenticate with AhaSend
+- `status` - Show authentication status
+- `switch` - Switch between profiles
+- `logout` - Remove authentication
+
+## Login
+
+Authenticate with your AhaSend API credentials:
+
+### Interactive Login
+
+```bash
+ahasend auth login
+```
+
+You'll be prompted for:
+- API Key
+- Account ID
+- Profile name (optional)
+
+### Direct Login
+
+```bash
+ahasend auth login \
+  --api-key YOUR_API_KEY \
+  --account-id YOUR_ACCOUNT_ID \
+  --profile production
+```
+
+### Flags
+
+- `--api-key`: Your AhaSend API key
+- `--account-id`: Your AhaSend Account ID
+- `--profile`: Profile name (default: "default")
+- `--api-url`: Custom API URL (default: https://api.ahasend.com)
+
+## Status
+
+Check current authentication status and available profiles:
+
+```bash
+ahasend auth status
+```
+
+Output:
+```
+Authentication Status
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Current Profile: production
+Account: ACME Corporation
+Account ID: acc_1234567890abcdef
+API URL: https://api.ahasend.com
+
+Available Profiles:
+  ✓ production (current)
+  - staging
+  - development
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+JSON output for scripting:
+```bash
+ahasend auth status --output json
+```
+
+## Switch
+
+Change the active profile:
+
+```bash
+# Switch to staging profile
+ahasend auth switch staging
+
+# Confirm switch
+ahasend auth status
+```
+
+## Logout
+
+Remove authentication credentials:
+
+```bash
+# Remove current profile with confirmation
+ahasend auth logout
+
+# Skip confirmation
+ahasend auth logout --yes
+```
+
+## Profile Management
+
+### Multiple Environments
+
+Set up profiles for different environments:
+
+```bash
+# Production
+ahasend auth login --profile production
+
+# Staging
+ahasend auth login --profile staging
+
+# Development
+ahasend auth login --profile development
+```
+
+### Using Profiles
+
+```bash
+# Use specific profile for a command
+ahasend messages send --profile staging \
+  --from test@staging.com \
+  --to dev@example.com \
+  --subject "Test" \
+  --text "Testing"
+
+# Check which profile is active
+ahasend auth status
+```
+
+## Security Notes
+
+- Credentials are stored in `~/.ahasend/config.yaml`
+- File permissions are set to 600 (read/write for owner only)
+- Never commit credentials to version control
+- Use environment variables for CI/CD
+
+## Next Steps
+
+- [Configure the CLI](/cli/configuration)
+- [Send your first email](/cli/quickstart)
+- [Manage domains](/cli/commands/domains)

@@ -1,0 +1,127 @@
+---
+title: Routes
+description: Manage inbound email routes for processing incoming messages
+icon: route
+---
+
+# Routes Command
+
+Manage inbound email routes for processing incoming messages through webhooks.
+
+## Overview
+
+```bash
+ahasend routes [subcommand] [flags]
+```
+
+Available subcommands:
+- `list` - List all inbound email routes
+- `create` - Create a new inbound email route
+- `get` - Get detailed information about a specific route
+- `update` - Update an existing inbound email route
+- `delete` - Delete an inbound email route
+- `listen` - Listen for inbound email events in real-time
+- `trigger` - Trigger route events for testing
+
+Routes enable you to:
+- Process inbound emails through webhooks
+- Filter emails by recipient patterns
+- Control attachment handling and formatting
+- Group messages by conversation threads
+- Strip reply content for cleaner processing
+
+## List Routes
+
+```bash
+ahasend routes list
+```
+
+## Create Route
+
+```bash
+# Basic route
+ahasend routes create \
+  --match-recipient "support@example.com" \
+  --forward-to "https://your-app.com/webhooks/inbound"
+
+# With recipient pattern filtering
+ahasend routes create \
+  --match-recipient "*@help.example.com" \
+  --forward-to "https://api.example.com/email-handler" \
+  --description "Help desk routing"
+
+# Advanced route with options
+ahasend routes create \
+  --match-recipient "support-*@example.com" \
+  --forward-to "https://support.example.com/webhook" \
+  --strip-replies \
+  --group-by-conversation \
+  --description "Support ticket routing"
+```
+
+## Get Route Details
+
+```bash
+ahasend routes get route_1234567890abcdef
+```
+
+## Update Route
+
+```bash
+# Update webhook URL
+ahasend routes update route_1234567890abcdef \
+  --forward-to "https://new-api.example.com/webhook"
+
+# Update recipient pattern
+ahasend routes update route_1234567890abcdef \
+  --match-recipient "new-pattern@example.com"
+
+# Update processing options
+ahasend routes update route_1234567890abcdef \
+  --strip-replies \
+  --group-by-conversation
+```
+
+## Delete Route
+
+```bash
+ahasend routes delete route_1234567890abcdef
+```
+
+## Listen for Events (Development)
+
+Listen for inbound email routing events in real-time:
+
+```bash
+# Listen with existing route
+ahasend routes listen --route-id route_1234567890abcdef
+
+# Listen with temporary route pattern
+ahasend routes listen --recipient "*@example.com"
+
+# Forward events to local endpoint
+ahasend routes listen \
+  --recipient "support-*@example.com" \
+  --forward-to http://localhost:3000/webhook
+```
+
+<Note>
+Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
+</Note>
+
+## Trigger Test Events (Development)
+
+Manually trigger route events for testing:
+
+```bash
+ahasend routes trigger route_1234567890abcdef
+```
+
+<Warning>
+This is a development-only feature and may not be available in production environments.
+</Warning>
+
+## Next Steps
+
+- [Configure webhooks](/cli/commands/webhooks)
+- [View statistics](/cli/commands/stats)

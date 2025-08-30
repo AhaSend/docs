@@ -1,0 +1,99 @@
+---
+title: SMTP
+description: Manage SMTP credentials for sending emails through AhaSend's SMTP service
+icon: server
+---
+
+# SMTP Command
+
+Manage SMTP credentials for sending emails through AhaSend's SMTP service.
+
+## Overview
+
+```bash
+ahasend smtp [subcommand] [flags]
+```
+
+Available subcommands:
+- `list` - List all SMTP credentials
+- `create` - Create a new SMTP credential
+- `get` - Get details of a specific SMTP credential
+- `delete` - Delete an SMTP credential
+- `send` - Send an email via SMTP protocol
+
+SMTP credentials allow you to send emails using standard SMTP protocol through any email client or application that supports SMTP. This is useful for integrating AhaSend with legacy systems, mail servers, or applications that only support SMTP.
+
+Use SMTP credentials to:
+- Send emails from email clients (Outlook, Thunderbird, etc.)
+- Integrate with applications that only support SMTP
+- Use AhaSend from programming languages without SDK support
+- Send transactional emails from servers or IoT devices
+
+## List SMTP Credentials
+
+```bash
+ahasend smtp list
+```
+
+## Create SMTP Credential
+
+```bash
+# Global SMTP credential
+ahasend smtp create --name "Main Server" --scope global
+
+# Domain-specific credential
+ahasend smtp create \
+  --name "Notifications" \
+  --scope scoped \
+  --domains "notifications.example.com"
+
+# Sandbox credential for testing
+ahasend smtp create \
+  --name "Development" \
+  --scope global \
+  --sandbox
+```
+
+## Get SMTP Details
+
+```bash
+ahasend smtp get smtp_1234567890abcdef
+```
+
+## Delete SMTP Credential
+
+```bash
+ahasend smtp delete smtp_1234567890abcdef
+```
+
+## Send via SMTP
+
+Send email using SMTP protocol for testing:
+
+```bash
+# Basic SMTP send
+ahasend smtp send \
+  --credential-id smtp_1234567890abcdef \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "SMTP Test" \
+  --text "Testing SMTP sending"
+
+# Test SMTP connection
+ahasend smtp send \
+  --test \
+  --server send.ahasend.com:587 \
+  --from sender@example.com \
+  --to recipient@example.com
+```
+
+Each SMTP credential provides:
+- Username and password for authentication
+- Scope (global or domain-specific)
+- Sandbox mode option for testing
+- Standard SMTP server configuration
+
+## Next Steps
+
+- [Send messages via API](/cli/commands/messages)
+- [Manage API keys](/cli/commands/apikeys)

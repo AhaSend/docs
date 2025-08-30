@@ -1,0 +1,64 @@
+---
+title: Configuration
+description: Configure the AhaSend CLI behavior and preferences
+icon: gear
+---
+
+# Configuration
+
+The AhaSend CLI stores configuration in `~/.ahasend/config.yaml` and can be overridden with environment variables or command-line flags.
+
+## Configuration File
+
+The configuration file is automatically created when you authenticate and contains your profiles and preferences:
+
+```yaml
+default_profile: production
+profiles:
+  production:
+    api_key: "ak_prod_..."
+    account_id: "acc_1234567890"
+    api_url: "https://api.ahasend.com"
+preferences:
+  output_format: table
+  color_output: true
+```
+
+## Environment Variables
+
+For automation or CI/CD, use environment variables:
+
+```bash
+# Authentication
+export AHASEND_API_KEY="your-api-key"
+export AHASEND_ACCOUNT_ID="your-account-id"
+export AHASEND_PROFILE="staging"
+```
+
+## Global Flags
+
+Available for all commands:
+
+```bash
+# Authentication
+--api-key string      # AhaSend API key (overrides profile)
+--account-id string   # AhaSend Account ID (required with --api-key)
+--profile string      # Profile to use (overrides default)
+
+# Output
+--output string       # Output format: table, json, plain (default: plain)
+--no-color            # Disable colored output
+
+# Logging
+--verbose             # Enable verbose output
+--debug               # Enable debug mode
+
+# Help
+-h, --help            # Show help
+-v, --version         # Show version
+```
+
+## Next Steps
+
+- [Learn about authentication](/cli/authentication)
+- [Explore available commands](/cli/commands/messages)

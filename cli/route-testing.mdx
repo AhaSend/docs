@@ -1,0 +1,175 @@
+---
+title: Route Testing
+description: Test inbound email routing locally with the CLI
+icon: envelopes-bulk
+---
+
+# Route Testing
+
+Test and debug inbound email routing locally using the AhaSend CLI's WebSocket-based route listener.
+
+## Overview
+
+The CLI provides tools for:
+- Listening to inbound email events in real-time
+- Creating temporary routes for testing
+- Forwarding events to local endpoints
+- Triggering test route events
+
+## Route Listener
+
+### Basic Usage
+
+```bash
+# Listen with existing route
+ahasend routes listen --route-id abcd1234-5678-90ef-abcd-1234567890ab
+
+# Create temporary route with wildcard
+ahasend routes listen --recipient "*@example.com"
+
+# Listen for specific subdomain patterns
+ahasend routes listen --recipient "support-*@example.com"
+```
+
+<Note>
+Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
+</Note>
+
+### Event Type
+
+- `message.routing` - Triggered when an inbound email matches a route
+
+## Event Forwarding
+
+### Forward to Local Server
+
+```bash
+# Forward to local development server
+ahasend routes listen \
+  --recipient "*@example.com" \
+  --forward-to http://localhost:3000/webhook
+
+# Skip SSL verification for self-signed certificates
+ahasend routes listen \
+  --route-id abcd1234-5678-90ef-abcd-1234567890ab \
+  --forward-to https://localhost:8443/webhook \
+  --skip-verify
+```
+
+### Event Headers
+
+Forwarded requests include standard webhook headers:
+- `webhook-id` - Unique message identifier
+- `webhook-timestamp` - Unix timestamp
+- `webhook-signature` - HMAC signature for verification
+
+## Triggering Test Events
+
+### Development Testing
+
+```bash
+# Trigger a message.routing event for testing
+ahasend routes trigger abcd1234-5678-90ef-abcd-1234567890ab
+```
+
+### Finding Route IDs
+
+```bash
+# List all routes to find IDs
+ahasend routes list
+```
+
+## Integration Testing
+
+### Development Workflow
+
+```bash
+# 1. Create a route for testing
+ahasend routes create \
+  --match-recipient "test@example.com" \
+  --forward-to "https://app.example.com/webhook" \
+  --description "Test inbound route"
+
+# 2. Start listening for events
+ahasend routes listen --route-id <route-id> \
+  --forward-to http://localhost:3000/webhook
+
+# 3. Trigger test event (in another terminal)
+ahasend routes trigger <route-id>
+
+# 4. Send test email to the route address
+# test@example.com will trigger the route
+```
+
+## Output Formats
+
+### Standard Output
+
+```bash
+# Full event details (default)
+ahasend routes listen --route-id abc123
+```
+
+### Slim Output
+
+```bash
+# Minimal console display
+ahasend routes listen --route-id abc123 --slim-output
+```
+
+## Common Flags
+
+- `--route-id` - Use existing route ID (mutually exclusive with --recipient)
+- `--recipient` - Recipient pattern for temporary route (supports wildcards)
+- `--forward-to` - Local endpoint URL to forward events to
+- `--skip-verify` - Skip SSL certificate verification for local endpoints
+- `--slim-output` - Minimal event display format
+
+## Use Cases
+
+### Testing Inbound Email Processing
+
+```bash
+# Set up listener for all emails to your domain
+ahasend routes listen --recipient "*@yourdomain.com" \
+  --forward-to http://localhost:3000/inbound
+```
+
+### Support Ticket System
+
+```bash
+# Route support emails to local handler
+ahasend routes listen --recipient "support@example.com" \
+  --forward-to http://localhost:3000/tickets/create
+```
+
+### Email-to-Task Integration
+
+```bash
+# Convert emails to tasks
+ahasend routes listen --recipient "tasks@example.com" \
+  --forward-to http://localhost:3000/api/tasks/from-email
+```
+
+## Best Practices
+
+1. **Use Temporary Routes for Testing**: Create temporary routes with wildcards during development
+2. **Verify Signatures**: Always validate webhook signatures in production
+3. **Handle WebSocket Disconnects**: Implement reconnection logic for production use
+4. **Test with Trigger Command**: Use trigger to test without sending real emails
+5. **Use Slim Output for Monitoring**: Reduce console clutter when monitoring events
+
+## Troubleshooting
+
+**WebSocket Connection Failed**: Check network connectivity and firewall settings
+
+**Events Not Received**: Verify the route pattern matches the recipient address
+
+**Signature Verification Failed**: Ensure webhook secret is displayed when connection starts
+
+**Route Not Found**: Check route ID with `ahasend routes list`
+
+## Next Steps
+
+- [Learn about routes](/cli/commands/routes)
+- [Configure webhooks](/cli/commands/webhooks)

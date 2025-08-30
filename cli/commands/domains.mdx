@@ -1,0 +1,103 @@
+---
+title: Domains
+description: Manage sending domains and DNS configuration
+icon: globe
+---
+
+# Domains Command
+
+Manage your sending domains for email authentication.
+
+## Overview
+
+```bash
+ahasend domains [subcommand] [flags]
+```
+
+Available subcommands:
+- `list` - List all domains
+- `create` - Add a new domain
+- `get` - Get domain details
+- `verify` - Verify domain DNS configuration
+- `delete` - Remove a domain
+
+## List Domains
+
+```bash
+# List all domains
+ahasend domains list
+
+# With filters
+ahasend domains list --limit 10 --status verified
+```
+
+## Create Domain
+
+```bash
+ahasend domains create example.com
+```
+
+The command returns DNS records that need to be configured:
+- **SPF Record**: `v=spf1 include:spf.ahasend.com ~all`
+- **DKIM Record**: CNAME `mail._domainkey` → `mail._domainkey.ahasend.com`
+- **DMARC Record**: `v=DMARC1; p=none;`
+
+## Verify Domain
+
+After configuring DNS records:
+
+```bash
+ahasend domains verify example.com
+```
+
+<Note>
+DNS propagation can take up to 24 hours, but typically completes within minutes.
+</Note>
+
+## Get Domain Details
+
+```bash
+ahasend domains get example.com
+```
+
+## Delete Domain
+
+```bash
+# Delete with confirmation
+ahasend domains delete example.com
+
+# Skip confirmation
+ahasend domains delete example.com --force
+```
+
+<Warning>
+Deleting a domain is irreversible. You'll need to re-add and re-verify the domain if you want to use it again.
+</Warning>
+
+## Common DNS Setup
+
+### Existing SPF Records
+
+If you already have SPF records, merge them:
+
+```
+# Before
+v=spf1 include:_spf.google.com ~all
+
+# After
+v=spf1 include:_spf.google.com include:spf.ahasend.com ~all
+```
+
+### Subdomains
+
+You can add subdomains for sending:
+
+```bash
+ahasend domains create mail.example.com
+```
+
+## Next Steps
+
+- [Send emails from verified domains](/cli/commands/messages)
+- [Configure webhooks](/cli/commands/webhooks)
+- [View statistics](/cli/commands/stats)

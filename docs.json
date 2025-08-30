@@ -73,7 +73,8 @@
             "group": "Integrations",
             "pages": [
               "integrations/webhooks",
-              "integrations/routing"
+              "integrations/routing",
+              "integrations/dsn-reports"
             ]
           },
           {
@@ -105,7 +106,7 @@
       },
       {
         "tab": "API Reference",
-        "icon": "square-terminal",
+        "icon": "code",
         "groups": [
           {
             "group": "Overview",
@@ -276,10 +277,56 @@
         ]
       },
       {
+        "tab": "CLI",
+        "icon": "square-terminal",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "cli/index",
+              "cli/installation",
+              "cli/quickstart",
+              "cli/authentication",
+              "cli/configuration",
+              "cli/examples"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/commands/messages",
+              "cli/commands/domains",
+              "cli/commands/webhooks",
+              "cli/commands/routes",
+              "cli/commands/suppressions",
+              "cli/commands/smtp",
+              "cli/commands/apikeys",
+              "cli/commands/stats",
+              "cli/commands/auth",
+              "cli/commands/ping"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "cli/batch-processing",
+              "cli/templates",
+              "cli/webhook-testing",
+              "cli/route-testing"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Changelog",
         "icon": "clock-rotate-left",
-        "pages": [
-          "changelog"
+        "groups": [
+          {
+            "group": "Changelog",
+            "pages": [
+              "changelog"
+            ]
+          }
         ]
       }
     ]

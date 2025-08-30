@@ -1,0 +1,163 @@
+---
+title: Messages
+description: Send and manage email messages
+icon: envelope
+---
+
+# Messages Command
+
+Send and manage email messages using the `messages` command.
+
+## Overview
+
+```bash
+ahasend messages [subcommand] [flags]
+```
+
+Available subcommands:
+- `send` - Send email messages
+- `list` - List sent messages
+- `cancel` - Cancel scheduled messages
+
+## Send Messages
+
+### Basic Usage
+
+```bash
+# Text email
+ahasend messages send \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "Hello" \
+  --text "Hello World"
+
+# HTML email
+ahasend messages send \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "Welcome" \
+  --html "<h1>Welcome!</h1><p>Thank you for signing up.</p>"
+```
+
+### Recipients
+
+```bash
+# Single recipient
+ahasend messages send \
+  --from sender@example.com \
+  --to user@example.com \
+  --subject "Notification" \
+  --text "Your order has been processed"
+
+# Multiple recipients
+ahasend messages send \
+  --from sender@example.com \
+  --to user1@example.com \
+  --to user2@example.com \
+  --subject "Team Update" \
+  --text "Important announcement"
+
+# Batch from file
+ahasend messages send \
+  --from sender@example.com \
+  --recipients users.csv \
+  --subject "Newsletter" \
+  --html-template newsletter.html
+```
+
+### Content Options
+
+```bash
+# With template
+ahasend messages send \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "Welcome {{name}}" \
+  --html-template welcome.html \
+  --global-substitutions data.json
+
+# With attachments
+ahasend messages send \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "Invoice" \
+  --text "Please find your invoice attached." \
+  --attach invoice.pdf
+
+# Scheduled delivery
+ahasend messages send \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "Reminder" \
+  --text "Meeting tomorrow at 2 PM" \
+  --schedule "2024-12-25T14:00:00Z"
+```
+
+### Testing
+
+```bash
+# Sandbox mode (no actual sending)
+ahasend messages send \
+  --from test@example.com \
+  --to test@example.com \
+  --subject "Test" \
+  --text "Testing" \
+  --sandbox
+```
+
+### Key Flags
+
+**Recipients:**
+- `--to`: Single recipient (can be used multiple times)
+- `--recipients`: CSV/JSON file with recipient data
+
+**Content:**
+- `--subject`: Email subject
+- `--text`: Plain text content
+- `--html`: HTML content
+- `--html-template`: HTML template file
+- `--text-template`: Plain text template file
+- `--global-substitutions`: JSON file with template variables
+
+**Options:**
+- `--attach`: File attachments (can be used multiple times)
+- `--schedule`: Delivery time (RFC3339 format)
+- `--sandbox`: Test mode without sending
+- `--tags`: Tags for categorization
+- `--header`: Custom headers
+
+**Batch Processing:**
+- `--max-concurrency`: Parallel workers (1-10)
+- `--progress`: Show progress bar
+- `--show-metrics`: Display performance statistics
+
+## List Messages
+
+```bash
+# List recent messages
+ahasend messages list
+
+# With filters
+ahasend messages list --limit 50 --status delivered
+```
+
+## Cancel Messages
+
+```bash
+# Cancel scheduled message
+ahasend messages cancel msg_1234567890abcdef
+```
+
+## Advanced Usage
+
+For detailed information on batch processing and templating:
+
+- [Batch Processing Guide](/cli/batch-processing) - High-volume email sending
+- [Template System](/cli/templates) - Advanced templating with Jinja2
+- [Examples](/cli/examples) - Real-world use cases
+
+## Next Steps
+
+- [Learn about domains](/cli/commands/domains)
+- [Configure webhooks](/cli/commands/webhooks)
+- [View statistics](/cli/commands/stats)

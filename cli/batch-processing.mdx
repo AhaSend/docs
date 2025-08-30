@@ -1,0 +1,199 @@
+---
+title: Batch Processing
+description: Send high-volume emails efficiently with the CLI
+icon: layer-group
+---
+
+# Batch Processing
+
+Send high-volume personalized emails efficiently using the AhaSend CLI batch processing capabilities.
+
+## Overview
+
+Batch processing allows you to:
+- Send thousands of personalized emails
+- Use concurrent workers for speed
+- Track progress in real-time
+- Automatically retry failures
+- Generate performance metrics
+
+## Recipient File Formats
+
+<Tabs>
+<Tab title="CSV Format">
+
+Create `recipients.csv`:
+```csv
+email,name,first_name,company,account_type
+john@example.com,John Doe,John,ACME Corp,premium
+jane@example.com,Jane Smith,Jane,Tech Inc,basic
+alice@example.com,Alice Johnson,Alice,StartUp Ltd,enterprise
+```
+
+</Tab>
+<Tab title="JSON Format">
+
+Create `recipients.json`:
+```json
+[
+  {
+    "email": "john@example.com",
+    "name": "John Doe",
+    "substitution_data": {
+      "first_name": "John",
+      "company": "ACME Corp",
+      "account_type": "premium"
+    }
+  }
+]
+```
+
+</Tab>
+</Tabs>
+
+## Basic Batch Send
+
+```bash
+ahasend messages send \
+  --from noreply@example.com \
+  --recipients recipients.csv \
+  --subject "Welcome to {{company}}" \
+  --html-template welcome.html \
+  --progress \
+  --show-metrics
+```
+
+## Performance Options
+
+### Concurrency Control
+
+```bash
+# Conservative (1 worker)
+ahasend messages send \
+  --recipients users.csv \
+  --html-template template.html \
+  --max-concurrency 1
+
+# High performance (5 workers - default)
+ahasend messages send \
+  --recipients users.csv \
+  --html-template template.html \
+  --max-concurrency 5
+
+# Maximum throughput (10 workers)
+ahasend messages send \
+  --recipients users.csv \
+  --html-template template.html \
+  --max-concurrency 10
+```
+
+### Performance Comparison
+
+| Concurrency | Emails/Hour | Use Case |
+|-------------|-------------|----------|
+| 1 | ~3,600 | Testing, low priority |
+| 5 | ~18,000 | Standard campaigns |
+| 10 | ~36,000 | Maximum throughput |
+
+### Progress Tracking
+
+```bash
+ahasend messages send \
+  --recipients large-list.csv \
+  --html-template newsletter.html \
+  --max-concurrency 5 \
+  --progress
+```
+
+## Error Handling
+
+### Automatic Retries
+
+```bash
+ahasend messages send \
+  --recipients users.csv \
+  --html-template template.html \
+  --max-retries 3
+```
+
+### Failed Recipients Recovery
+
+Failed recipients are automatically saved for retry:
+
+```bash
+# If failures occur, retry with saved file
+ahasend messages send \
+  --recipients ~/.ahasend/failed-2024-01-16-143022.json \
+  --html-template campaign.html \
+  --max-retries 5
+```
+
+## Template Personalization
+
+### Global and Per-Recipient Data
+
+```json
+// global-data.json
+{
+  "company_name": "ACME Corp",
+  "support_email": "support@acme.com"
+}
+```
+
+```bash
+ahasend messages send \
+  --from noreply@acme.com \
+  --recipients users.csv \
+  --subject "{{first_name}}, Welcome to {{company_name}}" \
+  --html-template welcome.html \
+  --global-substitutions global-data.json
+```
+
+## Best Practices
+
+### 1. Test with Small Batches First
+
+```bash
+# Test with first 10 recipients
+head -11 recipients.csv > test-batch.csv
+
+ahasend messages send \
+  --from sender@example.com \
+  --recipients test-batch.csv \
+  --html-template template.html \
+  --sandbox
+```
+
+### 2. Use Idempotency Keys
+
+```bash
+ahasend messages send \
+  --recipients users.csv \
+  --html-template template.html \
+  --idempotency-key "campaign-$(date +%Y%m%d)"
+```
+
+### 3. Monitor Performance
+
+```bash
+# Send with detailed logging
+ahasend messages send \
+  --recipients users.csv \
+  --html-template template.html \
+  --verbose \
+  --show-metrics \
+  --output json
+```
+
+## Troubleshooting
+
+**Slow Performance**: Increase `--max-concurrency` up to 10 workers
+
+**High Failure Rate**: Verify domains and check suppressions list
+
+**Memory Issues**: Process large files in smaller chunks
+
+## Next Steps
+
+- [Learn about templates](/cli/templates)
+- [Set up webhook monitoring](/cli/webhook-testing)

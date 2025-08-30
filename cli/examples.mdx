@@ -1,0 +1,530 @@
+---
+title: Examples
+description: Real-world examples and use cases for the AhaSend CLI
+icon: lightbulb
+---
+
+# Examples
+
+This page provides comprehensive examples for common email sending scenarios using the AhaSend CLI.
+
+## Transactional Emails
+
+### Order Confirmation
+
+```bash
+# Single order confirmation
+ahasend messages send \
+  --from orders@shop.com \
+  --to customer@example.com \
+  --subject "Order #12345 Confirmed" \
+  --html-template order-confirmation.html \
+  --global-substitutions order-data.json \
+  --attach invoice.pdf \
+  --idempotency-key "order-12345"
+```
+
+**order-data.json:**
+```json
+{
+  "order_id": "12345",
+  "customer_name": "John Doe",
+  "total": "$149.99",
+  "items": [
+    {"name": "Product A", "quantity": 2, "price": "$49.99"},
+    {"name": "Product B", "quantity": 1, "price": "$50.01"}
+  ],
+  "delivery_date": "January 20, 2024"
+}
+```
+
+### Password Reset
+
+```bash
+# Secure password reset email
+ahasend messages send \
+  --from security@app.com \
+  --to user@example.com \
+  --subject "Password Reset Request" \
+  --html-template password-reset.html \
+  --global-substitutions reset-data.json \
+  --header "X-Priority: high" \
+  --track-clicks false \
+  --idempotency-key "reset-user123-$(date +%s)"
+```
+
+### Account Verification
+
+```bash
+# New user verification
+ahasend messages send \
+  --from noreply@app.com \
+  --to newuser@example.com \
+  --subject "Verify Your Email Address" \
+  --html "<h2>Welcome!</h2><p>Please verify your email by clicking <a href='{{verify_url}}'>here</a></p>" \
+  --text "Welcome! Please verify your email by visiting: {{verify_url}}" \
+  --global-substitutions '{"verify_url": "https://app.com/verify?token=abc123"}' \
+  --tags signup,verification
+```
+
+## Marketing Campaigns
+
+### Newsletter Distribution
+
+```bash
+#!/bin/bash
+# send-newsletter.sh
+
+# Prepare data
+TEMPLATE="newsletter-january.html"
+RECIPIENTS="subscribers.csv"
+SUBJECT="📰 January Newsletter: New Year, New Features!"
+
+# Send newsletter with tracking
+ahasend messages send \
+  --from newsletter@company.com \
+  --recipients "$RECIPIENTS" \
+  --subject "$SUBJECT" \
+  --html-template "$TEMPLATE" \
+  --track-opens true \
+  --track-clicks true \
+  --tags newsletter,january,2024 \
+  --max-concurrency 5 \
+  --progress \
+  --show-metrics
+
+# Check delivery stats after 1 hour
+sleep 3600
+ahasend stats deliverability \
+  --start-date $(date +%Y-%m-%d) \
+  --group-by hour
+```
+
+### Product Launch Announcement
+
+```bash
+# Segmented product launch campaign
+for segment in vip regular trial; do
+  echo "Sending to $segment segment..."
+
+  ahasend messages send \
+    --from marketing@startup.com \
+    --recipients "${segment}-users.csv" \
+    --subject "{{first_name}}, Introducing Our New Product!" \
+    --html-template "launch-${segment}.html" \
+    --global-substitutions launch-data.json \
+    --tags "product-launch,${segment}" \
+    --max-concurrency 3 \
+    --progress
+
+  sleep 60  # Stagger sends
+done
+```
+
+### Abandoned Cart Recovery
+
+```bash
+#!/bin/bash
+# abandoned-cart-recovery.sh
+
+# Query abandoned carts from database
+# ... database query logic ...
+
+# Create recipients file
+cat > abandoned-carts.json << EOF
+[
+  {
+    "email": "shopper@example.com",
+    "name": "Jane Shopper",
+    "substitution_data": {
+      "first_name": "Jane",
+      "cart_value": "$234.99",
+      "items_count": 3,
+      "cart_url": "https://shop.com/cart/restore/abc123",
+      "discount_code": "COMEBACK10"
+    }
+  }
+]
+EOF
+
+# Send recovery emails
+ahasend messages send \
+  --from shop@store.com \
+  --recipients abandoned-carts.json \
+  --subject "{{first_name}}, you left something behind!" \
+  --html-template abandoned-cart.html \
+  --schedule "$(date -d '+2 hours' --iso-8601=seconds)" \
+  --tags "abandoned-cart,recovery,automated"
+```
+
+## Notification Systems
+
+### Real-Time Alerts
+
+```bash
+#!/bin/bash
+# send-alert.sh
+
+ALERT_TYPE=$1
+ALERT_MESSAGE=$2
+RECIPIENTS=$3
+
+case $ALERT_TYPE in
+  critical)
+    SUBJECT="🚨 CRITICAL ALERT"
+    PRIORITY="high"
+    ;;
+  warning)
+    SUBJECT="⚠️ Warning"
+    PRIORITY="normal"
+    ;;
+  info)
+    SUBJECT="ℹ️ Information"
+    PRIORITY="low"
+    ;;
+esac
+
+ahasend messages send \
+  --from alerts@monitoring.com \
+  --to "$RECIPIENTS" \
+  --subject "$SUBJECT: $ALERT_MESSAGE" \
+  --text "$ALERT_MESSAGE\n\nTime: $(date)\nSystem: Production" \
+  --header "X-Priority: $PRIORITY" \
+  --tags "alert,${ALERT_TYPE},automated"
+```
+
+### Daily Reports
+
+```bash
+#!/bin/bash
+# daily-report.sh
+
+# Generate report data
+generate_report() {
+  echo "{"
+  echo "  \"date\": \"$(date +%Y-%m-%d)\","
+  echo "  \"total_users\": 15234,"
+  echo "  \"new_signups\": 87,"
+  echo "  \"revenue\": \"$12,456.78\","
+  echo "  \"top_products\": ["
+  echo "    {\"name\": \"Product A\", \"sales\": 234},"
+  echo "    {\"name\": \"Product B\", \"sales\": 189}"
+  echo "  ]"
+  echo "}"
+}
+
+# Generate and save report data
+generate_report > report-data.json
+
+# Send daily report
+ahasend messages send \
+  --from reports@analytics.com \
+  --recipients executives.csv \
+  --subject "Daily Report - $(date +%Y-%m-%d)" \
+  --html-template daily-report.html \
+  --global-substitutions report-data.json \
+  --attach "reports/detailed-$(date +%Y%m%d).pdf" \
+  --schedule "$(date -d 'today 09:00' --iso-8601=seconds)" \
+  --tags "report,daily,automated"
+```
+
+## Webhook Integration
+
+### Process Webhook Events
+
+```bash
+#!/bin/bash
+# webhook-processor.sh
+
+# Start webhook listener and process events
+ahasend webhooks listen http://localhost:8080/webhook \
+  --events "message.bounced,message.failed" \
+  --output json | while read -r event; do
+
+  EVENT_TYPE=$(echo "$event" | jq -r '.event')
+  EMAIL=$(echo "$event" | jq -r '.recipient')
+
+  case $EVENT_TYPE in
+    message.bounced)
+      echo "Processing bounce for: $EMAIL"
+      # Add to suppression list
+      ahasend suppressions create "$EMAIL" --type bounce
+      ;;
+    message.failed)
+      echo "Processing failure for: $EMAIL"
+      # Log and alert
+      echo "$event" >> failed-emails.log
+      ;;
+  esac
+done
+```
+
+### Webhook Testing Pipeline
+
+```bash
+#!/bin/bash
+# test-webhook-integration.sh
+
+# 1. Create test webhook
+WEBHOOK_ID=$(ahasend webhooks create \
+  --url http://localhost:3000/test-webhook \
+  --events all \
+  --description "Integration test webhook" \
+  --output json | jq -r '.id')
+
+echo "Created webhook: $WEBHOOK_ID"
+
+# 2. Start listener
+ahasend webhooks listen http://localhost:3000/test-webhook \
+  --verbose &
+LISTENER_PID=$!
+
+# 3. Trigger test events
+sleep 2
+ahasend webhooks trigger "$WEBHOOK_ID" --all-events
+
+# 4. Send test email
+ahasend messages send \
+  --from test@example.com \
+  --to test@example.com \
+  --subject "Webhook Test" \
+  --text "Testing webhook integration" \
+  --sandbox
+
+# 5. Wait and cleanup
+sleep 5
+kill $LISTENER_PID
+
+# 6. Delete test webhook
+ahasend webhooks delete "$WEBHOOK_ID" --yes
+
+echo "Integration test complete"
+```
+
+## Automation Scripts
+
+### CI/CD Email Notifications
+
+```yaml
+# .github/workflows/deploy-notification.yml
+name: Deployment Notification
+
+on:
+  deployment_status:
+
+jobs:
+  notify:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install AhaSend CLI
+        run: |
+          wget https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64.tar.gz
+          tar -xzf ahasend-linux-amd64.tar.gz
+          sudo mv ahasend /usr/local/bin/
+
+      - name: Send deployment notification
+        env:
+          AHASEND_API_KEY: ${{ secrets.AHASEND_API_KEY }}
+          AHASEND_ACCOUNT_ID: ${{ secrets.AHASEND_ACCOUNT_ID }}
+        run: |
+          ahasend messages send \
+            --from ci@company.com \
+            --to team@company.com \
+            --subject "✅ Deployment Successful: ${{ github.event.deployment.environment }}" \
+            --html "<h2>Deployment Complete</h2>
+                    <p>Environment: ${{ github.event.deployment.environment }}</p>
+                    <p>Commit: ${{ github.sha }}</p>
+                    <p>Deployed by: ${{ github.actor }}</p>
+                    <p>Time: $(date)</p>" \
+            --tags "deployment,ci,notification"
+```
+
+### Database Backup Notifications
+
+```bash
+#!/bin/bash
+# backup-notification.sh
+
+# Perform backup
+BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+BACKUP_STATUS=$?
+
+if [ $BACKUP_STATUS -eq 0 ]; then
+  SUBJECT="✅ Backup Successful"
+  MESSAGE="Database backup completed successfully.\nFile: $BACKUP_FILE\nSize: $BACKUP_SIZE"
+  TAGS="backup,success"
+else
+  SUBJECT="❌ Backup Failed"
+  MESSAGE="Database backup failed with error code: $BACKUP_STATUS"
+  TAGS="backup,failure,alert"
+fi
+
+# Send notification
+ahasend messages send \
+  --from backup@database.com \
+  --to admin@company.com \
+  --subject "$SUBJECT - $(date +%Y-%m-%d)" \
+  --text "$MESSAGE" \
+  --tags "$TAGS"
+```
+
+### User Onboarding Sequence
+
+```bash
+#!/bin/bash
+# onboarding-sequence.sh
+
+USER_EMAIL=$1
+USER_NAME=$2
+
+# Welcome email (immediate)
+ahasend messages send \
+  --from welcome@app.com \
+  --to "$USER_EMAIL" \
+  --subject "Welcome to Our App, $USER_NAME!" \
+  --html-template templates/welcome.html \
+  --global-substitutions "{\"name\": \"$USER_NAME\"}" \
+  --tags "onboarding,day0,welcome"
+
+# Day 1: Getting started guide
+ahasend messages send \
+  --from tips@app.com \
+  --to "$USER_EMAIL" \
+  --subject "Getting Started with Our App" \
+  --html-template templates/getting-started.html \
+  --global-substitutions "{\"name\": \"$USER_NAME\"}" \
+  --schedule "$(date -d '+1 day 10:00' --iso-8601=seconds)" \
+  --tags "onboarding,day1,guide"
+
+# Day 3: Feature highlights
+ahasend messages send \
+  --from tips@app.com \
+  --to "$USER_EMAIL" \
+  --subject "Discover Our Best Features" \
+  --html-template templates/features.html \
+  --global-substitutions "{\"name\": \"$USER_NAME\"}" \
+  --schedule "$(date -d '+3 days 10:00' --iso-8601=seconds)" \
+  --tags "onboarding,day3,features"
+
+# Day 7: Check-in
+ahasend messages send \
+  --from support@app.com \
+  --to "$USER_EMAIL" \
+  --subject "How's Everything Going?" \
+  --html-template templates/checkin.html \
+  --global-substitutions "{\"name\": \"$USER_NAME\"}" \
+  --schedule "$(date -d '+7 days 10:00' --iso-8601=seconds)" \
+  --tags "onboarding,day7,checkin"
+
+echo "Onboarding sequence scheduled for $USER_EMAIL"
+```
+
+## Performance Testing
+
+### Load Testing Script
+
+```bash
+#!/bin/bash
+# load-test.sh
+
+# Configuration
+TOTAL_EMAILS=10000
+BATCH_SIZE=1000
+CONCURRENCY=10
+
+echo "Starting load test: $TOTAL_EMAILS emails"
+
+# Generate test recipients
+echo "email,name,test_id" > test-recipients.csv
+for i in $(seq 1 $TOTAL_EMAILS); do
+  echo "test${i}@example.com,Test User ${i},TEST-${i}" >> test-recipients.csv
+done
+
+# Run load test
+START_TIME=$(date +%s)
+
+ahasend messages send \
+  --from loadtest@example.com \
+  --recipients test-recipients.csv \
+  --subject "Load Test {{test_id}}" \
+  --text "This is a load test message for {{name}}" \
+  --sandbox \
+  --max-concurrency $CONCURRENCY \
+  --progress \
+  --show-metrics \
+  --output json > load-test-results.json
+
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+# Analyze results
+SUCCESS=$(jq '.successful_jobs' load-test-results.json)
+FAILED=$(jq '.failed_jobs' load-test-results.json)
+RATE=$(jq '.emails_per_sec' load-test-results.json)
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Load Test Results"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Total Emails:    $TOTAL_EMAILS"
+echo "Successful:      $SUCCESS"
+echo "Failed:          $FAILED"
+echo "Duration:        ${DURATION}s"
+echo "Rate:            $RATE emails/sec"
+echo "Concurrency:     $CONCURRENCY"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Cleanup
+rm test-recipients.csv
+```
+
+## Multi-Environment Management
+
+### Environment-Specific Sending
+
+```bash
+#!/bin/bash
+# deploy-emails.sh
+
+ENVIRONMENT=$1
+
+case $ENVIRONMENT in
+  production)
+    PROFILE="production"
+    FROM="noreply@company.com"
+    RECIPIENTS="all-users.csv"
+    ;;
+  staging)
+    PROFILE="staging"
+    FROM="test@staging.company.com"
+    RECIPIENTS="test-users.csv"
+    ;;
+  development)
+    PROFILE="development"
+    FROM="dev@dev.company.com"
+    RECIPIENTS="dev-team.csv"
+    ;;
+  *)
+    echo "Unknown environment: $ENVIRONMENT"
+    exit 1
+    ;;
+esac
+
+# Send with environment-specific profile
+ahasend messages send \
+  --profile "$PROFILE" \
+  --from "$FROM" \
+  --recipients "$RECIPIENTS" \
+  --subject "[$ENVIRONMENT] System Update" \
+  --html-template update-notification.html \
+  --tags "update,${ENVIRONMENT}"
+
+echo "Emails sent to $ENVIRONMENT environment"
+```
+
+## Next Steps
+
+- [Learn about batch processing](/cli/batch-processing)
+- [Configure webhooks](/cli/commands/webhooks)
+- [Explore the API](/api-reference)

@@ -1,0 +1,465 @@
+---
+title: Installation
+description: Install the AhaSend CLI on your system
+icon: download
+---
+
+# Installation
+
+The AhaSend CLI can be installed through multiple methods. Choose the one that best fits your system and workflow.
+
+## System Requirements
+
+- **Go Version**: 1.21 or higher (for building from source)
+- **Operating Systems**: Linux, macOS, Windows
+- **Architecture**: x86_64, ARM64
+
+## Installation Methods
+
+<Tabs>
+<Tab title="Binary Download">
+
+### Download Pre-built Binary
+
+The quickest way to get started is to download a pre-built binary for your platform.
+
+1. Download the appropriate binary for your platform from the [GitHub releases page](https://github.com/AhaSend/ahasend-cli/releases):
+   - **Linux x64**: `ahasend-linux-amd64`
+   - **macOS Intel**: `ahasend-darwin-amd64`  
+   - **macOS Apple Silicon**: `ahasend-darwin-arm64`
+   - **Windows x64**: `ahasend-windows-amd64.exe`
+
+2. Rename and make executable (Linux/macOS):
+```bash
+# Linux
+mv ahasend-linux-amd64 ahasend
+chmod +x ahasend
+
+# macOS Intel
+mv ahasend-darwin-amd64 ahasend
+chmod +x ahasend
+
+# macOS Apple Silicon
+mv ahasend-darwin-arm64 ahasend
+chmod +x ahasend
+```
+
+3. Move to your PATH:
+```bash
+# Linux/macOS
+sudo mv ahasend /usr/local/bin/
+
+# Or add to your user bin directory
+mkdir -p ~/.local/bin
+mv ahasend ~/.local/bin/
+# Add ~/.local/bin to your PATH if not already there
+```
+
+4. For Windows:
+```powershell
+# Rename to remove platform suffix (optional)
+ren ahasend-windows-amd64.exe ahasend.exe
+
+# Move to a directory in your PATH or add current directory to PATH
+```
+
+5. Verify the installation:
+```bash
+ahasend --version
+```
+
+</Tab>
+<Tab title="Build from Source">
+
+### Build from Source
+
+For the latest features or to contribute to development, build from source.
+
+#### Prerequisites
+
+- Go 1.21 or higher
+- Make (optional but recommended)
+- Git
+
+#### Build Steps
+
+1. Clone the repository:
+```bash
+git clone https://github.com/AhaSend/ahasend-cli.git
+cd ahasend-cli
+```
+
+2. Build the CLI:
+```bash
+# Using Make (recommended)
+make build
+
+# Or using Go directly
+go build -o ahasend ./cmd/ahasend
+```
+
+3. Install to your PATH:
+```bash
+# Using Make
+sudo make install
+
+# Or manually
+sudo cp ./bin/ahasend /usr/local/bin/
+```
+
+4. Verify the installation:
+```bash
+ahasend --version
+```
+
+</Tab>
+<Tab title="Go Install">
+
+### Install with Go
+
+If you have Go installed, you can use `go install`:
+
+```bash
+go install github.com/AhaSend/ahasend-cli/cmd/ahasend@latest
+```
+
+This will install the CLI to your `$GOPATH/bin` directory. Make sure it's in your PATH:
+
+```bash
+export PATH=$PATH:$(go env GOPATH)/bin
+```
+
+</Tab>
+</Tabs>
+
+## Platform-Specific Instructions
+
+### Linux
+
+<Tabs>
+<Tab title="Ubuntu/Debian">
+
+```bash
+# Download the binary
+wget https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64
+
+# Make executable and install
+chmod +x ahasend-linux-amd64
+sudo mv ahasend-linux-amd64 /usr/local/bin/ahasend
+
+# Verify
+ahasend --version
+```
+
+</Tab>
+<Tab title="Fedora/RHEL">
+
+```bash
+# Download the binary
+curl -LO https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64
+
+# Make executable and install
+chmod +x ahasend-linux-amd64
+sudo mv ahasend-linux-amd64 /usr/local/bin/ahasend
+
+# Verify
+ahasend --version
+```
+
+</Tab>
+<Tab title="Arch Linux">
+
+```bash
+# Download the binary
+wget https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64
+
+# Install to user directory
+mkdir -p ~/.local/bin
+mv ahasend-linux-amd64 ~/.local/bin/ahasend
+chmod +x ~/.local/bin/ahasend
+
+# Add to PATH if needed
+echo 'export PATH=$PATH:~/.local/bin' >> ~/.bashrc
+source ~/.bashrc
+
+# Verify
+ahasend --version
+```
+
+</Tab>
+</Tabs>
+
+### macOS
+
+<Tabs>
+<Tab title="Intel Mac">
+
+```bash
+# Download the binary
+curl -LO https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-darwin-amd64
+
+# Make executable and install
+chmod +x ahasend-darwin-amd64
+sudo mv ahasend-darwin-amd64 /usr/local/bin/ahasend
+
+# Verify
+ahasend --version
+```
+
+</Tab>
+<Tab title="Apple Silicon">
+
+```bash
+# Download the binary
+curl -LO https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-darwin-arm64
+
+# Make executable and install
+chmod +x ahasend-darwin-arm64
+sudo mv ahasend-darwin-arm64 /usr/local/bin/ahasend
+
+# Verify
+ahasend --version
+```
+
+</Tab>
+</Tabs>
+
+<Note>
+On macOS, you may need to allow the binary in Security & Privacy settings if you see a security warning.
+</Note>
+
+### Windows
+
+<Tabs>
+<Tab title="PowerShell">
+
+```powershell
+# Download the binary
+Invoke-WebRequest -Uri "https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-windows-amd64.exe" -OutFile "ahasend.exe"
+
+# Create a directory for the CLI
+New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\AhaSend"
+
+# Move the executable
+Move-Item -Path ".\ahasend.exe" -Destination "$env:LOCALAPPDATA\AhaSend\ahasend.exe"
+
+# Add to PATH (requires admin privileges)
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:LOCALAPPDATA\AhaSend", [EnvironmentVariableTarget]::User)
+
+# Verify (open new PowerShell window)
+ahasend --version
+```
+
+</Tab>
+<Tab title="Command Prompt">
+
+```batch
+:: Download using curl (Windows 10+)
+curl -LO https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-windows-amd64.exe
+
+:: Create directory
+mkdir "%LOCALAPPDATA%\AhaSend"
+
+:: Move executable
+move ahasend-windows-amd64.exe "%LOCALAPPDATA%\AhaSend\ahasend.exe"
+
+:: Add to PATH manually through System Properties > Environment Variables
+:: Add %LOCALAPPDATA%\AhaSend to your PATH
+
+:: Verify (open new command prompt)
+ahasend --version
+```
+
+</Tab>
+</Tabs>
+
+## Shell Completion
+
+The CLI supports shell completion for bash, zsh, fish, and PowerShell.
+
+<Tabs>
+<Tab title="Bash">
+
+**Linux:**
+```bash
+# Install system-wide (requires sudo)
+sudo ahasend completion bash > /etc/bash_completion.d/ahasend
+
+# Or install for current user
+ahasend completion bash > ~/.bash_completion.d/ahasend
+echo "source ~/.bash_completion.d/ahasend" >> ~/.bashrc
+source ~/.bashrc
+```
+
+**macOS:**
+```bash
+# Install system-wide (requires brew and bash-completion)
+brew install bash-completion
+ahasend completion bash > $(brew --prefix)/etc/bash_completion.d/ahasend
+
+# Reload shell
+exec bash
+```
+
+</Tab>
+<Tab title="Zsh">
+
+**Linux:**
+```bash
+# Generate completion script
+ahasend completion zsh > "${fpath[1]}/_ahasend"
+
+# Reload shell
+exec zsh
+```
+
+**macOS:**
+```bash
+# Install to homebrew's zsh completions directory
+ahasend completion zsh > $(brew --prefix)/share/zsh/site-functions/_ahasend
+
+# Reload shell
+exec zsh
+```
+
+</Tab>
+<Tab title="Fish">
+
+```bash
+# Generate completion script (works on Linux and macOS)
+ahasend completion fish > ~/.config/fish/completions/ahasend.fish
+
+# Reload shell
+exec fish
+```
+
+</Tab>
+<Tab title="PowerShell">
+
+```powershell
+# Generate completion script
+ahasend completion powershell > ahasend.ps1
+
+# Source it in your profile
+Add-Content $PROFILE "& $(Get-Location)\ahasend.ps1"
+
+# Reload profile
+. $PROFILE
+```
+
+</Tab>
+</Tabs>
+
+## Verifying Installation
+
+After installation, verify that the CLI is working correctly:
+
+```bash
+# Check version
+ahasend --version
+
+# View help
+ahasend --help
+
+# Test API connectivity (after authentication)
+ahasend ping
+```
+
+## Updating the CLI
+
+To update to the latest version:
+
+<Tabs>
+<Tab title="Binary">
+
+Download and replace the existing binary with the latest version from the [releases page](https://github.com/AhaSend/ahasend-cli/releases).
+
+</Tab>
+<Tab title="From Source">
+
+```bash
+cd ahasend-cli
+git pull origin main
+make clean build
+sudo make install
+```
+
+</Tab>
+<Tab title="Go Install">
+
+```bash
+go install github.com/AhaSend/ahasend-cli/cmd/ahasend@latest
+```
+
+</Tab>
+</Tabs>
+
+## Uninstallation
+
+To remove the AhaSend CLI from your system:
+
+```bash
+# Remove the binary
+sudo rm /usr/local/bin/ahasend
+
+# Remove configuration (optional)
+rm -rf ~/.ahasend
+
+# Remove shell completions (if installed)
+# Location depends on your shell and installation method
+```
+
+## Troubleshooting
+
+### Command Not Found
+
+If you get "command not found" after installation:
+
+1. Check if the binary is in your PATH:
+```bash
+which ahasend
+```
+
+2. If not found, add the installation directory to your PATH:
+```bash
+# For bash
+echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
+source ~/.bashrc
+
+# For zsh
+echo 'export PATH=$PATH:/usr/local/bin' >> ~/.zshrc
+source ~/.zshrc
+```
+
+### Permission Denied
+
+If you get permission errors:
+
+1. Make sure the binary is executable:
+```bash
+chmod +x /path/to/ahasend
+```
+
+2. Use sudo for system-wide installation:
+```bash
+sudo mv ahasend /usr/local/bin/
+```
+
+### Version Conflicts
+
+If you have multiple versions installed:
+
+1. Check all locations:
+```bash
+which -a ahasend
+```
+
+2. Remove old versions and keep only the latest.
+
+## Next Steps
+
+Once installed, you're ready to:
+
+1. [Set up authentication](/cli/authentication)
+2. [Start with the quick start guide](/cli/quickstart)
+3. [Explore available commands](/cli/commands/messages)

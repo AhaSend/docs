@@ -1,0 +1,129 @@
+---
+title: AhaSend CLI Overview
+description: Command-line interface for AhaSend's transactional email service
+icon: book
+---
+
+# AhaSend CLI
+
+A powerful command-line interface for [AhaSend](https://ahasend.com), the reliable transactional email service. Send emails, manage domains, configure webhooks, and monitor email analytics directly from your terminal.
+
+<Note>
+The AhaSend CLI is available on [GitHub](https://github.com/AhaSend/ahasend-cli) and supports Linux, macOS, and Windows.
+</Note>
+
+## Key Features
+
+<CardGroup>
+<Card title="Email Sending" icon="envelope">
+  Send single or batch emails with templates, attachments, and scheduling
+</Card>
+<Card title="Domain Management" icon="globe">
+  Add, verify, and manage sending domains with DNS configuration
+</Card>
+<Card title="Webhook Management" icon="webhook">
+  Configure, test, and monitor real-time event notifications
+</Card>
+<Card title="Analytics" icon="chart-line">
+  Comprehensive email statistics and reporting
+</Card>
+</CardGroup>
+
+## Why Use the CLI?
+
+The AhaSend CLI provides several advantages:
+
+- **Automation-Ready**: Perfect for CI/CD pipelines and scripted workflows
+- **Batch Processing**: High-performance concurrent operations with progress tracking
+- **Multiple Output Formats**: JSON, table, CSV, and plain text for different use cases
+- **Profile Management**: Easily switch between production, staging, and development environments
+- **Interactive Testing**: Built-in webhook listeners and route testing for development
+- **Debug Support**: Comprehensive logging for troubleshooting
+
+## Quick Example
+
+Send your first email in just a few commands:
+
+```bash
+# Authenticate with your API key
+ahasend auth login
+
+# Add and verify a domain
+ahasend domains create example.com
+ahasend domains verify example.com
+
+# Send an email
+ahasend messages send \
+  --from noreply@example.com \
+  --to user@recipient.com \
+  --subject "Hello from AhaSend" \
+  --text "Welcome to AhaSend!"
+```
+
+## Core Capabilities
+
+### Email Operations
+- Send single or batch emails with templates
+- Support for HTML, plain text, and AMP content
+- Attachment handling up to 10MB per file
+- Scheduled delivery with timezone support
+- Sandbox mode for testing without sending
+
+### Domain Management
+- Add and configure sending domains
+- Automatic DNS record generation
+- Domain verification status tracking
+- SPF, DKIM, and DMARC configuration
+
+### Webhook & Route Management
+- Real-time webhook event listeners
+- Development webhook testing and triggering
+- Inbound email route configuration
+- WebSocket-based event streaming
+
+### Analytics & Reporting
+- Deliverability statistics
+- Bounce rate analysis
+- Delivery time metrics
+- Export to CSV for further analysis
+
+## Supported Platforms
+
+The CLI is distributed as a single binary with no external dependencies:
+
+- **Linux**: x86_64, ARM64
+- **macOS**: Intel and Apple Silicon
+- **Windows**: x86_64
+
+## Integration with AhaSend Services
+
+The CLI seamlessly integrates with all AhaSend services:
+
+- **API**: Full compatibility with AhaSend API v2
+- **SMTP**: Credential management and testing
+- **Webhooks**: Real-time event processing
+- **Routes**: Inbound email handling
+- **Suppressions**: List management
+
+## Next Steps
+
+<CardGroup cols={2}>
+<Card title="Installation" href="/cli/installation" icon="download">
+  Install the CLI on your system
+</Card>
+<Card title="Quick Start" href="/cli/quickstart" icon="rocket">
+  Send your first email in minutes
+</Card>
+<Card title="Authentication" href="/cli/authentication" icon="key">
+  Set up API credentials
+</Card>
+<Card title="Command Reference" href="/cli/commands/messages" icon="terminal">
+  Explore available commands
+</Card>
+</CardGroup>
+
+## Support
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/AhaSend/ahasend-cli/issues)
+- **Documentation**: You're reading it!
+- **Email Support**: support@ahasend.com

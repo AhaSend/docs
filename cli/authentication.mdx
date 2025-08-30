@@ -1,0 +1,98 @@
+---
+title: Authentication
+description: Manage API credentials and authentication profiles
+icon: key
+---
+
+# Authentication
+
+The AhaSend CLI uses profile-based authentication to manage your API credentials and support multiple environments.
+
+## Getting Started
+
+You'll need your API Key and Account ID from the [AhaSend dashboard](https://dash.ahasend.com).
+
+### Interactive Login
+
+```bash
+ahasend auth login
+```
+
+You'll be prompted for your API Key, Account ID, and an optional profile name.
+
+### Direct Login
+
+```bash
+ahasend auth login \
+  --api-key YOUR_API_KEY \
+  --account-id YOUR_ACCOUNT_ID \
+  --profile production
+```
+
+### Environment Variables
+
+For automation or CI/CD:
+
+```bash
+export AHASEND_API_KEY="your-api-key"
+export AHASEND_ACCOUNT_ID="your-account-id"
+```
+
+## Profiles
+
+Profiles let you manage multiple environments easily.
+
+### Creating Profiles
+
+```bash
+ahasend auth login --profile production
+ahasend auth login --profile staging
+```
+
+### Switching Profiles
+
+```bash
+# Change default profile
+ahasend auth switch production
+
+# Use profile for single command
+ahasend messages send --profile staging \
+  --from test@staging.example.com \
+  --to dev@example.com \
+  --subject "Test"
+```
+
+### Check Status
+
+```bash
+ahasend auth status
+```
+
+### Remove Profile
+
+```bash
+ahasend auth logout
+```
+
+## Configuration
+
+Credentials are stored in `~/.ahasend/config.yaml` with secure file permissions.
+
+<Warning>
+Keep your API keys secure. Never commit credentials to version control.
+</Warning>
+
+## Testing Authentication
+
+Verify your setup:
+
+```bash
+ahasend ping
+ahasend auth status
+```
+
+## Next Steps
+
+- [Send your first email](/cli/quickstart)
+- [Manage domains](/cli/commands/domains)
+- [Configure webhooks](/cli/commands/webhooks)

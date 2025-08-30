@@ -1,0 +1,120 @@
+---
+title: Stats
+description: View email statistics and analytics
+icon: chart-line
+---
+
+# Stats Command
+
+View email statistics and analytics for your account.
+
+## Overview
+
+```bash
+ahasend stats [subcommand] [flags]
+```
+
+Available subcommands:
+- `deliverability` - View delivery statistics
+- `bounces` - Analyze bounce rates
+- `delivery-time` - Check delivery performance
+
+## Deliverability Statistics
+
+```bash
+# Basic deliverability stats (last 30 days)
+ahasend stats deliverability
+
+# Custom date range
+ahasend stats deliverability \
+  --start-date 2024-01-01 \
+  --end-date 2024-01-31
+
+# Group by time period
+ahasend stats deliverability \
+  --group-by day \
+  --start-date 2024-01-01
+```
+
+### Grouping Options
+
+- `hour` - Hourly breakdown
+- `day` - Daily breakdown (default)
+- `week` - Weekly breakdown
+- `month` - Monthly breakdown
+
+### Export to CSV
+
+```bash
+ahasend stats deliverability \
+  --start-date 2024-01-01 \
+  --end-date 2024-01-31 \
+  --output csv > deliverability-report.csv
+```
+
+## Bounce Analysis
+
+```bash
+# Basic bounce report
+ahasend stats bounces
+
+# Detailed bounce analysis
+ahasend stats bounces \
+  --start-date 2024-01-01 \
+  --end-date 2024-01-31 \
+  --group-by day
+```
+
+### Bounce Categories
+
+- **Hard Bounces**: Permanent delivery failures
+- **Soft Bounces**: Temporary delivery issues
+- **Blocked**: Rejected by recipient server
+
+## Delivery Time Performance
+
+```bash
+# Basic delivery time stats
+ahasend stats delivery-time
+
+# Hourly breakdown
+ahasend stats delivery-time \
+  --group-by hour \
+  --start-date 2024-01-15
+```
+
+## Advanced Options
+
+### Campaign Performance
+
+```bash
+# Filter by tags
+ahasend stats deliverability \
+  --tags "campaign-summer-2024" \
+  --start-date 2024-06-01 \
+  --end-date 2024-08-31
+```
+
+### Domain-Specific Stats
+
+```bash
+# Stats for specific domain
+ahasend stats deliverability \
+  --domain example.com \
+  --group-by day
+```
+
+## Common Flags
+
+- `--start-date`: Start date (YYYY-MM-DD format)
+- `--end-date`: End date (YYYY-MM-DD format)
+- `--group-by`: Time grouping (hour, day, week, month)
+- `--domain`: Filter by sending domain
+- `--tags`: Filter by message tags
+- `--output`: Output format (table, json, csv, plain)
+
+## Next Steps
+
+- [Configure webhooks for real-time tracking](/cli/commands/webhooks)
+- [Manage suppressions](/cli/commands/suppressions)
+- [Send messages](/cli/commands/messages)

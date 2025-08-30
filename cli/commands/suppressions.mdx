@@ -1,0 +1,87 @@
+---
+title: Suppressions
+description: Manage email suppressions (bounces, complaints, unsubscribes)
+icon: ban
+---
+
+# Suppressions Command
+
+Manage email suppressions (bounces, complaints, unsubscribes).
+
+## Overview
+
+```bash
+ahasend suppressions [subcommand] [flags]
+```
+
+Available subcommands:
+- `list` - List all suppressed email addresses
+- `create` - Create a new suppression for an email address
+- `check` - Check if an email address is suppressed
+- `delete` - Delete an email address from the suppression list
+- `wipe` - Delete all suppressions from your account
+
+Suppressions are email addresses that should not receive emails from your account. They can be created automatically (bounces, complaints) or manually (unsubscribes).
+
+Use suppressions to:
+- View all suppressed email addresses
+- Check if a specific email is suppressed
+- Create new suppressions for email addresses
+- Delete existing suppressions
+- Bulk manage suppressions
+
+## List Suppressions
+
+```bash
+# List all suppressions
+ahasend suppressions list
+
+# Filter by type
+ahasend suppressions list --type bounce
+```
+
+## Create Suppression
+
+```bash
+# Create manual suppression
+ahasend suppressions create user@example.com --reason unsubscribe
+
+# Create bounce suppression
+ahasend suppressions create user@example.com --type bounce
+
+# Create complaint suppression
+ahasend suppressions create user@example.com --type complaint
+```
+
+## Check Suppression
+
+```bash
+ahasend suppressions check user@example.com
+```
+
+## Delete Suppression
+
+```bash
+ahasend suppressions delete user@example.com
+```
+
+## Wipe Suppressions
+
+Remove all suppressions (use with caution):
+
+```bash
+# Wipe all suppressions
+ahasend suppressions wipe --confirm
+
+# Wipe specific type
+ahasend suppressions wipe --type bounce --confirm
+```
+
+<Warning>
+This action is irreversible and will remove all specified suppressions.
+</Warning>
+
+## Next Steps
+
+- [Send messages](/cli/commands/messages)
+- [View statistics](/cli/commands/stats)

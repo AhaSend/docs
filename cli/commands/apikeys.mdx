@@ -1,0 +1,87 @@
+---
+title: API Keys
+description: Manage API keys for authentication and access control
+icon: key
+---
+
+# API Keys Command
+
+Manage API keys for authentication and access control.
+
+## Overview
+
+```bash
+ahasend apikeys [subcommand] [flags]
+```
+
+Available subcommands:
+- `list` - List all API keys
+- `create` - Create a new API key
+- `get` - Get detailed information about a specific API key
+- `update` - Update an existing API key
+- `delete` - Delete an API key
+
+API keys are used to authenticate requests to the AhaSend API. You can create multiple API keys with different scopes and labels to organize access for different applications or team members.
+
+Each API key has:
+- A unique identifier and secret
+- Configurable scopes (permissions) - see [API Key Scopes](/api-reference/scopes)
+- Optional labels for organization
+- Creation and last used timestamps
+
+## List API Keys
+
+```bash
+ahasend apikeys list
+```
+
+## Create API Key
+
+```bash
+# Send messages from any domain
+ahasend apikeys create --label "Production API" --scope "messages:send:all"
+
+# Multiple specific scopes
+ahasend apikeys create \
+  --label "Analytics Only" \
+  --scope "statistics-transactional:read:all" \
+  --scope "suppressions:read"
+
+# Domain-specific messaging
+ahasend apikeys create \
+  --label "Newsletter Service" \
+  --scope "messages:send:{example.com}" \
+  --scope "suppressions:write"
+```
+
+## Get API Key Details
+
+```bash
+ahasend apikeys get ak_1234567890abcdef
+```
+
+## Update API Key
+
+```bash
+# Update label
+ahasend apikeys update ak_1234567890abcdef --label "Updated Label"
+
+# Update scope
+ahasend apikeys update ak_1234567890abcdef --scope "messages:send:{example.com}"
+```
+
+## Delete API Key
+
+```bash
+ahasend apikeys delete ak_1234567890abcdef
+```
+
+<Warning>
+Deleting an API key is irreversible. Applications using this key will lose access immediately.
+</Warning>
+
+## Next Steps
+
+- [Learn about API Key Scopes](/api-reference/scopes)
+- [Authenticate with the CLI](/cli/authentication)
+- [Send messages](/cli/commands/messages)
