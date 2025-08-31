@@ -319,9 +319,9 @@ jobs:
     steps:
       - name: Install AhaSend CLI
         run: |
-          wget https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64.tar.gz
-          tar -xzf ahasend-linux-amd64.tar.gz
-          sudo mv ahasend /usr/local/bin/
+          wget https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64
+          chmod +x ahasend-linux-amd64
+          sudo mv ahasend-linux-amd64 /usr/local/bin/ahasend
 
       - name: Send deployment notification
         env:
