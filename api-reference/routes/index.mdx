@@ -1,10 +1,70 @@
 ---
-title: "Introduction"
+title: "Message Routes API"
 sidebarTitle: "Introduction"
-icon: "book"
+description: "Process inbound emails with configurable routing rules for support tickets, reply handling, and automated workflows"
+icon: "route"
 ---
 
-Triggered when an email has been received and queued for delivery.
+<Note>
+**New to message routing?** Start with our [comprehensive routing guide](/integrations/routing) to learn how to create and configure message routes in your dashboard before diving into the API details.
+</Note>
 
-This webhook is sent via HTTP POST to your configured webhook URL and follows the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md).
+Message routes enable automatic processing of inbound emails sent to your AhaSend domains. When emails arrive at configured addresses, AhaSend parses the content and forwards it to your application endpoints via HTTP POST requests.
+
+## Overview
+
+Message routing provides intelligent inbound email handling with:
+
+- **Pattern-based routing** using exact addresses or wildcards (`*`, `ticket-*`, `*-support`)
+- **Real-time delivery** via HTTP POST to your configured endpoints
+- **Flexible processing options** for attachments, headers, and reply extraction
+- **Secure payload delivery** following the Standard Webhooks specification
+
+## Prerequisites
+
+Message routing requires:
+- Domain added and verified in AhaSend
+- MX records pointing to AhaSend mail servers
+- Endpoint accepting HTTP POST requests with 2xx responses
+
+## Payload Structure
+
+All routing events use a consistent JSON structure:
+
+```json
+{
+  "type": "message.routing",
+  "timestamp": "2024-05-07T10:41:45.026792973Z",
+  "data": {
+    "from": "sender@example.com",
+    "to": "support@yourdomain.com",
+    "subject": "Email subject",
+    "html_body": "<p>Email content</p>",
+    "plain_body": "Email content",
+    // Additional fields based on configuration
+  }
+}
+```
+
+## Security Headers
+
+Every routing request includes security headers for verification:
+
+- `webhook-id`: Unique event identifier for idempotency
+- `webhook-timestamp`: Unix timestamp when the route was triggered
+- `webhook-signature`: HMAC signature for payload verification
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Create Routes" icon="plus" href="/integrations/routing">
+    Learn how to configure message routes and handle inbound emails
+  </Card>
+  <Card title="Security" icon="shield" href="/api-reference/routes/security">
+    Implement signature verification for secure route handling
+  </Card>
+  <Card title="Retry Policy" icon="arrows-rotate" href="/api-reference/routes/retry-policy">
+    Understand routing delivery guarantees and retry behavior
+  </Card>
+</CardGroup>
 

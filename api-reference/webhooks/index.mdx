@@ -1,7 +1,57 @@
 ---
-title: "Introduction"
+title: "Webhooks API"
 sidebarTitle: "Introduction"
-icon: "book"
+description: "Real-time HTTP callbacks for email events following the Standard Webhooks specification"
+icon: "webhook"
 ---
 
-// @TODO: ADD INTRODUCTION
+<Note>
+**New to webhooks?** Start with our [comprehensive webhooks guide](/integrations/webhooks) to learn how to create and configure webhooks in your dashboard before diving into the API details.
+</Note>
+
+Webhooks are user-defined HTTP callbacks that notify your application in real-time when specific events occur in AhaSend. When an email is delivered, bounced, opened, or other events happen, AhaSend sends a POST request to your configured endpoint with detailed event data.
+
+## Overview
+
+AhaSend webhooks follow the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks), providing:
+
+- **Real-time notifications** for email events (delivery, bounce, open, click, suppression)
+- **Secure payload delivery** with HMAC signature verification
+- **Automatic retries** up to 6 times over 16+ minutes for failed deliveries
+- **Idempotency support** via unique webhook-id headers
+
+## Payload Structure
+
+All webhook events use a consistent JSON structure:
+
+```json
+{
+  "type": "entity.event",
+  "timestamp": "2024-05-06T09:49:16.687031577Z",
+  "data": {
+    // Event-specific data
+  }
+}
+```
+
+## Security Headers
+
+Every webhook request includes three security headers for verification:
+
+- `webhook-id`: Unique event identifier for idempotency
+- `webhook-timestamp`: Unix timestamp when the webhook was sent
+- `webhook-signature`: HMAC signature for payload verification
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Create Webhooks" icon="plus" href="/integrations/webhooks">
+    Learn how to configure webhooks in your dashboard and handle events
+  </Card>
+  <Card title="Security" icon="shield" href="/api-reference/webhooks/security">
+    Implement signature verification and security best practices
+  </Card>
+  <Card title="Retry Policy" icon="arrows-rotate" href="/api-reference/webhooks/retry-policy">
+    Understand webhook delivery guarantees and retry behavior
+  </Card>
+</CardGroup>

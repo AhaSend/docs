@@ -233,28 +233,28 @@
                 "group": "Message Events",
                 "icon": "envelope",
                 "pages": [
-                  "api-reference/webhooks/message.reception",
-                  "api-reference/webhooks/message.delivered",
-                  "api-reference/webhooks/message.transient-error",
-                  "api-reference/webhooks/message.failed",
-                  "api-reference/webhooks/message.bounced",
-                  "api-reference/webhooks/message.suppressed",
-                  "api-reference/webhooks/message.opened",
-                  "api-reference/webhooks/message.clicked"
+                  "api-reference/webhooks/message-reception",
+                  "api-reference/webhooks/message-delivered",
+                  "api-reference/webhooks/message-transient_error",
+                  "api-reference/webhooks/message-failed",
+                  "api-reference/webhooks/message-bounced",
+                  "api-reference/webhooks/message-suppressed",
+                  "api-reference/webhooks/message-opened",
+                  "api-reference/webhooks/message-clicked"
                 ]
               },
               {
                 "group": "Suppression Events",
                 "icon": "ban",
                 "pages": [
-                  "api-reference/webhooks/suppression.created"
+                  "api-reference/webhooks/suppression-created"
                 ]
               },
               {
                 "group": "Domain Events",
                 "icon": "globe",
                 "pages": [
-                  "api-reference/webhooks/domain.dns_error"
+                  "api-reference/webhooks/domain-dns_error"
                 ]
               }
             ]
@@ -265,7 +265,7 @@
               "api-reference/routes/index",
               "api-reference/routes/security",
               "api-reference/routes/retry-policy",
-              "api-reference/routes/route.message"
+              "api-reference/routes/route-message"
             ]
           },
           {
