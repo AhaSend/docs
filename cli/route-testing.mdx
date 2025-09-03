@@ -11,9 +11,11 @@ Test and debug inbound email routing locally using the AhaSend CLI's WebSocket-b
 ## Overview
 
 The CLI provides tools for:
-- Listening to inbound email events in real-time
-- Creating temporary routes for testing
-- Forwarding events to local endpoints
+- Listening to inbound email events in real-time using WebSocket connection
+- Using existing routes or creating temporary routes with recipient patterns
+- Forwarding events to local endpoints for development
+- Displaying events in full or slim output format
+- Handling disconnections with buffered event replay
 - Triggering test route events
 
 ## Route Listener
@@ -24,15 +26,19 @@ The CLI provides tools for:
 # Listen with existing route
 ahasend routes listen --route-id abcd1234-5678-90ef-abcd-1234567890ab
 
-# Create temporary route with wildcard
+# Listen with recipient pattern (backend creates temporary route)
 ahasend routes listen --recipient "*@example.com"
 
 # Listen for specific subdomain patterns
 ahasend routes listen --recipient "support-*@example.com"
+
+# Slim output (minimal event display)
+ahasend routes listen --route-id abc123 --slim-output
 ```
 
 <Note>
-Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
+- Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
+- The command generates a webhook secret for signing forwarded events using the standard-webhooks specification.
 </Note>
 
 ### Event Type
@@ -44,9 +50,14 @@ Attachment data is not sent over WebSocket for performance reasons. Only email m
 ### Forward to Local Server
 
 ```bash
-# Forward to local development server
+# Forward events to local endpoint
 ahasend routes listen \
-  --recipient "*@example.com" \
+  --recipient "support-*@example.com" \
+  --forward-to http://localhost:3000/webhook
+
+# Forward with existing route
+ahasend routes listen \
+  --route-id abcd1234-5678-90ef-abcd-1234567890ab \
   --forward-to http://localhost:3000/webhook
 
 # Skip SSL verification for self-signed certificates
@@ -119,11 +130,13 @@ ahasend routes listen --route-id abc123 --slim-output
 
 ## Common Flags
 
-- `--route-id` - Use existing route ID (mutually exclusive with --recipient)
-- `--recipient` - Recipient pattern for temporary route (supports wildcards)
-- `--forward-to` - Local endpoint URL to forward events to
-- `--skip-verify` - Skip SSL certificate verification for local endpoints
-- `--slim-output` - Minimal event display format
+| Flag | Description |
+|------|-------------|
+| `--route-id` | Use existing route instead of creating temporary one |
+| `--recipient` | Recipient pattern for temporary route (e.g., *@domain.com) |
+| `--forward-to` | Local endpoint to forward events to |
+| `--skip-verify` | Skip SSL certificate verification for local endpoints when forwarding events |
+| `--slim-output` | Slim down the payload for printing to the console |
 
 ## Use Cases
 
@@ -165,7 +178,7 @@ ahasend routes listen --recipient "tasks@example.com" \
 
 **Events Not Received**: Verify the route pattern matches the recipient address
 
-**Signature Verification Failed**: Ensure webhook secret is displayed when connection starts
+**Signature Verification Failed**: The command automatically generates a webhook secret using the standard-webhooks specification
 
 **Route Not Found**: Check route ID with `ahasend routes list`
 

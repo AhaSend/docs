@@ -100,22 +100,41 @@ ahasend webhooks delete webhook_1234567890abcdef --force
 
 ## Listen for Events (Development)
 
-Create a local webhook listener for testing:
+Listen for webhook events in real-time using WebSocket connection. This command establishes a WebSocket connection to receive webhook events and can forward them to a local endpoint for development.
 
 ```bash
-# Basic listener
-ahasend webhooks listen http://localhost:8080/webhook
+# Listen for all webhook events
+ahasend webhooks listen
 
-# Listen for specific events
-ahasend webhooks listen http://localhost:3000/events \
-  --events message.delivered,message.opened \
-  --port 3000
+# Use existing webhook
+ahasend webhooks listen --webhook-id abcd1234-5678-90ef-abcd-1234567890ab
 
-# With custom headers
-ahasend webhooks listen http://localhost:3000/webhook \
-  --header "X-API-Key: your-secret-key" \
-  --verbose
+# Forward events to local endpoint
+ahasend webhooks listen --forward-to http://localhost:3000/webhook
+
+# Filter specific event types
+ahasend webhooks listen --events message.opened,message.clicked
+
+# Slim output (only event types)
+ahasend webhooks listen --slim-output
+
+# Skip SSL verification for local endpoints
+ahasend webhooks listen --forward-to https://localhost:3000/webhook --skip-verify
 ```
+
+### Listen Flags
+
+| Flag | Description |
+|------|-------------|
+| `--webhook-id` | Use existing webhook instead of creating temporary one |
+| `--forward-to` | Local endpoint to forward events to |
+| `--events` | Filter specific events (client-side filtering) |
+| `--slim-output` | Slim down the payload for console output |
+| `--skip-verify` | Skip SSL certificate verification for local endpoints |
+
+<Note>
+The command automatically generates a webhook secret for signing forwarded events using the standard-webhooks specification. It also handles disconnections with buffered event replay.
+</Note>
 
 ## Trigger Test Events (Development)
 

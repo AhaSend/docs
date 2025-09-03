@@ -32,13 +32,33 @@ Use suppressions to:
 
 ## List Suppressions
 
+List suppressed email addresses with filtering and pagination support. Suppressions are email addresses that should not receive emails from your account. They can be filtered by email address, domain, creation time, and exported to JSON format.
+
 ```bash
 # List all suppressions
 ahasend suppressions list
 
-# Filter by type
-ahasend suppressions list --type bounce
+# Search for specific email suppression
+ahasend suppressions list --email user@example.com
+
+# Filter by domain
+ahasend suppressions list --domain example.com
+
+# Export to JSON
+ahasend suppressions list --output json
+
+# List with pagination
+ahasend suppressions list --limit 100
 ```
+
+### List Flags
+
+| Flag | Description |
+|------|-------------|
+| `--email` | Email address to search for (optional) |
+| `--domain` | Filter by specific domain |
+| `--limit` | Maximum number of suppressions to return (default 50) |
+| `--cursor` | Pagination cursor for continued results |
 
 ## Create Suppression
 

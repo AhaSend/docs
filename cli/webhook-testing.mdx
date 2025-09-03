@@ -21,18 +21,20 @@ The CLI provides tools for:
 ### Basic Usage
 
 ```bash
-# Listen on default port (8080)
-ahasend webhooks listen http://localhost:8080/webhook
+# Listen for all webhook events
+ahasend webhooks listen
 
-# Custom port with specific events
-ahasend webhooks listen http://localhost:3000/events \
-  --events "message.delivered,message.opened,message.clicked" \
-  --port 3000
+# Use existing webhook
+ahasend webhooks listen --webhook-id abcd1234-5678-90ef-abcd-1234567890ab
 
-# Listen for all events
-ahasend webhooks listen http://localhost:8080/webhook \
-  --events "all" \
-  --verbose
+# Forward events to local endpoint
+ahasend webhooks listen --forward-to http://localhost:3000/webhook
+
+# Filter specific event types
+ahasend webhooks listen --events message.opened,message.clicked
+
+# Slim output (only event types)
+ahasend webhooks listen --slim-output
 ```
 
 ### Available Events
@@ -87,17 +89,17 @@ ahasend webhooks trigger webhook-id \
 ### Development Workflow
 
 ```bash
-# 1. Create test webhook pointing to local server
-ahasend webhooks create \
-  --url http://localhost:3000/api/webhooks/ahasend \
-  --events "message.delivered,message.bounced,message.failed" \
-  --description "Local development webhook"
+# 1. Start webhook listener with event forwarding
+ahasend webhooks listen \
+  --forward-to http://localhost:3000/api/webhooks/ahasend \
+  --events message.delivered,message.bounced,message.failed
 
-# 2. Start webhook listener to monitor events
-ahasend webhooks listen http://localhost:3000/api/webhooks/ahasend \
-  --verbose
+# 2. Or use an existing webhook
+ahasend webhooks listen \
+  --webhook-id your-webhook-id \
+  --forward-to http://localhost:3000/api/webhooks/ahasend
 
-# 3. Trigger test events
+# 3. Trigger test events (in another terminal)
 ahasend webhooks trigger webhook-id --all-events
 
 # 4. Send test email to generate real events
@@ -109,34 +111,41 @@ ahasend messages send \
   --sandbox
 ```
 
-### Custom Headers
+### SSL Certificate Verification
 
 ```bash
-# Add authentication headers
-ahasend webhooks listen http://localhost:8080/webhook \
-  --header "X-API-Key: secret123" \
-  --header "Content-Type: application/json"
+# Skip SSL certificate verification for local endpoints
+ahasend webhooks listen \
+  --forward-to https://localhost:3000/webhook \
+  --skip-verify
 ```
 
 ## Debugging
 
-### Verbose Mode
+### Output Options
 
 ```bash
 # Show detailed request/response information
-ahasend webhooks listen http://localhost:8080/webhook \
-  --events "all" \
+ahasend webhooks listen \
   --verbose \
   --debug
+
+# Show only event types (slim output)
+ahasend webhooks listen \
+  --slim-output
+
+# Filter specific events
+ahasend webhooks listen \
+  --events message.delivered,message.opened
 ```
 
 ### Common Issues
 
-**Signature Verification Failed**: Ensure webhook secret is properly configured in your AhaSend account settings
+**Signature Verification Failed**: The command automatically generates a webhook secret using the standard-webhooks specification
 
 **Events Not Received**: Check that the webhook URL is correct and the local server is running
 
-**Connection Refused**: Verify the port is not already in use and firewall allows connections
+**Connection Lost**: The command handles disconnections with buffered event replay, automatically reconnecting when possible
 
 ## Best Practices
 

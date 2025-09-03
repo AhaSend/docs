@@ -23,13 +23,29 @@ Available subcommands:
 
 ## List Domains
 
+List all domains in your AhaSend account with their verification status, DNS record status, and other details. The list can be filtered and paginated for large numbers of domains.
+
 ```bash
 # List all domains
 ahasend domains list
 
-# With filters
-ahasend domains list --limit 10 --status verified
+# List domains with JSON output
+ahasend domains list --output json
+
+# List domains with pagination
+ahasend domains list --limit 10
+
+# Filter by DNS status
+ahasend domains list --status verified
 ```
+
+### List Flags
+
+| Flag | Description |
+|------|-------------|
+| `--cursor` | Pagination cursor for next page |
+| `--limit` | Maximum number of domains to return |
+| `--status` | Filter by DNS status (verified, pending, failed) |
 
 ## Create Domain
 

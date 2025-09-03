@@ -236,9 +236,10 @@ ahasend messages send \
 #!/bin/bash
 # webhook-processor.sh
 
-# Start webhook listener and process events
-ahasend webhooks listen http://localhost:8080/webhook \
-  --events "message.bounced,message.failed" \
+# Start webhook listener and forward to local processor
+ahasend webhooks listen \
+  --forward-to http://localhost:8080/webhook \
+  --events message.bounced,message.failed \
   --output json | while read -r event; do
 
   EVENT_TYPE=$(echo "$event" | jq -r '.event')
@@ -274,8 +275,10 @@ WEBHOOK_ID=$(ahasend webhooks create \
 
 echo "Created webhook: $WEBHOOK_ID"
 
-# 2. Start listener
-ahasend webhooks listen http://localhost:3000/test-webhook \
+# 2. Start listener with forwarding
+ahasend webhooks listen \
+  --webhook-id "$WEBHOOK_ID" \
+  --forward-to http://localhost:3000/test-webhook \
   --verbose &
 LISTENER_PID=$!
 

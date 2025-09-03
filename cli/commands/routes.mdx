@@ -90,23 +90,44 @@ ahasend routes delete route_1234567890abcdef
 
 ## Listen for Events (Development)
 
-Listen for inbound email routing events in real-time:
+Listen for inbound email routing events in real-time using WebSocket connection. This command establishes a WebSocket connection to receive inbound email events and can forward them to a local endpoint for development.
 
 ```bash
 # Listen with existing route
-ahasend routes listen --route-id route_1234567890abcdef
+ahasend routes listen --route-id abcd1234-5678-90ef-abcd-1234567890ab
 
-# Listen with temporary route pattern
+# Listen with recipient pattern (backend creates temporary route)
 ahasend routes listen --recipient "*@example.com"
 
 # Forward events to local endpoint
 ahasend routes listen \
   --recipient "support-*@example.com" \
   --forward-to http://localhost:3000/webhook
+
+# Slim output (minimal event display)
+ahasend routes listen --route-id abc123 --slim-output
+
+# Skip SSL verification for local endpoints
+ahasend routes listen \
+  --route-id abc123 \
+  --forward-to https://localhost:3000/webhook \
+  --skip-verify
 ```
 
+### Listen Flags
+
+| Flag | Description |
+|------|-------------|
+| `--route-id` | Use existing route instead of creating temporary one |
+| `--recipient` | Recipient pattern for temporary route (e.g., *@domain.com) |
+| `--forward-to` | Local endpoint to forward events to |
+| `--slim-output` | Slim down the payload for printing to the console |
+| `--skip-verify` | Skip SSL certificate verification for local endpoints |
+
 <Note>
-Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
+- Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
+- The command generates a webhook secret for signing forwarded events using the standard-webhooks specification.
+- The command handles disconnections with buffered event replay.
 </Note>
 
 ## Trigger Test Events (Development)
