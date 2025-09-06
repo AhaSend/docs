@@ -1,0 +1,13 @@
+---
+title: "Get Message"
+sidebarTitle: "Get Message"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/messages/{message_id}"
+---
+
+Returns a message by its ID.
+
+The main difference between the response of this API and the response of the
+[List Messages API](/api-reference/messages/get-messages) is that this API returns
+a single message including the original, raw email `content` (if available),
+while the message objects returned in the List Messages API do not include
+the email `content`.
