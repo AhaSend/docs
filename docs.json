@@ -127,6 +127,7 @@
                 "icon": "envelope",
                 "pages": [
                   "api-reference/messages/create-message",
+                  "api-reference/messages/get-message",
                   "api-reference/messages/get-messages",
                   "api-reference/messages/cancel-message"
                 ]
@@ -406,6 +407,10 @@
     },
     "telemetry": {
       "enabled": true
+    },
+    "cookies": {
+      "key": "analyticsConsent",
+      "value": "true"
     }
   },
   "contextual": {

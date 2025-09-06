@@ -3,3 +3,9 @@ title: "List Messages"
 sidebarTitle: "List Messages"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/messages"
 ---
+
+<Note>
+The `content` field is omitted from list responses for performance reasons. Use the
+[Get Message](/api-reference/messages/get-message) endpoint to retrieve the full
+message content.
+</Note>
