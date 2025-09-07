@@ -99,7 +99,8 @@
             "pages": [
               "scale/dedicated-ips",
               "scale/ip-pools",
-              "scale/byoip"
+              "scale/byoip",
+              "scale/dns-whitelabel"
             ]
           }
         ]
