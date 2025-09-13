@@ -2,6 +2,16 @@
 title: "Product Updates"
 description: "New releases and improvements"
 ---
+<Update label="September 2025">
+- Add [Service Status Page](https://status.ahasend.com)
+- Add [Get Message](/api-reference/messages/get-message) API
+- New marketing website
+- Improve `Content-Type` and `Content-Disposition` handling for attachments in [Create Message API](/api-reference/messages/create-message)
+- Add optional global suppression for large volume senders
+- Fix issues with false positives in DMARC verification in some corner cases
+- Fix DNS verification failures due to large TXT records: Retry truncated TXT lookups over TCP
+</Update>
+
 <Update label="August 2025">
 - Add support for generating and sending RFC 3464 [DSN reports](/integrations/dsn-reports).
 - Introduce AhaSend [API v2](/api-reference)
