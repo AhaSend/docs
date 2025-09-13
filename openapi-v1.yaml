@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: AhaSend Email API
+  description: |-
+    This is the API documentation for sending emails via [AhaSend.com](https://ahasend.com). To use this API you need to get your API Key from your account under the API Keys page.
+
+  termsOfService: https://ahasend.com/terms/
+  contact:
+    email: support@ahasend.com
+  license:
+    name: MIT
+    identifier: MIT
+  version: 1.0.1
+servers:
+  - url: https://api.ahasend.com
+    description: Production server
+tags:
+  - name: email
+    description: APIs for sending emails
+    externalDocs:
+      description: Find out more
+      url: https://ahasend.com
+
+paths:
+  /v1/email/send:
+    post:
+      tags:
+        - email
+      summary: Send emails
+      description: You can send emails to up to 100 recipients using this API at the same time.
+      operationId: sendEmail
+      parameters:
+        - in: header
+          name: Content-Type
+          schema:
+            type: string
+          description: Only application/json is supported
+          example: 'application/json'
+      requestBody:
+        description: Email object.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Email'
+        required: true
+      responses:
+        '201':
+          description: Request was accepted. This doesn't necessarily mean immediate delivery or even queueing of the emails for delivery. It just means that the request was well-formed and accepted, but you need to check the response for success_count and fail_count to make sure about the status of your request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessfulResponse'
+        '400':
+          description: The request is malformed and could not be validated.
+          content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/BadRequestResponse'
+        '403':
+            description: You are not allowed to send for any reason such as invalid credentials, not having access to the sending domain, etc.
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/AccessDeniedResponse'
+
+      security:
+        - api_key:
+            - write:email
+            - read:email
+components:
+  schemas:
+    Contact:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          examples: [john@nasa.gov, jane@nasa.gov]
+        name:
+          type: string
+          examples: [John Smith, Jane Williams]
+    Attachment:
+        type: object
+        required:
+            - data
+            - file_name
+            - content_type
+        properties:
+            data:
+                type: string
+                examples: [R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7]
+                description: The attachment data. If the base64 field is true, this data must be encoded using base64. Otherwise, it will be interpreted as UTF-8.
+            base64:
+                type: boolean
+                examples: [true, false]
+                description: If set to true, data needs to be encoded using base64. Otherwise data will be interpreted as UTF-8.
+            content_type:
+                type: string
+                examples: [image/gif]
+            content_id:
+                type: string
+                examples: [my-image]
+                description: If specified, this attachment will be added as an inline attachment and a multipart/related MIME container will be generated in the message to hold it and the textual content.
+            file_name:
+                type: string
+                examples: [my_image.gif]
+
+    Content:
+      type: object
+      required:
+        - subject
+      properties:
+        subject:
+            type: string
+            examples: [Sample subject]
+        text_body:
+          type: string
+          description: Plaintext body of the email
+          examples: [Sample email body]
+        html_body:
+          type: string
+          description: HTML body of the email
+          examples: [<p>Sample email body</p>]
+        attachments:
+            type: array
+            items:
+                $ref: '#/components/schemas/Attachment'
+        reply_to:
+          $ref: '#/components/schemas/Contact'
+        headers:
+          type: object
+          description: Specify arbitary headers.
+          additionalProperties:
+            type: string
+          example:
+            X-My-Mail-ID: "12345"
+            X-Comment-ID: "456789"
+
+    Email:
+      required:
+        - from
+        - recipients
+        - content
+      type: object
+      properties:
+        from:
+          $ref: '#/components/schemas/Contact'
+        recipients:
+          type: array
+          description: Specifies the list of recipients to which message will be sent.
+          items:
+            $ref: '#/components/schemas/Contact'
+        content:
+            $ref: '#/components/schemas/Content'
+
+    SuccessfulResponse:
+        type: object
+        properties:
+            success_count:
+                type: integer
+                description: Number of messages that were queued for sending.
+                example: 1
+            fail_count:
+                type: integer
+                description: Number of messages that failed to be queued for sending.
+                example: 1
+            failed_recipients:
+                type: array
+                description: List of email addresses that the email was not sent to.
+                example:
+                    [john@nasa.gov]
+                items:
+                    type: string
+            errors:
+                type: array
+                example:
+                    ["john@nasa.gov: The email account that you tried to reach does not exist."]
+                items:
+                    type: string
+                    description: The reason the email failed to be sent to a recipient.
+    BadRequestResponse:
+        type: object
+        example:
+            status: "bad request"
+        properties:
+            status:
+                type: string
+                examples: ["domain is not yours", "domain DNS config is not valid"]
+    AccessDeniedResponse:
+        type: object
+        example:
+            status: "invalid credentials"
+        properties:
+            status:
+                type: string
+                description: The reason your request failed.
+                examples: ["invalid credentials", "domain DNS config is not valid"]
+
+  requestBodies:
+    Email:
+      description: The email object that needs to be sent.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Email'
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: X-Api-Key
+      in: header
