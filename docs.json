@@ -90,7 +90,7 @@
               "security/2fa",
               "security/2fa-enforcement",
               "security/scoped-credentials",
-              "security/recipient-shield",
+              "security/reputation-shield",
               "security/sso"
             ]
           },
