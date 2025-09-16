@@ -11,7 +11,7 @@
   "logo": {
     "light": "/logo.png",
     "dark": "/logo-dark.png",
-    "href": "https://ahasend.com/docs"
+    "href": "https://ahasend.com/"
   },
   "favicon": "/favicon.png",
   "appearance": {
@@ -336,8 +336,8 @@
   "navbar": {
     "links": [
       {
-        "label": "AhaSend",
-        "href": "https://ahasend.com"
+        "label": "Login",
+        "href": "https://dash.ahasend.com"
       }
     ],
     "primary": {
