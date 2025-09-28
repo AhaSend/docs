@@ -198,6 +198,9 @@ components:
         next_cursor:
           type: string
           description: Cursor for the next page of results
+        previous_cursor:
+          type: string
+          description: Cursor for the previous page of results
       example:
         has_more: true
         next_cursor: "eyJpZCI6MTIzNH0="
@@ -2005,9 +2008,14 @@ paths:
             minimum: 1
             maximum: 100
             default: 100
-        - name: cursor
+        - name: after
           in: query
-          description: Pagination cursor for the next page
+          description: Pagination cursor for the next page. Provide the value provided in `next_cursor` from the response.
+          schema:
+            type: string
+        - name: before
+          in: query
+          description: Pagination cursor for the previous page.
           schema:
             type: string
       security:
@@ -2578,9 +2586,14 @@ paths:
             minimum: 1
             maximum: 100
             default: 100
-        - name: cursor
+        - name: after
           in: query
-          description: Pagination cursor for the next page
+          description: Pagination cursor for the next page. Provide the value provided in `next_cursor` from the response.
+          schema:
+            type: string
+        - name: before
+          in: query
+          description: Pagination cursor for the previous page.
           schema:
             type: string
       security:
@@ -3060,9 +3073,14 @@ paths:
             minimum: 1
             maximum: 100
             default: 100
-        - name: cursor
+        - name: after
           in: query
-          description: Pagination cursor for the next page
+          description: Pagination cursor for the next page. Provide the value provided in `next_cursor` from the response.
+          schema:
+            type: string
+        - name: before
+          in: query
+          description: Pagination cursor for the previous page.
           schema:
             type: string
       security:
@@ -3820,9 +3838,14 @@ paths:
             minimum: 1
             maximum: 100
             default: 100
-        - name: cursor
+        - name: after
           in: query
-          description: Pagination cursor for the next page
+          description: Pagination cursor for the next page. Provide the value provided in `next_cursor` from the response.
+          schema:
+            type: string
+        - name: before
+          in: query
+          description: Pagination cursor for the previous page. Provide the value provided in `previous_cursor` from the response.
           schema:
             type: string
       security:
@@ -4271,9 +4294,14 @@ paths:
             minimum: 1
             maximum: 100
             default: 100
-        - name: cursor
+        - name: after
           in: query
-          description: Pagination cursor for the next page
+          description: Pagination cursor for the next page. Provide the value provided in `next_cursor` from the response.
+          schema:
+            type: string
+        - name: before
+          in: query
+          description: Pagination cursor for the previous page.
           schema:
             type: string
       security:
@@ -4898,9 +4926,14 @@ paths:
             minimum: 1
             maximum: 100
             default: 100
-        - name: cursor
+        - name: after
           in: query
-          description: Pagination cursor for the next page
+          description: Pagination cursor for the next page. Provide the value provided in `next_cursor` from the response.
+          schema:
+            type: string
+        - name: before
+          in: query
+          description: Pagination cursor for the previous page.
           schema:
             type: string
       security:
@@ -5468,9 +5501,14 @@ paths:
             minimum: 1
             maximum: 100
             default: 100
-        - name: cursor
+        - name: after
           in: query
-          description: Pagination cursor for the next page
+          description: Pagination cursor for the next page. Provide the value provided in `next_cursor` from the response.
+          schema:
+            type: string
+        - name: before
+          in: query
+          description: Pagination cursor for the previous page.
           schema:
             type: string
       security:
