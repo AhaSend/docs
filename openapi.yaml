@@ -453,7 +453,7 @@ components:
           $ref: '#/components/schemas/PaginationInfo'
 
     # Message Schemas
-    SenderAddress:
+    Address:
       type: object
       required:
         - email
@@ -582,7 +582,7 @@ components:
         - subject
       properties:
         from:
-          $ref: '#/components/schemas/SenderAddress'
+          $ref: '#/components/schemas/Address'
         recipients:
           type: array
           items:
@@ -590,7 +590,7 @@ components:
           minItems: 1
           description: This does not set the To header to multiple addresses, it sends a separate message for each recipient
         reply_to:
-          $ref: '#/components/schemas/SenderAddress'
+          $ref: '#/components/schemas/Address'
           description: If provided, the reply-to header in headers array must not be provided
         subject:
           type: string
@@ -618,6 +618,93 @@ components:
           type: object
           additionalProperties: true
           description: Global substitutions, recipient substitutions override global
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for categorizing messages
+        sandbox:
+          type: boolean
+          description: If true, the message will be sent to the sandbox environment
+          default: false
+        sandbox_result:
+          type: string
+          enum: [deliver, bounce, defer, fail, suppress]
+          description: The result of the sandbox send
+        tracking:
+          $ref: '#/components/schemas/Tracking'
+          description: Tracking settings for the message, overrides default account settings
+        retention:
+          $ref: '#/components/schemas/Retention'
+          description: Retention settings for the message, overrides default account settings
+        schedule:
+          $ref: '#/components/schemas/MessageSchedule'
+          description: Schedule for message delivery
+      example:
+        from:
+          email: "noreply@example.com"
+          name: "Example Corp"
+        recipients:
+          - email: "user@example.com"
+            name: "John Doe"
+        subject: "Welcome to Example Corp"
+        html_content: "<h1>Welcome {{first_name}}!</h1>"
+        text_content: "Welcome {{first_name}}!"
+        substitutions:
+          first_name: "John"
+
+    CreateConversationMessageRequest:
+      type: object
+      required:
+        - from
+        - recipients
+        - subject
+      properties:
+        from:
+          $ref: '#/components/schemas/Address'
+        to:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+          minItems: 1
+          description: This parameter can set the `To` header to multiple addresses.
+        cc:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+          minItems: 1
+          description: This parameter can set the `CC` header to multiple addresses. Do not include `cc` in the headers array.
+        bcc:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+          minItems: 1
+          description: This parameter can set the `To` header to multiple addresses.
+        reply_to:
+          $ref: '#/components/schemas/Address'
+          description: If provided, the reply-to header in headers array must not be provided
+        subject:
+          type: string
+          description: Email subject line
+        text_content:
+          type: string
+          description: Plain text content. Required if html_content is empty
+        html_content:
+          type: string
+          description: HTML content. Required if text_content is empty
+        amp_content:
+          type: string
+          description: AMP HTML content
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+          description: File attachments
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom email headers. `cc` and `reply-to` headers cannot be provided if `reply_to` or `cc` parameters are provided, message-id will be ignored and automatically generated
         tags:
           type: array
           items:
@@ -3172,7 +3259,7 @@ paths:
     post:
       summary: Create Message
       description: |
-        Creates and sends a message to one or more recipients.
+        Creates and sends a message to one or more recipients. This API cannot be used if you want to send a conversational/P2P message and set CC or BCC. Use [Create Conversation Message](/api-reference/messages/create-conversation) instead.
 
         **Validation Requirements:**
         - Either `text_content` or `html_content` is required
@@ -3229,7 +3316,7 @@ paths:
                 ctx,
                 accountID,
                 requests.CreateMessageRequest{
-                  From: common.SenderAddress{
+                  From: common.Address{
                     Email: "info@example.com",
                     Name:  ahasend.String("Example Corp."),
                   },
@@ -3266,6 +3353,80 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateMessageRequest'
+      responses:
+        '202':
+          description: Message created successfully
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateMessageResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '412':
+          $ref: '#/components/responses/IdempotencyPreconditionFailed'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/messages/conversation:
+    post:
+      summary: Create Conversational Message
+      description: |
+        Creates and sends a conversational message (with support for CC and BCC) to one or more recipients. This API does not support template substitutions, use [Create Message](/api-reference/messages/create-message) instead if you need substitutions.
+
+        **Validation Requirements:**
+        - Either `text_content` or `html_content` is required
+        - `from.email` must be from a domain you own with valid DNS records
+        - `retention.metadata` must be between 1 and 30 days
+        - `retention.data` must be between 0 and 30 days
+        - If the `reply_to` parameter is provided, do not include `reply-to` in headers
+        - If the `cc` parameter is provided, do not include `cc` in headers
+        - `message-id` header will be ignored and automatically generated
+        - Schedule times must be in RFC3339 format
+      operationId: createConversationMessage
+      tags:
+        - Messages
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+        - BearerAuth: ["messages:send:all", "messages:send:{domain}"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationMessageRequest'
       responses:
         '202':
           description: Message created successfully
