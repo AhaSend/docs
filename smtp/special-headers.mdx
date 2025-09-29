@@ -148,7 +148,7 @@ AhaSend provides two types of retention control for different aspects of your em
 
 <AccordionGroup>
   <Accordion title="Message Metadata & Delivery Log Retention" icon="chart-line">
-    **Header:** `ahasend-message-retention`<br />
+    **Header:** `ahasend-metadata-retention`<br />
     **Values:** 1-30 days<br />
     **Purpose:** Control how long metadata and delivery logs are retained
 
@@ -156,7 +156,7 @@ AhaSend provides two types of retention control for different aspects of your em
   </Accordion>
 
   <Accordion title="Message Data Retention" icon="envelope">
-    **Header:** `ahasend-message-data-retention`<br />
+    **Header:** `ahasend-data-retention`<br />
     **Values:** 0-30 days<br />
     **Purpose:** Control how long the actual email content is retained
 
@@ -170,8 +170,8 @@ AhaSend provides two types of retention control for different aspects of your em
 From: hello@yourdomain.com
 To: user@example.com
 Subject: Sensitive Document
-ahasend-message-retention: 7
-ahasend-message-data-retention: 0
+ahasend-metadata-retention: 7
+ahasend-data-retention: 0
 Content-Type: text/plain
 
 This email's metadata will be retained for 7 days, but content will be deleted immediately after processing.
@@ -182,8 +182,8 @@ This email's metadata will be retained for 7 days, but content will be deleted i
 <CardGroup cols={1}>
   <Card title="High Security" icon="shield">
     For emails containing sensitive data you can disable data retention to prevent it from being stored in our database:
-    - `ahasend-message-retention`: 1-3 days
-    - `ahasend-message-data-retention`: 0 days
+    - `ahasend-metadata-retention`: 1-3 days
+    - `ahasend-data-retention`: 0 days
 
     **Use for:** Sensitive communications, financial data, personal information
   </Card>
@@ -251,8 +251,8 @@ AhaSend-Sandbox-Result: deliver
 ahasend-track-opens: true
 ahasend-track-clicks: false
 ahasend-tags: test,integration,staging
-ahasend-message-retention: 3
-ahasend-message-data-retention: 1
+ahasend-metadata-retention: 3
+ahasend-data-retention: 1
 Content-Type: text/html
 
 <html>
@@ -279,8 +279,8 @@ Content-Type: text/html
   </Accordion>
 
   <Accordion title="Data Management Headers" icon="database">
-    - `ahasend-message-retention`: Number (1-30) - Metadata & delivery log retention in days
-    - `ahasend-message-data-retention`: Number (0-30) - Email content retention in days
+    - `ahasend-metadata-retention`: Number (1-30) - Metadata & delivery log retention in days
+    - `ahasend-data-retention`: Number (0-30) - Email content retention in days
     - `ahasend-tags`: Comma-separated list - Message tags (max 10 tags, 64 chars each)
   </Accordion>
 </AccordionGroup>
