@@ -731,14 +731,20 @@ components:
         from:
           email: "noreply@example.com"
           name: "Example Corp"
-        recipients:
+        to:
           - email: "user@example.com"
             name: "John Doe"
+          - email: "someone@example.com"
+            name: "Jane Doe"
+        cc:
+          - email: "hr@example.com"
+            name: "Example Corp HR"
+        bcc:
+          - email: "bcc@example.com"
+            name: "BCC Recipient"
         subject: "Welcome to Example Corp"
-        html_content: "<h1>Welcome {{first_name}}!</h1>"
-        text_content: "Welcome {{first_name}}!"
-        substitutions:
-          first_name: "John"
+        html_content: "<h1>Dear John and Jane, welcome to Example Corp!</h1>"
+        text_content: "Dear John and Jane, welcome to Example Corp!"
 
     CreateSingleMessageResponse:
       type: object
