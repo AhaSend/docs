@@ -139,7 +139,7 @@ AhaSend returns standard SMTP response codes with specific meanings:
 
 | Code | Description | Action Required |
 |------|-------------|-----------------|
-| `421` | **Load shedding** - Server overwhelmed, cannot accept new connections | Retry later with exponential backoff |
+| `421` | **Service Unavailable** - This error could be returned as a result of **disconnecting idle connections** (idle too long), **Load shedding** (server is overwhelmed and cannot accept new connections), or temporary internal errors | Retry with exponential backoff |
 | `451` | **Internal server error** - Temporary server issue | Retry the request |
 | `500` | **Invalid credentials** - Authentication failed | Check username/password |
 | `521` | **Account disabled** - Account suspended or out of credits | Check account status in dashboard |
