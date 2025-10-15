@@ -404,8 +404,8 @@
     ]
   },
   "integrations": {
-    "ga4": {
-      "measurementId": "G-2RDLCTEVXK"
+    "gtm": {
+      "tagId": "GTM-KCQ9JNVZ"
     },
     "telemetry": {
       "enabled": true
