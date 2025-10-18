@@ -411,7 +411,7 @@
       "enabled": true
     },
     "cookies": {
-      "key": "analyticsConsent",
+      "key": "cookieConsent",
       "value": "true"
     }
   },
