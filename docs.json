@@ -404,9 +404,6 @@
     ]
   },
   "integrations": {
-    "gtm": {
-      "tagId": "GTM-KCQ9JNVZ"
-    },
     "telemetry": {
       "enabled": true
     },
