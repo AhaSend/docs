@@ -61,7 +61,7 @@ Before enabling S3 archiving, ensure you meet these prerequisites:
     **Required Credentials:**
     - S3 endpoint URL (HTTPS recommended for security)
     - Bucket name (must be pre-created)
-    - Access key and secret key with write permissions
+    - Access key and secret key with write and replace permissions (with some providers like Google Cloud Storage, replacing objects requires both write and delete permissions)
   </Accordion>
 </AccordionGroup>
 
@@ -73,7 +73,7 @@ Configure S3 archiving in your AhaSend account settings:
   <Step title="Create S3 Bucket" icon="bucket">
     **Set up your storage bucket:**
     1. **Create a new bucket** in your S3-compatible storage provider
-    2. **Configure permissions** to allow write access for your credentials
+    2. **Configure permissions** to allow write and replace access for your credentials
     3. **Note the bucket name** and endpoint URL for configuration
 
     <Tip>
@@ -88,8 +88,11 @@ Configure S3 archiving in your AhaSend account settings:
     - **Endpoint URL** - Provider-specific S3 API endpoint
 
     <Warning>
-    **Security:** Use dedicated credentials with minimal permissions (write-only to your archive bucket).
+    **Security:** Use dedicated credentials with minimal permissions. AhaSend requires write and replace permissions to archive messages and update delivery logs.
     </Warning>
+    <Info>
+    **Google Cloud Storage:** Replacing objects requires both write and delete permissions.
+    </Info>
   </Step>
 
   <Step title="Configure AhaSend" icon="gear">
