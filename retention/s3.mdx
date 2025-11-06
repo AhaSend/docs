@@ -61,7 +61,7 @@ Before enabling S3 archiving, ensure you meet these prerequisites:
     **Required Credentials:**
     - S3 endpoint URL (HTTPS recommended for security)
     - Bucket name (must be pre-created)
-    - Access key and secret key with write and replace permissions (with some providers like Google Cloud Storage, replacing objects requires both write and delete permissions)
+    - Access key and secret key with write permission
   </Accordion>
 </AccordionGroup>
 
@@ -73,7 +73,7 @@ Configure S3 archiving in your AhaSend account settings:
   <Step title="Create S3 Bucket" icon="bucket">
     **Set up your storage bucket:**
     1. **Create a new bucket** in your S3-compatible storage provider
-    2. **Configure permissions** to allow write and replace access for your credentials
+    2. **Configure permissions** to allow write access for your credentials
     3. **Note the bucket name** and endpoint URL for configuration
 
     <Tip>
@@ -88,7 +88,7 @@ Configure S3 archiving in your AhaSend account settings:
     - **Endpoint URL** - Provider-specific S3 API endpoint
 
     <Warning>
-    **Security:** Use dedicated credentials with minimal permissions. AhaSend requires write and replace permissions to archive messages and update delivery logs.
+    **Security:** Use dedicated credentials with minimal permissions (write only).
     </Warning>
     <Info>
     **Google Cloud Storage:** Replacing objects requires both write and delete permissions.
@@ -123,8 +123,8 @@ AhaSend organizes archived messages in a logical directory structure for easy na
 ### Directory Pattern
 
 ```
-RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID.eml
-RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID.logs.csv
+RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID/MESSAGE_ID.eml
+RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID/YYYYMMDDTHHMMSSZ-STATUS.txt
 ```
 
 ### Email Address Formatting
@@ -147,19 +147,24 @@ Special characters in email addresses are replaced for S3 compatibility:
 my-email-archive/
 ├── john_AT_example.com/
 │   ├── 2024-01-15/
-│   │   ├── msg_abc123.eml
-│   │   └── msg_abc123.logs.csv
+│   │   ├── msg_abc123/
+│   │   │   └── msg_abc123.eml
+│   │   │   └── 20240115T120000Z-Delivery.txt
 │   └── 2024-01-16/
-│       ├── msg_def456.eml
-│       └── msg_def456.logs.csv
+│       ├── msg_def456/
+│       │   └── msg_def456.eml
+│       │   └── 20240116T120000Z-TransientFailure.txt
 ├── support_AT_mycompany.org/
 │   └── 2024-01-15/
-│       ├── msg_ghi789.eml
-│       └── msg_ghi789.logs.csv
+│       ├── msg_ghi789/
+│       │   └── msg_ghi789.eml
+│       │   └── 20240115T120000Z-Bounce.txt
 └── user_PLUS_tag_AT_example.com/
     └── 2024-01-15/
-        ├── msg_jkl012.eml
-        └── msg_jkl012.logs.csv
+        ├── msg_jkl012/
+        │   └── msg_jkl012.eml
+        │   └── 20240115T120000Z-TransientFailure.txt
+        │   └── 20240115T120100Z-Expiration.txt
 ```
 
 ## Archived File Formats
@@ -181,18 +186,14 @@ AhaSend saves two types of files for each message:
     - Can be imported into email clients for viewing
   </Accordion>
 
-  <Accordion title="Delivery Logs (.logs.csv)" icon="list">
-    **Detailed delivery attempt history in CSV format:**
-    - Timestamp of each delivery attempt
-    - Event type (Delivery, Bounce, Transient Failure, etc.)
-    - Complete server response messages
-    - Chronological record of all delivery events
+  <Accordion title="Delivery Logs (.txt files)" icon="list">
+    **Detailed delivery attempt history in text files:**
+    - File name: YYYYMMDDTHHMMSSZ-STATUS.txt
+    - Content: Raw delivery attempt log from the SMTP server
 
-    **Example CSV content:**
-    ```csv
-    "2024/06/18 16:07:15","Delivery","OK 1718732564 - Message delivered successfully"
-    "2024/06/17 11:52:52","Bounce","The email account does not exist. Please check the recipient's email address"
-    "2024/06/13 13:00:31","TransientFailure","The recipient's inbox is out of storage space"
+    **Example content:**
+    ```
+    The recipient's inbox is out of storage space. Please direct the recipient to  https://support.google.com/mail/?p=OverQuotaTemp 5b1f17b1804b1-46e619a90c2si94549775e9.46 - gsmtp
     ```
   </Accordion>
 </AccordionGroup>
@@ -300,7 +301,7 @@ AhaSend saves two types of files for each message:
     **Common configuration problems:**
     - **Invalid endpoint URL:** Verify the correct S3 endpoint for your provider and region
     - **Incorrect credentials:** Double-check access key and secret key
-    - **Bucket permissions:** Ensure write and replace access is granted to your credentials
+    - **Bucket permissions:** Ensure write access is granted to your credentials
     - **Network connectivity:** Test HTTPS connectivity to the endpoint
 
     **Testing Connection:**
