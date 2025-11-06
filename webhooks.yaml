@@ -159,6 +159,7 @@ webhooks:
               $ref: '#/components/schemas/MessageDeliveredWebhookPayload'
             example:
               type: "message.delivered"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
               timestamp: "2024-05-06T09:50:16.687031577Z"
               data:
                 account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
@@ -200,6 +201,18 @@ webhooks:
           application/json:
             schema:
               $ref: '#/components/schemas/MessageTransientErrorWebhookPayload'
+            example:
+              type: "message.transient_error"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
+              timestamp: "2024-05-06T09:51:16.687031577Z"
+              data:
+                account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
+                event: "on_transient_error"
+                from: "sender@example.com"
+                recipient: "recipient@example.com"
+                subject: "Welcome to our service"
+                message_id_header: "<message-id-12345@localhost>"
+                id: "407926766d2711f09b30960002cafe7c"
       responses:
         '200':
           description: Webhook received successfully
@@ -232,6 +245,18 @@ webhooks:
           application/json:
             schema:
               $ref: '#/components/schemas/MessageFailedWebhookPayload'
+            example:
+              type: "message.failed"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
+              timestamp: "2024-05-06T09:55:16.687031577Z"
+              data:
+                account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
+                event: "on_failed"
+                from: "sender@example.com"
+                recipient: "invalid@nonexistent-domain.com"
+                subject: "Welcome to our service"
+                message_id_header: "<message-id-12345@localhost>"
+                id: "407926766d2711f09b30960002cafe7c"
       responses:
         '200':
           description: Webhook received successfully
@@ -261,6 +286,18 @@ webhooks:
           application/json:
             schema:
               $ref: '#/components/schemas/MessageBouncedWebhookPayload'
+            example:
+              type: "message.bounced"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
+              timestamp: "2024-05-06T10:05:16.687031577Z"
+              data:
+                account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
+                event: "on_bounced"
+                from: "sender@example.com"
+                recipient: "recipient@example.com"
+                subject: "Welcome to our service"
+                message_id_header: "<message-id-12345@localhost>"
+                id: "407926766d2711f09b30960002cafe7c"
       responses:
         '200':
           description: Webhook received successfully
@@ -290,6 +327,18 @@ webhooks:
           application/json:
             schema:
               $ref: '#/components/schemas/MessageSuppressedWebhookPayload'
+            example:
+              type: "message.suppressed"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
+              timestamp: "2024-05-06T10:10:16.687031577Z"
+              data:
+                account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
+                event: "on_suppressed"
+                from: "sender@example.com"
+                recipient: "bounced@example.com"
+                subject: "Welcome to our service"
+                message_id_header: "<message-id-12345@localhost>"
+                id: "407926766d2711f09b30960002cafe7c"
       responses:
         '200':
           description: Webhook received successfully
@@ -328,6 +377,7 @@ webhooks:
               $ref: '#/components/schemas/MessageOpenedWebhookPayload'
             example:
               type: "message.opened"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
               timestamp: "2024-05-06T10:15:16.687031577Z"
               data:
                 account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
@@ -339,7 +389,7 @@ webhooks:
                 id: "407926766d2711f09b30960002cafe7c"
                 user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
                 ip: "192.168.1.100"
-                is_bot: "false"
+                is_bot: false
       responses:
         '200':
           description: Webhook received successfully
@@ -373,6 +423,22 @@ webhooks:
           application/json:
             schema:
               $ref: '#/components/schemas/MessageClickedWebhookPayload'
+            example:
+              type: "message.clicked"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
+              timestamp: "2024-05-06T10:20:16.687031577Z"
+              data:
+                account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
+                event: "on_clicked"
+                from: "sender@example.com"
+                recipient: "recipient@example.com"
+                subject: "Welcome to our service"
+                message_id_header: "<message-id-12345@localhost>"
+                id: "407926766d2711f09b30960002cafe7c"
+                url: "https://example.com/landing-page"
+                user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                ip: "192.168.1.100"
+                is_bot: false
       responses:
         '200':
           description: Webhook received successfully
@@ -412,6 +478,7 @@ webhooks:
               $ref: '#/components/schemas/SuppressionWebhookPayload'
             example:
               type: "suppression.created"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
               timestamp: "2024-05-06T12:57:06.451529527Z"
               data:
                 account_id: "4cdd7bdd-294e-4762-892f-83d40abf5a87"
@@ -462,6 +529,7 @@ webhooks:
               $ref: '#/components/schemas/DomainWebhookPayload'
             example:
               type: "domain.dns_error"
+              webhook_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
               timestamp: "2024-05-06T12:59:46.404433272Z"
               data:
                 domain: "example.com"
@@ -481,7 +549,7 @@ webhooks:
           description: Webhook received successfully
 
   # Route Event Webhooks (Inbound Email Processing)
-  route.message:
+  message.routing:
     post:
       summary: Inbound Message Route Event
       description: |
@@ -516,7 +584,8 @@ webhooks:
             schema:
               $ref: '#/components/schemas/RouteWebhookPayload'
             example:
-              type: "route.message"
+              type: "message.routing"
+              route_id: "abe11757-2886-4b55-96f1-0e0afc95795a"
               timestamp: "2024-05-06T13:15:46.404433272Z"
               data:
                 id: "route-msg-12345"
@@ -710,8 +779,7 @@ components:
           type: string
           description: IP address (only for opened/clicked events)
         is_bot:
-          type: string
-          enum: ["true", "false"]
+          type: boolean
           description: Whether the action was performed by a bot
 
     MessageClickedWebhookData:
@@ -881,7 +949,7 @@ components:
       properties:
         type:
           type: string
-          enum: [route.message]
+          enum: [message.routing]
           description: The event type
         timestamp:
           type: string
