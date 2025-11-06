@@ -644,7 +644,7 @@ components:
           description: The event type
         webhook_id:
           type: string
-          description: The webhook ID (the same ID as returned by the [Create Webhook API](/api-reference/webhooks/create-webhook))
+          description: The webhook ID (the same ID as returned by the [Create Webhook API](https://ahasend.com/docs/api-reference/webhooks/create-webhook))
           format: uuid
         timestamp:
           type: string
@@ -768,7 +768,7 @@ components:
           description: Email subject line
         message_id_header:
           type: string
-          description: Message ID header (same as returned by the [Create Message API](/api-reference/messages/create-message))
+          description: Message ID header (same as returned by the [Create Message API](https://ahasend.com/docs/api-reference/messages/create-message))
         id:
           type: string
           description: Internal AhaSend message ID
@@ -817,7 +817,7 @@ components:
           description: Email subject line
         message_id_header:
           type: string
-          description: Message ID header (same as returned by the [Create Message API](/api-reference/messages/create-message))
+          description: Message ID header (same as returned by the [Create Message API](https://ahasend.com/docs/api-reference/messages/create-message))
         url:
           type: string
           description: The URL that was clicked
@@ -899,7 +899,7 @@ components:
           description: The event type
         webhook_id:
           type: string
-          description: The webhook ID (the same ID as returned by the [Create Webhook API](/api-reference/webhooks/create-webhook))
+          description: The webhook ID (the same ID as returned by the [Create Webhook API](https://ahasend.com/docs/api-reference/webhooks/create-webhook))
           format: uuid
         timestamp:
           type: string
@@ -957,7 +957,7 @@ components:
           description: When the event occurred (ISO 8601 format)
         route_id:
           type: string
-          description: The route ID (the same ID as returned by the [Create Route API](/api-reference/routes/create-route))
+          description: The route ID (the same ID as returned by the [Create Route API](https://ahasend.com/docs/api-reference/routes/create-route))
           format: uuid
         data:
           $ref: '#/components/schemas/RouteWebhookData'
