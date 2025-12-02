@@ -2,6 +2,22 @@
 title: "Product Updates"
 description: "New releases and improvements"
 ---
+<Update label="November 2025">
+- Added Workflow Engine: currently in private beta and being internally used and tested for AhaSend's own user-onboarding campaigns.
+- [S3 retention](/retention/s3): Create separate files for each delivery attempt in the S3 bucket, allowing customers to use write-only credentials for archiving and using built-in S3 retention policies.
+- Added support for legacy plan customers to switch to new pricing plans.
+- Added support for upgrading and downgrading between Pro and Max plans.
+- Improved Out-of-Band (OOB) NDR notification handling for bounced outbound messages.
+- Added automatic notifications for monthly quotas for Free accounts.
+- MX records are no longer shown for root domains (e.g. `example.com`) in the dashboard to prevent confusion and potential DNS issues.
+- Improved account, domain, and credential synchronization speed between the backend and MTA servers.
+- Upgraded to Stripe API to `2025-03-31.basil`, adding support for improved usage-based pricing (and soon adaptive pricing with local currency support).
+- Improved [DSN report delivery](/integrations/dsn-reports).
+- Improved user experience for searching and deleting suppressions in the dashboard.
+- Improved spam and phishing monitoring and detection systems.
+- Improved security measures in code and infrastructure.
+- Multiple bug fixes, improvements and optimizations.
+</Update>
 <Update label="October 2025">
 - New [marketing website](https://ahasend.com) with a completely new design, dark mode, better performance, and improved content
 - Implemented new [pricing plans](https://ahasend.com/pricing); existing customers remain on legacy pricing but can switch anytime
