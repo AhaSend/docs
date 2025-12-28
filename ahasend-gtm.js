@@ -98,8 +98,8 @@
     pushConsentEvent(false);
 
     document
-      .querySelectorAll(`script[src^="${GTM_SRC_PREFIX}/gtm.js"]`)
-      .forEach((script) => script.remove());
+    .querySelectorAll(`script[src^="${GTM_SRC_PREFIX}/gtm.js"]`)
+    .forEach((script) => script.remove());
 
     const managedScript = document.getElementById(SCRIPT_ID);
     if (managedScript) {
@@ -136,6 +136,7 @@
     const consent = safeGetLocalStorage(CONSENT_KEY);
     if (consent === CONSENT_GRANTED) {
       loadGtm();
+      captureUTMs();
     } else {
       removeGtm();
     }
@@ -157,5 +158,26 @@
     document.addEventListener('DOMContentLoaded', applyConsentState, { once: true });
   } else {
     applyConsentState();
+  }
+
+  function captureUTMs() {
+    const params = new URLSearchParams(window.location.search);
+    const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+    let utmData = {};
+
+    utmKeys.forEach(key => {
+      if (params.has(key)) {
+        utmData[key] = params.get(key);
+      }
+    });
+
+    if (Object.keys(utmData).length > 0) {
+      const cookieName = "ahasend_utm";
+
+      const cookieValue = encodeURIComponent(JSON.stringify(utmData));
+      const maxAge = 60 * 60 * 24 * 30; // 30 days
+
+      document.cookie = `${cookieName}=${cookieValue}; Domain=ahasend.com; Path=/; Max-Age=${maxAge}; SameSite=Lax; Secure`;
+    }
   }
 })();
