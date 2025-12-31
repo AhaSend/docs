@@ -2,6 +2,20 @@
 title: "Product Updates"
 description: "New releases and improvements"
 ---
+<Update label="December 2025">
+- Improvements and bugfixes for the Workflow Engine and Campaign Management features. [Request early access](https://ahasend.com/contact).
+- Improve dashboard reporting performance.
+- Add support for Bring Your Own DKIM keys to [Create Domain API](/api-reference/domains/create-domain) (currently only for Platform Partner accounts).
+- Add support for domain validation without explicit SPF if Return-Path is configured (currently only for Platform Partner accounts).
+- Improve error reporting for invalid pagination cursors in API v2.
+- Improve [S3 retention](/retention/s3) performance and reliability.
+- Improve reliability of Usage Records and Billing Meters for billing via Stripe.
+- Improve speed, reliability and scalability of MTA configuration subsystem, resulting in faster onboarding for accounts, domains and SMTP credentials.
+- Fix issues with some adding tracking links to some messages.
+- Improve spam and phishing monitoring and detection systems.
+- Security improvements.
+- Other minor improvements and bugfixes.
+</Update>
 <Update label="November 2025">
 - Added Workflow Engine: currently in private beta and being internally used and tested for AhaSend's own user-onboarding campaigns.
 - [S3 retention](/retention/s3): Create separate files for each delivery attempt in the S3 bucket, allowing customers to use write-only credentials for archiving and using built-in S3 retention policies.
