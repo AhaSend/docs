@@ -9,8 +9,11 @@ description: "New releases and improvements"
 
 #### New Features
 
+- **Contact List Validation**: Automatically validate your contact lists before sending campaigns. The system checks email syntax, MX records, and uses external verification services to identify invalid or risky addresses. Campaigns with high bounce risk are flagged for review before sending.
+- **Campaign Cancellation & Rescheduling**: Cancel scheduled campaigns or validation in progress, and reschedule campaigns with a new send time.
 - Campaigns now send emails faster with concurrent delivery.
 - Added delete campaign option with confirmation on the campaign edit page.
+- Email notifications for campaign reviews: get notified when your campaign is pending review, approved, or requires changes.
 
 #### Changes
 
@@ -22,7 +25,8 @@ description: "New releases and improvements"
 #### Improvements
 
 - Suppression rate calculations now include campaign recipients for more accurate metrics.
-- Many improvements and bugfixes for the Email Template Designer.
+- Campaign report page redesigned with separate views for campaigns being validated, scheduled, or paused.
+- Many improvements and bugfixes for the Email Template Designer: fixed inline images breaking on edits, added undo/redo buttons, fixed color picker positioning, and resolved image resize issues.
 
 #### Bug Fixes
 
@@ -30,14 +34,15 @@ description: "New releases and improvements"
 - Fixed [Send Message API](/api-reference/messages/create-message) incorrectly changing custom email header names to lowercase.
 - Fixed inability to switch API keys from sandbox mode back to production mode.
 - Fixed credit usage notifications not being sent correctly.
+- Fixed webhook and S3 failure notifications not being sent correctly.
 - Fixed contact and contact attribute delete buttons not working.
 - Fixed logo not displaying correctly in Email Template Designer.
 - Fixed domain validation issues during account onboarding.
 - Fixed list segment filters not working correctly for numeric and yes/no fields.
 - Fixed campaign pause notifications showing incorrect complaint rate.
-- Fixed campaigns occasionally getting stuck during scheduling.
+- Fixed campaigns occasionally getting stuck during scheduling or validation.
 - Fixed dropdown menu visibility on contacts page.
-
+- Fixed redirect loop for users with 2FA enabled who haven't completed onboarding (only affected users who requested their accounts to be deleted without deleting their user profile).
 </Update>
 <Update label="December 2025">
 - Improvements and bugfixes for the Workflow Engine and Campaign Management features. [Request early access](https://ahasend.com/contact).
