@@ -3,7 +3,41 @@ title: "Product Updates"
 description: "New releases and improvements"
 ---
 <Update label="January 2026">
--
+#### Security
+
+- Improved session security with automatic session refresh after login and password reset.
+
+#### New Features
+
+- Campaigns now send emails faster with concurrent delivery.
+- Added delete campaign option with confirmation on the campaign edit page.
+
+#### Changes
+
+- Dashboard charts now include campaign email statistics alongside transactional emails.
+- "Deferrals" renamed to "Deferred Attempts" on the dashboard for clarity.
+- Recent messages section now labeled "Recent transactional messages" to distinguish from campaigns.
+- [Send Message API](/api-reference/messages/create-message) now automatically detects template format based on whether substitutions are provided.
+
+#### Improvements
+
+- Suppression rate calculations now include campaign recipients for more accurate metrics.
+- Many improvements and bugfixes for the Email Template Designer.
+
+#### Bug Fixes
+
+- Fixed [API sandbox mode](/send-api/sandbox) not being respected when set on credentials.
+- Fixed [Send Message API](/api-reference/messages/create-message) incorrectly changing custom email header names to lowercase.
+- Fixed inability to switch API keys from sandbox mode back to production mode.
+- Fixed credit usage notifications not being sent correctly.
+- Fixed contact and contact attribute delete buttons not working.
+- Fixed logo not displaying correctly in Email Template Designer.
+- Fixed domain validation issues during account onboarding.
+- Fixed list segment filters not working correctly for numeric and yes/no fields.
+- Fixed campaign pause notifications showing incorrect complaint rate.
+- Fixed campaigns occasionally getting stuck during scheduling.
+- Fixed dropdown menu visibility on contacts page.
+
 </Update>
 <Update label="December 2025">
 - Improvements and bugfixes for the Workflow Engine and Campaign Management features. [Request early access](https://ahasend.com/contact).
