@@ -274,6 +274,7 @@
           {
             "group": "API v1 (legacy)",
             "pages": [
+              "api-reference/v1/v1-vs-v2",
               "api-reference/v1/index"
             ]
           }
