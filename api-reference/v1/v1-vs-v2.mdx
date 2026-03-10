@@ -1,0 +1,281 @@
+---
+title: "API v1 vs v2"
+sidebarTitle: "API v1 vs v2"
+description: "Compare AhaSend API v1 and v2 to choose the right version for your integration"
+icon: "code-compare"
+---
+
+AhaSend offers two API versions for sending emails. This page helps you understand the differences so you can choose the right one when creating credentials.
+
+<Info>
+**API v1 is in maintenance mode.** It will continue to work, but all new features and improvements go to API v2. We recommend API v2 for new integrations.
+</Info>
+
+## Quick Comparison
+
+| | API v1 | API v2 |
+|--|--------|--------|
+| **Status** | Maintenance mode | Actively developed |
+| **Endpoints** | Single (`POST /v1/email/send`) | Full REST API with [multiple resources](#beyond-sending-managing-resources-with-api-v2) |
+| **Authentication** | `X-Api-Key` header | `Authorization: Bearer` header |
+| **Send emails** | Up to 100 recipients per request | Up to 100 recipients per request |
+| **Attachments** | Yes | Yes |
+| **Custom headers** | Yes | Yes |
+| **Reply-to** | Yes | Yes |
+| **Template substitutions** | No | Yes (global and per-recipient) |
+| **AMP email content** | No | Yes |
+| **CC/BCC** | No | Yes (via [conversation endpoint](/api-reference/messages/create-conversation)) |
+| **Message tags** | No | Yes |
+| **Scheduled delivery** | No | Yes |
+| **Message cancellation** | No | Yes |
+| **Per-message tracking controls** | No | Yes (override account defaults) |
+| **Retention controls** | No | Yes |
+| **Sandbox mode** | No | Yes |
+| **Idempotency** | No | Yes |
+| **Granular API key scopes** | No | Yes |
+| **Resource management** | No | Yes (domains, webhooks, routes, etc.) |
+| **Reporting & analytics** | No | Yes |
+
+## When to Use API v1
+
+API v1 is a single endpoint for sending emails. Choose it if you are maintaining an existing integration that already uses v1.
+
+For new integrations, use API v2.
+
+## When to Use API v2
+
+API v2 is the recommended choice for all new integrations. It includes everything v1 can do, plus:
+
+- **Template substitutions** with [MiniJinja](https://github.com/mitsuhiko/minijinja) — global and per-recipient
+- **AMP email content** for interactive emails
+- **CC/BCC support** via the [conversation message endpoint](/api-reference/messages/create-conversation)
+- **Message tags** for categorization
+- **Scheduled delivery** and **message cancellation**
+- **Per-message tracking controls** to override account-level open/click tracking settings
+- **Retention controls** for metadata and content
+- **Sandbox mode** for testing without delivery
+- **Idempotency** for safe retries
+- **Granular API key [scopes](/api-reference/scopes)** for least-privilege security
+- **Full resource management** — domains, webhooks, routes, suppressions, and more
+- **Delivery analytics and reporting**
+
+## Key Differences in Detail
+
+### Authentication
+
+<Tabs>
+  <Tab title="API v1">
+    Uses an `X-Api-Key` header:
+
+    ```bash
+    curl -X POST https://api.ahasend.com/v1/email/send \
+      -H "X-Api-Key: YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{ ... }'
+    ```
+  </Tab>
+
+  <Tab title="API v2">
+    Uses a Bearer token in the `Authorization` header:
+
+    ```bash
+    curl -X POST https://api.ahasend.com/v2/accounts/{account_id}/messages \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{ ... }'
+    ```
+  </Tab>
+</Tabs>
+
+### Request Structure
+
+<Tabs>
+  <Tab title="API v1">
+    Email content is nested under a `content` object. Fields use `text_body` and `html_body`:
+
+    ```json
+    {
+      "from": { "email": "hello@yourdomain.com", "name": "Your Company" },
+      "recipients": [
+        { "email": "user@example.com", "name": "John Doe" }
+      ],
+      "content": {
+        "subject": "Hello!",
+        "text_body": "Plain text content",
+        "html_body": "<p>HTML content</p>",
+        "attachments": [
+          {
+            "data": "base64-encoded-data",
+            "base64": true,
+            "file_name": "document.pdf",
+            "content_type": "application/pdf"
+          }
+        ],
+        "reply_to": { "email": "reply@yourdomain.com" },
+        "headers": { "X-Custom-Header": "value" }
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="API v2">
+    All fields are at the top level. Fields use `text_content` and `html_content`. Recipients can have individual substitution data:
+
+    ```json
+    {
+      "from": { "email": "hello@yourdomain.com", "name": "Your Company" },
+      "recipients": [
+        {
+          "email": "user@example.com",
+          "name": "John Doe",
+          "substitutions": { "first_name": "John" }
+        }
+      ],
+      "subject": "Hello {{first_name}}!",
+      "text_content": "Hello {{first_name}}!",
+      "html_content": "<p>Hello {{first_name}}!</p>",
+      "substitutions": { "first_name": "there" },
+      "attachments": [
+        {
+          "data": "base64-encoded-data",
+          "base64": true,
+          "file_name": "document.pdf",
+          "content_type": "application/pdf"
+        }
+      ],
+      "tags": ["welcome"],
+      "tracking": { "open": true, "click": true },
+      "retention": { "metadata": 30, "data": 7 },
+      "schedule": {
+        "first_attempt": "2026-03-11T10:00:00Z",
+        "expires": "2026-03-12T10:00:00Z"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Response Format
+
+<Tabs>
+  <Tab title="API v1">
+    Returns `201 Created` with aggregate counts:
+
+    ```json
+    {
+      "success_count": 1,
+      "fail_count": 0,
+      "failed_recipients": [],
+      "errors": []
+    }
+    ```
+
+    Errors return a `status` string:
+
+    ```json
+    { "status": "domain is not yours" }
+    ```
+  </Tab>
+
+  <Tab title="API v2">
+    Returns `202 Accepted` with per-recipient status:
+
+    ```json
+    {
+      "object": "list",
+      "data": [
+        {
+          "object": "message",
+          "id": "<uuid@example.com>",
+          "recipient": {
+            "email": "user@example.com",
+            "name": "John Doe"
+          },
+          "status": "queued",
+          "error": null
+        }
+      ]
+    }
+    ```
+
+    Errors return a structured `message`:
+
+    ```json
+    { "message": "Either text_content or html_content is required" }
+    ```
+  </Tab>
+</Tabs>
+
+### Beyond Sending: Managing Resources with API v2
+
+API v1 only sends emails. API v2 provides a complete management API:
+
+<CardGroup cols={2}>
+  <Card title="Messages" icon="envelope" href="/api-reference/messages/create-message">
+    Send, retrieve, list, and cancel messages
+  </Card>
+  <Card title="Domains" icon="globe" href="/api-reference/domains/create-domain">
+    Add, verify, and manage sending domains
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/api-reference/webhooks/create-webhook">
+    Create and manage webhook endpoints for delivery events
+  </Card>
+  <Card title="Routes" icon="route" href="/api-reference/routes/create-route">
+    Configure inbound email routing rules
+  </Card>
+  <Card title="Suppressions" icon="ban" href="/api-reference/suppressions/create-suppression">
+    Manage bounce and complaint suppression lists
+  </Card>
+  <Card title="Reports" icon="chart-line" href="/api-reference/reports/get-deliverability-report">
+    Access deliverability, bounce, and delivery time analytics
+  </Card>
+  <Card title="SMTP Credentials" icon="user-shield" href="/api-reference/smtp-credentials/create-smtp-credential">
+    Create and manage SMTP credentials
+  </Card>
+  <Card title="API Keys" icon="key" href="/api-reference/api-keys/create-api-key">
+    Create and manage API keys programmatically
+  </Card>
+</CardGroup>
+
+## Migrating from v1 to v2
+
+<Steps>
+  <Step title="Create an API v2 key">
+    Go to [Credentials](https://dash.ahasend.com/account/-/transactional/credentials) and create a new credential with type "API Key v2".
+  </Step>
+  <Step title="Update authentication">
+    Replace the `X-Api-Key` header with `Authorization: Bearer YOUR_V2_KEY`.
+  </Step>
+  <Step title="Update the endpoint">
+    Change the URL from `/v1/email/send` to `/v2/accounts/{account_id}/messages`.
+  </Step>
+  <Step title="Update the request body">
+    - Move `content.subject` to top-level `subject`
+    - Rename `content.text_body` to `text_content`
+    - Rename `content.html_body` to `html_content`
+    - Move `content.attachments` to top-level `attachments`
+    - Move `content.headers` to top-level `headers`
+    - Move `content.reply_to` to top-level `reply_to`
+  </Step>
+  <Step title="Update response handling">
+    - v1 returns `201` with `success_count`/`fail_count` — v2 returns `202` with a `data` array of per-recipient message objects
+    - v1 error responses use a `status` field — v2 uses a `message` field
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API v2 Credentials" icon="key" href="/send-api/credentials">
+    Create and manage API v2 keys
+  </Card>
+  <Card title="Send Emails with v2" icon="paper-plane" href="/send-api/send-email">
+    Full guide with examples
+  </Card>
+  <Card title="API v1 Reference" icon="clock-rotate-left" href="/api-reference/v1">
+    Legacy API v1 endpoint reference
+  </Card>
+  <Card title="API v2 Reference" icon="terminal" href="/api-reference">
+    Complete API v2 documentation
+  </Card>
+</CardGroup>
