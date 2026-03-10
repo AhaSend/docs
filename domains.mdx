@@ -63,7 +63,7 @@ Before setting up your domain, make sure you have:
         ```
         Name: @ (or your subdomain)
         Type: TXT
-        Value: v=spf1 include:_spf.ahasend.com ~all
+        Value: v=spf1 include:spf.ahasend.com ~all
         ```
 
         <Warning>
@@ -78,7 +78,7 @@ Before setting up your domain, make sure you have:
         **Purpose:** Prevents email tampering and confirms sender identity
 
         ```
-        Name: [unique-selector]._domainkey
+        Name: ahasend._domainkey.(your domain or subdomain)
         Type: TXT
         Value: [unique DKIM public key]
         ```
@@ -97,7 +97,7 @@ Before setting up your domain, make sure you have:
         ```
         Name: _dmarc
         Type: TXT
-        Value: v=DMARC1; p=quarantine; rua=mailto:dmarc@ahasend.com
+        Value: v=DMARC1; p=quarantine; sp=none; adkim=r; aspf=r;
         ```
 
         <Info>
@@ -112,9 +112,9 @@ Before setting up your domain, make sure you have:
         **Purpose:** Improves deliverability by providing a communication channel for bounce handling
 
         ```
-        Name: bounces (or your specified subdomain)
+        Name: psrp.(your domain or subdomain)
         Type: CNAME
-        Value: bounces.ahasend.com
+        Value: rp.ahasend.com
         ```
 
         <Tip>
@@ -129,7 +129,7 @@ Before setting up your domain, make sure you have:
         **Purpose:** Improves deliverability and maintains brand consistency for tracked links
 
         ```
-        Name: track (or your specified subdomain)
+        Name: track.(your domain or subdomain)
         Type: CNAME
         Value: track.ahasend.com
         ```
@@ -259,7 +259,7 @@ For programmatic domain management, use our comprehensive Domains API:
     Example:
     ```
     OLD: v=spf1 include:_spf.google.com ~all
-    NEW: v=spf1 include:_spf.google.com include:_spf.ahasend.com ~all
+    NEW: v=spf1 include:_spf.google.com include:spf.ahasend.com ~all
     ```
   </Accordion>
 
