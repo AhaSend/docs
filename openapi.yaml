@@ -405,12 +405,35 @@ components:
           description: DNS records required for domain verification
         last_dns_check_at:
           type: string
-          nullable: string
+          nullable: true
           format: date-time
           description: When DNS records were last checked
         dns_valid:
           type: boolean
           description: Whether all required DNS records are properly configured
+        tracking_subdomain:
+          type: string
+          nullable: true
+          description: Custom tracking subdomain. Null means the account or product default is used.
+        return_path_subdomain:
+          type: string
+          nullable: true
+          description: Custom return-path subdomain. Null means the account or product default is used.
+        subscription_subdomain:
+          type: string
+          nullable: true
+          description: Custom subscription management subdomain. Null means the account or product default is used.
+        media_subdomain:
+          type: string
+          nullable: true
+          description: Custom media subdomain. Null means the account or product default is used.
+        dkim_rotation_interval_days:
+          type: integer
+          nullable: true
+          description: Custom DKIM rotation interval in days. Null means the account default is used.
+        rotation_ready:
+          type: boolean
+          description: Whether the standby DKIM slot is ready for rotation.
       required:
         - object
         - id
@@ -436,8 +459,53 @@ components:
             DKIM Private Key for the domain. Only RSA keys with a minimum key size of 2048 bits are supported.
 
             **Note:** This parameter is only supported on [Platform Partner](https://ahasend.com/partners) accounts.
+        tracking_subdomain:
+          type: string
+          description: Optional custom tracking subdomain. Omit to use the default on create.
+        return_path_subdomain:
+          type: string
+          description: Optional custom return-path subdomain. Omit to use the default on create.
+        subscription_subdomain:
+          type: string
+          description: Optional custom subscription management subdomain. Omit to use the default on create.
+        media_subdomain:
+          type: string
+          description: Optional custom media subdomain. Omit to use the default on create.
+        dkim_rotation_interval_days:
+          type: integer
+          description: Optional custom DKIM rotation interval in days. Only supported for managed DNS domains on eligible plans.
       example:
         domain: "example.com"
+        tracking_subdomain: "click"
+        return_path_subdomain: "mail"
+        subscription_subdomain: "preferences"
+        media_subdomain: "media"
+        dkim_rotation_interval_days: 45
+
+    UpdateDomainRequest:
+      type: object
+      properties:
+        tracking_subdomain:
+          type: string
+          description: Optional custom tracking subdomain. Omit to leave the current value unchanged.
+        return_path_subdomain:
+          type: string
+          description: Optional custom return-path subdomain. Omit to leave the current value unchanged.
+        subscription_subdomain:
+          type: string
+          description: Optional custom subscription management subdomain. Omit to leave the current value unchanged.
+        media_subdomain:
+          type: string
+          description: Optional custom media subdomain. Omit to leave the current value unchanged.
+        dkim_rotation_interval_days:
+          type: integer
+          description: Optional custom DKIM rotation interval in days. Omit to leave the current value unchanged. Only supported for managed DNS domains on eligible plans.
+      example:
+        tracking_subdomain: "click"
+        return_path_subdomain: "mail"
+        subscription_subdomain: "preferences"
+        media_subdomain: "media"
+        dkim_rotation_interval_days: 45
 
     PaginatedDomainsResponse:
       type: object
@@ -2174,12 +2242,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedAPIKeysResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
@@ -2286,12 +2348,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/APIKey'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
@@ -2997,6 +3053,121 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+    put:
+      summary: Update Domain
+      description: Updates DNS domain settings such as custom subdomains and DKIM rotation interval.
+      operationId: updateDomain
+      tags:
+        - Domains
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: domain
+          in: path
+          required: true
+          description: Domain name
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["domains:write"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              ahasend "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Update domain settings
+              response, httpResp, err := client.DomainsAPI.UpdateDomain(
+                ctx,
+                accountID,
+                "example.com",
+                requests.UpdateDomainRequest{
+                  TrackingSubdomain:        ahasend.String("click"),
+                  ReturnPathSubdomain:      ahasend.String("mail"),
+                  DKIMRotationIntervalDays: ahasend.Int(45),
+                },
+              )
+              if err != nil {
+                log.Fatalf("Error updating domain: %v", err)
+              }
+
+              fmt.Printf("Status: %d\n", httpResp.StatusCode)
+              if response != nil {
+                fmt.Printf("Updated domain: %s\n", response.Domain)
+              }
+            }
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDomainRequest'
+      responses:
+        '200':
+          description: Domain updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Domain not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
     delete:
       summary: Delete Domain
       description: Deletes a domain
@@ -3099,6 +3270,109 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v2/accounts/{account_id}/domains/{domain}/check-dns:
+    post:
+      summary: Check Domain DNS
+      description: Triggers a DNS validation check for the domain. If the domain was checked within the last 60 seconds, the cached validation result is returned instead of performing a fresh lookup.
+      operationId: checkDomainDNS
+      tags:
+        - Domains
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: string
+            format: uuid
+        - name: domain
+          in: path
+          required: true
+          description: Domain name
+          schema:
+            type: string
+      security:
+        - BearerAuth: ["domains:write"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Trigger a DNS validation check
+              response, httpResp, err := client.DomainsAPI.CheckDomainDNS(
+                ctx,
+                accountID,
+                "example.com",
+              )
+              if err != nil {
+                log.Fatalf("Error checking domain DNS: %v", err)
+              }
+
+              fmt.Printf("Status: %d\n", httpResp.StatusCode)
+              if response != nil {
+                fmt.Printf("DNS valid: %t\n", response.DNSValid)
+              }
+            }
+
+      responses:
+        '200':
+          description: Domain DNS status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Domain not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Managed DNS is currently unavailable
           content:
             application/json:
               schema:

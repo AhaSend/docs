@@ -33,6 +33,10 @@ Before setting up your domain, make sure you have:
 - **An AhaSend account** with verified email address
 - **The domain or subdomain** you want to use for sending emails
 
+<Info>
+**Managed DNS vs manual DNS:** New domains in AhaSend use managed DNS (DNS v3) by default. Managed DNS shows two DKIM CNAME records so AhaSend can rotate DKIM keys safely over time. Some older or explicitly manual domains may still use the legacy single-DKIM-TXT setup instead. Your domain details page is always the source of truth for the exact records you need to publish.
+</Info>
+
 <Steps>
   <Step title="Add Your Domain" icon="plus">
     Start by adding your domain to your AhaSend account:
@@ -51,7 +55,17 @@ Before setting up your domain, make sure you have:
   </Step>
 
   <Step title="Configure DNS Records" icon="gear">
-    Add the following DNS records to your domain. All records are provided in your domain details page with exact values for your domain.
+    Add the DNS records shown on your domain details page. The exact hostnames and values can vary by account, domain mode, and reseller configuration.
+
+    <Info>
+    **Required for sending:** SPF, DKIM, and DMARC must be valid before the domain can send mail.
+
+    **Optional or feature-specific:** Return-path, tracking, subscription management, media, and MX records improve deliverability or enable product features, but they are not all required for basic sending.
+    </Info>
+
+    <Tip>
+    **Custom subdomains:** AhaSend can use custom subdomains for return-path, tracking, subscription management, and media. Always copy the exact hostnames from your domain page instead of assuming the defaults.
+    </Tip>
 
     <AccordionGroup>
       <Accordion title="SPF Record (Required)" icon="shield-check">
@@ -67,24 +81,46 @@ Before setting up your domain, make sure you have:
         ```
 
         <Warning>
-        If you already have an SPF record, **do not create a duplicate**. Instead, add `include:_spf.ahasend.com` to your existing SPF record before the final mechanism (`~all` or `-all`).
+        If you already have an SPF record, **do not create a duplicate**. Instead, add `include:spf.ahasend.com` to your existing SPF record before the final mechanism (`~all` or `-all`).
         </Warning>
+
+        <Note>
+        AhaSend can validate SPF through the return-path setup in some cases, but you should still publish the SPF record shown in your dashboard. It is the most portable and least surprising setup.
+        </Note>
       </Accordion>
 
-      <Accordion title="DKIM Record (Required)" icon="signature">
+      <Accordion title="DKIM Records (Required)" icon="signature">
         **DomainKeys Identified Mail (DKIM)** cryptographically signs your emails to verify authenticity.
 
-        **Record Type:** `TXT`
-        **Purpose:** Prevents email tampering and confirms sender identity
+        **Record Type:** Usually `CNAME` for managed DNS, sometimes `TXT` for manual DNS
+        **Purpose:** Prevents email tampering, confirms sender identity, and enables safe DKIM rotation on managed domains
+
+        **Managed DNS (DNS v3):**
 
         ```
-        Name: ahasend._domainkey.(your domain or subdomain)
+        Name: managed._domainkey.(your domain or subdomain)
+        Type: CNAME
+        Value: [AhaSend alias shown in dashboard]
+
+        Name: managed2._domainkey.(your domain or subdomain)
+        Type: CNAME
+        Value: [AhaSend alias shown in dashboard]
+        ```
+
+        <Note>
+        Managed DNS domains show two DKIM selectors: one active selector used for signing now, and one standby selector used for future rotation. Your domain can verify with the active selector alone, but publishing **both** DKIM CNAMEs up front is recommended so future DKIM rotation does not require another DNS change.
+        </Note>
+
+        **Manual DNS:**
+
+        ```
+        Name: [selector]._domainkey.(your domain or subdomain)
         Type: TXT
         Value: [unique DKIM public key]
         ```
 
         <Note>
-        The exact DKIM record name and value are unique for each domain and provided in your dashboard. Copy them exactly as shown.
+        If you are working with a legacy or explicitly manual domain, your dashboard will show a single DKIM TXT record instead of the managed CNAME-based setup.
         </Note>
       </Accordion>
 
@@ -109,16 +145,16 @@ Before setting up your domain, make sure you have:
         **Return-Path** specifies where bounce messages and delivery notifications should be sent.
 
         **Record Type:** `CNAME`
-        **Purpose:** Improves deliverability by providing a communication channel for bounce handling
+        **Purpose:** Improves deliverability by providing a communication channel for bounce handling and SPF alignment
 
         ```
-        Name: psrp.(your domain or subdomain)
+        Name: [return-path subdomain].(your domain or subdomain)
         Type: CNAME
-        Value: rp.ahasend.com
+        Value: [value shown in dashboard]
         ```
 
         <Tip>
-        While not strictly required, the Return-Path record significantly improves deliverability by allowing AhaSend to properly handle bounces and feedback loops.
+        While not strictly required for every setup, the return-path record is strongly recommended. It improves bounce handling and is part of the managed DNS flow for many domains.
         </Tip>
       </Accordion>
 
@@ -129,13 +165,47 @@ Before setting up your domain, make sure you have:
         **Purpose:** Improves deliverability and maintains brand consistency for tracked links
 
         ```
-        Name: track.(your domain or subdomain)
+        Name: [tracking subdomain].(your domain or subdomain)
         Type: CNAME
-        Value: track.ahasend.com
+        Value: [value shown in dashboard]
         ```
 
         <Note>
         Email tracking is **disabled by default** and must be explicitly enabled in your account settings, even if you configure the tracking domain.
+        </Note>
+      </Accordion>
+
+      <Accordion title="Subscription Management Record (Optional)" icon="mailbox">
+        **Subscription management domain** hosts unsubscribe and subscription management links on your own domain.
+
+        **Record Type:** `CNAME`
+        **Purpose:** Keeps subscription management links branded on your domain
+
+        ```
+        Name: [subscription subdomain].(your domain or subdomain)
+        Type: CNAME
+        Value: [value shown in dashboard]
+        ```
+
+        <Note>
+        This record is optional, but recommended if you want subscription management URLs to use your own domain instead of an AhaSend hostname.
+        </Note>
+      </Accordion>
+
+      <Accordion title="Media Record (Optional)" icon="image">
+        **Media domain** serves hosted media assets from your own domain.
+
+        **Record Type:** `CNAME`
+        **Purpose:** Keeps hosted assets and media URLs branded on your domain
+
+        ```
+        Name: [media subdomain].(your domain or subdomain)
+        Type: CNAME
+        Value: [value shown in dashboard]
+        ```
+
+        <Note>
+        This record is optional and mainly useful if you use AhaSend-hosted assets or want a consistent branded media hostname.
         </Note>
       </Accordion>
 
@@ -149,7 +219,7 @@ Before setting up your domain, make sure you have:
         Name: @ (or your subdomain)
         Type: MX
         Priority: 10
-        Value: mx.ahasend.com
+        Value: [value shown in dashboard]
         ```
 
         <Info>
@@ -180,14 +250,20 @@ Before setting up your domain, make sure you have:
     4. **Look for the green checkmarks** next to each record type
 
     <Check>
-    **Success!** When all records show green checkmarks, your domain is verified and ready to send emails.
+    **Success!** When SPF, DKIM, and DMARC show as valid, your domain is ready to send emails.
     </Check>
+
+    <Info>
+    On managed DNS domains, you may see a second DKIM selector that is marked as standby or not currently required. That is expected. Publishing it anyway is recommended so DKIM rotation can happen without a future DNS update.
+    </Info>
 
     <Warning>
     If verification fails, double-check that:
     - All DNS records are added exactly as shown
     - DNS changes have had time to propagate
     - You don't have conflicting DNS records
+    - You didn't create a second SPF TXT record
+    - You published the DKIM record type shown by AhaSend (`CNAME` for managed DNS, `TXT` for manual DNS)
     </Warning>
   </Step>
 </Steps>
@@ -236,6 +312,10 @@ For programmatic domain management, use our comprehensive Domains API:
   </Card>
 </CardGroup>
 
+<Info>
+API v2 also supports updating domain DNS settings such as tracking, return-path, subscription, media, and DKIM rotation interval, as well as requesting a DNS check for an existing domain.
+</Info>
+
 ## Troubleshooting
 
 <AccordionGroup>
@@ -244,7 +324,7 @@ For programmatic domain management, use our comprehensive Domains API:
 
     - **Wait longer:** DNS propagation can take up to 48 hours
     - **Check record values:** Ensure exact copy-paste from dashboard (no extra spaces)
-    - **Verify record type:** TXT records for SPF/DKIM/DMARC, CNAME for others
+    - **Verify record type:** SPF and DMARC use TXT; DKIM can be `CNAME` or `TXT` depending on your domain mode
     - **Remove duplicates:** Don't create multiple SPF records
     - **Check with DNS tools:** Use online DNS checkers to verify records are live
   </Accordion>
@@ -253,7 +333,7 @@ For programmatic domain management, use our comprehensive Domains API:
     **If you already have an SPF record:**
 
     1. **Don't create a duplicate** - domains can only have one SPF record
-    2. **Modify your existing record** by adding `include:_spf.ahasend.com`
+    2. **Modify your existing record** by adding `include:spf.ahasend.com`
     3. **Place it before the final mechanism** (`~all` or `-all`)
 
     Example:
@@ -263,6 +343,15 @@ For programmatic domain management, use our comprehensive Domains API:
     ```
   </Accordion>
 
+  <Accordion title="Why Do I See Two DKIM Records?">
+    **Managed DNS domains use two DKIM selectors.**
+
+    - **Active selector:** Used for signing mail right now and required for verification
+    - **Standby selector:** Reserved for the next DKIM rotation
+
+    Publishing both DKIM CNAMEs from the start is recommended. It lets AhaSend rotate keys later without requiring another DNS change on your side.
+  </Accordion>
+
   <Accordion title="Subdomain vs Root Domain">
     **Understanding the difference:**
 
@@ -270,6 +359,8 @@ For programmatic domain management, use our comprehensive Domains API:
     - **Subdomain:** `email.yourcompany.com` (isolated setup)
 
     **For subdomains:** Add all DNS records to the specific subdomain, not the root domain.
+
+    Records like return-path, tracking, subscription management, and media are usually additional subdomains under the domain you add to AhaSend.
   </Accordion>
 
   <Accordion title="Still Having Issues?">

@@ -183,6 +183,8 @@
                   "api-reference/domains/create-domain",
                   "api-reference/domains/get-domain",
                   "api-reference/domains/get-domains",
+                  "api-reference/domains/update-domain",
+                  "api-reference/domains/check-dns",
                   "api-reference/domains/delete-domain"
                 ]
               },
