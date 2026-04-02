@@ -7,7 +7,7 @@ description: "New releases and improvements"
 
 - **Managed DNS & DKIM Rotation Setup**: Sending-domain setup now supports our new native managed DNS flow. Managed domains get two DKIM CNAME records: one required for sending and a second recommended record that lets AhaSend rotate DKIM keys later without asking for another DNS change.
 - **Contact Detail Pages**: You can now view and edit individual contacts directly from the dashboard, including custom attributes, list memberships, engagement statistics, campaign delivery history, and activity logs. Drill-down pages for opens, clicks, and campaigns are available for detailed analysis.
-- **Message Tag Filtering**: Messages can now be filtered by tags in both the API and the dashboard, making it easier to find specific transactional messages. The dashboard includes a multi-select tag dropdown and a `tags=x|y` search bar syntax.
+- **Message Tag Filtering**: Messages can now be filtered by tags in both the [API](/api-reference/messages/list-messages) and the [dashboard](https://dash.ahasend.com/account/-/transactional/messages), making it easier to find specific transactional messages. The dashboard includes a multi-select tag dropdown and a `tags=x|y` search bar syntax.
 - **Email Proxy Detection**: Open and click tracking now correctly identifies email proxies from Gmail, Yahoo, Apple Mail Privacy Protection, Superhuman, and Fastmail, giving you more accurate engagement metrics. Apple MPP detection uses IP range verification rather than user agent matching alone.
 - **Delivery Analytics**: Messages now track egress pool, egress source, and mailbox provider (Gmail, Yahoo, Outlook, etc.), with pre-aggregated statistics tables for future per-provider delivery reporting.
 
