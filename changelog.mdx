@@ -2,6 +2,42 @@
 title: "Product Updates"
 description: "New releases and improvements"
 ---
+<Update label="March 2026">
+#### New Features
+
+- **Managed DNS & DKIM Rotation Setup**: Sending-domain setup now supports our new native managed DNS flow. Managed domains get two DKIM CNAME records: one required for sending and a second recommended record that lets AhaSend rotate DKIM keys later without asking for another DNS change.
+- **Contact Detail Pages**: You can now view and edit individual contacts directly from the dashboard, including custom attributes, list memberships, engagement statistics, campaign delivery history, and activity logs. Drill-down pages for opens, clicks, and campaigns are available for detailed analysis.
+- **Message Tag Filtering**: Messages can now be filtered by tags in both the API and the dashboard, making it easier to find specific transactional messages. The dashboard includes a multi-select tag dropdown and a `tags=x|y` search bar syntax.
+- **Email Proxy Detection**: Open and click tracking now correctly identifies email proxies from Gmail, Yahoo, Apple Mail Privacy Protection, Superhuman, and Fastmail, giving you more accurate engagement metrics. Apple MPP detection uses IP range verification rather than user agent matching alone.
+- **Delivery Analytics**: Messages now track egress pool, egress source, and mailbox provider (Gmail, Yahoo, Outlook, etc.), with pre-aggregated statistics tables for future per-provider delivery reporting.
+
+#### Changes
+
+- Contact imports now update existing contacts' names and attributes instead of silently skipping duplicates.
+- Default message data retention for new accounts is now 7 days (previously 30).
+- Campaign "from" addresses are now stored at schedule time, so campaign reports remain accurate even if the sending domain is later removed.
+- API v2 list API keys endpoint now returns both send-only and full-access keys.
+- The onboarding DNS setup page has a wider layout that is easier to read on all screen sizes.
+- Invoices issued prior to March 15, 2026 are noted as unavailable in the dashboard billing page, with a link to support for older invoices.
+
+#### Improvements
+
+- DNS validation now tries multiple fallback nameservers (Cloudflare, Level3, Google, OpenDNS) before marking a domain as broken, reducing false alarms from temporary resolver issues.
+- DNS validation now follows CNAME chains, so domains using intermediate CNAME records (e.g., through a CDN or DNS proxy) validate correctly.
+- DMARC checking recovers more gracefully from transient DNS failures, preserving the previously known state instead of marking the domain invalid.
+- The dashboard adapts better to light and dark color modes.
+- Checkout and payment form initialization is more reliable.
+- Established accounts (verified, or 30+ days old with significant volume) can now disable message data retention, in addition to approved accounts.
+
+#### Bug Fixes
+
+- Fixed character encoding corruption (mojibake) in campaign emails when HTML entities such as non-breaking spaces were converted to UTF-8 by the tracking system.
+- Fixed single-part campaign emails not receiving click or open tracking.
+- Fixed API v2 send-only keys not appearing in the list API keys response.
+- Fixed domain deletion not cleaning up associated API key scopes.
+- Fixed text selection being unreadable in code blocks on the dashboard.
+- Fixed checkout validation requiring company name and VAT ID together for Singapore customers, where VAT is not applicable.
+</Update>
 <Update label="February 2026">
 #### New Features
 
