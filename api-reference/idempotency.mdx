@@ -24,7 +24,7 @@ When you make a request with an `Idempotency-Key` header:
 
     - **API Keys**: Create API keys
     - **Domains**: Create domains
-    - **Messages**: Send messages and cancel scheduled messages
+    - **Messages**: Send messages
     - **Account Members**: Add team members
     - **Suppressions**: Create email suppressions
     - **Routes**: Create message routes
@@ -46,9 +46,8 @@ When you make a request with an `Idempotency-Key` header:
     - Account ID
     - Idempotency key
     - Request body content (SHA256 hash)
-    - Request path
 
-    If any of these differ, the request is treated as unique.
+    If you reuse the same key with a different request body, the API returns `422 Unprocessable Entity`.
   </Accordion>
 </AccordionGroup>
 
@@ -268,6 +267,17 @@ The API responds differently based on the idempotency key status:
     }
     ```
   </Tab>
+
+  <Tab title="Payload Mismatch">
+    **Status**: `422 Unprocessable Entity`
+
+    **Body**:
+    ```json
+    {
+      "message": "idempotency key was already used with a different request payload"
+    }
+    ```
+  </Tab>
 </Tabs>
 
 ## Best Practices
@@ -313,6 +323,7 @@ The API responds differently based on the idempotency key status:
     Handle different response codes appropriately:
     - `409`: Wait and retry (concurrent request)
     - `412`: Don't retry (original failed)
+    - `422`: Use a new idempotency key or retry with the original payload
     - `2xx` with `Idempotent-Replayed: true` header: Success (replayed)
   </Card>
 </CardGroup>
@@ -349,11 +360,17 @@ The API responds differently based on the idempotency key status:
   </Accordion>
 
   <Accordion title="Key Mismatch" icon="key">
-    If you use the same idempotency key with different request data, the API will treat it as a new request.
+    If you use the same idempotency key with different request data, the API returns `422 Unprocessable Entity`.
 
-    **What it means**: The request body, path, or other parameters don't match the original request.
+    **What it means**: The request body doesn't match the original request for that key.
 
     **What to do**: Ensure you're using the exact same request parameters when retrying, or use a different idempotency key for different requests.
+
+    ```json Response
+    {
+      "message": "idempotency key was already used with a different request payload"
+    }
+    ```
   </Accordion>
 </AccordionGroup>
 
