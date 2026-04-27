@@ -476,9 +476,11 @@ components:
         dkim_private_key:
           type: string
           description: |
-            DKIM Private Key for the domain. Only RSA keys with a minimum key size of 2048 bits are supported.
+            DKIM Private Key for the domain. Only RSA keys with a minimum key size of 1024 bits are supported.
 
             **Note:** This parameter is only supported on [Platform Partner](https://ahasend.com/partners) accounts.
+
+            <Note>Key size of at least 1024 bits is supported; 2048 bit keys are strongly recommended for improved security.</Note>
         tracking_subdomain:
           type: string
           description: Optional custom tracking subdomain. Omit to use the default on create.
