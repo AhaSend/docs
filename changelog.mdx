@@ -2,6 +2,41 @@
 title: "Product Updates"
 description: "New releases and improvements"
 ---
+<Update label="April 2026">
+#### New Features
+
+- **Multi-Currency Billing**: New paid subscriptions are now billed in EUR, GBP, or USD depending on your location. The same applies when upgrading or switching between Pro and Max plans. Your default currency is captured when your account is verified, and prices on the onboarding and dashboard billing pages — both plan base prices and per-1k-email overage rates — are now shown in your local currency with the correct symbol (€9 / £8 / $10 for the Pro plan, etc.). You can override the auto-detected currency with a `currency` cookie.
+- **Custom Subdomains on Domain Creation**: The API v2 [create-domain endpoint](/api-reference/domains/create-domain) now accepts `tracking_subdomain`, `return_path_subdomain`, `subscription_subdomain`, `media_subdomain`, and `dkim_rotation_interval_days` so domains can be set up with custom subdomains in a single API call.
+- **Subdomains lock after DNS verification.** Once a sending-domain subdomain (tracking, return-path, subscription, media) is verified in DNS, it is locked: any change requires contacting support, and the [update domain API](/api-reference/domains/update-domain) returns a clear 400 error indicating which subdomain is locked.
+- **API v2 Domain Management**: API clients can now [set](/api-reference/domains/create-domain) and [update](/api-reference/domains/update-domain) domain settings and [trigger DNS re-checks](/api-reference/domains/check-dns), including custom tracking, return-path, subscription, media, and DKIM rotation settings for managed DNS domains.
+- **BYODKIM Compatibility**: Platform Partner accounts can now [create domains](/api-reference/domains/create-domain) with 1024-bit BYODKIM keys when needed for legacy compatibility. 2048-bit keys remain recommended.
+- **Work Email Required at Signup**: To reduce abuse, new account sign-ups must now use a work email address. Free, personal, and temporary email providers are no longer accepted at registration.
+
+#### Changes
+
+- **Email addresses are normalized on messages and suppressions** (lowercased and trimmed of surrounding whitespace) on write and on lookup, making suppression checks robust to casing and whitespace variations.
+- **API v2 message scheduling validation is stricter:** [Create Message API](/api-reference/messages/create-message) scheduled expiration must be in the future and within the documented limit.
+
+#### Improvements
+
+- **Better API v2 error responses.** `403 Forbidden` (not `401`) is returned for insufficient scopes; `400` (not `404`/`412`) for invalid sender domains or DNS-invalid domains on send; clearer errors for invalid suppression domains, invalid webhook boolean filters, and message-status enum mismatches.
+- **Idempotent create endpoints document the `422` response** that is returned when an idempotency key is reused with a different payload.
+- **API v2 domain-scoped routes, webhooks, SMTP credentials, messages, and statistics** now handle scoped access more consistently.
+- **Account updates return the updated account**, not the pre-update copy. The account response no longer leaks internal fields such as suspension status, monthly credit, or contact attributes; it now includes `owner_id`.
+- **Account billing pages now keep customer currency consistent** when viewing existing subscriptions or switching plans.
+- **Plan cards now show localized overage prices** instead of hardcoded USD amounts.
+
+#### Bug fixes
+
+- **Domain names are normalized everywhere.** Domain names submitted to the API, the dashboard, or as part of an API key scope are now lowercased, trimmed, and stripped of any trailing dot, so equivalent names are no longer treated as different.
+- Dashboard links in campaign review, DNS, route, and webhook notification emails now point directly to the correct pages.
+- Fixed manually resumed campaigns getting sent back through the normal evaluation gate after an admin resumed them.
+- Fixed message cancellation requiring `messages:send` instead of `messages:cancel` permission.
+- Fixed message send results being assembled without synchronization, which could occasionally drop or duplicate per-recipient entries.
+- Fixed webhook list `enabled` and `on_*` boolean query parameters being silently ignored when given non-boolean values.
+
+</Update>
+
 <Update label="March 2026">
 #### New Features
 
