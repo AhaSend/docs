@@ -375,7 +375,7 @@ The API uses SHA256 hashing of the request method, path, and body to detect chan
 
 ### Concurrency Protection
 
-Claiming an idempotency key happens in a short database transaction guarded by a PostgreSQL advisory lock; the lock is never held while your request is being processed. While a request is in flight, concurrent requests with the same key receive `409 Conflict` with a `Retry-After` header instead of waiting.
+Claiming an idempotency key happens atomically; While a request is in flight, concurrent requests with the same key receive `409 Conflict` with a `Retry-After` header instead of waiting.
 
 ### Execution Leases
 
