@@ -16,7 +16,8 @@ When you make a request with an `Idempotency-Key` header:
 
 1. **First Request**: The API processes your request normally and stores the response
 2. **Subsequent Requests**: If you retry with the same key, the API returns the stored response instead of processing the request again
-3. **Automatic Cleanup**: Idempotency keys expire after 24 hours
+3. **Server Errors Are Retriable**: If the original attempt failed with a server error (HTTP 5xx) or never completed, no response is stored — retrying with the same key safely re-executes the request
+4. **Automatic Cleanup**: Idempotency keys expire after 24 hours
 
 <AccordionGroup>
   <Accordion title="Supported Operations" icon="list-check">
@@ -45,9 +46,10 @@ When you make a request with an `Idempotency-Key` header:
 
     - Account ID
     - Idempotency key
+    - Request method and path, including path parameters
     - Request body content (SHA256 hash)
 
-    If you reuse the same key with a different request body, the API returns `422 Unprocessable Entity`.
+    If you reuse the same key with a different request body — or send the same body to a different endpoint or resource — the API returns `422 Unprocessable Entity`.
   </Accordion>
 </AccordionGroup>
 
@@ -245,6 +247,7 @@ The API responds differently based on the idempotency key status:
 
     **Headers**:
     - `Idempotent-Replayed: false`
+    - `Retry-After: <seconds>` — when it is safe to retry
 
     **Body**:
     ```json
@@ -255,17 +258,9 @@ The API responds differently based on the idempotency key status:
   </Tab>
 
   <Tab title="Failed Original">
-    **Status**: `412 Precondition Failed`
+    **Replayed**: client errors (`4xx`) are deterministic outcomes — they are stored and replayed exactly like successful responses, with `Idempotent-Replayed: true`.
 
-    **Headers**:
-    - `Idempotent-Replayed: false`
-
-    **Body**:
-    ```json
-    {
-      "message": "The original request with this idempotency key failed and cannot be retried"
-    }
-    ```
+    **Re-executed**: server errors (`5xx`) are transient — no response is stored, and a retry with the same idempotency key re-executes the request as if it were the first attempt.
   </Tab>
 
   <Tab title="Payload Mismatch">
@@ -321,10 +316,10 @@ The API responds differently based on the idempotency key status:
 
   <Card title="Error Handling" icon="triangle-exclamation">
     Handle different response codes appropriately:
-    - `409`: Wait and retry (concurrent request)
-    - `412`: Don't retry (original failed)
-    - `422`: Use a new idempotency key or retry with the original payload
-    - `2xx` with `Idempotent-Replayed: true` header: Success (replayed)
+    - `409`: Concurrent request in progress — wait for the `Retry-After` interval, then retry with the same key
+    - `422`: Key reused with a different request — use a new idempotency key, or retry with the original payload and endpoint
+    - `5xx`: Transient failure — retry with the same idempotency key
+    - `2xx`/`4xx` with `Idempotent-Replayed: true` header: replayed original outcome
   </Card>
 </CardGroup>
 
@@ -336,7 +331,7 @@ The API responds differently based on the idempotency key status:
 
     **What it means**: Another request with the same key is currently being processed.
 
-    **What to do**: Wait a moment and retry with the same key. The second request will either get a `409` again (still processing) or the final result once complete.
+    **What to do**: Wait for the interval indicated by the `Retry-After` response header, then retry with the same key. The retry will either get a `409` again (still processing), the stored result once complete, or — if the original request never completed (e.g. it was interrupted) — it will re-execute the request once the in-flight lease expires (at most 5 minutes).
 
     ```json Response
     {
@@ -345,26 +340,20 @@ The API responds differently based on the idempotency key status:
     ```
   </Accordion>
 
-  <Accordion title="Original Request Failed (412 Precondition Failed)" icon="xmark">
-    This happens when you retry a request whose original attempt failed.
+  <Accordion title="Original Request Failed with a Server Error" icon="xmark">
+    If the original request failed with an HTTP `5xx` error, no response is stored for the idempotency key.
 
-    **What it means**: The first request with this idempotency key encountered an error and cannot be safely retried.
+    **What it means**: The failure is treated as transient, and the key remains usable.
 
-    **What to do**: Use a new idempotency key if you want to retry the operation.
-
-    ```json Response
-    {
-      "message": "The original request with this idempotency key failed and cannot be retried"
-    }
-    ```
+    **What to do**: Retry with the same idempotency key — the request is re-executed as if it were the first attempt. (Client errors — HTTP `4xx` — behave differently: they are deterministic outcomes and are replayed on retry, just like successes.)
   </Accordion>
 
   <Accordion title="Key Mismatch" icon="key">
-    If you use the same idempotency key with different request data, the API returns `422 Unprocessable Entity`.
+    If you use the same idempotency key with different request data — or with the same data against a different endpoint or resource — the API returns `422 Unprocessable Entity`.
 
-    **What it means**: The request body doesn't match the original request for that key.
+    **What it means**: The request doesn't match the original request for that key.
 
-    **What to do**: Ensure you're using the exact same request parameters when retrying, or use a different idempotency key for different requests.
+    **What to do**: Ensure you're using the exact same request (payload and endpoint) when retrying, or use a different idempotency key for different requests.
 
     ```json Response
     {
@@ -382,11 +371,15 @@ The API responds differently based on the idempotency key status:
 
 ### Request Hashing
 
-The API uses SHA256 hashing of the request body to detect changes between requests with the same idempotency key. This ensures that different requests don't accidentally match.
+The API uses SHA256 hashing of the request method, path, and body to detect changes between requests with the same idempotency key. This ensures that different requests don't accidentally match — including the same payload sent to a different resource.
 
 ### Concurrency Protection
 
-PostgreSQL advisory locks prevent race conditions when multiple requests with the same idempotency key arrive simultaneously. The first request proceeds normally while subsequent requests wait.
+Claiming an idempotency key happens in a short database transaction guarded by a PostgreSQL advisory lock; the lock is never held while your request is being processed. While a request is in flight, concurrent requests with the same key receive `409 Conflict` with a `Retry-After` header instead of waiting.
+
+### Execution Leases
+
+An in-flight request holds a lease on its idempotency key for up to 5 minutes. If the original request never completes (for example, it was interrupted by a deploy or crash), the key unblocks automatically when the lease expires and the next retry re-executes the request.
 
 ### Storage Duration
 
