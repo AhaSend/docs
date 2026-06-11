@@ -204,13 +204,13 @@ components:
       properties:
         has_more:
           type: boolean
-          description: Whether there are more items available
+          description: Whether more items exist after the last item of this page
         next_cursor:
           type: string
-          description: Cursor for the next page of results
+          description: Pass as `after` to fetch the next page
         previous_cursor:
           type: string
-          description: Cursor for the previous page of results
+          description: Pass as `before` to fetch the previous page; absent on a `before` page when the start of the list has been reached
       example:
         has_more: true
         next_cursor: "eyJpZCI6MTIzNH0="
