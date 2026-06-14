@@ -2,6 +2,39 @@
 title: "Product Updates"
 description: "New releases and improvements"
 ---
+<Update label="May 2026">
+#### New Features
+
+- **Duplicate a Campaign**: You can now duplicate an existing marketing campaign in one action. The copy includes the design, sender settings, subject, preview text, tags, and recipient lists, and opens as a new editable draft — delivery history and statistics are not carried over.
+- **Automatic Tax on Subscriptions**: New paid subscriptions now have applicable sales tax or VAT automatically calculated and added to your invoices based on your billing location.
+
+#### Changes
+
+- **Transactional sends are limited to 100 recipients per request.** The v1 send API now enforces a maximum of 100 recipients per call and rejects empty recipient lists with a validation error, matching the documented v2 limit.
+- **Each recipient gets a unique Message-ID.** When you send to multiple recipients via the v1 send API without supplying your own Message-ID, every recipient now receives an individually generated, unique Message-ID instead of a shared one, making each message separately trackable. Supplying your own Message-ID works as before.
+- **Higher domain limits for enterprise and reseller accounts.** Enterprise and Platform Partner accounts can now add up to 10,000 sending domains.
+
+#### Improvements
+
+- **Cost estimates now reflect your subscription's currency.** The estimated-amount figure on the billing page is calculated using EUR or GBP pricing for EUR/GBP subscribers, instead of dollar-based rates.
+- **Fewer false-positive account suspensions.** Automated bounce-rate protection now measures your actual bounce rate over the trailing 30 days and only acts once you've accumulated a meaningful number of bounces, so low-volume accounts are no longer suspended over a handful of bounces. Reviewed accounts that are reinstated are judged only on their activity going forward.
+- **Clearer error when adding a duplicate contact.** Adding a contact whose email already exists now shows a specific "a contact with this email address already exists" message instead of a generic failure.
+- **Better partial-failure reporting on multi-recipient sends.** When some recipients in a send fail, the API response now clearly reports which recipients failed and why, rather than failing the entire request opaquely.
+
+#### Bug Fixes
+
+- Fixed credit purchases that could silently fail to complete; credit top-ups are now provisioned reliably.
+- Fixed plan upgrades occasionally resolving to the wrong plan when an invoice contained proration credits.
+- Fixed the dashboard billing page showing a contradictory "your subscription is about to be cancelled" banner for customers who had scheduled a cancellation and then started a new subscription.
+- Fixed the billing and credits pages failing to load for brand-new subscriptions that had not yet produced their first invoice; usage, billing dates, and estimated charges now display correctly in that window.
+- Fixed the credits history failing to render entries that had no linked invoice; such entries now show "N/A" and a support contact link.
+- Fixed the dashboard notice about an upcoming scheduled plan change to show the correct current and target plans and the right wording (for example, "downgrade" only when it actually is one), and to no longer appear when there is no real pending change. Plan changes made through the Stripe billing portal now reflect correctly on your account.
+- Fixed unpaid checkouts falling through without an error message; if a checkout completes without a successful payment, you'll now see a prompt to retry with a different payment method.
+- Fixed updated checkout links for purchasing additional credit packs.
+- Improved the contrast of the status indicators on the campaign edit page.
+
+</Update>
+
 <Update label="April 2026">
 #### New Features
 
