@@ -4777,6 +4777,50 @@ paths:
             type: string
       security:
         - BearerAuth: ["sub-accounts:read"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/common"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // List sub accounts (limit results to 50 per page)
+              response, httpResp, err := client.SubAccountsAPI.ListSubAccounts(ctx, accountID, &common.PaginationParams{Limit: ahasend.Int32(50)})
+              if err != nil {
+                log.Fatalf("Error listing sub accounts: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Sub accounts listed! Status: %d\n", httpResp.StatusCode)
+                fmt.Printf("Found %d sub accounts\n", len(response.Data))
+                for _, sub := range response.Data {
+                  fmt.Printf("- ID: %s, Name: %s, Status: %s\n", sub.ID, sub.Name, sub.Status)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: List of sub accounts
@@ -4832,6 +4876,55 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["sub-accounts:write"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Create a sub account with an idempotency key for safe retries
+              response, httpResp, err := client.SubAccountsAPI.CreateSubAccount(ctx, accountID, requests.CreateSubAccountRequest{
+                Name:          "Acme Subsidiary",
+                Website:       "acme.example.com",
+                MonthlyCredit: ahasend.Int64(0),
+              }, api.WithIdempotencyKey("subacct-20240101-acme"))
+              if err != nil {
+                log.Fatalf("Error creating sub account: %v", err)
+              }
+
+              if httpResp.StatusCode == 201 {
+                fmt.Printf("✅ Sub account created! Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("ID: %s\n", response.ID)
+                  fmt.Printf("Name: %s\n", response.Name)
+                  fmt.Printf("Status: %s\n", response.Status)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       requestBody:
         required: true
         content:
@@ -4900,6 +4993,54 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-accounts:usage"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              response, httpResp, err := client.SubAccountsAPI.GetSubAccountsUsage(ctx, accountID)
+              if err != nil {
+                log.Fatalf("Error getting sub-accounts usage: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Retrieved sub-accounts usage! Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("Currency: %s\n", response.Currency)
+                  fmt.Printf("Allocation method: %s\n", response.AllocationMethod)
+                  fmt.Printf("Total reception count: %d\n", response.Total.ReceptionCount)
+                  fmt.Printf("Total allocated cost: %.2f\n", response.Total.AllocatedCost)
+
+                  fmt.Printf("Sub-accounts: %d\n", len(response.SubAccounts))
+                  for i, sub := range response.SubAccounts {
+                    fmt.Printf("  [%d] reception count: %d, allocated cost: %.2f\n", i, sub.ReceptionCount, sub.AllocatedCost)
+                  }
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Sub-account usage breakdown
@@ -4962,6 +5103,57 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-accounts:read"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Get a single sub account by ID
+              response, httpResp, err := client.SubAccountsAPI.GetSubAccount(
+                ctx,
+                accountID,
+                subAccountID,
+              )
+              if err != nil {
+                log.Fatalf("Error getting sub account: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Retrieved sub account. Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("ID: %s\n", response.ID)
+                  fmt.Printf("Name: %s\n", response.Name)
+                  fmt.Printf("Website: %s\n", response.Website)
+                  fmt.Printf("Status: %s\n", response.Status)
+                  fmt.Printf("Domain count: %d\n", response.DomainCount)
+                  fmt.Printf("Member count: %d\n", response.MemberCount)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Sub account details
@@ -5023,6 +5215,51 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-accounts:write"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              response, httpResp, err := client.SubAccountsAPI.UpdateSubAccount(ctx, accountID, subAccountID, requests.UpdateSubAccountRequest{Name: ahasend.String("Acme Subsidiary"), MonthlyCredit: ahasend.Int64(50000)})
+              if err != nil {
+                log.Fatalf("Error updating sub account: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Sub account updated! Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("ID: %s\n", response.ID)
+                  fmt.Printf("Name: %s\n", response.Name)
+                  fmt.Printf("MonthlyCredit: %d\n", response.MonthlyCredit)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       requestBody:
         required: true
         content:
@@ -5090,6 +5327,48 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-accounts:delete"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Soft-delete the sub account
+              response, httpResp, err := client.SubAccountsAPI.DeleteSubAccount(ctx, accountID, subAccountID)
+              if err != nil {
+                log.Fatalf("Error deleting sub account: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Sub account deleted! Status: %d\n", httpResp.StatusCode)
+                if response != nil && response.Message != "" {
+                  fmt.Printf("Response: %s\n", response.Message)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Sub account deleted successfully
@@ -5154,6 +5433,49 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-accounts:suspend"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              response, httpResp, err := client.SubAccountsAPI.SuspendSubAccount(ctx, accountID, subAccountID, requests.SuspendSubAccountRequest{
+                Reason: "Customer requested temporary pause",
+              })
+              if err != nil {
+                log.Fatalf("Error suspending sub account: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Sub account suspended. Status: %d\n", httpResp.StatusCode)
+                fmt.Printf("ID: %s\n", response.ID)
+                fmt.Printf("Status: %s\n", response.Status)
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       requestBody:
         required: true
         content:
@@ -5222,6 +5544,49 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-accounts:suspend"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Unsuspend the sub account
+              response, httpResp, err := client.SubAccountsAPI.UnsuspendSubAccount(ctx, accountID, subAccountID)
+              if err != nil {
+                log.Fatalf("Error unsuspending sub account: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Sub account unsuspended! Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("Sub Account ID: %s\n", response.ID)
+                  fmt.Printf("Status: %s\n", response.Status)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Sub account unsuspended successfully
