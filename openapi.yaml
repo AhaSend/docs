@@ -610,7 +610,12 @@ components:
           description: The disposition of the attachment
         content_id:
           type: string
-          description: The Content-ID of the attachment for inline images
+          description: |
+            Content-ID that lets you reference this attachment as an inline image from your HTML.
+
+            The value **must be wrapped in angle brackets**, matching the MIME `Content-ID` header format — for example `"<image1@example.com>"`. Reference it from `html_content` **without** the brackets, e.g. `<img src="cid:image1@example.com">`.
+
+            If the angle brackets are omitted, the file is delivered as a regular (downloadable) attachment instead of rendering inline.
         file_name:
           type: string
           description: The filename of the attachment
@@ -702,7 +707,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Attachment'
-          description: File attachments
+          description: File attachments. For inline images, set the attachment's `content_id` to a value wrapped in angle brackets (e.g. `<image1@example.com>`) and reference it from `html_content` with `cid:` (e.g. `<img src="cid:image1@example.com">`).
         headers:
           type: object
           additionalProperties:
@@ -796,7 +801,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Attachment'
-          description: File attachments
+          description: File attachments. For inline images, set the attachment's `content_id` to a value wrapped in angle brackets (e.g. `<image1@example.com>`) and reference it from `html_content` with `cid:` (e.g. `<img src="cid:image1@example.com">`).
         headers:
           type: object
           additionalProperties:
