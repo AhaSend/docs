@@ -3808,6 +3808,77 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["messages:send:all", "messages:send:{domain}"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/common"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // A conversational message sets the To/CC/BCC headers directly, so
+              // recipients can see each other (BCC excluded). The combined
+              // To + CC + BCC count must not exceed 50. Unlike Create Message,
+              // this endpoint does not support template substitutions.
+              response, httpResp, err := client.MessagesAPI.CreateConversationMessage(
+                ctx,
+                accountID,
+                requests.CreateConversationMessageRequest{
+                  From: common.SenderAddress{
+                    Email: "info@example.com",
+                    Name:  ahasend.String("Example Corp."),
+                  },
+                  To: []common.SenderAddress{
+                    {Email: "john@example.com", Name: ahasend.String("John Smith")},
+                    {Email: "jane@example.com", Name: ahasend.String("Jane Doe")},
+                  },
+                  CC: []common.SenderAddress{
+                    {Email: "hr@example.com", Name: ahasend.String("Example Corp HR")},
+                  },
+                  BCC: []common.SenderAddress{
+                    {Email: "archive@example.com"},
+                  },
+                  Subject:     "Welcome to Example Corp",
+                  HtmlContent: ahasend.String("<h1>Dear John and Jane, welcome to Example Corp!</h1>"),
+                  TextContent: ahasend.String("Dear John and Jane, welcome to Example Corp!"),
+                  Sandbox:     ahasend.Bool(true),
+                },
+              )
+              if err != nil {
+                log.Fatalf("Error sending conversational message: %v", err)
+              }
+
+              // Check response
+              if httpResp.StatusCode == 202 {
+                fmt.Printf("✅ Send successful! Status: %d\n", httpResp.StatusCode)
+                if response != nil && len(response.Data) > 0 && response.Data[0].ID != nil {
+                  fmt.Printf("Message ID: %s\n", *response.Data[0].ID)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       requestBody:
         required: true
         content:
