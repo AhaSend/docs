@@ -5667,6 +5667,59 @@ paths:
             type: string
       security:
         - BearerAuth: ["sub-account-api-keys:read"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/common"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // List a sub-account's API keys (paginated, up to 50 per page).
+              // Note: secret_key is omitted from list responses; only create returns it once.
+              response, httpResp, err := client.SubAccountsAPI.ListSubAccountAPIKeys(
+                ctx,
+                accountID,
+                subAccountID,
+                &common.PaginationParams{Limit: ahasend.Int32(50)},
+              )
+              if err != nil {
+                log.Fatalf("Error listing sub-account API keys: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Listed sub-account API keys. Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("Found %d API keys\n", len(response.Data))
+                  for _, key := range response.Data {
+                    fmt.Printf("API key %s: %s\n", key.ID, key.Label)
+                  }
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: List of sub-account API keys
@@ -5737,6 +5790,62 @@ paths:
       security:
         - BearerAuth: ["sub-account-api-keys:write"]
       x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Bootstrap an API key for the sub-account (idempotency key makes retries safe)
+              response, httpResp, err := client.SubAccountsAPI.CreateSubAccountAPIKey(
+                ctx,
+                accountID,
+                subAccountID,
+                requests.CreateAPIKeyRequest{
+                  Label:  "Bootstrap key",
+                  Scopes: []string{"messages:send:all", "domains:read"},
+                },
+                api.WithIdempotencyKey("child-bootstrap-key-20240101-acme"),
+              )
+              if err != nil {
+                log.Fatalf("Error creating sub-account API key: %v", err)
+              }
+
+              if httpResp.StatusCode == 201 {
+                fmt.Printf("✅ Sub-account API key created. Status: %d\n", httpResp.StatusCode)
+                fmt.Printf("ID: %s\n", response.ID)
+                fmt.Printf("Label: %s\n", response.Label)
+                fmt.Printf("Public key: %s\n", response.PublicKey)
+                // SecretKey is the one-time secret, returned ONLY on create.
+                if response.SecretKey != nil {
+                  // Store this value immediately — it cannot be retrieved again later.
+                  fmt.Printf("Secret key (store this now, shown only once): %s\n", *response.SecretKey)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
         - lang: shell
           label: Bootstrap child API key
           source: |
@@ -5866,6 +5975,58 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-account-api-keys:read"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+              keyID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Get a single sub-account API key
+              response, httpResp, err := client.SubAccountsAPI.GetSubAccountAPIKey(
+                ctx,
+                accountID,
+                subAccountID,
+                keyID,
+              )
+              if err != nil {
+                log.Fatalf("Error getting sub-account API key: %v", err)
+              }
+
+              // Check response
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Retrieved sub-account API key. Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("ID: %s\n", response.ID)
+                  fmt.Printf("Label: %s\n", response.Label)
+                  fmt.Printf("PublicKey: %s\n", response.PublicKey)
+                  fmt.Printf("Scopes: %d\n", len(response.Scopes))
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Sub-account API key details
@@ -5934,6 +6095,50 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-account-api-keys:write"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+              keyID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              response, httpResp, err := client.SubAccountsAPI.UpdateSubAccountAPIKey(ctx, accountID, subAccountID, keyID, requests.UpdateAPIKeyRequest{Label: ahasend.String("Updated bootstrap key"), Scopes: &[]string{"messages:send:all", "domains:read"}})
+              if err != nil {
+                log.Fatalf("Error updating sub-account API key: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Sub-account API key updated. Status: %d\n", httpResp.StatusCode)
+                fmt.Printf("ID: %s\n", response.ID)
+                fmt.Printf("Label: %s\n", response.Label)
+                fmt.Printf("Scopes: %d\n", len(response.Scopes))
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       requestBody:
         required: true
         content:
@@ -6011,6 +6216,48 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["sub-account-api-keys:delete"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              subAccountID := uuid.New()
+              keyID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              response, httpResp, err := client.SubAccountsAPI.DeleteSubAccountAPIKey(ctx, accountID, subAccountID, keyID)
+              if err != nil {
+                log.Fatalf("Error deleting sub-account API key: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Sub-account API key deleted. Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("Message: %s\n", response.Message)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Sub-account API key deleted successfully
