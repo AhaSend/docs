@@ -4453,6 +4453,49 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["accounts:read"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              response, httpResp, err := client.AccountsAPI.GetAccount(ctx, accountID)
+              if err != nil {
+                log.Fatalf("Error getting account: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Account retrieved. Status: %d\n", httpResp.StatusCode)
+                fmt.Printf("ID: %s\n", response.ID)
+                fmt.Printf("Name: %s\n", response.Name)
+                fmt.Printf("Owner ID: %s\n", response.OwnerID)
+                if response.Website != nil {
+                  fmt.Printf("Website: %s\n", *response.Website)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Account details
@@ -4514,6 +4557,57 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["accounts:write"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Update the account name and open/click tracking settings
+              response, httpResp, err := client.AccountsAPI.UpdateAccount(ctx, accountID, requests.UpdateAccountRequest{
+                Name:        ahasend.String("Acme Corp"),
+                TrackOpens:  ahasend.Bool(true),
+                TrackClicks: ahasend.Bool(true),
+              })
+              if err != nil {
+                log.Fatalf("Error updating account: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Account updated! Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("ID: %s\n", response.ID)
+                  fmt.Printf("Name: %s\n", response.Name)
+                  if response.TrackOpens != nil {
+                    fmt.Printf("Track Opens: %t\n", *response.TrackOpens)
+                  }
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       requestBody:
         required: true
         content:
@@ -4575,6 +4669,51 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["accounts:members:read"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // List the members of the account
+              response, httpResp, err := client.AccountsAPI.GetAccountMembers(ctx, accountID)
+              if err != nil {
+                log.Fatalf("Error listing account members: %v", err)
+              }
+
+              // Check response
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Retrieved account members! Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("Found %d account members\n", len(response.Data))
+                  for _, member := range response.Data {
+                    fmt.Printf("- User: %s, Role: %s\n", member.UserID, member.Role)
+                  }
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: List of account members
@@ -4629,6 +4768,53 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       security:
         - BearerAuth: ["accounts:members:add"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go"
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/AhaSend/ahasend-go/models/requests"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              response, httpResp, err := client.AccountsAPI.AddAccountMember(ctx, accountID, requests.AddMemberRequest{
+                Email: "teammate@example.com",
+                Name:  ahasend.String("Jordan Lee"),
+                Role:  "Developer",
+              }, api.WithIdempotencyKey("add-member-20240101-jordan"))
+              if err != nil {
+                log.Fatalf("Error adding account member: %v", err)
+              }
+
+              if httpResp.StatusCode == 201 {
+                fmt.Printf("✅ Member added successfully! Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("User ID: %s\n", response.UserID)
+                  fmt.Printf("Role: %s\n", response.Role)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       requestBody:
         required: true
         content:
@@ -4703,6 +4889,48 @@ paths:
             format: uuid
       security:
         - BearerAuth: ["accounts:members:remove"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              userID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Remove the member from the account by user ID
+              response, httpResp, err := client.AccountsAPI.RemoveAccountMember(ctx, accountID, userID)
+              if err != nil {
+                log.Fatalf("Error removing account member: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Account member removed! Status: %d\n", httpResp.StatusCode)
+                if response != nil && response.Message != "" {
+                  fmt.Printf("Response: %s\n", response.Message)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Member removed successfully
