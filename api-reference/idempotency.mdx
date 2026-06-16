@@ -17,7 +17,7 @@ When you make a request with an `Idempotency-Key` header:
 1. **First Request**: The API processes your request normally and stores the response
 2. **Subsequent Requests**: If you retry with the same key, the API returns the stored response instead of processing the request again
 3. **Server Errors Are Retriable**: If the original attempt failed with a server error (HTTP 5xx) or never completed, no response is stored — retrying with the same key safely re-executes the request
-4. **Automatic Cleanup**: Idempotency keys expire after 24 hours
+4. **Automatic Cleanup**: Stored idempotency responses expire after 24 hours. The exception is API key creation: because its response carries a one-time `secret_key`, the replayable response expires after 5 minutes
 
 <AccordionGroup>
   <Accordion title="Supported Operations" icon="list-check">
@@ -31,13 +31,23 @@ When you make a request with an `Idempotency-Key` header:
     - **Routes**: Create message routes
     - **Webhooks**: Create webhook endpoints
     - **SMTP Credentials**: Create SMTP credentials
+    - **Sub Accounts**: Create sub accounts
+    - **Sub-Account API Keys**: Create sub-account API keys
+  </Accordion>
+
+  <Accordion title="One-Time Secrets (API Key Creation)" icon="key">
+    API-key creation endpoints — [Create API Key](/api-reference/api-keys/create-api-key) and [Create Sub-Account API Key](/api-reference/sub-accounts/create-sub-account-api-key) — return a one-time `secret_key` in the response.
+
+    Their idempotent replay response is **encrypted and expires after 5 minutes** (instead of the usual 24 hours). Within that window, an exact retry with the same `Idempotency-Key` replays the same `secret_key`. After it, the secret can no longer be retrieved — if you lose it, create a new key.
+
+    Every other create endpoint returns non-secret data and is replayable for the full 24 hours.
   </Accordion>
 
   <Accordion title="Key Requirements" icon="key">
     - **Header Name**: `Idempotency-Key`
     - **Key Format**: Any string up to 255 characters
     - **Uniqueness**: Keys are scoped to your account
-    - **Expiration**: Keys expire after 24 hours
+    - **Expiration**: Stored responses expire after 24 hours — except API key creation, whose secret-bearing response expires after 5 minutes
     - **Request Method**: Only POST requests support idempotency
   </Accordion>
 
@@ -311,7 +321,7 @@ The API responds differently based on the idempotency key status:
   </Card>
 
   <Card title="Key Expiration" icon="clock">
-    Keys expire after 24 hours. Don't reuse keys after this period as the behavior is undefined.
+    Stored responses expire after 24 hours — don't reuse a key after this period, as the behavior is undefined. API key creation is shorter: its one-time `secret_key` is only replayable for 5 minutes.
   </Card>
 
   <Card title="Error Handling" icon="triangle-exclamation">
@@ -384,6 +394,8 @@ An in-flight request holds a lease on its idempotency key for up to 5 minutes. I
 ### Storage Duration
 
 Idempotency records are automatically cleaned up after 24 hours. This prevents the idempotency table from growing indefinitely while providing a reasonable retry window.
+
+Responses that contain a one-time secret — API key creation and sub-account API key creation — are stored encrypted and their replayable response expires after 5 minutes. Within that window an exact retry replays the same `secret_key`; afterward the secret can no longer be returned.
 
 ---
 

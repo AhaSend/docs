@@ -200,6 +200,32 @@
                 ]
               },
               {
+                "group": "Sub Accounts",
+                "icon": "sitemap",
+                "pages": [
+                  "api-reference/sub-accounts/overview",
+                  "api-reference/sub-accounts/create-sub-account",
+                  "api-reference/sub-accounts/get-sub-accounts",
+                  "api-reference/sub-accounts/get-sub-account",
+                  "api-reference/sub-accounts/update-sub-account",
+                  "api-reference/sub-accounts/suspend-sub-account",
+                  "api-reference/sub-accounts/unsuspend-sub-account",
+                  "api-reference/sub-accounts/delete-sub-account",
+                  "api-reference/sub-accounts/get-sub-accounts-usage"
+                ]
+              },
+              {
+                "group": "Sub-Account API Keys",
+                "icon": "key",
+                "pages": [
+                  "api-reference/sub-accounts/create-sub-account-api-key",
+                  "api-reference/sub-accounts/get-sub-account-api-key",
+                  "api-reference/sub-accounts/get-sub-account-api-keys",
+                  "api-reference/sub-accounts/update-sub-account-api-key",
+                  "api-reference/sub-accounts/delete-sub-account-api-key"
+                ]
+              },
+              {
                 "group": "Reports",
                 "icon": "chart-line",
                 "pages": [

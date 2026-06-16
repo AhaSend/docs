@@ -158,6 +158,25 @@ AhaSend supports three types of scopes:
 | `api-keys:write` | Create and update API keys |
 | `api-keys:delete` | Delete API keys |
 
+### Sub-Account Management
+
+These scopes are granted to **parent**-account API keys to manage sub accounts and the API keys owned by those sub accounts. See the [Sub Accounts API](/api-reference/sub-accounts/overview) for the full workflow.
+
+| Scope | Description |
+|-------|-------------|
+| `sub-accounts:read` | List and read sub accounts under the parent |
+| `sub-accounts:write` | Create and update sub accounts |
+| `sub-accounts:delete` | Soft-delete sub accounts |
+| `sub-accounts:suspend` | Suspend and unsuspend sub accounts |
+| `sub-accounts:usage` | Read per-sub-account usage and allocated cost |
+| `sub-account-api-keys:read` | List and read API keys owned by sub accounts |
+| `sub-account-api-keys:write` | Create and update API keys owned by sub accounts |
+| `sub-account-api-keys:delete` | Delete API keys owned by sub accounts |
+
+<Note>
+  Sub-account API keys are managed only with parent credentials that hold the relevant `sub-account-api-keys:*` scope. A sub account's own credentials cannot create or manage its nested API keys.
+</Note>
+
 ### Statistics and Reports
 
 <Tabs>

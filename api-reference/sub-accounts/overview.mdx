@@ -1,0 +1,109 @@
+---
+title: "Sub Accounts API"
+sidebarTitle: "Introduction"
+description: "Create and manage isolated sub accounts under a parent account, provision their API keys, and track per-sub-account usage and allocated cost"
+icon: "sitemap"
+---
+
+Sub accounts let a parent account create and manage isolated child accounts under a single billing relationship. Each sub account has its own domains, members, suppressions, and sending activity, while the parent account retains administrative control and consolidated billing.
+
+This model is built for platforms and agencies that send on behalf of many customers: provision a sub account per customer, issue that sub account its own API key, and let it use the full v2 API in isolation — all billed back to the parent.
+
+## Overview
+
+From the parent account you can:
+
+- **Manage the sub account lifecycle** — create, read, update, suspend, unsuspend, and soft-delete sub accounts
+- **Provision sub-account API keys** — create a bootstrap API key that authenticates as the child account
+- **Track usage and cost** — read per-sub-account message volume and the proportional share of the parent's invoice allocated to each sub account
+
+<Note>
+All sub-account endpoints are addressed under the **parent** account ID, for example `/v2/accounts/{account_id}/sub-accounts`. The `{account_id}` path parameter is always the parent account, and `{sub_account_id}` identifies the child.
+</Note>
+
+## Sub account status
+
+Each sub account reports a `status` field:
+
+| Status | Meaning |
+|--------|---------|
+| `active` | The sub account is operating normally. |
+| `suspended` | The sub account was suspended directly via the [suspend endpoint](/api-reference/sub-accounts/suspend-sub-account). |
+| `parent-suspended` | The sub account is suspended because its parent account is suspended. |
+| `deleted` | The sub account has been soft-deleted. |
+
+The `monthly_credit` field is an optional monthly cap on the sub account, where `0` means no cap.
+
+## Provisioning a sub account
+
+Stand up a new sub account and give it its own credentials in two calls, then use the returned child secret for all of that customer's traffic.
+
+<Steps>
+  <Step title="Create the sub account">
+    Call [`POST /v2/accounts/{account_id}/sub-accounts`](/api-reference/sub-accounts/create-sub-account) with the parent account ID and a unique `Idempotency-Key`. Capture the `id` from the response — this is the `sub_account_id` (the child account ID).
+  </Step>
+  <Step title="Create a bootstrap API key">
+    Call [`POST /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/api-keys`](/api-reference/sub-accounts/create-sub-account-api-key) with the parent account ID, the new `sub_account_id`, and a **different** unique `Idempotency-Key`. The credential you use must belong to the parent account and hold the `sub-account-api-keys:write` scope.
+  </Step>
+  <Step title="Store the one-time secret">
+    The `201` response includes a one-time `secret_key`. Store it immediately — it is omitted from all list, get, update, and delete responses. Exact idempotent replays within 5 minutes return the same `secret_key`; after that window it cannot be retrieved again.
+  </Step>
+  <Step title="Send as the child account">
+    Use the child `secret_key` as the bearer token and the `sub_account_id` as the `account_id` on ordinary v2 routes (for example `GET /v2/accounts/{sub_account_id}/domains`). The child key authenticates as the sub account and is scoped to its resources.
+  </Step>
+</Steps>
+
+<Warning>
+Sub-account API keys can only be managed with **parent** credentials that hold the relevant `sub-account-api-keys:*` scope. A sub account's own credentials cannot create or manage its nested API keys.
+</Warning>
+
+## Usage and billing
+
+The [usage endpoint](/api-reference/sub-accounts/get-sub-accounts-usage) returns current billing-period message volume and the proportional cost allocated to the parent and each active sub account:
+
+- **`allocation_method`** is `proportional` — each `allocated_cost` is a share of the parent's pooled invoice for the period, distributed by message volume.
+- **`allocated_cost` is not standalone pricing.** As the `allocation_note` disclaimer states, it reflects a proportional share of the parent's pooled invoice, not what the sub account would pay on its own plan.
+- **`removed_sub_accounts`** aggregates usage from sub accounts that were soft-deleted during the current period. That usage is still billed to the parent and is not attributed to individual sub accounts.
+- **`total`** is the combined parent, active sub-account, and removed-sub-account usage for the period.
+
+<Note>
+Soft-deleted sub accounts are excluded from [the list endpoint](/api-reference/sub-accounts/get-sub-accounts). Usage they accrued before deletion in the current period is still reported through the `removed_sub_accounts` aggregate.
+</Note>
+
+## Idempotency
+
+The create endpoints — [create sub account](/api-reference/sub-accounts/create-sub-account) and [create sub-account API key](/api-reference/sub-accounts/create-sub-account-api-key) — accept an [`Idempotency-Key`](/api-reference/idempotency) header for safe retries. Because the API-key create response carries a one-time `secret_key`, its idempotent replay is only available for **5 minutes**; other create responses are replayable for 24 hours. See [Request Idempotency](/api-reference/idempotency) for the full retry model.
+
+## Scopes
+
+Sub-account operations require dedicated scopes, all granted to **parent**-account API keys:
+
+| Scope | Grants |
+|-------|--------|
+| `sub-accounts:read` | List and read sub accounts |
+| `sub-accounts:write` | Create and update sub accounts |
+| `sub-accounts:delete` | Soft-delete sub accounts |
+| `sub-accounts:suspend` | Suspend and unsuspend sub accounts |
+| `sub-accounts:usage` | Read per-sub-account usage and allocated cost |
+| `sub-account-api-keys:read` | List and read sub-account API keys |
+| `sub-account-api-keys:write` | Create and update sub-account API keys |
+| `sub-account-api-keys:delete` | Delete sub-account API keys |
+
+See the [Scopes reference](/api-reference/scopes#sub-account-management) for how scopes are evaluated.
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Create a Sub Account" icon="plus" href="/api-reference/sub-accounts/create-sub-account">
+    Provision a new isolated child account under your parent account
+  </Card>
+  <Card title="Create a Sub-Account API Key" icon="key" href="/api-reference/sub-accounts/create-sub-account-api-key">
+    Issue a bootstrap key that authenticates as the child account
+  </Card>
+  <Card title="Sub-Account Usage" icon="chart-line" href="/api-reference/sub-accounts/get-sub-accounts-usage">
+    Track per-sub-account volume and allocated cost for the billing period
+  </Card>
+  <Card title="Scopes" icon="lock" href="/api-reference/scopes">
+    Understand the scopes that control sub-account access
+  </Card>
+</CardGroup>
