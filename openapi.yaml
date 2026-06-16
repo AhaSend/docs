@@ -4242,6 +4242,54 @@ paths:
             type: string
       security:
         - BearerAuth: ["messages:read:all", "messages:read:{domain}"]
+      x-code-samples:
+        - lang: go
+          label: AhaSend Go SDK
+          source: |
+            package main
+
+            import (
+              "context"
+              "fmt"
+              "log"
+
+              "github.com/AhaSend/ahasend-go/api"
+              "github.com/google/uuid"
+            )
+
+            func main() {
+              // Create API client with authentication
+              client := api.NewAPIClient(
+                api.WithAPIKey("aha-sk-your-64-character-key"),
+              )
+
+              accountID := uuid.New()
+              messageID := uuid.New()
+
+              // Create context for the API call
+              ctx := context.Background()
+
+              // Fetch a single message by ID
+              response, httpResp, err := client.MessagesAPI.GetMessage(ctx, accountID, messageID)
+              if err != nil {
+                log.Fatalf("Error getting message: %v", err)
+              }
+
+              if httpResp.StatusCode == 200 {
+                fmt.Printf("✅ Message retrieved! Status: %d\n", httpResp.StatusCode)
+                if response != nil {
+                  fmt.Printf("Subject: %s\n", response.Subject)
+                  fmt.Printf("Status: %s\n", response.Status)
+                  fmt.Printf("Sender: %s\n", response.Sender)
+                  fmt.Printf("Recipient: %s\n", response.Recipient)
+                  fmt.Printf("Attempts: %d\n", response.NumAttempts)
+                  fmt.Printf("Opens: %d\n", response.OpenCount)
+                  fmt.Printf("Clicks: %d\n", response.ClickCount)
+                }
+              } else {
+                fmt.Printf("❌ Unexpected status code: %d\n", httpResp.StatusCode)
+              }
+            }
       responses:
         '200':
           description: Message details
