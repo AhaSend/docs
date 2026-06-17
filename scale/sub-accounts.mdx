@@ -1,0 +1,176 @@
+---
+title: "Sub Accounts"
+sidebarTitle: "Sub Accounts"
+description: "Provision isolated child accounts under one parent, each with its own domains, API keys, and sending, all under a single billing relationship."
+icon: "diagram-subtask"
+---
+
+Sub Accounts let a parent account create and manage isolated child accounts under a single billing relationship. A sub account is a full, regular AhaSend account in its own right, with the same feature set and isolation as any standalone account. It simply lives and is billed under the parent's umbrella. Each sub account has its own domains, members, suppressions, and sending activity, while the parent keeps administrative control and one consolidated bill.
+
+This model is built for platforms and agencies that send on behalf of many customers: provision a sub account per customer, and let it use the full feature set of AhaSend in complete isolation, all billed back to the parent.
+
+<Info>
+  **Platform Partner feature:** Sub Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
+</Info>
+
+## Why Use Sub Accounts?
+
+<CardGroup cols={2}>
+  <Card title="Full Sending Isolation" icon="shield-halved">
+    Each sub account has its own domains, suppressions, reputation context, and sending activity. One customer's sending never affects another's.
+  </Card>
+
+  <Card title="Consolidated Billing" icon="file-invoice">
+    All sub-account usage rolls up to the parent account as a single invoice, with per-sub-account cost visibility.
+  </Card>
+
+  <Card title="The Full API, Per Customer" icon="code">
+    A sub-account API key authenticates as the child and can use every regular v2 endpoint: domains, messages, webhooks, routes, and more.
+  </Card>
+
+  <Card title="Central Control" icon="sliders">
+    Create, update, suspend, unsuspend, and soft-delete sub accounts from the parent, view per-sub-account usage, and set an optional monthly sending cap on each one.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+Sub accounts follow a parent and child model:
+
+* All sub-account management endpoints are addressed under the **parent** account ID, for example `/v2/accounts/{account_id}/sub-accounts`. The `{account_id}` is always the parent.
+* Each sub account has its own child account ID (`sub_account_id`). Once a sub account has its own API key, that key uses the **child** account ID on ordinary routes, for example `/v2/accounts/{sub_account_id}/domains`.
+* Sub-account API keys can only be created and managed with **parent** credentials that hold the right `sub-account-api-keys:*` scope. A sub account cannot manage its own nested API keys.
+
+From the parent account you stay in control end to end: manage the full lifecycle ([create](/api-reference/sub-accounts/create-sub-account) and [update](/api-reference/sub-accounts/update-sub-account) sub accounts, suspend, unsuspend, and soft-delete), pull per-sub-account statistics with [Get Sub-Account Usage](/api-reference/sub-accounts/get-sub-accounts-usage), and, because the parent provisions the sub account's API keys, act on the sub account's behalf to manage anything inside it (domains, webhooks, sending, and more).
+
+<Note>
+  Each sub account has an optional `monthly_credit` field, a monthly sending cap where `0` means no cap.
+</Note>
+
+## When to Use Sub Accounts
+
+Sub Accounts are ideal when you send on behalf of distinct end customers and need each kept separate:
+
+* **SaaS platforms** giving each of their customers their own sending setup and domains.
+* **Agencies** managing email for multiple clients under one account and one bill.
+* **Resellers** who want isolation and per-customer usage reporting without running multiple top-level accounts.
+* **Cloud and hosting providers** offering transactional email as part of their platform, with a separate, isolated sending account provisioned per tenant.
+* **Managed service providers (MSPs)** running transactional email on behalf of the clients they manage, keeping each client's sending, domains, and reputation cleanly separated and individually reportable.
+
+For a single business sending its own transactional mail, a regular account with multiple domains is simpler and is the better fit.
+
+## Provisioning a Sub Account
+
+You provision a sub account from the parent in two API calls: create the sub account, then create its bootstrap API key. After that, the child key and child account ID are all you need to run that customer's email.
+
+<Steps>
+  <Step title="Create the sub account">
+    With **parent** credentials, call [`POST /v2/accounts/{account_id}/sub-accounts`](/api-reference/sub-accounts/create-sub-account) using the parent account ID and a unique `Idempotency-Key`. The response `id` is the new `sub_account_id`.
+  </Step>
+
+  <Step title="Create a bootstrap API key">
+    Call [`POST /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/api-keys`](/api-reference/sub-accounts/create-sub-account-api-key) with the parent account ID, the new `sub_account_id`, and a different unique `Idempotency-Key`. The parent credential must hold the `sub-account-api-keys:write` scope. The `201` response returns a one-time `secret_key`.
+  </Step>
+
+  <Step title="Use the child key for that customer">
+    Authenticate with the child `secret_key` and use the `sub_account_id` as the `account_id` on ordinary v2 routes. The child key acts as the sub account and can use the full feature set in complete isolation.
+  </Step>
+</Steps>
+
+<Warning>
+  The `secret_key` is shown only once, on creation, and is omitted from all later responses (exact idempotent replays within 5 minutes return the same value). Store it securely the moment you receive it.
+</Warning>
+
+## Example: Provision, Verify a Domain, and Send
+
+The flow below runs end to end: it provisions a sub account with the parent key, then switches to the child key to verify a sending domain and send a message. It uses `jq` to capture the IDs and secret returned along the way.
+
+<CodeGroup>
+
+```bash 1. Provision
+PARENT_ACCOUNT_ID="your-parent-account-id"
+PARENT_SECRET="aha-sk-parent-64-character-key"
+
+# Create the sub account and capture its account ID
+CHILD_ACCOUNT_ID="$(curl -sS -X POST "https://api.ahasend.com/v2/accounts/${PARENT_ACCOUNT_ID}/sub-accounts" -H "Authorization: Bearer ${PARENT_SECRET}" -H "Content-Type: application/json" -H "Idempotency-Key: subacct-20240101-acme" -d '{"name":"Acme Subsidiary","website":"acme.example.com"}' | jq -r '.id')"
+
+# Create its bootstrap API key and capture the one-time secret (shown only once)
+CHILD_SECRET="$(curl -sS -X POST "https://api.ahasend.com/v2/accounts/${PARENT_ACCOUNT_ID}/sub-accounts/${CHILD_ACCOUNT_ID}/api-keys" -H "Authorization: Bearer ${PARENT_SECRET}" -H "Content-Type: application/json" -H "Idempotency-Key: child-bootstrap-key-20240101-acme" -d '{"label":"Bootstrap key","scopes":["domains:read","domains:write","messages:send:all"]}' | jq -r '.secret_key')"
+```
+
+```bash 2. Verify a domain
+# From here on, use the CHILD account ID and CHILD secret
+
+# Add a sending domain to the sub account
+curl -sS -X POST "https://api.ahasend.com/v2/accounts/${CHILD_ACCOUNT_ID}/domains" -H "Authorization: Bearer ${CHILD_SECRET}" -H "Content-Type: application/json" -d '{"domain":"mail.acme.example.com"}'
+
+# Add the returned DNS records at your DNS provider, then trigger a validation check
+curl -sS -X POST "https://api.ahasend.com/v2/accounts/${CHILD_ACCOUNT_ID}/domains/mail.acme.example.com/check-dns" -H "Authorization: Bearer ${CHILD_SECRET}"
+```
+
+```bash 3. Send
+# Once the domain is verified, send as the sub account
+curl -sS -X POST "https://api.ahasend.com/v2/accounts/${CHILD_ACCOUNT_ID}/messages" -H "Authorization: Bearer ${CHILD_SECRET}" -H "Content-Type: application/json" -d '{"from":{"email":"noreply@mail.acme.example.com","name":"Acme"},"recipients":[{"email":"user@example.com","name":"Jane Doe"}],"subject":"Welcome to Acme","text_content":"Thanks for signing up!"}'
+```
+
+</CodeGroup>
+
+<Note>
+  Step 1 uses the **parent** credentials. Steps 2 and 3 use the **child** account ID and the **child** secret. Parent credentials are only needed to manage the sub account itself and its API keys.
+</Note>
+
+See [Create Domain](/api-reference/domains/create-domain), [Check Domain DNS](/api-reference/domains/check-dns), and [Create Message](/api-reference/messages/create-message) for the full reference.
+
+## Sub Account Status
+
+Each sub account reports a `status`:
+
+| Status             | Meaning                                                                 |
+| ------------------ | ---------------------------------------------------------------------- |
+| `active`           | The sub account is operating normally.                                 |
+| `suspended`        | The sub account was suspended directly via the suspend endpoint.       |
+| `parent-suspended` | The sub account is suspended because its parent account is suspended.  |
+| `deleted`          | The sub account has been soft-deleted.                                 |
+
+## Usage and Billing
+
+The [usage endpoint](/api-reference/sub-accounts/get-sub-accounts-usage) returns current billing-period message volume and the proportional cost allocated to the parent and each active sub account:
+
+* **Proportional allocation:** each sub account's `allocated_cost` is a share of the parent's pooled invoice for the period, distributed by message volume.
+* **Not standalone pricing:** `allocated_cost` reflects a proportional share of the parent's pooled invoice, not what the sub account would pay on its own plan.
+* **Removed sub accounts:** usage from sub accounts soft-deleted during the period is still billed to the parent and reported in a separate aggregate.
+
+## Scopes
+
+Sub-account operations require dedicated scopes, all granted to **parent**-account API keys:
+
+| Scope                         | Grants                                          |
+| ----------------------------- | ----------------------------------------------- |
+| `sub-accounts:read`           | List and read sub accounts                      |
+| `sub-accounts:write`          | Create and update sub accounts                  |
+| `sub-accounts:delete`         | Soft-delete sub accounts                        |
+| `sub-accounts:suspend`        | Suspend and unsuspend sub accounts              |
+| `sub-accounts:usage`          | Read per-sub-account usage and allocated cost   |
+| `sub-account-api-keys:read`   | List and read sub-account API keys              |
+| `sub-account-api-keys:write`  | Create and update sub-account API keys          |
+| `sub-account-api-keys:delete` | Delete sub-account API keys                     |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Sub Accounts API Overview" icon="book" href="/api-reference/sub-accounts/overview">
+    The full API model for managing sub accounts and their keys
+  </Card>
+
+  <Card title="Create a Sub Account" icon="plus" href="/api-reference/sub-accounts/create-sub-account">
+    Provision a new isolated child account under your parent account
+  </Card>
+
+  <Card title="Create a Sub-Account API Key" icon="key" href="/api-reference/sub-accounts/create-sub-account-api-key">
+    Issue a bootstrap key that authenticates as the child account
+  </Card>
+
+  <Card title="Sub-Account Usage" icon="chart-line" href="/api-reference/sub-accounts/get-sub-accounts-usage">
+    Track per-sub-account volume and allocated cost for the billing period
+  </Card>
+</CardGroup>

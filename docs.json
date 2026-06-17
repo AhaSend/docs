@@ -97,6 +97,7 @@
           {
             "group": "Scaling up",
             "pages": [
+              "scale/sub-accounts",
               "scale/dedicated-ips",
               "scale/ip-pools",
               "scale/byoip",
@@ -434,7 +435,7 @@
   },
   "seo": {
     "metatags": {
-        "canonical": "https://ahasend.com/docs"
+      "canonical": "https://ahasend.com/docs"
     }
   },
   "integrations": {
