@@ -498,23 +498,30 @@ components:
         tracking_subdomain:
           type: string
           nullable: true
-          description: Custom tracking subdomain. Null means the account or product default is used.
+          description: Custom tracking subdomain. Null means the account or product default is used. Applies to both manual-DNS and managed-DNS domains.
         return_path_subdomain:
           type: string
           nullable: true
-          description: Custom return-path subdomain. Null means the account or product default is used.
+          description: Custom return-path subdomain. Null means the account or product default is used. Applies to both manual-DNS and managed-DNS domains.
         subscription_subdomain:
           type: string
           nullable: true
-          description: Custom subscription management subdomain. Null means the account or product default is used.
+          description: Custom subscription management subdomain. Null means the account or product default is used. Applies to both manual-DNS and managed-DNS domains.
         media_subdomain:
           type: string
           nullable: true
-          description: Custom media subdomain. Null means the account or product default is used.
+          description: Custom media subdomain. Null means the account or product default is used. Applies to both manual-DNS and managed-DNS domains.
         dkim_rotation_interval_days:
           type: integer
           nullable: true
-          description: Custom DKIM rotation interval in days. Null means the account default is used.
+          description: Custom DKIM rotation interval in days. Null means the account default is used. Only supported for managed DNS domains.
+        dkim_selector:
+          type: string
+          nullable: true
+          description: |
+            Per-domain DKIM selector override. Null means no per-domain override is set.
+
+            This reports the configured per-domain override only, not the effective selector used for DKIM signing. The effective selector is resolved separately and can differ — for example, a selector locked after DNS verification takes precedence over this override.
         rotation_ready:
           type: boolean
           description: Whether the standby DKIM slot is ready for rotation.
@@ -551,19 +558,28 @@ components:
             <Note>Key size of at least 1024 bits is supported; 2048 bit keys are strongly recommended for improved security.</Note>
         tracking_subdomain:
           type: string
-          description: Optional custom tracking subdomain. Omit to use the default on create.
+          description: Optional custom tracking subdomain. Omit to use the default on create. Applies to both manual-DNS and managed-DNS domains.
         return_path_subdomain:
           type: string
-          description: Optional custom return-path subdomain. Omit to use the default on create.
+          description: Optional custom return-path subdomain. Omit to use the default on create. Applies to both manual-DNS and managed-DNS domains.
         subscription_subdomain:
           type: string
-          description: Optional custom subscription management subdomain. Omit to use the default on create.
+          description: Optional custom subscription management subdomain. Omit to use the default on create. Applies to both manual-DNS and managed-DNS domains.
         media_subdomain:
           type: string
-          description: Optional custom media subdomain. Omit to use the default on create.
+          description: Optional custom media subdomain. Omit to use the default on create. Applies to both manual-DNS and managed-DNS domains.
         dkim_rotation_interval_days:
           type: integer
           description: Optional custom DKIM rotation interval in days. Only supported for managed DNS domains on eligible plans.
+        dkim_selector:
+          type: string
+          nullable: true
+          description: |
+            Optional custom DKIM selector for the domain. Omit, send null, or send an empty or whitespace-only string to use the default selector (no per-domain override); the value is trimmed before it is interpreted, so whitespace-only input is treated as empty.
+
+            When provided, it is normalized to lowercase and must be a single DNS label: 1-62 characters using lowercase letters, numbers, and hyphens only, without a leading or trailing hyphen.
+
+            **Note:** This parameter is only supported on [Platform Partner](https://ahasend.com/partners) accounts.
       example:
         domain: "example.com"
         tracking_subdomain: "click"
@@ -577,19 +593,28 @@ components:
       properties:
         tracking_subdomain:
           type: string
-          description: Optional custom tracking subdomain. Omit to leave the current value unchanged.
+          description: Optional custom tracking subdomain. Omit to leave the current value unchanged. Applies to both manual-DNS and managed-DNS domains.
         return_path_subdomain:
           type: string
-          description: Optional custom return-path subdomain. Omit to leave the current value unchanged.
+          description: Optional custom return-path subdomain. Omit to leave the current value unchanged. Applies to both manual-DNS and managed-DNS domains.
         subscription_subdomain:
           type: string
-          description: Optional custom subscription management subdomain. Omit to leave the current value unchanged.
+          description: Optional custom subscription management subdomain. Omit to leave the current value unchanged. Applies to both manual-DNS and managed-DNS domains.
         media_subdomain:
           type: string
-          description: Optional custom media subdomain. Omit to leave the current value unchanged.
+          description: Optional custom media subdomain. Omit to leave the current value unchanged. Applies to both manual-DNS and managed-DNS domains.
         dkim_rotation_interval_days:
           type: integer
           description: Optional custom DKIM rotation interval in days. Omit to leave the current value unchanged. Only supported for managed DNS domains on eligible plans.
+        dkim_selector:
+          type: string
+          nullable: true
+          description: |
+            Optional custom DKIM selector for the domain. Omit or send null to leave the current value unchanged; send an empty or whitespace-only string to clear the override and revert to the default selector. The value is trimmed before it is interpreted, so whitespace-only input clears the override just like an empty string.
+
+            When provided, it is normalized to lowercase and must be a single DNS label: 1-62 characters using lowercase letters, numbers, and hyphens only, without a leading or trailing hyphen. It cannot be changed once the selector locks after DNS verification or while a DKIM key rotation is in progress.
+
+            **Note:** This parameter is only supported on [Platform Partner](https://ahasend.com/partners) accounts.
       example:
         tracking_subdomain: "click"
         return_path_subdomain: "mail"
