@@ -2,6 +2,41 @@
 title: "Product Updates"
 description: "New releases and improvements"
 ---
+<Update label="June 2026">
+#### New Features
+
+- **Sub-Accounts**: Platform Partner and reseller accounts can now create and manage sub-accounts under a single parent, from both the dashboard and the v2 API. Each sub-account is a full account — its own domains, sending, webhooks, routes, and members — that is billed through the parent, with usage pooled onto the parent's invoice and a proportional per-sub cost breakdown available in the dashboard and API.
+- **API-Only Sub-Account Provisioning**: Partners can provision a new sub-account and mint its first working API key entirely over the API, with no dashboard step. The new key belongs to the sub-account, and its secret is returned only once (or on an exact idempotent retry within five minutes).
+- **API Key IP Allow Lists**: Each v2 API key can now be restricted to a set of IPv4/IPv6 addresses or CIDR ranges. When a key has a non-empty allow list, any request made with it from an IP that isn't on the list is rejected on every endpoint, regardless of the key's permissions. An empty list means no restriction, so existing keys are unaffected. Up to 100 entries per key; the "allow everything" ranges are rejected.
+- **Per-Domain DKIM Selectors**: Platform Partner accounts can now set a custom DKIM selector for each sending domain — in the dashboard and via the v2 API — instead of only an account-wide selector, so the same domain can be authenticated across multiple senders without collisions. The selector can be changed while the domain's DKIM is unverified and locks once verified (contact support to unlock).
+
+#### Changes
+
+- **API key responses now include an `ip_allow_list` field.** The list, get, create, and update API-key endpoints always return the key's allow list (an empty array when the key has no restriction).
+- **Changing a key's IP allow list in the dashboard now requires confirming it's you.** Saving an allow-list change prompts for a current two-factor code (or a recovery code) if you have two-factor enabled, otherwise your account password; the confirmation is remembered for five minutes. Dashboard management works from any IP and is never blocked by a key's own allow list.
+- **Security alert email for allow-list changes.** When an API key's IP allow list is created or changed, account owners and administrators receive an email noting that a security setting on the named key changed. The email never contains the key's secret or the list contents.
+- **The v2 domain API now accepts and returns a `dkim_selector` field.** Create and update accept an optional per-domain selector (Platform Partner accounts only; a trimmed-empty value clears it and reverts to the default), and the domain response reports the configured override (null when none is set). The custom tracking, return-path, subscription, and media subdomain fields are now documented as applying to both self-managed and managed DNS.
+- **Every v2 account response now includes a `parent_account_id` field**, so you can tell whether an account is a sub-account and which parent it belongs to.
+- **The v1 send API now rejects a request with neither a text body nor an HTML body.** Both the transactional send and the send-with-substitutions endpoint return a validation error when both body fields are omitted; at least one must be provided.
+- **Suspended accounts can no longer manage sending domains** To prevent abuse, while an account is suspended, adding, editing, deleting, or re-checking DNS for a domain is blocked with a message to contact support.
+- **The billing page now shows emails sent "in the current billing cycle"** for customers on a paid subscription, instead of "in the past 30 days."
+- **Custom Subdomains on Self-Managed DNS**: Domains that use your own self-published DNS can now customize their tracking, return-path, subscription, and media subdomains, matching what was already available for managed-DNS domains. Each subdomain is editable until its DNS record is verified, then locks.
+
+#### Improvements
+
+- **Safer API retries.** Retrying a request while the original is still processing now returns a clear "conflict" response with retry guidance, and reusing the same idempotency key on a different endpoint, resource, or payload is rejected instead of replaying the wrong response — so retries no longer risk creating duplicate resources.
+- **Self-lockout protection on API-key allow lists.** If you use a key to set its own IP allow list to a value that excludes the IP you're calling from, the change is rejected and nothing is saved. You can still change it from the dashboard, from an already-allowed IP, or with a different key.
+- **Sub-account and API-key updates reject empty or no-change requests** with a clear error and leave omitted fields untouched; the website field is optional when updating a sub-account.
+
+#### Bug Fixes
+
+- Fixed legacy plan customers being unable to upgrade to the Pro or Max plan; these upgrades now complete correctly.
+- Fixed plan upgrades failing for cards that require extra verification; the upgrade now goes through against your saved card without a failed authentication prompt.
+- Fixed a legacy-plan upgrade being blocked for up to 24 hours after you updated your payment method; retrying with a new card now works immediately.
+- Fixed backward ("previous page") cursor pagination on v2 list endpoints, which could jump back to the first page instead of the page immediately before your cursor.
+- Fixed the profile account switcher so deleted accounts no longer appear and can no longer break the page.
+
+</Update>
 <Update label="May 2026">
 #### New Features
 
