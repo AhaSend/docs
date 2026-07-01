@@ -361,6 +361,18 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Roadmap",
+        "icon": "map",
+        "groups": [
+          {
+            "group": "Roadmap",
+            "pages": [
+              "roadmap"
+            ]
+          }
+        ]
       }
     ]
   },

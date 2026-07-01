@@ -1,0 +1,138 @@
+/* AhaSend roadmap styling. Registered via "customCSS" in docs.json.
+   Inherits Mintlify light/dark mode through the .dark ancestor class. */
+
+.rm {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Section header: status pill + count */
+.rm-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.rm-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.28rem 0.75rem;
+  border-radius: 999px;
+  line-height: 1;
+}
+.rm-badge.is-active  { background: #fdebd0; color: #854f0b; }
+.rm-badge.is-planned { background: #e6f1fb; color: #0c447c; }
+.rm-badge.is-shipped { background: #e1f5ee; color: #0f6e56; }
+
+.rm-count {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+/* Cards */
+.rm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.rm-card {
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.9rem 1.05rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.7rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.rm-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.rm-accent {
+  flex: 0 0 3px;
+  border-radius: 2px;
+}
+.rm-card.is-active  .rm-accent { background: #ba7517; }
+.rm-card.is-planned .rm-accent { background: #378add; }
+.rm-card.is-shipped .rm-accent { background: #1d9e75; }
+
+/* Nested sub-item, indented under the card above with a connector */
+.rm-card.is-sub { margin-left: 2rem; position: relative; }
+.rm-card.is-sub h4 { font-size: 0.9rem; }
+.rm-card.is-sub::before {
+  content: "";
+  position: absolute;
+  left: -1.15rem;
+  top: -0.65rem;
+  height: calc(100% + 0.65rem);
+  border-left: 1.5px solid #d1d5db;
+  pointer-events: none;
+}
+.rm-card.is-sub::after {
+  content: "";
+  position: absolute;
+  left: -1.15rem;
+  top: 50%;
+  width: 0.85rem;
+  border-top: 1.5px solid #d1d5db;
+  pointer-events: none;
+}
+
+.rm-card h4 {
+  margin: 0 0 0.2rem;
+  font-size: 0.97rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.rm-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #4b5563;
+}
+.rm-date {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0f6e56;
+}
+
+/* Category / status tags shown next to the title */
+.rm-tag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  vertical-align: middle;
+  line-height: 1.4;
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.rm-tag.is-new         { background: linear-gradient(135deg, #a855f7, #7c3aed); }
+.rm-tag.is-product     { background: linear-gradient(135deg, #fb7185, #e11d48); }
+.rm-tag.is-improvement { background: linear-gradient(135deg, #22d3ee, #0891b2); }
+.rm-tag.is-early       { background: linear-gradient(135deg, #38bdf8, #2563eb); }
+
+/* Dark mode */
+.dark .rm-card   { background: rgba(255, 255, 255, 0.025); border-color: rgba(255, 255, 255, 0.09); }
+.dark .rm-card p { color: #9ca3af; }
+.dark .rm-count  { color: #9ca3af; }
+.dark .rm-badge.is-active  { background: rgba(186, 117, 23, 0.18);  color: #fac074; }
+.dark .rm-badge.is-planned { background: rgba(55, 138, 221, 0.18);  color: #85b7eb; }
+.dark .rm-badge.is-shipped { background: rgba(29, 158, 117, 0.18);  color: #5dcaa5; }
+.dark .rm-date { color: #5dcaa5; }
+.dark .rm-card.is-sub::before,
+.dark .rm-card.is-sub::after { border-color: rgba(255, 255, 255, 0.18); }
