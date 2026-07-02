@@ -1,7 +1,7 @@
 /* AhaSend roadmap styling. Registered via "customCSS" in docs.json.
    Inherits Mintlify light/dark mode through the .dark ancestor class. */
 
-.rm {
+  .rm {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
@@ -19,6 +19,8 @@
 .rm-badge {
   display: inline-flex;
   align-items: center;
+  margin: 0;
+  border: none;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -29,11 +31,6 @@
 .rm-badge.is-active  { background: #fdebd0; color: #854f0b; }
 .rm-badge.is-planned { background: #e6f1fb; color: #0c447c; }
 .rm-badge.is-shipped { background: #e1f5ee; color: #0f6e56; }
-
-.rm-count {
-  font-size: 0.82rem;
-  color: #6b7280;
-}
 
 /* Cards */
 .rm-list {
@@ -66,7 +63,7 @@
 
 /* Nested sub-item, indented under the card above with a connector */
 .rm-card.is-sub { margin-left: 2rem; position: relative; }
-.rm-card.is-sub h4 { font-size: 0.9rem; }
+.rm-card.is-sub .rm-title { font-size: 0.9rem; }
 .rm-card.is-sub::before {
   content: "";
   position: absolute;
@@ -86,11 +83,12 @@
   pointer-events: none;
 }
 
-.rm-card h4 {
+.rm-card .rm-title {
   margin: 0 0 0.2rem;
   font-size: 0.97rem;
   font-weight: 600;
   line-height: 1.35;
+  color: #111827;
 }
 .rm-card p {
   margin: 0;
@@ -121,18 +119,40 @@
   color: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
-.rm-tag.is-new         { background: linear-gradient(135deg, #a855f7, #7c3aed); }
-.rm-tag.is-product     { background: linear-gradient(135deg, #fb7185, #e11d48); }
-.rm-tag.is-improvement { background: linear-gradient(135deg, #22d3ee, #0891b2); }
-.rm-tag.is-early       { background: linear-gradient(135deg, #38bdf8, #2563eb); }
+.rm-tag.is-new         { background: #6d28d9; }
+.rm-tag.is-product     { background: #be123c; }
+.rm-tag.is-improvement { background: #0e7490; }
+.rm-tag.is-early       { background: #1d4ed8; }
 
 /* Dark mode */
 .dark .rm-card   { background: rgba(255, 255, 255, 0.025); border-color: rgba(255, 255, 255, 0.09); }
 .dark .rm-card p { color: #9ca3af; }
-.dark .rm-count  { color: #9ca3af; }
 .dark .rm-badge.is-active  { background: rgba(186, 117, 23, 0.18);  color: #fac074; }
 .dark .rm-badge.is-planned { background: rgba(55, 138, 221, 0.18);  color: #85b7eb; }
 .dark .rm-badge.is-shipped { background: rgba(29, 158, 117, 0.18);  color: #5dcaa5; }
 .dark .rm-date { color: #5dcaa5; }
 .dark .rm-card.is-sub::before,
 .dark .rm-card.is-sub::after { border-color: rgba(255, 255, 255, 0.18); }
+
+/* Footer note */
+.rm-note {
+  margin-top: 2.5rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+.dark .rm-note { color: #9ca3af; }
+.dark .rm-card .rm-title { color: #e7e9ee; }
+
+/* Jump link under the intro */
+.rm-jump {
+  margin: -0.5rem 0 0;
+  font-size: 0.88rem;
+}
+.rm-jump a {
+  color: #2296FF;
+  text-decoration: none;
+  font-weight: 500;
+}
+.rm-jump a:hover { text-decoration: underline; }
+/* Offset anchor target below sticky navbar */
+.rm-badge[id] { scroll-margin-top: 6rem; }
