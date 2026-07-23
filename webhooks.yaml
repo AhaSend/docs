@@ -568,6 +568,10 @@ webhooks:
         - Choose whether to include attachments and headers
         - Set recipient filters and processing options
 
+        When attachments are enabled, `attachments` includes conventional attachments,
+        inline MIME parts (such as images referenced by `cid:` URLs in `html_body`), and
+        filename-bearing MIME parts that omit the `Content-Disposition` header.
+
         **Use cases**:
         - Support ticket systems
         - Email-to-ticket conversion
@@ -605,7 +609,12 @@ webhooks:
                 html_body: "<p>I need help with my account settings.</p>"
                 plain_body: "I need help with my account settings."
                 reply_from_plain_body: "I need help with my account settings."
-                attachments: []
+                attachments:
+                  - filename: "logo.png"
+                    content_type: "image/png"
+                    content_id: "logo-123"
+                    disposition: "inline"
+                    data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB..."
                 headers:
                   "X-Mailer": "Gmail"
                   "X-Priority": "3"
@@ -1034,7 +1043,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RouteAttachment'
-          description: Email attachments (if route is configured to include them)
+          description: |
+            MIME attachments, if the route is configured to include them. This includes
+            conventional attachments, inline parts, and filename-bearing parts without a
+            Content-Disposition header. Use `content_id` to resolve `cid:` references in
+            `html_body`.
         headers:
           type: object
           additionalProperties:
@@ -1046,6 +1059,7 @@ components:
       required:
         - filename
         - content_type
+        - disposition
         - data
       properties:
         filename:
@@ -1057,6 +1071,13 @@ components:
         content_id:
           type: string
           description: Content-ID for inline attachments
+        disposition:
+          type: string
+          enum: [attachment, inline, ""]
+          description: |
+            Parsed Content-Disposition value. An empty string indicates that the MIME part
+            had no Content-Disposition header and was recognized as an attachment by its
+            filename or content type.
         data:
           type: string
           description: Base64-encoded attachment data
