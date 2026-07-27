@@ -1,7 +1,7 @@
 /* AhaSend roadmap styling. Registered via "customCSS" in docs.json.
    Inherits Mintlify light/dark mode through the .dark ancestor class. */
 
-  .rm {
+.rm {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
