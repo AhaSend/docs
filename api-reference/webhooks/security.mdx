@@ -11,4 +11,23 @@ All webhooks include Standard Webhooks security headers for verification:
 - `webhook-timestamp`: Unix timestamp when the webhook was sent
 - `webhook-signature`: HMAC signature of the payload using your webhook secret
 
-Use the [Standard Webhooks libraries](https://github.com/standard-webhooks/standard-webhooks) to verify webhook authenticity. See the [verification documentation](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md#verifying-webhook-authenticity) for implementation details.
+Signatures are HMAC-SHA256 over `id.timestamp.body`, following the
+[Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks/blob/main/spec/standard-webhooks.md).
+
+<Warning>
+The HMAC key is the **literal UTF-8 bytes of your webhook secret, exactly as
+returned when the webhook was created — including any prefix**. Do not
+Base64-decode the secret and do not strip a prefix before signing.
+
+Some [Standard Webhooks libraries](https://github.com/standard-webhooks/standard-webhooks)
+Base64-decode the secret in their default constructor. Those constructors
+derive a different key and reject valid AhaSend deliveries. Use your
+library's raw-key mode instead — for example `NewWebhookRaw` in Go, or
+`new Webhook(secret, { format: "raw" })` in JavaScript.
+</Warning>
+
+The easiest path is a verifier that already implements this correctly, such as
+the official [AhaSend SDKs](https://github.com/AhaSend). Whatever you use, verify
+against the raw request body bytes (before any JSON parsing), and reject
+deliveries whose `webhook-timestamp` is outside your tolerance window in either
+direction to prevent replay.
