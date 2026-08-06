@@ -1,0 +1,196 @@
+---
+title: "How to Send Transactional Email with Next.js"
+sidebarTitle: "Next.js"
+description: "Send transactional email from Next.js App Router route handlers and Server Actions with the AhaSend SDK, plus verified webhooks via nextRouteHandler."
+keywords: ["nextjs send email", "next.js transactional email", "nextjs email api route", "ahasend nextjs", "nextjs webhook email"]
+---
+
+Send your first transactional email from a [Next.js](https://nextjs.org) 14 or 15 App Router app in under five minutes using the official AhaSend Node.js SDK, then wire up webhooks with the SDK's dedicated Next.js route handler.
+
+## Prerequisites
+
+- Node.js 22 or later and a Next.js 14/15 project using the App Router
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+The SDK is still on [`0.x`](https://www.npmjs.com/package/@ahasend/sdk), so its API can change before 1.0. Pin the exact version in production: `npm install @ahasend/sdk@0.1.0`.
+
+## Configure Environment Variables
+
+Add your credentials to `.env.local`, which Next.js loads automatically:
+
+```bash .env.local
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+```
+
+<Warning>
+Never prefix these variables with `NEXT_PUBLIC_`. Next.js inlines every `NEXT_PUBLIC_*` variable into the browser bundle at build time. A `NEXT_PUBLIC_AHASEND_API_KEY` would hand full send access to anyone who opens DevTools. Unprefixed variables stay server-side.
+</Warning>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests: it maintains its own connection pooling and retry state:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+<Tip>
+If you prefer pure env-driven configuration, `AhaSendClient.fromEnv()` builds a client from the `AHASEND_*` variables directly.
+</Tip>
+
+## Send an Email from a Next.js Route Handler
+
+```ts app/api/welcome/route.ts
+import { NextResponse } from "next/server";
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend } from "@/lib/ahasend";
+
+export const runtime = "nodejs"; // the SDK does not run on the Edge runtime
+
+export async function POST(request: Request) {
+  const { email, name } = await request.json();
+
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
+
+    const rejected = result.data.filter((r) => r.status === "error");
+    return NextResponse.json({ queued: result.data.length - rejected.length, rejected });
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return NextResponse.json({ error: "Failed to send email" }, { status: 502 });
+    }
+    throw err;
+  }
+}
+```
+
+A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+
+The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send; stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after one can still send twice. Local request pacing is opt-in (`rateLimit.enabled`) and off by default.
+
+### Alternative: Send from a Server Action
+
+Server Actions run on the server too, so the same client works, which is handy for form submissions without a dedicated API route:
+
+```ts app/actions.ts
+"use server";
+
+import { ahasend } from "@/lib/ahasend";
+
+export async function sendWelcome(email: string, name: string) {
+  const result = await ahasend.messages.send({
+    from: { email: "hello@yourdomain.com", name: "Your App" },
+    recipients: [{ email, name }],
+    subject: "Welcome to Your App!",
+    text_content: "Welcome aboard! We're glad you're here.",
+  });
+  const rejected = result.data.filter((r) => r.status === "error");
+  return { queued: result.data.length - rejected.length, rejected };
+}
+```
+
+<Note>
+Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
+</Note>
+
+## Handle Webhooks
+
+The SDK ships a dedicated App Router adapter, `nextRouteHandler`, that reads the raw body, verifies the HMAC signature, guards against replays, and hands you a typed event. Export it directly as `POST`:
+
+```ts app/api/webhooks/ahasend/route.ts
+import {
+  WebhookVerifier,
+  nextRouteHandler,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
+
+export const runtime = "nodejs"; // webhook verification uses node:crypto
+
+const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
+
+export const POST = nextRouteHandler(verifier, async (event) => {
+  if (!isKnownWebhookEvent(event)) {
+    return new Response(null, { status: 200 }); // future event type: acknowledge & ignore
+  }
+
+  switch (event.type) {
+    case "message.delivered":
+      console.log(`Delivered to ${event.data.recipient}`);
+      break;
+    case "message.bounced":
+      console.log(`Bounced: ${event.data.recipient}`);
+      break;
+    case "message.opened":
+      console.log(`Opened by ${event.data.recipient}`);
+      break;
+  }
+
+  return new Response(null, { status: 200 });
+});
+```
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix). Invalid signatures are rejected with a 400 before your handler runs.
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+- **Deploying to Vercel?** The [Vercel guide](/guides/vercel) covers environment variable scoping, the Node.js runtime requirement, and webhook endpoints on Vercel Functions.
+
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). Building a standalone API server instead? Start from the [Express guide](/guides/express).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error about window/document or node:crypto on deploy">
+    The route is running on the Edge runtime, which the SDK does not support. Add `export const runtime = "nodejs"` to every route that imports `@ahasend/sdk` or `@ahasend/sdk/webhooks`. If you must send from an Edge function, call the [REST API](https://ahasend.com/docs/api-reference) directly with `fetch` instead.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in `.env.local` (restart `next dev` after editing it) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). In production, set the variable in your hosting provider's environment settings.
+  </Accordion>
+  <Accordion title="API key visible in the browser bundle">
+    You prefixed the variable with `NEXT_PUBLIC_`. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and only read it from server code (Route Handlers, Server Actions, Server Components).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

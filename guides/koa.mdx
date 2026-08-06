@@ -1,0 +1,202 @@
+---
+title: "How to Send Transactional Email with Koa"
+sidebarTitle: "Koa"
+description: "Send transactional email from a Koa app with the AhaSend Node.js SDK: install, send from a route, and verify AhaSend webhooks with raw-body."
+keywords: ["koa send email", "koa transactional email", "koa email api", "ahasend koa", "koa webhook verification"]
+---
+
+Send your first transactional email from a [Koa](https://koajs.com) (v2 or v3) app with `@koa/router` using the official AhaSend Node.js SDK, then verify webhooks with the SDK's generic verifier and the `raw-body` package.
+
+## Prerequisites
+
+- Node.js 22 or later
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk @koa/router @koa/bodyparser raw-body
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk @koa/router @koa/bodyparser raw-body
+```
+
+```bash yarn
+yarn add @ahasend/sdk @koa/router @koa/bodyparser raw-body
+```
+
+```bash bun
+bun add @ahasend/sdk @koa/router @koa/bodyparser raw-body
+```
+
+</CodeGroup>
+
+`@koa/bodyparser` is the maintained successor to `koa-bodyparser` and supports Koa v2 and v3; `raw-body` is only needed for webhooks, where signature verification requires the raw, unparsed request body.
+
+The SDK is still on [`0.x`](https://www.npmjs.com/package/@ahasend/sdk), so its API can change before 1.0. Pin the exact version in production: `npm install @ahasend/sdk@0.1.0`.
+
+## Configure Environment Variables
+
+Add your credentials to `.env` (and load them with `node --env-file=.env` or `dotenv`):
+
+```bash .env
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+```
+
+<Warning>
+The API key grants full send access to your account. Keep it server-side: never ship it in a browser bundle.
+</Warning>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests: it maintains its own connection pooling and retry state:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+<Tip>
+If you prefer pure env-driven configuration, `AhaSendClient.fromEnv()` builds a client from the `AHASEND_*` variables directly.
+</Tip>
+
+## Send an Email from a Koa Route
+
+```ts server.ts
+import Koa from "koa";
+import Router from "@koa/router";
+import { bodyParser } from "@koa/bodyparser";
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend } from "./lib/ahasend.js";
+
+const app = new Koa();
+const router = new Router();
+
+router.post("/api/welcome", async (ctx) => {
+  const { email, name } = ctx.request.body as { email: string; name?: string };
+
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
+
+    const rejected = result.data.filter((r) => r.status === "error");
+    ctx.body = { queued: result.data.length - rejected.length, rejected: rejected.length };
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      ctx.status = 502;
+      ctx.body = { error: "Failed to send email" };
+      return;
+    }
+    throw err;
+  }
+});
+
+app.use(bodyParser());
+app.use(router.routes()).use(router.allowedMethods());
+app.listen(3000);
+```
+
+A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+
+The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send; stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after one can still send twice. Local request pacing is opt-in (`rateLimit.enabled`) and off by default.
+
+<Note>
+Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
+</Note>
+
+## Handle Webhooks
+
+There is no Koa-specific adapter, so use the generic `WebhookVerifier`. It needs the **raw request body**, but a Koa body parser drains the request stream for every route it sees. Put the webhook route in its own router and register it **before** `bodyParser()`, then read the raw bytes from the Node request (`ctx.req`) with the [`raw-body`](https://github.com/stream-utils/raw-body) package:
+
+```ts server.ts
+import getRawBody from "raw-body";
+import {
+  AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
+
+const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
+const webhookRouter = new Router();
+
+webhookRouter.post("/webhooks/ahasend", async (ctx) => {
+  const raw = await getRawBody(ctx.req, { limit: "1mb" });
+
+  try {
+    const event = verifier.parse(ctx.req.headers, raw);
+
+    if (isKnownWebhookEvent(event)) {
+      switch (event.type) {
+        case "message.delivered":
+          console.log(`Delivered to ${event.data.recipient}`);
+          break;
+        case "message.bounced":
+          console.log(`Bounced: ${event.data.recipient}`);
+          break;
+        case "message.opened":
+          console.log(`Opened by ${event.data.recipient}`);
+          break;
+      }
+    }
+
+    ctx.status = 200;
+  } catch (err) {
+    if (err instanceof AhaSendWebhookVerificationError) {
+      ctx.status = 400;
+      return;
+    }
+    throw err;
+  }
+});
+
+// Register BEFORE bodyParser() so the webhook body reaches us unparsed:
+app.use(webhookRouter.routes());
+app.use(bodyParser());
+app.use(router.routes()).use(router.allowedMethods());
+```
+
+Because the webhook router runs first and its handler doesn't call `next()`, `bodyParser()` never touches webhook requests. Alternatively, keep a single middleware chain and skip the parser for that path: `app.use((ctx, next) => ctx.path === "/webhooks/ahasend" ? next() : bodyParser()(ctx, next))`. The two-router setup is easier to reason about, though.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). Using [Express](/guides/express) or [Fastify](/guides/fastify) elsewhere? Those guides use the SDK's built-in webhook adapters instead of the manual verifier shown here.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Webhook handler hangs or verification always fails">
+    The body parser ran before your webhook route and drained the request stream, so `getRawBody(ctx.req)` has nothing left to read. Register the webhook router before `bodyParser()` (as above), or configure the parser to skip the webhook path. Also note the raw body must come from `ctx.req` (the Node request), not `ctx.request` (Koa's wrapper).
+  </Accordion>
+  <Accordion title="ctx.request.body is undefined in the send route">
+    `bodyParser()` must be registered before the router that reads parsed bodies. Check middleware order and that the client sends `Content-Type: application/json`.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

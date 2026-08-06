@@ -1,0 +1,191 @@
+---
+title: "How to Send Transactional Email with Hono"
+sidebarTitle: "Hono"
+description: "Send transactional email from a Hono app on Node.js in under 5 minutes with the AhaSend SDK, plus signed webhook verification."
+keywords: ["hono send email", "hono transactional email", "hono email api", "ahasend hono", "hono webhook email"]
+---
+
+Send your first transactional email from a [Hono](https://hono.dev) app running on Node.js via `@hono/node-server`, then verify webhooks with the SDK's generic verifier: Hono's Fetch-native request objects plug straight into it.
+
+<Warning>
+The AhaSend SDK is Node-only (it uses `node:crypto` and `node:buffer`) and its constructor refuses to run in edge runtimes. If you deploy Hono to Cloudflare Workers or another edge platform, use the [Cloudflare Workers guide](/guides/cloudflare-workers) for the fetch-based REST approach instead. Hono on Bun works fine: Bun implements the Node built-ins the SDK needs.
+</Warning>
+
+## Prerequisites
+
+- Node.js 22 or later
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk hono @hono/node-server
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk hono @hono/node-server
+```
+
+```bash yarn
+yarn add @ahasend/sdk hono @hono/node-server
+```
+
+```bash bun
+bun add @ahasend/sdk hono
+```
+
+</CodeGroup>
+
+On Bun you don't need `@hono/node-server`: `Bun.serve` runs Hono natively via `export default app`.
+
+[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still v0.x, so the API may change before 1.0: pin the exact version in production (`npm install @ahasend/sdk@0.1.0`).
+
+## Configure Environment Variables
+
+Add your credentials to `.env` (and load them with `node --env-file=.env`; Bun loads `.env` automatically):
+
+```bash .env
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+```
+
+<Warning>
+The API key grants full send access to your account. Keep it server-side, never ship it in a browser bundle.
+</Warning>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests: it maintains its own connection pooling, retry, and idempotency state:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+<Tip>
+If you prefer pure env-driven configuration, `AhaSendClient.fromEnv()` builds a client from the `AHASEND_*` variables directly.
+</Tip>
+
+## Send an Email from a Hono Route
+
+```ts server.ts
+import { Hono } from "hono";
+import { serve } from "@hono/node-server";
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend } from "./lib/ahasend.js";
+
+const app = new Hono();
+
+app.post("/api/welcome", async (c) => {
+  const { email, name } = await c.req.json<{ email: string; name?: string }>();
+
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
+
+    const rejected = result.data.filter((r) => r.status === "error");
+    if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+
+    return c.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return c.json({ error: "Failed to send email" }, 502);
+    }
+    throw err;
+  }
+});
+
+serve({ fetch: app.fetch, port: 3000 });
+```
+
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+
+The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a 5xx can still send twice. Local rate-limit pacing is a separate, opt-in feature (`rateLimit: { enabled: true }`) that is off by default.
+
+<Note>
+Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
+</Note>
+
+## Handle Webhooks
+
+There is no Hono-specific adapter, so use the generic `WebhookVerifier`. Hono never parses bodies eagerly, so the raw payload is available with `await c.req.text()`, and `verifier.parse()` accepts the Fetch `Headers` object from `c.req.raw.headers` directly:
+
+```ts server.ts
+import {
+  AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
+
+const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
+
+app.post("/webhooks/ahasend", async (c) => {
+  let event;
+  try {
+    event = verifier.parse(c.req.raw.headers, await c.req.text());
+  } catch (err) {
+    if (err instanceof AhaSendWebhookVerificationError) {
+      return c.body(null, 400);
+    }
+    throw err;
+  }
+
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }
+
+  return c.body(null, 200);
+});
+```
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). Running Hono on Bun instead? The [Bun guide](/guides/bun) covers env loading and `Bun.serve` specifics.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Constructor throws about an unsupported runtime">
+    You're running the SDK in an edge environment (Cloudflare Workers, Vercel Edge, or another ServiceWorker-like scope) and it threw an `AhaSendConfigurationError`. The SDK requires Node.js 22+ or Bun; on edge, call the REST API with `fetch` as shown in the [Cloudflare Workers guide](/guides/cloudflare-workers).
+  </Accordion>
+  <Accordion title="Webhook verification always returns 400">
+    Verify `AHASEND_WEBHOOK_SECRET` matches the dashboard value exactly (including the `aha-whsec-` prefix), and make sure nothing between AhaSend and your handler rewrites the body: even reformatting the JSON invalidates the HMAC. If a Hono middleware read the body first, Hono's cached `c.req.text()` still returns the original bytes, so middleware is rarely the culprit.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`). On Node, remember to start with `node --env-file=.env`.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

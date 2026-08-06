@@ -1,0 +1,240 @@
+---
+title: "AhaSend Node.js SDK"
+sidebarTitle: "Node.js SDK"
+description: "Install and use @ahasend/sdk, the official Node.js and TypeScript SDK for the AhaSend email API, with typed errors, automatic retries, and webhook verification."
+keywords: ["ahasend node sdk", "nodejs transactional email sdk", "@ahasend/sdk", "typescript email api", "node email api client"]
+icon: "node-js"
+---
+
+[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is the official Node.js and TypeScript SDK for the AhaSend API. It ships typed request and response models, automatic retries with idempotency keys, and a separate webhooks entry point with signature verification.
+
+This page covers the SDK itself. For wiring it into a specific framework, see the [integration guides](/guides).
+
+## Requirements
+
+- **Node.js 22 or later.** The SDK uses `node:crypto` and `node:buffer` and Node's built-in `fetch`.
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain, an API key (`aha-sk-…`), and your account ID.
+
+<Warning>
+  This is a server-side SDK. The API key grants full send access to your account, so it must never reach a browser bundle. The constructor throws if it detects a browser-like environment (`window`, `document`, or a service worker scope).
+</Warning>
+
+<Note>
+  Edge runtimes are not supported: Cloudflare Workers, Vercel Edge, Supabase Edge Functions, and Deno without Node compatibility all lack the Node built-ins the SDK depends on. Call the [REST API](/api-reference) with `fetch` there instead. The [Cloudflare Workers guide](/guides/cloudflare-workers) shows the full pattern, including webhook verification with WebCrypto.
+</Note>
+
+## Installation
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+The SDK is still v0.x, so the public API can change before 1.0. Pin the exact version in production:
+
+```bash
+npm install @ahasend/sdk@0.1.0
+```
+
+Both ES modules and CommonJS work:
+
+```ts
+import { AhaSendClient } from "@ahasend/sdk";
+// or
+const { AhaSendClient } = require("@ahasend/sdk");
+```
+
+TypeScript declarations are included, so there is no separate types package. Your `tsconfig.json` needs `moduleResolution` set to `Bundler`, `Node16`, or `NodeNext`, and either `"lib": ["DOM"]` or `@types/node` for the `fetch`, `Request`, `Response`, and `AbortSignal` globals.
+
+## Create the Client
+
+Create the client once at module scope and reuse it. It holds connection pooling, retry, and idempotency state, so building one per request wastes work.
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+`AhaSendClient.fromEnv()` builds the same client from `AHASEND_API_KEY` (or `AHASEND_TOKEN`) and `AHASEND_ACCOUNT_ID`, along with the other `AHASEND_*` variables.
+
+### Configuration Options
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `apiKey` | required | Your API key |
+| `accountId` | required | Account UUID, one client per account |
+| `baseUrl` | `https://api.ahasend.com` | HTTPS is enforced, localhost exempted |
+| `timeoutMs` | `30_000` | Per-attempt timeout in milliseconds |
+| `retry` | enabled, 3 retries | Exponential backoff with jitter |
+| `rateLimit` | disabled | Opt-in local request pacing |
+| `idempotency` | auto-generate | Idempotency key behaviour on create operations |
+| `fetch` | `globalThis.fetch` | Inject your own fetch implementation |
+| `hooks` | none | `onRequest`, `onResponse`, `onRetry`, `onError` telemetry |
+| `debug` | `false` | Console diagnostics |
+
+## Send an Email
+
+```ts
+const result = await ahasend.messages.send({
+  from: { email: "hello@yourdomain.com", name: "Your App" },
+  recipients: [{ email: "user@example.com", name: "Jane" }],
+  subject: "Welcome to Your App",
+  html_content: "<h1>Welcome aboard</h1>",
+  text_content: "Welcome aboard",
+});
+```
+
+Body fields use snake_case, matching the API. At least one of `html_content` or `text_content` is required. Optional fields include `reply_to`, `attachments`, `headers`, `substitutions`, `tags`, `tracking`, `retention`, `schedule`, and `sandbox`.
+
+<Warning>
+  **A send is multi-status.** `recipients` accepts up to 100 addresses and each one gets its own message, so `result.data` carries one entry per recipient. An individual recipient can come back with `status: "error"` and a null `id`, a suppressed address for example, while the call itself succeeds. Inspect every entry, not just the first:
+
+```ts
+const rejected = result.data.filter((r) => r.status === "error");
+if (rejected.length > 0) {
+  console.warn(`${rejected.length} recipient(s) rejected`);
+}
+```
+</Warning>
+
+To send one message with several visible recipients in To, Cc, and Bcc, use `messages.sendConversation()` instead.
+
+### Per-Call Options
+
+Every method accepts a trailing options object:
+
+```ts
+await ahasend.messages.send(body, {
+  idempotencyKey: `order-${orderId}`,   // drive the key from your own identifier
+  timeoutMs: 5_000,                     // override the per-attempt timeout
+  retry: { maxRetries: 1 },             // restrict retries, or false to disable
+  signal: AbortSignal.timeout(10_000),  // cancel the request
+  headers: { "x-trace-id": traceId },
+});
+```
+
+### Testing Without Sending
+
+Add `sandbox: true` and the API validates and accepts the request without delivering anything. Use `sandbox_result` to rehearse an outcome: `deliver`, `bounce`, `defer`, `fail`, or `suppress`. See [Sandbox Mode](/send-api/sandbox).
+
+## Resources
+
+| Resource | Methods |
+| --- | --- |
+| `client.messages` | `send`, `sendConversation`, `list`, `iterate`, `get`, `cancel` |
+| `client.domains` | `list`, `iterate`, `create`, `get`, `update`, `delete`, `checkDns` |
+| `client.apiKeys` | `list`, `iterate`, `create`, `get`, `update`, `delete` |
+| `client.webhooks` | `list`, `iterate`, `create`, `get`, `update`, `delete` |
+| `client.statistics` | `deliverability`, `bounces`, `deliveryTimes` |
+| `client.suppressions` | `list`, `iterate`, `create`, `delete`, `wipe` |
+| `client.routes` | `list`, `iterate`, `create`, `get`, `update`, `delete` |
+| `client.accounts` | `get`, `update`, `listMembers`, `addMember`, `removeMember` |
+| `client.smtpCredentials` | `list`, `iterate`, `create`, `get`, `delete` |
+| `client.subAccounts` | `list`, `iterate`, `create`, `usage`, `get`, `update`, `delete`, `suspend`, `unsuspend`, nested `apiKeys` |
+| `client.ping()` | Health check |
+
+List endpoints paginate. Fetch a page at a time with `list()`, or let `iterate()` walk everything lazily:
+
+```ts
+for await (const message of ahasend.messages.iterate({ status: "Delivered" })) {
+  // pages are fetched as needed
+}
+```
+
+## Retries and Idempotency
+
+The SDK retries `408`, `429`, `5xx`, network failures, and timeouts with exponential backoff, and never retries other `4xx` responses. It attaches a UUID `Idempotency-Key` to every create operation and reuses it across its own retries.
+
+<Note>
+  Stored outcomes replay for 24 hours, which covers 2xx and deterministic 4xx responses. Server errors are not stored, so a retry after a 5xx can still result in a second send. Pass your own `idempotencyKey` derived from a stable business identifier when a duplicate would be expensive.
+</Note>
+
+Local rate pacing is a separate, opt-in feature (`rateLimit: { enabled: true }`) and is off by default.
+
+## Error Handling
+
+Every non-2xx response throws a typed error:
+
+```ts
+import { AhaSendAPIError, AhaSendRateLimitError } from "@ahasend/sdk";
+
+try {
+  await ahasend.messages.send(body);
+} catch (err) {
+  if (err instanceof AhaSendRateLimitError) {
+    console.warn(`Rate limited, retry after ${err.retryAfterSeconds}s`);
+  } else if (err instanceof AhaSendAPIError) {
+    console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+  } else {
+    throw err;
+  }
+}
+```
+
+The hierarchy runs from `AhaSendError` through `AhaSendAPIError` (with `.status`, `.code`, `.requestId`, `.body`) to per-status subclasses: `AhaSendBadRequestError`, `AhaSendAuthenticationError`, `AhaSendPermissionError`, `AhaSendNotFoundError`, `AhaSendConflictError`, `AhaSendUnprocessableEntityError`, `AhaSendRateLimitError`, and `AhaSendServerError`. Alongside those sit `AhaSendConnectionError` and its `AhaSendTimeoutError` subclass, plus `AhaSendAbortError`, `AhaSendConfigurationError`, and `AhaSendResponseParseError`.
+
+<Warning>
+  Match on `error.code` or `error.status`, never on message text: `error.message` is derived and capped at 200 characters. Keep whole error, request, and response objects out of your logs, since they can carry server bodies and headers.
+</Warning>
+
+## Webhook Verification
+
+`@ahasend/sdk/webhooks` is a separate entry point holding the Standard Webhooks HMAC-SHA256 verifier, typed parsers for all 11 event types, and adapters for Express, Fastify, and Next.js. It does not pull in the API client.
+
+```ts
+import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
+
+const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
+const event = verifier.parse(request.headers, rawBody);
+
+if (isKnownWebhookEvent(event)) {
+  switch (event.type) {
+    case "message.delivered":
+      break;
+    case "message.bounced":
+      break;
+  }
+}
+```
+
+<Warning>
+  Verification needs the **raw request body**, the exact bytes AhaSend sent. If a JSON body parser runs first, the signature can no longer be checked and the adapters treat that as a setup error. Pass the webhook secret exactly as the dashboard shows it, including the `aha-whsec-` prefix.
+</Warning>
+
+Timestamp checking rejects stale deliveries but does not deduplicate a valid one replayed inside the window. Commit each `webhook-id` durably and make your side effects idempotent.
+
+## Framework Guides
+
+<CardGroup cols={3}>
+  <Card title="Express" icon="server" href="/guides/express" />
+  <Card title="Next.js" icon="layer-group" href="/guides/nextjs" />
+  <Card title="Fastify" icon="server" href="/guides/fastify" />
+  <Card title="NestJS" icon="server" href="/guides/nestjs" />
+  <Card title="Nuxt" icon="layer-group" href="/guides/nuxt" />
+  <Card title="SvelteKit" icon="layer-group" href="/guides/sveltekit" />
+</CardGroup>
+
+Every other framework, runtime, and platform is in the sidebar. Building in Go instead? See the [Go SDK](/guides/go-sdk).
+
+## Source and Support
+
+The SDK is MIT licensed and developed at [github.com/AhaSend/ahasend-ts](https://github.com/AhaSend/ahasend-ts). Report reproducible bugs as GitHub issues without including credentials, message content, or webhook payloads.

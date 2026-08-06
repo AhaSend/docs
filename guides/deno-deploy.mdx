@@ -1,0 +1,175 @@
+---
+title: "How to Send Transactional Email on Deno Deploy"
+sidebarTitle: "Deno Deploy"
+description: "Send transactional email on Deno Deploy in minutes with the AhaSend SDK via npm specifiers, plus signed webhook handling, no build step required."
+keywords: ["deno deploy send email", "deno transactional email", "deno email api", "ahasend deno", "deno deploy webhooks"]
+---
+
+Sending transactional email on Deno Deploy takes nothing but an `npm:` specifier: Deno 2's Node compatibility layer provides `node:crypto` and `node:buffer`, so the AhaSend SDK runs on both local Deno and [Deno Deploy](https://deno.com/deploy): no build step, no `package.json`.
+
+## Prerequisites
+
+- Deno 2 locally, and a [Deno Deploy](https://dash.deno.com) project
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Import the SDK
+
+No install step is required, import straight from npm:
+
+```ts
+import { AhaSendClient } from "npm:@ahasend/sdk";
+```
+
+<Tip>
+If you prefer bare specifiers, run `deno add npm:@ahasend/sdk` to pin the package in `deno.json`, then import from `"@ahasend/sdk"` as usual. [`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still v0.x and its API may change before 1.0, so pin the exact version in production (`npm:@ahasend/sdk@0.1.0`). The package declares `engines.node >= 22`; Deno 2's Node compatibility layer provides what it needs.
+</Tip>
+
+## Configure Environment Variables
+
+On Deno Deploy, set the variables in your project's dashboard under **Settings → Environment Variables**:
+
+```bash
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+```
+
+For local development, put the same values in a `.env` file and run with `deno run --env-file --allow-net --allow-env main.ts`.
+
+<Warning>
+The API key grants full send access to your account. Keep it server-side, never ship it in a browser bundle.
+</Warning>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests: it maintains its own retry and idempotency state:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "npm:@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: Deno.env.get("AHASEND_API_KEY")!,
+  accountId: Deno.env.get("AHASEND_ACCOUNT_ID")!,
+});
+```
+
+## Send an Email from a Deno.serve Route
+
+`Deno.serve` works identically locally and on Deno Deploy:
+
+```ts main.ts
+import { AhaSendAPIError } from "npm:@ahasend/sdk";
+import { ahasend } from "./lib/ahasend.ts";
+
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
+
+  if (req.method === "POST" && url.pathname === "/api/welcome") {
+    const { email, name } = await req.json();
+
+    try {
+      const result = await ahasend.messages.send({
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email, name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      });
+
+      const rejected = result.data.filter((r) => r.status === "error");
+      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+
+      return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+        return Response.json({ error: "Failed to send email" }, { status: 502 });
+      }
+      throw err;
+    }
+  }
+
+  return new Response("Not found", { status: 404 });
+});
+```
+
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+
+The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a 5xx can still send twice. Local rate-limit pacing is a separate, opt-in feature (`rateLimit: { enabled: true }`) that is off by default.
+
+<Note>
+Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
+</Note>
+
+## Handle Webhooks
+
+The webhooks module lives on its own subpath, so importing it doesn't pull in the API client. `verifier.parse()` accepts the Fetch `Headers` object and raw body string straight off the `Request`. Read the body with `req.text()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed.
+
+```ts main.ts
+import { WebhookVerifier, isKnownWebhookEvent } from "npm:@ahasend/sdk/webhooks";
+
+const verifier = new WebhookVerifier(Deno.env.get("AHASEND_WEBHOOK_SECRET")!);
+
+// inside the Deno.serve handler:
+if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
+  let event;
+  try {
+    event = verifier.parse(req.headers, await req.text());
+  } catch {
+    return new Response("Invalid signature", { status: 400 });
+  }
+
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }
+
+  return new Response(null, { status: 200 });
+}
+```
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-project.deno.dev/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+## Deploy
+
+Push to the GitHub repo linked to your Deno Deploy project, or deploy directly:
+
+```bash
+deno deploy
+```
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). Running on another modern runtime? The same SDK works on [Bun](/guides/bun), and edge platforms get a fetch-only variant in the [Cloudflare Workers guide](/guides/cloudflare-workers).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="PermissionDenied running locally">
+    Deno is permission-scoped: the SDK needs `--allow-net` (to reach `api.ahasend.com`) and `--allow-env` (to read the `AHASEND_*` variables). On Deno Deploy both are granted automatically.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    `Deno.env.get("AHASEND_API_KEY")` returned `undefined`. Locally you likely forgot `--env-file`; on Deno Deploy check the project's environment variables and redeploy (new values apply to new deployments/instances).
+  </Accordion>
+  <Accordion title="Webhook verification fails with 400">
+    Pass `await req.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes byte layout, so the signature no longer matches. Also confirm the secret includes the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

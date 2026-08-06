@@ -351,6 +351,64 @@
         ]
       },
       {
+        "tab": "Guides",
+        "icon": "plug",
+        "groups": [
+          {
+            "group": "SDKs",
+            "pages": [
+              "guides/index",
+              "guides/nodejs-sdk",
+              "guides/go-sdk"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "guides/astro",
+              "guides/aws-lambda",
+              "guides/azure-functions",
+              "guides/bun",
+              "guides/chi",
+              "guides/cloudflare-workers",
+              "guides/deno-deploy",
+              "guides/echo",
+              "guides/elysiajs",
+              "guides/encore",
+              "guides/express",
+              "guides/fastify",
+              "guides/fiber",
+              "guides/gin",
+              "guides/google-cloud-functions",
+              "guides/gorilla-mux",
+              "guides/hono",
+              "guides/koa",
+              "guides/nestjs",
+              "guides/nextjs",
+              "guides/nuxt",
+              "guides/railway",
+              "guides/redwoodjs",
+              "guides/remix",
+              "guides/sveltekit",
+              "guides/vercel",
+              "guides/vite"
+            ]
+          },
+          {
+            "group": "AI Development Tools",
+            "pages": [
+              "guides/cursor",
+              "guides/claude",
+              "guides/github-copilot",
+              "guides/windsurf",
+              "guides/v0",
+              "guides/lovable",
+              "guides/bolt-new"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Changelog",
         "icon": "clock-rotate-left",
         "groups": [

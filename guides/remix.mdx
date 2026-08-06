@@ -1,0 +1,197 @@
+---
+title: "How to Send Transactional Email with Remix"
+sidebarTitle: "Remix"
+description: "Send transactional email from Remix v2 actions and resource routes with the AhaSend Node.js SDK, plus signed webhook verification with request.text()."
+keywords: ["remix send email", "remix transactional email", "remix resource route email", "ahasend remix", "remix webhook action"]
+---
+
+Send your first transactional email from a [Remix](https://remix.run) v2 app in under five minutes using the official AhaSend Node.js SDK, then wire up webhooks to react to deliveries, bounces, and opens in real time. React Router v7 framework mode uses the same route module APIs, so everything below applies there too.
+
+## Prerequisites
+
+- Node.js 22 or later and a Remix v2 project running on a Node server (the default Remix App Server, Express, etc.)
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+The SDK is still on [`0.x`](https://www.npmjs.com/package/@ahasend/sdk), so its API can change before 1.0. Pin the exact version in production: `npm install @ahasend/sdk@0.1.0`.
+
+## Configure Environment Variables
+
+Add your credentials to `.env`, which the Remix dev server loads automatically; in production, set them in your host's environment:
+
+```bash .env
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+```
+
+<Warning>
+The API key grants full send access to your account. Keep it in server-only code: never pass it to the client through loader data or `window.ENV`-style globals.
+</Warning>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests. Use the `.server.ts` filename convention so Remix's compiler guarantees the module (and your key) can never end up in the browser bundle:
+
+```ts app/lib/ahasend.server.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+<Tip>
+If you prefer pure env-driven configuration, `AhaSendClient.fromEnv()` builds a client from the `AHASEND_*` variables directly.
+</Tip>
+
+## Send an Email from a Remix Action
+
+Actions run only on the server, so they can use the client directly, for example on a signup route:
+
+```tsx app/routes/signup.tsx
+import { json, type ActionFunctionArgs } from "@remix-run/node";
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend } from "~/lib/ahasend.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const form = await request.formData();
+  const email = String(form.get("email"));
+  const name = String(form.get("name"));
+
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
+
+    const rejected = result.data.filter((r) => r.status === "error");
+    return json({ queued: result.data.length - rejected.length, rejected });
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return json({ error: "Failed to send email" }, { status: 502 });
+    }
+    throw err;
+  }
+}
+```
+
+For a JSON API endpoint instead, use a **resource route**, a route module with no default export:
+
+```ts app/routes/api.welcome.ts
+import { json, type ActionFunctionArgs } from "@remix-run/node";
+import { ahasend } from "~/lib/ahasend.server";
+
+export async function action({ request }: ActionFunctionArgs) {
+  const { email, name } = await request.json();
+
+  const result = await ahasend.messages.send({
+    from: { email: "hello@yourdomain.com", name: "Your App" },
+    recipients: [{ email, name }],
+    subject: "Welcome to Your App!",
+    text_content: "Welcome aboard! We're glad you're here.",
+  });
+
+  const rejected = result.data.filter((r) => r.status === "error");
+  return json({ queued: result.data.length - rejected.length, rejected });
+}
+```
+
+A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+
+The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send; stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after one can still send twice. Local request pacing is opt-in (`rateLimit.enabled`) and off by default.
+
+<Note>
+Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
+</Note>
+
+## Handle Webhooks
+
+Handle webhooks in a resource route. Signature verification needs the raw body, so read it with `request.text()`; `verifier.parse()` accepts the Fetch `Headers` object directly:
+
+```ts app/routes/webhooks.ahasend.ts
+import type { ActionFunctionArgs } from "@remix-run/node";
+import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
+
+const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
+
+export async function action({ request }: ActionFunctionArgs) {
+  let event;
+  try {
+    event = verifier.parse(request.headers, await request.text());
+  } catch {
+    return new Response(null, { status: 400 });
+  }
+
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }
+
+  return new Response(null, { status: 200 });
+}
+```
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+## Going Further
+
+- **Deployment**: the SDK requires Node.js 22+ and its built-ins (`node:crypto`, `node:buffer`). The Remix App Server, Express adapter, and Node serverless targets all work; edge deploys (Cloudflare Workers/Pages, Deno Deploy edge) cannot run the SDK; call the [REST API](https://ahasend.com/docs/api-reference) with `fetch` there instead.
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). The same server-side pattern works in the other full-stack frameworks: see the [Next.js](/guides/nextjs) and [SvelteKit](/guides/sveltekit) guides.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build error: server-only module referenced by client">
+    A component imported `ahasend.server.ts` (or `@ahasend/sdk` directly) outside a loader/action. Keep all SDK imports inside `.server.ts` modules or server-only exports: the `.server` suffix is what tells the compiler to exclude them from the browser bundle.
+  </Accordion>
+  <Accordion title="Error about window/document or node:crypto on deploy">
+    You deployed to an edge runtime (e.g. Cloudflare) that the SDK does not support. Move email sending to a Node deployment target, or call the REST API directly from edge code.
+  </Accordion>
+  <Accordion title="Webhook verification always returns 400">
+    The body passed to `verifier.parse()` must be the exact raw bytes AhaSend sent. Don't call `request.json()` first: a request body can only be read once. Read it with `request.text()` and pass that string straight to the verifier. Also confirm `AHASEND_WEBHOOK_SECRET` includes the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the server environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+</AccordionGroup>

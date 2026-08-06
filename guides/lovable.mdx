@@ -1,0 +1,154 @@
+---
+title: "How to Send Email from a Lovable App"
+sidebarTitle: "Lovable"
+description: "Add transactional email to a Lovable app: send from a Supabase Edge Function with the AhaSend REST API, with your key kept in Lovable Cloud secrets."
+keywords: ["lovable app send email", "lovable send email", "lovable ahasend", "lovable transactional email", "lovable supabase edge function email"]
+icon: "heart"
+---
+
+[Lovable](https://lovable.dev) is good at the thing it promises: describe an app, watch it appear, keep refining it in plain English. Where it gets you into trouble is not the code it writes, it is the code you do not read. Ask it to "send a welcome email when someone signs up" and it will build something that looks like it works. The preview will even show a success toast. The question that decides whether you have a feature or an incident is one the preview cannot answer: where did Lovable put your API key?
+
+Get that one thing right and adding email to a Lovable app takes about ten minutes. Get it wrong and you have published a key that anyone can pull out of your site's JavaScript and use to send mail on your domain.
+
+<Note>
+Never let Lovable put your AhaSend API key in the frontend. Add it as a secret in Lovable Cloud (the backend layer, powered by Supabase), send from an Edge Function that reads the key with `Deno.env.get()`, and POST to `https://api.ahasend.com/v2/accounts/{account_id}/messages`. A successful send returns **202**, not 200. Test everything with `"sandbox": true` before you flip to production.
+</Note>
+
+## Why This Guide Uses the REST API, Not the SDK
+
+Lovable Cloud runs your backend code as Supabase Edge Functions, which execute on Deno's edge runtime. The [`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) package does not run there: it targets Node.js 22 or later, depends on `node:crypto` and `node:buffer`, and its constructor rejects service-worker-like scopes. So on Lovable you call the REST API directly with `fetch`, which is a single request and needs no dependency at all. The JSON body is the same shape the SDK sends.
+
+This is the same pattern as the [Cloudflare Workers guide](/guides/cloudflare-workers). If you later move the send to a Node server, switch to the SDK: the [Express guide](/guides/express) covers that path.
+
+## Prerequisites
+
+- A Lovable project with Lovable Cloud enabled
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a [verified sending domain](/domains)
+- An [API key](/send-api/credentials) with a send scope, plus your account ID
+
+Lovable cannot verify your sending domain or create your credentials. Those steps happen in the [dashboard](https://dash.ahasend.com) and are quick: the [quickstart](/quickstart) has both. Scope the key to `messages:send:{your-domain}` rather than `messages:send:all`, so if the key ever leaks the blast radius is one domain's outbound mail instead of your whole account.
+
+## Why the Obvious Approach Is the Wrong One
+
+A Lovable app is, by default, a frontend. It runs in your visitor's browser. That is right for buttons and forms and wrong for anything involving a secret. Any value the browser can read, a visitor can read too: open dev tools, look at the network tab or the bundled JavaScript, and there is your key. Anything prefixed with `VITE_` in a Lovable project is a build-time variable that ships to the browser by design. An API key does not belong there.
+
+So the rule for email, and for Stripe, and for any third-party service with a secret, is simple: the key lives on the server, and the browser asks the server to send. Lovable has a backend layer for exactly this. It is called Lovable Cloud, it runs on Supabase, and it gives you an encrypted Secrets store that only your Edge Functions can read.
+
+<Warning>
+If you ever find yourself typing your API key into a variable with a `VITE_` prefix, stop. That one is public. Rotate the key before continuing.
+</Warning>
+
+## Store the Key as a Secret
+
+In your Lovable project, enable Lovable Cloud in the project's backend settings. That is what gives your app server-side functions and a place to keep secrets. Then open the Secrets section and add two values:
+
+```bash
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+```
+
+Lovable encrypts these and injects them into your Edge Functions at runtime. They are not part of your frontend bundle, they are not in your project's `.env`, and they do not show up in the published site. That is the whole point.
+
+## Prompt Lovable for a Backend Send
+
+Lovable does what you ask, so ask precisely. The words that matter most here are *Edge Function*. Without them, Lovable may reach for the path of least resistance and call the email API from the client. Spell out the architecture:
+
+> "When a user signs up, send a welcome email through AhaSend. Do it in a Supabase Edge Function, never from the frontend. Read the API key and account ID from the secrets `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` using `Deno.env.get()`. POST to `https://api.ahasend.com/v2/accounts/{account_id}/messages` with a Bearer token. Treat HTTP 202 as success. The frontend should call the Edge Function, not AhaSend directly."
+
+That single paragraph encodes the security model, the right endpoint, the auth scheme, and the correct success code: all the things Lovable is most likely to fudge if you leave them to chance. The function it generates should look close to this:
+
+```ts supabase/functions/send-welcome-email/index.ts
+Deno.serve(async (req) => {
+  const { email, name } = await req.json();
+
+  const accountId = Deno.env.get("AHASEND_ACCOUNT_ID");
+  const apiKey = Deno.env.get("AHASEND_API_KEY");
+
+  const res = await fetch(
+    `https://api.ahasend.com/v2/accounts/${accountId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email, name }],
+        subject: "Welcome aboard",
+        html_content: `<p>Thanks for signing up, ${name}.</p>`,
+        text_content: `Thanks for signing up, ${name}.`,
+        sandbox: true, // flip to false when you're ready to send for real
+      }),
+    },
+  );
+
+  if (res.status !== 202) {
+    console.error(`AhaSend error ${res.status}`);
+    return new Response(JSON.stringify({ error: "Failed to send email" }), {
+      status: 502,
+    });
+  }
+
+  const result = await res.json();
+  const rejected = result.data.filter((r) => r.status === "error");
+
+  // 200 here is this function's reply to your frontend, not AhaSend's.
+  return new Response(JSON.stringify({ queued: result.data.length - rejected.length }), {
+    status: 200,
+  });
+});
+```
+
+Two details are worth defending in review. The secrets are read at runtime with `Deno.env.get()`, so the key lives in the function and nowhere else. And success is **202**, not 200: AhaSend returns 202 because delivery is asynchronous, meaning the API has accepted and queued your message rather than finished delivering it. Code that treats 200 as the success condition will log false failures on every send.
+
+The 202 body is also multi-status. `data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id`, a suppressed address for example, while the request itself succeeded. Check every entry, not just the first.
+
+## Read Where the Key Landed
+
+This is the step to slow down on, because Lovable's preview will not catch the mistake for you. Use Lovable's code view to confirm two things.
+
+<Steps>
+  <Step title="The key is referenced only inside the Edge Function">
+    Via `Deno.env.get()`, and nowhere else. If you see your key, anything starting with `aha-sk-`, or a `VITE_AHASEND...` variable anywhere in the frontend, that is the failure mode this guide exists to prevent. Send Lovable back: "Move the AhaSend call into the Edge Function and remove the key from the frontend entirely." Then rotate the key.
+  </Step>
+  <Step title="The frontend calls your Edge Function">
+    Which then calls AhaSend, not the other way around. The browser should be talking to your own backend, never directly to `api.ahasend.com`.
+  </Step>
+</Steps>
+
+<Tip>
+If you are not comfortable reading the code, ask Lovable directly: "Is my AhaSend API key exposed anywhere in the frontend bundle?" Then verify its answer against the two checks above rather than taking the success toast at face value.
+</Tip>
+
+## Test in Sandbox Before It Can Email a Real Person
+
+The `"sandbox": true` in the code above is not a placeholder to delete later, it is how you test safely. In sandbox mode AhaSend runs your message through the full validation and queuing pipeline, fires all the same webhooks, shows it in your dashboard logs, and then stops just short of delivery. It costs nothing and it cannot email a real customer by accident, which matters while you are clicking "sign up" twenty times to test the flow.
+
+Sandbox also lets you rehearse the unhappy paths. Add `"sandbox_result": "bounce"` and AhaSend simulates a hard bounce so you can see how your app reacts. `"defer"`, `"fail"`, and `"suppress"` cover the other outcomes, and the full list is in the [sandbox mode guide](/send-api/sandbox). Run through them once, confirm you get a clean 202 on the happy path, and only then change `sandbox` to `false`. Read the flag from a secret too, so you can toggle real sending without touching code.
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries, each of which gets its own message.
+- **Webhooks**: AhaSend signs every webhook with the Standard Webhooks scheme. The [Cloudflare Workers guide](/guides/cloudflare-workers) has a WebCrypto verifier that works unchanged on Deno.
+- **Attachments, scheduling, tags**: all available on the same endpoint. See the [API reference](/api-reference).
+- Building in a different AI tool? See [v0](/guides/v0) and [Bolt.new](/guides/bolt-new).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error importing @ahasend/sdk: node:crypto not found">
+    Expected. The SDK targets Node.js 22 or later and does not run on Supabase Edge Functions. Use the `fetch` approach above; the request and response shapes are identical.
+  </Accordion>
+  <Accordion title="401 from api.ahasend.com">
+    The secret is not set, or the function was deployed before the secret existed. Re-check the Secrets section in Lovable Cloud, redeploy the function, and confirm the key has a send scope.
+  </Accordion>
+  <Accordion title="The frontend gets a CORS error calling the Edge Function">
+    Supabase Edge Functions need to answer the preflight `OPTIONS` request with `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers`. Ask Lovable to add CORS headers to the function. This is a function concern, not an AhaSend one.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

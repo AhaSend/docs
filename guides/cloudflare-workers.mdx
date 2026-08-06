@@ -1,0 +1,207 @@
+---
+title: "How to Send Email from Cloudflare Workers"
+sidebarTitle: "Cloudflare Workers"
+description: "Send transactional email from Cloudflare Workers with one fetch call to the AhaSend email API, plus WebCrypto webhook verification, no SDK needed."
+keywords: ["cloudflare workers send email", "cloudflare workers email api", "workers transactional email", "ahasend cloudflare", "webcrypto webhook verification"]
+---
+
+To send email from Cloudflare Workers, skip the SDK: one `fetch` call to the AhaSend REST API sends transactional email, and ~40 lines of WebCrypto verify webhooks. This guide shows both.
+
+<Note>
+The [`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) package does **not** run on Cloudflare Workers. It targets Node.js 22+, depends on `node:crypto` and `node:buffer`, and its constructor throws an `AhaSendConfigurationError` in ServiceWorker-like scopes, so even the `nodejs_compat` flag won't get you there. On Node runtimes, use the SDK instead: see the [Express](/guides/express) or [Hono](/guides/hono) guides.
+</Note>
+
+## Prerequisites
+
+- A Workers project set up with [Wrangler](https://developers.cloudflare.com/workers/wrangler/)
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+If you're starting from scratch:
+
+<CodeGroup>
+
+```bash npm
+npm create cloudflare@latest my-worker
+```
+
+```bash pnpm
+pnpm create cloudflare@latest my-worker
+```
+
+```bash yarn
+yarn create cloudflare my-worker
+```
+
+```bash bun
+bun create cloudflare@latest my-worker
+```
+
+</CodeGroup>
+
+## Configure Secrets
+
+Store credentials as Worker secrets, never in `wrangler.toml` `vars`, which end up in source control:
+
+```bash
+wrangler secret put AHASEND_API_KEY
+wrangler secret put AHASEND_ACCOUNT_ID
+wrangler secret put AHASEND_WEBHOOK_SECRET
+```
+
+For local development, put the same values in a `.dev.vars` file (git-ignored by default). Type the bindings in your Worker:
+
+```ts src/index.ts
+export interface Env {
+  AHASEND_API_KEY: string;
+  AHASEND_ACCOUNT_ID: string;
+  AHASEND_WEBHOOK_SECRET: string;
+}
+```
+
+## Send Email from a Cloudflare Worker with fetch
+
+Send by POSTing to the messages endpoint. The JSON body uses the same shape as the SDK's `CreateMessageRequest` (snake_case fields), and an `Idempotency-Key` header makes retries safe:
+
+```ts src/index.ts
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (request.method === "POST" && url.pathname === "/api/welcome") {
+      const { email, name } = await request.json<{ email: string; name?: string }>();
+
+      const res = await fetch(
+        `https://api.ahasend.com/v2/accounts/${env.AHASEND_ACCOUNT_ID}/messages`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.AHASEND_API_KEY}`,
+            "Content-Type": "application/json",
+            "Idempotency-Key": crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            from: { email: "hello@yourdomain.com", name: "Your App" },
+            recipients: [{ email, name }],
+            subject: "Welcome to Your App!",
+            html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+            text_content: "Welcome aboard! We're glad you're here.",
+          }),
+        },
+      );
+
+      if (!res.ok) {
+        console.error(`AhaSend error ${res.status}`, await res.text());
+        return Response.json({ error: "Failed to send email" }, { status: 502 });
+      }
+
+      const result = await res.json<{ data: { status: string; recipient: string }[] }>();
+      const rejected = result.data.filter((r) => r.status === "error");
+      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+
+      return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+    }
+
+    return new Response("Not found", { status: 404 });
+  },
+};
+```
+
+A 202 is **multi-status**: `data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the request itself succeeds, so check every entry, not just the first.
+
+<Note>
+Testing without delivering real mail? Add `"sandbox": true` to the JSON body: the API validates and accepts it, but nothing leaves the platform. See the [API reference](https://ahasend.com/docs/api-reference) for every field and endpoint.
+</Note>
+
+## Verify Webhooks with WebCrypto
+
+AhaSend signs webhooks with the [Standard Webhooks](https://www.standardwebhooks.com) scheme: HMAC-SHA256 over `` `${webhook-id}.${webhook-timestamp}.${body}` ``, keyed by the raw UTF-8 bytes of your endpoint secret (including the `aha-whsec-` prefix; don't strip or base64-decode it). The expected signature is `v1,<base64 digest>`, and the `webhook-signature` header may contain several space-separated signatures during secret rotation. This function replicates the SDK's verifier exactly, including its 5-minute replay tolerance:
+
+```ts src/verify.ts
+const encoder = new TextEncoder();
+
+export async function verifyWebhook(
+  headers: Headers,
+  body: string,
+  secret: string,
+  toleranceSeconds = 300,
+): Promise<boolean> {
+  const id = headers.get("webhook-id");
+  const timestamp = headers.get("webhook-timestamp");
+  const signature = headers.get("webhook-signature");
+  if (!id || !timestamp || !signature) return false;
+
+  const tsSec = Number(timestamp);
+  if (!Number.isFinite(tsSec)) return false;
+  if (Math.abs(Math.floor(Date.now() / 1000) - tsSec) > toleranceSeconds) return false;
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret), // raw UTF-8 bytes, prefix included
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(`${id}.${timestamp}.${body}`),
+  );
+  const expected = `v1,${btoa(String.fromCharCode(...new Uint8Array(digest)))}`;
+
+  return signature.split(" ").filter(Boolean).some((part) => constantTimeEqual(part, expected));
+}
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+```
+
+Then in the fetch handler:
+
+```ts src/index.ts
+import { verifyWebhook } from "./verify";
+
+if (request.method === "POST" && url.pathname === "/webhooks/ahasend") {
+  const body = await request.text(); // raw body, verify BEFORE parsing JSON
+
+  if (!(await verifyWebhook(request.headers, body, env.AHASEND_WEBHOOK_SECRET))) {
+    return new Response("Invalid signature", { status: 400 });
+  }
+
+  const event = JSON.parse(body) as { type: string; data: { recipient?: string } };
+  if (event.type === "message.delivered") {
+    console.log(`Delivered to ${event.data.recipient}`);
+  }
+
+  return new Response(null, { status: 200 });
+}
+```
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://my-worker.your-subdomain.workers.dev/webhooks/ahasend`, and copy its secret into the `AHASEND_WEBHOOK_SECRET` secret exactly as shown.
+
+## Deploy
+
+```bash
+wrangler deploy
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error importing @ahasend/sdk: node:crypto / node:buffer not found">
+    Expected: the SDK targets Node.js 22+ and doesn't support Workers, and adding `nodejs_compat` won't help because the SDK's constructor also rejects ServiceWorker-like scopes. Use the plain `fetch` approach above; the request/response shapes are identical to the SDK's.
+  </Accordion>
+  <Accordion title="401 from api.ahasend.com">
+    The secret isn't bound. `wrangler secret put` applies to deployed Workers only. For `wrangler dev`, put the values in `.dev.vars`. Also confirm the key has the `messages:send:all` scope.
+  </Accordion>
+  <Accordion title="Webhook verification always fails">
+    Three usual causes: the body was read with `request.json()` and re-serialized (byte layout changes, so always verify against `request.text()`), the secret was base64-decoded or had its `aha-whsec-` prefix stripped (use it verbatim), or the timestamp is outside the 300-second tolerance (check for queued/delayed delivery through a proxy).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

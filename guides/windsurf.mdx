@@ -1,0 +1,230 @@
+---
+title: "How to Build Email Features with Windsurf"
+sidebarTitle: "Windsurf"
+description: "Ground Windsurf's Cascade agent in the AhaSend Node.js SDK, then capture the transactional email integration as a Workflow you can replay on demand."
+keywords: ["windsurf ide email integration", "windsurf cascade email", "windsurf ahasend", "build email feature windsurf", "windsurf workflow email"]
+icon: "wind"
+---
+
+Ask Windsurf's Cascade agent to "add a confirmation email here" and it'll do it in one shot: read your project, write the call, wire it into the handler. Ask for a second email feature next week and it does the whole thing again from scratch, with the same research, the same guesses, and the same chance of inventing a package that has never existed. Cascade is fast, but a one-shot agent re-rolls the dice on every prompt, and for a specific service the dice include a hallucinated SDK.
+
+Windsurf has a feature built precisely for "I'm going to ask for this shape of thing more than once": **Workflows**, named and reusable agentic recipes that live in your repo. Instead of re-prompting Cascade into the right answer each time, you capture the correct integration once, and every future "send an email here" replays a verified recipe. Pair that with a Rules file holding the API facts Cascade keeps getting wrong, and you turn a lucky one-shot into a repeatable feature.
+
+<Note>
+Give Cascade the real facts in a `.windsurf/rules/` file: the `@ahasend/sdk` package, the client constructor, `client.messages.send()`, and the multi-status response. Then capture the integration as a `.windsurf/workflows/` recipe so it's repeatable instead of re-guessed. Cascade can run your terminal, so let it test the result in **sandbox mode** before anything reaches an inbox.
+</Note>
+
+## Prerequisites
+
+Cascade writes and runs code, but it can't verify your domain or create your credentials. Do these two things in the [AhaSend dashboard](https://dash.ahasend.com) first.
+
+<Steps>
+  <Step title="Verify a Sending Domain">
+    Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). AhaSend checks DNS continuously, so a half-configured domain fails loudly at send time rather than quietly tanking deliverability.
+  </Step>
+  <Step title="Create an API Key">
+    Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` instead of `messages:send:all`: if it leaks, the damage is one domain's outbound mail. Grab your **account ID** too.
+  </Step>
+  <Step title="Put Both in Your Environment">
+    Set `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` in `.env`, and keep that file out of git. We'll tell Cascade that explicitly, because left to its habits it might not.
+  </Step>
+</Steps>
+
+You'll also need Node.js 22 or later, which is the minimum the SDK supports.
+
+## Step 1: Install the SDK Before You Prompt
+
+Do this yourself. An agent that finds the dependency already in `package.json` has far less room to improvise a different one.
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still v0.x, so pin the exact version in production (`npm install @ahasend/sdk@0.1.0`).
+
+## Step 2: Give Cascade the Ground Truth with a Rules File
+
+Cascade reads your codebase, but it won't fetch AhaSend's docs unless you make it, and it will reach for a half-remembered client from some other email provider. Windsurf's fix is the same idea you'd use for any project convention: a Rules file, which Cascade applies automatically as standing context on relevant requests.
+
+Rules live as Markdown in a `.windsurf/rules/` directory at your repo root. Create one that pins the facts the model is most likely to get wrong:
+
+```markdown .windsurf/rules/ahasend-email.md
+# AhaSend email
+
+When this project sends email, use the official AhaSend Node.js SDK.
+
+- Package: `@ahasend/sdk` on npm, Node.js 22 or later. Do not invent a
+  package name and do not hand-roll fetch calls to the REST API.
+- Server-side only. The constructor throws if it detects a browser, a
+  service worker, or an edge runtime. On edge, call
+  POST https://api.ahasend.com/v2/accounts/{account_id}/messages directly.
+- Construct the client ONCE at module scope, never per request:
+  `new AhaSendClient({ apiKey, accountId })`.
+- Send with `client.messages.send({ from, recipients, subject,
+  html_content, text_content })`. Body fields are snake_case. `from` is
+  `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
+  1 to 100 entries, and each recipient gets a separate message.
+- The response is multi-status (HTTP 202). `result.data` has one entry per
+  recipient, and a recipient can come back `status: "error"` with a null
+  `id` while the promise resolves. Check every entry, not just the first.
+- Errors are typed. Catch `AhaSendAPIError` and `AhaSendRateLimitError`
+  from `@ahasend/sdk`, and match on `err.status` or `err.code`, never on
+  message text.
+- Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
+  Signature checks need the RAW request body.
+- Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from the environment.
+  Never hardcode or commit them.
+- For testing, set `sandbox: true` in the send body.
+- Other languages: Go uses github.com/AhaSend/ahasend-go. There is no
+  Python SDK yet, so Python calls the REST API directly.
+```
+
+Now Cascade stops guessing on the facts. If you've never written a rule file, the quick way to start is to point Cascade at AhaSend's machine-readable doc index at `https://ahasend.com/docs/llms.txt` and ask it to draft the rule from those pages, then check the result against the list above.
+
+## Step 3: Capture the Integration as a Workflow
+
+A Rules file keeps Cascade honest about the facts. A **Workflow** keeps you from re-explaining the whole task every time. This is the Windsurf-native step the one-shot approach skips, and it's what turns a lucky generation into a feature you can stamp out on demand.
+
+A Workflow is a Markdown file under `.windsurf/workflows/` with a short frontmatter description and a series of steps: a saved prompt-plus-procedure that Cascade can replay. Instead of typing out the same brief for the fifth time, you write it once:
+
+```markdown .windsurf/workflows/ahasend-email.md
+---
+description: Add a transactional email send via the AhaSend SDK
+---
+
+# Add AhaSend email
+
+1. If `lib/ahasend.ts` does not exist, create it: import `AhaSendClient`
+   from `@ahasend/sdk` and export one client built from
+   `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. Module scope only.
+2. In the target handler, import that client and call
+   `client.messages.send({ from, recipients, subject, html_content,
+   text_content })`. Body fields are snake_case.
+3. Filter `result.data` for entries with `status === "error"` and log
+   how many recipients were rejected. Never read only `result.data[0]`.
+4. Wrap the call in a try/catch for `AhaSendAPIError` and log
+   `err.status` and `err.requestId`, never the whole error object.
+5. Set `sandbox: true` while building so nothing is delivered.
+6. Run the send once in sandbox and confirm every recipient came back
+   queued before reporting done.
+```
+
+Now adding email to a new screen is one invocation, not a fresh negotiation, and because the recipe encodes the same facts as your Rules file, every replay lands the integration the same correct way. That's the difference between an agent that happened to get it right once and one that gets it right every time you ask.
+
+## Step 4: Prompt Cascade Like You'd Brief a Teammate
+
+Whether you're invoking the Workflow or asking directly, specific beats vague. "Add email" makes Cascade guess. Naming the file and the behavior doesn't:
+
+- Weak: "add email to my app"
+- Better: "In the signup handler, after the user is created, send a welcome email through AhaSend using the email Workflow. Reuse the client from `lib/ahasend.ts`. Send it without blocking the response."
+
+That tells Cascade *where* the change goes, *which* recipe to follow, *how* to handle config, and *what* non-functional property matters. Here is the code the Workflow is grounded against:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+```ts routes/signup.ts
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend } from "../lib/ahasend.js";
+
+try {
+  const result = await ahasend.messages.send({
+    from: { email: "hello@yourdomain.com", name: "Your App" },
+    recipients: [{ email: user.email, name: user.name }],
+    subject: "Welcome aboard",
+    text_content: "Thanks for signing up.",
+    html_content: "<p>Thanks for signing up.</p>",
+  });
+
+  const rejected = result.data.filter((r) => r.status === "error");
+  if (rejected.length > 0) {
+    console.warn(`${rejected.length} recipient(s) rejected`);
+  }
+} catch (err) {
+  if (err instanceof AhaSendAPIError) {
+    console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+  } else {
+    throw err;
+  }
+}
+```
+
+## Step 5: Let Cascade Test It, in Sandbox Mode
+
+Cascade can run terminal commands, so the agent that wrote the integration can also run it. You just don't want its test runs firing real email at real people. [Sandbox mode](/send-api/sandbox) is built for this: add one field and the message goes through the full validation and queuing pipeline, fires every webhook, costs nothing, and is never delivered.
+
+```ts
+const result = await ahasend.messages.send({
+  from: { email: "hello@yourdomain.com", name: "Your App" },
+  recipients: [{ email: "test@example.com", name: "Ada" }],
+  subject: "Welcome aboard",
+  text_content: "Thanks for signing up.",
+  sandbox: true,
+  sandbox_result: "bounce", // rehearse the failure path
+});
+```
+
+Ask Cascade to "send once in sandbox and confirm every recipient came back queued", and it exercises the real API path with no side effects. Swap `sandbox_result` to `"deliver"`, `"bounce"`, `"defer"`, `"fail"`, or `"suppress"` and AhaSend fires the matching webhook, so Cascade can build and verify your bounce handling before a real bounce ever lands. Bake a default into the Workflow: `sandbox` stays `true` everywhere except production, driven by an environment variable so going live is a config change rather than a code edit.
+
+## Step 6: Read the Diff
+
+Cascade running its own test is reassuring, not conclusive. Three things to confirm before you commit, all quick:
+
+- **The real package.** The import must be `@ahasend/sdk`. If you see another package name, or raw `fetch` calls in a plain Node service, a guess slipped past the rule.
+- **Every recipient checked.** A promise that resolves means the request was accepted, not that every address was. Code reading `result.data[0]` and moving on will silently miss a suppressed recipient in a batch.
+- **The key comes from the environment.** An agent editing several files can drift a secret into the wrong one. Confirm the key is read from `process.env` and never written to anything git tracks. This is the most expensive mistake in AI-generated integration code and the easiest to miss when everything otherwise runs clean.
+
+<Warning>
+If Cascade scaffolds frontend code, make sure the key never lands in a client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`). Anything with those prefixes ships to the browser.
+</Warning>
+
+## One Recipe Beats a Hundred Lucky Prompts
+
+Cascade's one-shot speed is real, and for a throwaway script it's all you need. But email isn't usually a one-off. You'll add it to the next screen, and the one after that. A one-shot agent re-researches and re-guesses every time, which means every time carries the same chance of a wrong package or a leaked key.
+
+Windsurf gives you the way out of that loop: ground Cascade once with a Rules file, capture the verified integration as a Workflow, and let the agent test it in sandbox before it can reach a real inbox. Do that and "add an email feature" stops being a fresh roll of the dice and becomes a recipe that lands the same correct integration every time.
+
+## Related Guides
+
+Same grounding trick, different file: [Cursor](/guides/cursor) reads `.cursor/rules/`, [Claude](/guides/claude) reads `CLAUDE.md`, and [GitHub Copilot](/guides/github-copilot) reads `.github/copilot-instructions.md`. For the finished shape of what Cascade is building, see [Express](/guides/express), [Fastify](/guides/fastify), or [SvelteKit](/guides/sveltekit).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cascade ignores the Rules file">
+    Confirm the file is under `.windsurf/rules/` at the repo root, not in a subdirectory, and that the rule's activation mode allows Cascade to apply it. A rule set to manual activation only loads when you reference it. Installing `@ahasend/sdk` first is the strongest signal either way.
+  </Accordion>
+  <Accordion title="The Workflow runs but skips the sandbox check">
+    Workflow steps are instructions, not a script. Make the last step an explicit, checkable assertion ("confirm every entry in result.data has status queued before reporting done") rather than a vague "test it".
+  </Accordion>
+  <Accordion title="The generated code throws AhaSendConfigurationError on startup">
+    The SDK refuses to run in a browser, service worker, or edge runtime, and it checks at construction time. Move the send to a Node runtime route, or call the REST API directly from the edge. See [Cloudflare Workers](/guides/cloudflare-workers) for that pattern.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard, and see [the quickstart](/quickstart) if you haven't added one yet.
+  </Accordion>
+</AccordionGroup>
+
+Every endpoint the SDK exposes is in the [API reference](/api-reference).

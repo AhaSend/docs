@@ -1,0 +1,193 @@
+---
+title: "How to Add Email to Your App with Cursor"
+sidebarTitle: "Cursor"
+description: "Give Cursor's agent the real AhaSend SDK as standing context, so the transactional email integration it writes compiles, sends, and survives production."
+keywords: ["cursor ai send email integration", "cursor ai email", "add email to app cursor", "cursor ahasend", "cursor ai rules api integration"]
+icon: "i-cursor"
+---
+
+Ask Cursor to "add email sending to my signup flow" and you'll have code in about ten seconds. Some of it will be great. Some of it might call a package that has never existed, POST to an endpoint that returns 404, or paste your API key straight into a committed file. The agent isn't broken. It's pattern-matching against every email API it has ever seen and confidently filling the gaps for the one it hasn't.
+
+That's the real problem when you wire a specific service into an AI-assisted codebase: not *can the model write the code* (it can), but *does the model know the actual API*. This guide closes that gap. You give Cursor the ground truth up front, prompt it well, and verify the result in sandbox mode, so the email integration it writes is the one you'd have written by hand.
+
+<Note>
+Don't trust Cursor to recall AhaSend's API from memory. Drop a rule file in `.cursor/rules/` containing the verified facts (the `@ahasend/sdk` package, the client constructor, the send method, the multi-status response), then prompt the agent with a specific task and test the result in sandbox mode before it ever sends a real email.
+</Note>
+
+## Prerequisites
+
+Cursor writes the code, but it can't create your account or verify your domain. Do these two things in the [AhaSend dashboard](https://dash.ahasend.com) first:
+
+1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). AhaSend checks DNS continuously, so a misconfigured domain fails loudly at send time rather than quietly tanking deliverability.
+2. **Create an API key.** Follow the [API credentials guide](/send-api/credentials). Scope it to `messages:send:{your-domain}` instead of `messages:send:all`: if the key ever leaks, the damage is limited to one domain's outbound mail. You'll also need your **account ID**.
+
+You'll also need Node.js 22 or later, which is the minimum the SDK supports. Keep the key and account ID out of your repo. We'll tell Cursor that explicitly in a moment, because left to its own habits it may not.
+
+## Step 1: Install the SDK Yourself
+
+Do this before you prompt anything. An agent that finds `@ahasend/sdk` already in `package.json` has far less room to invent an alternative.
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still v0.x, so the API may change before 1.0: pin the exact version in production (`npm install @ahasend/sdk@0.1.0`).
+
+## Step 2: Give Cursor the Ground Truth
+
+This is the step that separates working code from a debugging session, and almost nobody does it. Cursor's agent will read your codebase, but it won't go fetch AhaSend's docs unless you make that happen.
+
+Cursor reads project rules from a `.cursor/rules/` directory (this replaced the older single `.cursorrules` file) and applies them as standing context on every relevant request. A rule file is just Markdown describing how the agent should behave in your project. Create one that pins down the facts the model is most likely to get wrong:
+
+```markdown .cursor/rules/ahasend-email.md
+# AhaSend email
+
+When this project sends email, use the official AhaSend Node.js SDK.
+
+- Package: `@ahasend/sdk` on npm. Node.js 22 or later. Do not invent a
+  different package name and do not hand-roll fetch calls to the REST API.
+- Server-side only. The constructor throws if it detects a browser, a
+  service worker, or an edge runtime (Cloudflare Workers, Vercel Edge).
+  On edge, call POST https://api.ahasend.com/v2/accounts/{account_id}/messages
+  directly instead.
+- Construct the client ONCE at module scope, never per request:
+  `new AhaSendClient({ apiKey, accountId })`.
+- Send with `client.messages.send({ from, recipients, subject,
+  html_content, text_content })`. Body fields are snake_case. `from` is
+  `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
+  1 to 100 entries, and each recipient gets a separate message.
+- The response is multi-status (HTTP 202). `result.data` has one entry per
+  recipient, and a recipient can come back `status: "error"` with a null
+  `id` while the promise still resolves. Check every entry, never just
+  `result.data[0]`.
+- Errors are typed. Catch `AhaSendAPIError` and `AhaSendRateLimitError`
+  from `@ahasend/sdk`, and match on `err.status` or `err.code`, never on
+  message text.
+- Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
+- Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from environment
+  variables. Never hardcode them, never write them to a committed file,
+  never expose them to the browser.
+- For safe testing, set `sandbox: true` in the send body.
+- Other languages: Go uses github.com/AhaSend/ahasend-go. There is no
+  Python SDK yet, so Python code calls the REST API directly.
+```
+
+Now every prompt about email inherits these constraints and the agent stops guessing. This is the same idea as the project-wide conventions teams already put in rules ("use Tailwind", "prefer named exports"). You're just doing it for an external API the model doesn't have memorized.
+
+<Tip>
+For a one-off, you can paste a documentation URL into the chat instead. AhaSend publishes a machine-readable index at `https://ahasend.com/docs/llms.txt` that lists every doc page. The rule file is better because it persists; the URL is fine when you just want one correct call.
+</Tip>
+
+## Step 3: Prompt the Agent Like You'd Brief a Teammate
+
+With context in place, the prompt can be short, but specific still beats vague. Cursor's own guidance is that "add tests for auth" produces worse results than naming the file, the edge case, and the existing pattern to follow. Email is the same. Compare:
+
+- Weak: "add email to my app"
+- Better: "In `routes/signup.ts`, after the user row is created, send a welcome email with the AhaSend SDK following the AhaSend rule. Reuse the client from `lib/ahasend.ts`. Send it in the background so the request doesn't block."
+
+The second version tells the agent *where* the change goes, *which* service, *how* to handle config, and *what* non-functional property matters. For a multi-file change, a reusable email module plus the call site, switch the agent into **Plan mode** (Shift+Tab) first. It forces a research-then-plan-then-build pass, so you review the approach before any code is written instead of discovering halfway through that it scattered API calls across three files.
+
+## Step 4: Read the Diff
+
+When the agent finishes, don't accept the diff just because it's green. The point of giving it ground truth was so you could check its work against something real. A correct integration has two parts. First, a single shared client:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+Then the send itself, with every recipient result inspected:
+
+```ts routes/signup.ts
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend } from "../lib/ahasend.js";
+
+const result = await ahasend.messages.send({
+  from: { email: "hello@yourdomain.com", name: "Your App" },
+  recipients: [{ email: user.email, name: user.name }],
+  subject: "Welcome aboard",
+  html_content: "<p>Thanks for signing up.</p>",
+  text_content: "Thanks for signing up.",
+});
+
+const rejected = result.data.filter((r) => r.status === "error");
+if (rejected.length > 0) {
+  console.warn(`${rejected.length} recipient(s) rejected`);
+}
+```
+
+Three things to confirm in whatever the agent wrote:
+
+- **The real package, not a phantom one.** The import must be `@ahasend/sdk`. If you see `import ahasend from "ahasend"` or a hand-rolled `fetch` to the REST API in a plain Node service, the model ignored your rule.
+- **It checks every recipient.** Code that reads `result.data[0].status` and moves on will miss a suppressed address in a batch. The promise resolving means the request was accepted, not that every recipient was.
+- **The key comes from the environment.** If the agent hardcoded the key or dropped it in a config file that git tracks, fix that before you commit. This is the most common and most expensive mistake in AI-generated integration code.
+
+<Warning>
+If the agent scaffolds any frontend code, make sure the key never lands in a client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`). Anything with those prefixes ships to the browser.
+</Warning>
+
+## Step 5: Let Cursor Test It, in Sandbox Mode
+
+The best part of finishing in an AI editor is that the agent can run the thing it just wrote. But you don't want its test runs sending real email to real inboxes. [Sandbox mode](/send-api/sandbox) is built for exactly this: add one field and the message goes through the full validation and queuing pipeline, costs nothing, and is never delivered.
+
+```ts
+const result = await ahasend.messages.send({
+  from: { email: "hello@yourdomain.com", name: "Your App" },
+  recipients: [{ email: "test@example.com", name: "Ada" }],
+  subject: "Welcome aboard",
+  text_content: "Thanks for signing up.",
+  sandbox: true,
+  sandbox_result: "bounce", // rehearse a failure path
+});
+```
+
+Ask Cursor to "add an integration test that sends in sandbox mode and asserts every recipient came back queued", and you get a test that exercises the real API path without side effects. Swap `sandbox_result` to `"bounce"`, `"defer"`, `"fail"`, or `"suppress"` and the matching webhook fires, so the agent can write and verify your bounce handling before a real bounce ever happens. A good habit to bake into your rule file: default `sandbox` to `true` everywhere except production, and read the flag from an environment variable so going live is a config change, not a code edit.
+
+## The Pattern Generalizes
+
+Nothing here is specific to email. Any time you ask an AI editor to integrate an external service, a payments API, a storage provider, a smaller SaaS the model has only half-learned, the failure mode is the same confident hallucination, and the fix is the same: give it the verified facts as standing context, prompt it specifically, and verify the output against the real API instead of against the model's vibes. Email just happens to be a place where a wrong package name and a hardcoded key are both easy to ship and painful to discover in production.
+
+Do the five minutes of setup, a rule file, a scoped key, a sandbox test, and Cursor goes from "writes plausible email code" to "writes the email integration you'd have written yourself, faster".
+
+## Related Guides
+
+The same grounding trick applies in every AI coding tool, with a different file name: [Claude](/guides/claude) uses `CLAUDE.md`, [GitHub Copilot](/guides/github-copilot) uses `.github/copilot-instructions.md`, and [Windsurf](/guides/windsurf) uses `.windsurf/rules/`. Once the agent has written the code, the framework guides show what the finished integration looks like end to end: [Express](/guides/express), [Next.js](/guides/nextjs), and [Fastify](/guides/fastify).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cursor keeps importing a package that doesn't exist">
+    The rule file isn't being applied, or it isn't specific enough. Confirm the file lives under `.cursor/rules/` in the repo root, and install `@ahasend/sdk` before prompting: an agent that sees the dependency in `package.json` rarely invents an alternative. Naming the package in the prompt itself also helps for a single request.
+  </Accordion>
+  <Accordion title="The generated code throws AhaSendConfigurationError on startup">
+    The SDK refuses to run in a browser, service worker, or edge runtime, and it checks at construction time. If Cursor put the client in an edge route (Vercel Edge, Cloudflare Workers, middleware), move the send to a Node runtime route, or call the REST API directly from the edge. See [Cloudflare Workers](/guides/cloudflare-workers) for the edge pattern.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError in the agent's test run">
+    The API key is missing, malformed, or revoked. Check that your `.env` is loaded in the terminal Cursor is using (`node --env-file=.env`), and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` or domain-scoped send permission.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard, and see [the quickstart](/quickstart) if you haven't added one yet.
+  </Accordion>
+</AccordionGroup>
+
+Every endpoint the SDK exposes is in the [API reference](/api-reference).

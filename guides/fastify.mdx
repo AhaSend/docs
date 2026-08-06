@@ -1,0 +1,186 @@
+---
+title: "How to Send Transactional Email with Fastify"
+sidebarTitle: "Fastify"
+description: "Send transactional email from Fastify in under 5 minutes with the AhaSend Node.js SDK, plus signed webhook handling via the built-in Fastify adapter."
+keywords: ["fastify send email", "fastify transactional email", "nodejs email api fastify", "ahasend fastify", "fastify webhook email"]
+---
+
+Send your first transactional email from a [Fastify](https://fastify.dev) (v4 or v5) app in under five minutes using the official AhaSend Node.js SDK, then wire up webhooks with the SDK's built-in Fastify adapter.
+
+## Prerequisites
+
+- Node.js 22 or later
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk fastify-raw-body
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk fastify-raw-body
+```
+
+```bash yarn
+yarn add @ahasend/sdk fastify-raw-body
+```
+
+```bash bun
+bun add @ahasend/sdk fastify-raw-body
+```
+
+</CodeGroup>
+
+`fastify-raw-body` is only needed for webhooks: signature verification requires the raw, unparsed request body.
+
+[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still v0.x, so the API may change before 1.0: pin the exact version in production (`npm install @ahasend/sdk@0.1.0`).
+
+## Configure Environment Variables
+
+Add your credentials to `.env` (and load them with `node --env-file=.env` or `@fastify/env`/`dotenv`):
+
+```bash .env
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+```
+
+<Warning>
+The API key grants full send access to your account. Keep it server-side, never ship it in a browser bundle.
+</Warning>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests: it maintains its own connection pooling, retry, and idempotency state:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+<Tip>
+If you prefer pure env-driven configuration, `AhaSendClient.fromEnv()` builds a client from the `AHASEND_*` variables directly.
+</Tip>
+
+## Send an Email from a Fastify Route
+
+Fastify parses JSON bodies out of the box, so the send route needs no extra plugins:
+
+```ts server.ts
+import Fastify from "fastify";
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend } from "./lib/ahasend.js";
+
+const app = Fastify({ logger: true });
+
+app.post<{ Body: { email: string; name?: string } }>(
+  "/api/welcome",
+  async (request, reply) => {
+    try {
+      const result = await ahasend.messages.send({
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: request.body.email, name: request.body.name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      });
+
+      const rejected = result.data.filter((r) => r.status === "error");
+      if (rejected.length > 0) request.log.warn({ count: rejected.length }, "Recipients rejected");
+
+      return { statuses: result.data.map((r) => r.status) }; // ["queued"]
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        request.log.error({ status: err.status, requestId: err.requestId }, "AhaSend error");
+        return reply.code(502).send({ error: "Failed to send email" });
+      }
+      throw err;
+    }
+  },
+);
+
+await app.listen({ port: 3000 });
+```
+
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+
+The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a 5xx can still send twice. Local rate-limit pacing is a separate, opt-in feature (`rateLimit: { enabled: true }`) that is off by default.
+
+<Note>
+Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
+</Note>
+
+## Handle Webhooks
+
+The SDK ships a dedicated Fastify adapter that verifies the HMAC signature, guards against replays, and hands you a typed event. The verifier needs the **raw request body**, which Fastify normally discards after JSON parsing. Register the [`fastify-raw-body`](https://github.com/Eomm/fastify-raw-body) plugin and enable it only on the webhook route:
+
+```ts server.ts
+import rawBody from "fastify-raw-body";
+import {
+  WebhookVerifier,
+  fastifyWebhookHandler,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
+
+await app.register(rawBody, { field: "rawBody", global: false });
+
+const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
+
+app.post(
+  "/webhooks/ahasend",
+  { config: { rawBody: true } },
+  fastifyWebhookHandler(verifier, async (event) => {
+    if (!isKnownWebhookEvent(event)) return; // future event type, acknowledge & ignore
+
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }),
+);
+```
+
+With `global: false`, raw-body capture only runs on routes that opt in via `config: { rawBody: true }`, so your other routes keep Fastify's normal (faster) parsing. The adapter replies `200` automatically when your handler completes, and `400` if verification fails.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). On a different Node framework? The same SDK powers the [Express](/guides/express) and [Hono](/guides/hono) guides.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Webhook route always returns 400">
+    The adapter couldn't find a raw body. Confirm `fastify-raw-body` is registered **before** the webhook route is declared, that the route options include `config: { rawBody: true }`, and that the plugin was registered with `field: "rawBody"` (the adapter reads `request.rawBody`).
+  </Accordion>
+  <Accordion title="fastify-raw-body fails to register">
+    Match the plugin major to your Fastify major: `fastify-raw-body` v5 targets Fastify v5, v4 targets Fastify v4. A version mismatch throws a plugin-compatibility error at registration time.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>
