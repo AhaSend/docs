@@ -1,11 +1,11 @@
 ---
-title: "How to Send Transactional Email with Encore.ts"
+title: "How to Send Email with Encore.ts"
 sidebarTitle: "Encore.ts"
 description: "Send transactional email from an Encore.ts backend in minutes with the AhaSend SDK: typed endpoints, built-in secrets, and signed webhook handling."
 keywords: ["encore.ts send email", "encore transactional email", "encore email api", "ahasend encore", "encore webhook email"]
 ---
 
-Sending transactional email with Encore.ts is fully supported by the AhaSend SDK, since [Encore.ts](https://encore.dev) runs your backend on Node.js. This guide wires the SDK into Encore's typed API endpoints, stores credentials with Encore's built-in secrets manager, and verifies webhooks in a raw endpoint.
+Two [Encore.ts](https://encore.dev) specifics shape the code below: credentials come from `secret()` rather than `process.env`, and the webhook endpoint must be declared `raw`, since signature verification needs the unparsed body.
 
 ## Prerequisites
 
@@ -35,8 +35,6 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still v0.x, so the API may change before 1.0: pin the exact version in production (`npm install @ahasend/sdk@0.1.0`).
-
 ## Store Credentials as Encore Secrets
 
 Encore has first-class secrets instead of `.env` files. Set each secret for local development (and again with `--type prod` for production):
@@ -62,17 +60,15 @@ const ahasendAccountId = secret("AhaSendAccountId");
 let client: AhaSendClient | undefined;
 
 export function ahasend(): AhaSendClient {
-  client ??= new AhaSendClient({
-    apiKey: ahasendApiKey(),
-    accountId: ahasendAccountId(),
-  });
-  return client;
+ client ??= new AhaSendClient({
+ apiKey: ahasendApiKey(),
+ accountId: ahasendAccountId(),
+ });
+ return client;
 }
 ```
 
-<Tip>
-The lazy module-level singleton means the client is constructed once per process: after the first request it's reused, keeping the SDK's retry and idempotency state intact.
-</Tip>
+The lazy module-level singleton means the client is constructed once per process, so its retry and idempotency state is reused across requests.
 
 ## Send an Email from an Encore API Endpoint
 
@@ -82,45 +78,43 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./ahasend";
 
 export const sendWelcome = api(
-  { expose: true, method: "POST", path: "/welcome" },
-  async ({ email, name }: { email: string; name: string }) => {
-    try {
-      const result = await ahasend().messages.send({
-        from: { email: "hello@yourdomain.com", name: "Your App" },
-        recipients: [{ email, name }],
-        subject: "Welcome to Your App!",
-        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-        text_content: "Welcome aboard! We're glad you're here.",
-      });
+ { expose: true, method: "POST", path: "/welcome" },
+ async ({ email, name }: { email: string; name: string }) => {
+ try {
+ const result = await ahasend().messages.send({
+ from: { email: "hello@yourdomain.com", name: "Your App" },
+ recipients: [{ email, name }],
+ subject: "Welcome to Your App!",
+ html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+ text_content: "Welcome aboard! We're glad you're here.",
+ });
 
-      const rejected = result.data.filter((r) => r.status === "error");
-      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+ const rejected = result.data.filter((r) => r.status === "error");
+ if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
-      return { statuses: result.data.map((r) => r.status) }; // ["queued"]
-    } catch (err) {
-      if (err instanceof AhaSendAPIError) {
-        console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-      }
-      throw err;
-    }
-  },
+ return { statuses: result.data.map((r) => r.status) }; // ["queued"]
+ } catch (err) {
+ if (err instanceof AhaSendAPIError) {
+ console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+ }
+ throw err;
+ }
+ },
 );
 ```
 
-A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first. The SDK retries transient failures automatically and attaches an idempotency key to every send; stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a 5xx can still send twice. Local rate-limit pacing is a separate, opt-in feature (`rateLimit: { enabled: true }`) that is off by default.
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first. The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
 
 Run it locally:
 
 ```bash
 encore run
 curl -X POST http://localhost:4000/welcome \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "name": "Jane"}'
+ -H "Content-Type: application/json" \
+ -d '{"email": "user@example.com", "name": "Jane"}'
 ```
 
-<Note>
-Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
-</Note>
+Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks with a Raw Endpoint
 
@@ -130,9 +124,9 @@ Signature verification needs the **raw request body**, which Encore's typed endp
 import { api } from "encore.dev/api";
 import { secret } from "encore.dev/config";
 import {
-  WebhookVerifier,
-  isKnownWebhookEvent,
-  AhaSendWebhookVerificationError,
+ WebhookVerifier,
+ isKnownWebhookEvent,
+ AhaSendWebhookVerificationError,
 } from "@ahasend/sdk/webhooks";
 
 const ahasendWebhookSecret = secret("AhaSendWebhookSecret");
@@ -140,39 +134,39 @@ const ahasendWebhookSecret = secret("AhaSendWebhookSecret");
 let verifier: WebhookVerifier | undefined;
 
 export const ahasendWebhook = api.raw(
-  { expose: true, path: "/webhooks/ahasend", method: "POST" },
-  async (req, resp) => {
-    verifier ??= new WebhookVerifier(ahasendWebhookSecret());
+ { expose: true, path: "/webhooks/ahasend", method: "POST" },
+ async (req, resp) => {
+ verifier ??= new WebhookVerifier(ahasendWebhookSecret());
 
-    const chunks: Buffer[] = [];
-    for await (const chunk of req) chunks.push(chunk as Buffer);
-    const rawBody = Buffer.concat(chunks);
+ const chunks: Buffer[] = [];
+ for await (const chunk of req) chunks.push(chunk as Buffer);
+ const rawBody = Buffer.concat(chunks);
 
-    try {
-      const event = verifier.parse(req.headers, rawBody);
+ try {
+ const event = verifier.parse(req.headers, rawBody);
 
-      if (isKnownWebhookEvent(event)) {
-        switch (event.type) {
-          case "message.delivered":
-            console.log(`Delivered to ${event.data.recipient}`);
-            break;
-          case "message.bounced":
-            console.log(`Bounced: ${event.data.recipient}`);
-            break;
-        }
-      }
+ if (isKnownWebhookEvent(event)) {
+ switch (event.type) {
+ case "message.delivered":
+ console.log(`Delivered to ${event.data.recipient}`);
+ break;
+ case "message.bounced":
+ console.log(`Bounced: ${event.data.recipient}`);
+ break;
+ }
+ }
 
-      resp.writeHead(200);
-      resp.end();
-    } catch (err) {
-      if (err instanceof AhaSendWebhookVerificationError) {
-        resp.writeHead(400);
-        resp.end();
-        return;
-      }
-      throw err;
-    }
-  },
+ resp.writeHead(200);
+ resp.end();
+ } catch (err) {
+ if (err instanceof AhaSendWebhookVerificationError) {
+ resp.writeHead(400);
+ resp.end();
+ return;
+ }
+ throw err;
+ }
+ },
 );
 ```
 
@@ -180,16 +174,26 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 Not on Encore everywhere? The same SDK, including dedicated webhook adapters, powers the [Express](/guides/express) and [Fastify](/guides/fastify) guides.
 
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Tags**: pass `tags` on the send to group messages for filtering and statistics later.
+- **Secrets for everything**: the webhook secret belongs in `encore secret set` alongside the API key, so neither value lives in your repo or in a `.env` file.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+
+See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration options, and the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes.
+
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Secret not found when calling the endpoint">
-    Secrets are per-environment. If it works locally but fails when deployed, you set `--type local` but not `--type prod` (or the environment type you deployed to).
-  </Accordion>
-  <Accordion title="401 AhaSendAuthenticationError">
-    The `AhaSendApiKey` secret holds a missing, malformed, or revoked key. Re-set it and verify the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
-  </Accordion>
-  <Accordion title="Webhook verification always returns 400">
-    Either the endpoint isn't `api.raw` (typed endpoints consume the raw body), or `AhaSendWebhookSecret` doesn't match the dashboard value exactly.
-  </Accordion>
+ <Accordion title="Secret not found when calling the endpoint">
+ Secrets are per-environment. If it works locally but fails when deployed, you set `--type local` but not `--type prod` (or the environment type you deployed to).
+ </Accordion>
+ <Accordion title="401 AhaSendAuthenticationError">
+ The `AhaSendApiKey` secret holds a missing, malformed, or revoked key. Re-set it and verify the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+ </Accordion>
+ <Accordion title="Webhook verification always returns 400">
+ Either the endpoint isn't `api.raw` (typed endpoints consume the raw body), or `AhaSendWebhookSecret` doesn't match the dashboard value exactly.
+ </Accordion>
 </AccordionGroup>

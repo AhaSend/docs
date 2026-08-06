@@ -1,11 +1,11 @@
 ---
-title: "How to Send Transactional Email with Echo (Go)"
+title: "How to Send Email with Echo (Go)"
 sidebarTitle: "Echo"
 description: "Send transactional email from an Echo (Go) app with the AhaSend email API: SDK setup, send handlers, and HMAC-verified delivery webhooks."
 keywords: ["echo send email", "golang transactional email echo", "echo email api", "ahasend go sdk", "echo webhook email"]
 ---
 
-Send your first transactional email from an [Echo](https://echo.labstack.com) app in under five minutes using the official AhaSend Go SDK, then wire up webhooks to react to deliveries, bounces, and opens in real time.
+[Echo](https://echo.labstack.com) hides the request behind `echo.Context`, so unwrap it: `c.Request()` for `verifier.ParseRequest`. The trap is middleware, since `BodyDump`, `BodyLimit`, or a global binder will consume the webhook body before verification.
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/labstack/echo/v4
 ```
 
-## Configure environment variables
+## Configure Environment Variables
 
 ```bash
 export AHASEND_API_KEY=aha-sk-...
@@ -28,13 +28,9 @@ export AHASEND_ACCOUNT_ID=your-account-uuid
 export AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
-<Warning>
-The API key grants full send access to your account. Keep it in environment variables or a secret manager — never commit it to source control.
-</Warning>
+## Create the Client
 
-## Create the client
-
-Create the client once at startup and share it across handlers — it maintains its own rate-limit, retry, and idempotency state:
+Create the client once at startup and share it across handlers: it maintains its own rate-limit, retry, and idempotency state:
 
 ```go main.go
 package main
@@ -51,7 +47,7 @@ import (
 
 var (
 	ahasendClient *api.APIClient
-	accountID     uuid.UUID
+	accountID uuid.UUID
 )
 
 func main() {
@@ -71,9 +67,9 @@ func main() {
 }
 ```
 
-`middleware.Logger()` only logs request metadata, so it's safe on every route — including the webhook route.
+`middleware.Logger()` only logs request metadata, so it's safe on every route, including the webhook route.
 
-## Send an email from an Echo handler
+## Send an Email from an Echo Handler
 
 Echo handlers take an `echo.Context` and return an `error`. Bind the JSON body into a struct with `c.Bind`:
 
@@ -94,7 +90,7 @@ import (
 
 type welcomeInput struct {
 	Email string `json:"email"`
-	Name  string `json:"name"`
+	Name string `json:"name"`
 }
 
 func sendWelcome(c echo.Context) error {
@@ -107,9 +103,9 @@ func sendWelcome(c echo.Context) error {
 	}
 
 	message := requests.CreateMessageRequest{
-		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
-		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
-		Subject:     "Welcome to Your App!",
+		From: common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+		Recipients: []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
+		Subject: "Welcome to Your App!",
 		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
 		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
 	}
@@ -132,15 +128,11 @@ func sendWelcome(c echo.Context) error {
 }
 ```
 
-The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send, so retries can never double-send.
+The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice.
 
-<Note>
-Sending the same email for the same business event (an order confirmation, say)? Pass `api.WithIdempotencyKey("order-1234")` as a final argument to `CreateMessage` to dedupe against your own identifiers.
-</Note>
+## Handle Webhooks
 
-## Handle webhooks
-
-Echo exposes the underlying `*http.Request` via `c.Request()`, so the SDK's `ParseRequest` works directly — it verifies the HMAC signature, guards against replays, and returns a typed event.
+Echo exposes the underlying `*http.Request` via `c.Request()`, so the SDK's `ParseRequest` works directly: it verifies the HMAC signature, guards against replays, and returns a typed event.
 
 <Warning>
 `ParseRequest` consumes the request body and must see it untouched. Don't run body-reading middleware (`middleware.BodyDump`, `middleware.BodyLimit`, custom binders) ahead of this route, and don't call `c.Bind` on it yourself.
@@ -199,33 +191,32 @@ func handleAhaSendWebhook(c echo.Context) error {
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-<Tip>
-Return 200 promptly and do slow processing in a goroutine or queue — AhaSend retries webhooks that don't get a timely 2xx.
-</Tip>
+Return 200 promptly and do slow processing in a goroutine or queue, because AhaSend retries webhooks that don't get a timely 2xx.
 
-## Going further
+## Going Further
 
-- **Templating** — set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends** — `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags** — set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
-- **Rate limits** — sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
-- **Other frameworks** — the same SDK patterns work in [Gin](/guides/gin), [Fiber](/guides/fiber), and [chi](/guides/chi).
+- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
+- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Rate limits**: sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
+- **Other frameworks**: the same SDK patterns work in [Gin](/guides/gin), [Fiber](/guides/fiber), and [chi](/guides/chi).
+- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="401 from the API">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
-  </Accordion>
-  <Accordion title="Webhook verification always fails">
-    Something consumed the request body before `ParseRequest` ran — `middleware.BodyDump`, `middleware.BodyLimit`, or a custom binder registered globally will all do this. Move them off the webhook route. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
-  </Accordion>
-  <Accordion title="c.Bind leaves my struct empty">
-    Echo binds by `Content-Type`. Make sure the client sends `Content-Type: application/json`; without it, `c.Bind` won't decode the JSON body and your struct fields stay zero-valued.
-  </Accordion>
-  <Accordion title="400 error mentioning the from address">
-    The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
-  </Accordion>
+ <Accordion title="401 from the API">
+ The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+ </Accordion>
+ <Accordion title="Webhook verification always fails">
+ Something consumed the request body before `ParseRequest` ran: `middleware.BodyDump`, `middleware.BodyLimit`, or a custom binder registered globally will all do this. Move them off the webhook route. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
+ </Accordion>
+ <Accordion title="c.Bind leaves my struct empty">
+ Echo binds by `Content-Type`. Make sure the client sends `Content-Type: application/json`; without it, `c.Bind` won't decode the JSON body and your struct fields stay zero-valued.
+ </Accordion>
+ <Accordion title="400 error mentioning the from address">
+ The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+ </Accordion>
 </AccordionGroup>

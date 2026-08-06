@@ -7,7 +7,7 @@ icon: "plug"
 
 Each guide takes one framework, runtime, platform, or tool and walks it end to end: install, configure credentials, send a first email from a real route, and verify incoming webhooks. They are written to be followed in about five minutes.
 
-If your stack is not covered here, the [Quickstart](/quickstart) shows the plain REST API and the [SMTP guides](/smtp) cover the relay. Both work anywhere.
+Already have a mailer in your framework, such as Nodemailer or ActionMailer? Point it at the [SMTP relay](/smtp) instead: four settings, no new code. If your stack is not covered here at all, the [Quickstart](/quickstart) shows the plain REST API, which works anywhere.
 
 ## Start with Your Language
 
@@ -21,10 +21,6 @@ If your stack is not covered here, the [Quickstart](/quickstart) shows the plain
   </Card>
 </CardGroup>
 
-<Note>
-  **The Node.js SDK requires Node.js 22 or later** and runs server-side only. It uses `node:crypto` and `node:buffer`, so browsers, service workers, and edge runtimes (Cloudflare Workers, Vercel Edge, Supabase Edge Functions) are not supported. On those platforms, call the REST API with `fetch`. The [Cloudflare Workers guide](/guides/cloudflare-workers) has the full pattern, including webhook verification with WebCrypto.
-</Note>
-
 ## Web Frameworks
 
 <CardGroup cols={3}>
@@ -36,11 +32,7 @@ If your stack is not covered here, the [Quickstart](/quickstart) shows the plain
   <Card title="SvelteKit" icon="layer-group" href="/guides/sveltekit" />
 </CardGroup>
 
-Also covered in the sidebar: Hono, Koa, ElysiaJS, Encore.ts, Remix, Astro, RedwoodJS, and Vite.
-
-<Warning>
-  The API key grants full send access to your account. In any framework with a public environment prefix (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`), never give the key that prefix. Those values are inlined into the browser bundle at build time. Each guide flags the specific trap for its framework.
-</Warning>
+Also covered: [Hono](/guides/hono), [Koa](/guides/koa), [ElysiaJS](/guides/elysiajs), [Encore.ts](/guides/encore), [Remix](/guides/remix), [Astro](/guides/astro), [RedwoodJS](/guides/redwoodjs), and [Vite](/guides/vite).
 
 ## Go Frameworks
 
@@ -50,9 +42,11 @@ Also covered in the sidebar: Hono, Koa, ElysiaJS, Encore.ts, Remix, Astro, Redwo
   <Card title="Fiber" icon="golang" href="/guides/fiber" />
 </CardGroup>
 
-Chi and gorilla/mux are in the sidebar, along with Azure Functions and Google Cloud Functions for Go on serverless.
+Also covered: [chi](/guides/chi) and [gorilla/mux](/guides/gorilla-mux), plus [Azure Functions](/guides/azure-functions) and [Cloud Run functions](/guides/google-cloud-functions) for Go on serverless.
 
 ## Runtimes and Deployment
+
+Where your code runs decides whether the SDK is an option at all. These cover the ones that need something different.
 
 <CardGroup cols={3}>
   <Card title="Bun" icon="bolt" href="/guides/bun" />
@@ -68,13 +62,13 @@ Chi and gorilla/mux are in the sidebar, along with Azure Functions and Google Cl
 AI agents write email code quickly and invent APIs just as quickly. These guides show how to give each tool the verified AhaSend SDK as standing context, then check the result in sandbox mode before it can send anything real.
 
 <CardGroup cols={3}>
-  <Card title="Cursor" icon="i-cursor" href="/guides/cursor" />
-  <Card title="Claude" icon="robot" href="/guides/claude" />
-  <Card title="GitHub Copilot" icon="github" href="/guides/github-copilot" />
-  <Card title="Windsurf" icon="wind" href="/guides/windsurf" />
-  <Card title="v0" icon="wand-magic-sparkles" href="/guides/v0" />
-  <Card title="Lovable" icon="heart" href="/guides/lovable" />
   <Card title="Bolt.new" icon="bolt" href="/guides/bolt-new" />
+  <Card title="Claude" icon="robot" href="/guides/claude" />
+  <Card title="Cursor" icon="i-cursor" href="/guides/cursor" />
+  <Card title="GitHub Copilot" icon="github" href="/guides/github-copilot" />
+  <Card title="Lovable" icon="heart" href="/guides/lovable" />
+  <Card title="v0" icon="wand-magic-sparkles" href="/guides/v0" />
+  <Card title="Windsurf" icon="wind" href="/guides/windsurf" />
 </CardGroup>
 
 ## What Every Guide Assumes

@@ -397,13 +397,13 @@
           {
             "group": "AI Development Tools",
             "pages": [
-              "guides/cursor",
+              "guides/bolt-new",
               "guides/claude",
+              "guides/cursor",
               "guides/github-copilot",
-              "guides/windsurf",
-              "guides/v0",
               "guides/lovable",
-              "guides/bolt-new"
+              "guides/v0",
+              "guides/windsurf"
             ]
           }
         ]

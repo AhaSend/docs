@@ -1,15 +1,11 @@
 ---
-title: "How to Send Transactional Email with Fiber (Go)"
+title: "How to Send Email with Fiber (Go)"
 sidebarTitle: "Fiber"
 description: "Send transactional email from a Fiber (Go) app with the AhaSend email API, including fasthttp-safe webhook verification with verifier.Parse."
 keywords: ["fiber send email", "golang transactional email fiber", "fiber email api", "ahasend go sdk", "fiber webhook email"]
 ---
 
-Send your first transactional email from a [Fiber](https://gofiber.io) app in under five minutes using the official AhaSend Go SDK, then wire up webhooks to react to deliveries, bounces, and opens in real time.
-
-<Note>
-Fiber is built on [fasthttp](https://github.com/valyala/fasthttp), not `net/http`, so a Fiber handler has no `*http.Request`. That changes two things in this guide compared to `net/http` frameworks: you pass `c.Context()` (the fasthttp context, which implements `context.Context`) to the SDK, and you verify webhooks with `verifier.Parse` instead of `verifier.ParseRequest`.
-</Note>
+[Fiber](https://gofiber.io) runs on [fasthttp](https://github.com/valyala/fasthttp), not `net/http`, so a handler never sees an `*http.Request`: pass `c.Context()` to the SDK, and verify webhooks with `verifier.Parse` instead of `verifier.ParseRequest`.
 
 ## Prerequisites
 
@@ -24,7 +20,7 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/gofiber/fiber/v2
 ```
 
-## Configure environment variables
+## Configure Environment Variables
 
 ```bash
 export AHASEND_API_KEY=aha-sk-...
@@ -32,13 +28,9 @@ export AHASEND_ACCOUNT_ID=your-account-uuid
 export AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
-<Warning>
-The API key grants full send access to your account. Keep it in environment variables or a secret manager — never commit it to source control.
-</Warning>
+## Create the Client
 
-## Create the client
-
-Create the client once at startup and share it across handlers — it maintains its own rate-limit, retry, and idempotency state:
+Create the client once at startup and share it across handlers: it maintains its own rate-limit, retry, and idempotency state:
 
 ```go main.go
 package main
@@ -54,7 +46,7 @@ import (
 
 var (
 	ahasendClient *api.APIClient
-	accountID     uuid.UUID
+	accountID uuid.UUID
 )
 
 func main() {
@@ -73,7 +65,7 @@ func main() {
 }
 ```
 
-## Send an email from a Fiber handler
+## Send an Email from a Fiber Handler
 
 Fiber v2 has no per-request `context.Context` of its own; `c.Context()` returns the underlying `*fasthttp.RequestCtx`, which implements `context.Context`, so pass that to the SDK:
 
@@ -93,7 +85,7 @@ import (
 
 type welcomeInput struct {
 	Email string `json:"email"`
-	Name  string `json:"name"`
+	Name string `json:"name"`
 }
 
 func sendWelcome(c *fiber.Ctx) error {
@@ -106,9 +98,9 @@ func sendWelcome(c *fiber.Ctx) error {
 	}
 
 	message := requests.CreateMessageRequest{
-		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
-		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
-		Subject:     "Welcome to Your App!",
+		From: common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+		Recipients: []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
+		Subject: "Welcome to Your App!",
 		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
 		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
 	}
@@ -131,15 +123,11 @@ func sendWelcome(c *fiber.Ctx) error {
 }
 ```
 
-The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send, so retries can never double-send.
+The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice.
 
-<Note>
-Sending the same email for the same business event (an order confirmation, say)? Pass `api.WithIdempotencyKey("order-1234")` as a final argument to `CreateMessage` to dedupe against your own identifiers.
-</Note>
+## Handle Webhooks
 
-## Handle webhooks
-
-The SDK's `ParseRequest` takes a `*http.Request`, which Fiber never constructs — fasthttp uses its own request type. Use `verifier.Parse` instead: hand it the raw body from `c.Body()` and an `http.Header` you build from the three signature headers AhaSend sends.
+The SDK's `ParseRequest` takes a `*http.Request`, which Fiber never constructs: fasthttp uses its own request type. Use `verifier.Parse` instead: hand it the raw body from `c.Body()` and an `http.Header` you build from the three signature headers AhaSend sends.
 
 ```go webhook.go
 package main
@@ -199,33 +187,32 @@ func handleAhaSendWebhook(c *fiber.Ctx) error {
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-<Tip>
-Return 200 promptly and do slow processing asynchronously — AhaSend retries webhooks that don't get a timely 2xx. If you hand work to a goroutine, copy any data you need first: Fiber reuses request buffers, so `c.Body()` and `c.Get()` values are only valid until the handler returns.
-</Tip>
+Return 200 promptly and do slow processing asynchronously, because AhaSend retries webhooks that don't get a timely 2xx. If you hand work to a goroutine, copy any data you need first: Fiber reuses request buffers, so `c.Body()` and `c.Get()` values are only valid until the handler returns.
 
-## Going further
+## Going Further
 
-- **Templating** — set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends** — `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags** — set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
-- **Rate limits** — sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
-- **Other frameworks** — prefer `net/http`-style routing? The same SDK patterns work in [Gin](/guides/gin) and [Echo](/guides/echo).
+- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
+- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Rate limits**: sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
+- **Other frameworks**: prefer `net/http`-style routing? The same SDK patterns work in [Gin](/guides/gin) and [Echo](/guides/echo).
+- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="401 from the API">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
-  </Accordion>
-  <Accordion title="Webhook verification always fails">
-    Confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix, and that no middleware rewrites the body before `verifier.Parse` runs — the signature is computed over the exact raw bytes AhaSend sent. Compression or body-mutating middleware on the webhook route will break verification.
-  </Accordion>
-  <Accordion title="Corrupted data after the handler returns">
-    Fiber is zero-copy by default: byte slices from `c.Body()` and strings from `c.Get()` point into buffers that are recycled for the next request. If you store them or pass them to a goroutine, make copies (or enable `fiber.Config{Immutable: true}`, at a performance cost). The parsed `event` structs from the verifier are safe — they're decoded copies.
-  </Accordion>
-  <Accordion title="400 error mentioning the from address">
-    The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
-  </Accordion>
+ <Accordion title="401 from the API">
+ The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+ </Accordion>
+ <Accordion title="Webhook verification always fails">
+ Confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix, and that no middleware rewrites the body before `verifier.Parse` runs: the signature is computed over the exact raw bytes AhaSend sent. Compression or body-mutating middleware on the webhook route will break verification.
+ </Accordion>
+ <Accordion title="Corrupted data after the handler returns">
+ Fiber is zero-copy by default: byte slices from `c.Body()` and strings from `c.Get()` point into buffers that are recycled for the next request. If you store them or pass them to a goroutine, make copies (or enable `fiber.Config{Immutable: true}`, at a performance cost). The parsed `event` structs from the verifier are safe: they're decoded copies.
+ </Accordion>
+ <Accordion title="400 error mentioning the from address">
+ The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+ </Accordion>
 </AccordionGroup>

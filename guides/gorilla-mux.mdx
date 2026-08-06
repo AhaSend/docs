@@ -1,11 +1,11 @@
 ---
-title: "How to Send Transactional Email with Gorilla Mux (Go)"
+title: "How to Send Email with gorilla/mux (Go)"
 sidebarTitle: "Gorilla Mux"
 description: "Send transactional email from a gorilla/mux (Go) app with the AhaSend email API: SDK setup, send handlers, and HMAC-verified delivery webhooks."
 keywords: ["gorilla mux send email", "golang transactional email gorilla mux", "gorilla mux email api", "ahasend go sdk", "gorilla mux webhook email"]
 ---
 
-Send your first transactional email from a [gorilla/mux](https://github.com/gorilla/mux) app in under five minutes using the official AhaSend Go SDK, then wire up webhooks to react to deliveries, bounces, and opens in real time. gorilla/mux is actively maintained again since 2023 under new stewardship, and its handlers are plain `net/http`, so everything here is standard library plus the SDK.
+[gorilla/mux](https://github.com/gorilla/mux), maintained again since 2023, routes plain `net/http` handlers, so `verifier.ParseRequest` takes the `*http.Request` you already receive. The care goes into `r.Use(...)`, which must leave the webhook body untouched.
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/gorilla/mux
 ```
 
-## Configure environment variables
+## Configure Environment Variables
 
 ```bash
 export AHASEND_API_KEY=aha-sk-...
@@ -28,13 +28,9 @@ export AHASEND_ACCOUNT_ID=your-account-uuid
 export AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
-<Warning>
-The API key grants full send access to your account. Keep it in environment variables or a secret manager — never commit it to source control.
-</Warning>
+## Create the Client
 
-## Create the client
-
-Create the client once at startup and share it across handlers — it maintains its own rate-limit, retry, and idempotency state. Pass the router to `http.ListenAndServe` to serve it:
+Create the client once at startup and share it across handlers: it maintains its own rate-limit, retry, and idempotency state. Pass the router to `http.ListenAndServe` to serve it:
 
 ```go main.go
 package main
@@ -51,7 +47,7 @@ import (
 
 var (
 	ahasendClient *api.APIClient
-	accountID     uuid.UUID
+	accountID uuid.UUID
 )
 
 func main() {
@@ -70,7 +66,7 @@ func main() {
 }
 ```
 
-## Send an email from a gorilla/mux handler
+## Send an Email from a gorilla/mux Handler
 
 gorilla/mux handlers are ordinary `net/http` handlers, so decode the JSON body with `encoding/json`:
 
@@ -91,7 +87,7 @@ import (
 
 type welcomeInput struct {
 	Email string `json:"email"`
-	Name  string `json:"name"`
+	Name string `json:"name"`
 }
 
 func sendWelcome(w http.ResponseWriter, r *http.Request) {
@@ -102,9 +98,9 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := requests.CreateMessageRequest{
-		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
-		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
-		Subject:     "Welcome to Your App!",
+		From: common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+		Recipients: []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
+		Subject: "Welcome to Your App!",
 		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
 		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
 	}
@@ -130,15 +126,11 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send, so retries can never double-send.
+The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice.
 
-<Note>
-Sending the same email for the same business event (an order confirmation, say)? Pass `api.WithIdempotencyKey("order-1234")` as a final argument to `CreateMessage` to dedupe against your own identifiers.
-</Note>
+## Handle Webhooks
 
-## Handle webhooks
-
-gorilla/mux hands you the raw `*http.Request`, so the SDK's `ParseRequest` works directly — it verifies the HMAC signature, guards against replays, and returns a typed event.
+gorilla/mux hands you the raw `*http.Request`, so the SDK's `ParseRequest` works directly: it verifies the HMAC signature, guards against replays, and returns a typed event.
 
 <Warning>
 `ParseRequest` consumes the request body and must see it untouched. Don't attach body-reading middleware (request dumpers, body-buffering loggers) to the router ahead of the webhook route.
@@ -197,33 +189,32 @@ func handleAhaSendWebhook(w http.ResponseWriter, r *http.Request) {
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-<Tip>
-Return 200 promptly and do slow processing in a goroutine or queue — AhaSend retries webhooks that don't get a timely 2xx.
-</Tip>
+Return 200 promptly and do slow processing in a goroutine or queue, because AhaSend retries webhooks that don't get a timely 2xx.
 
-## Going further
+## Going Further
 
-- **Templating** — set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends** — `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags** — set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
-- **Rate limits** — sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
-- **Other frameworks** — the same SDK patterns work in [chi](/guides/chi), [Gin](/guides/gin), and [Echo](/guides/echo).
+- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
+- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Rate limits**: sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
+- **Other frameworks**: the same SDK patterns work in [chi](/guides/chi), [Gin](/guides/gin), and [Echo](/guides/echo).
+- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="401 from the API">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
-  </Accordion>
-  <Accordion title="Webhook verification always fails">
-    Something consumed the request body before `ParseRequest` ran — check `r.Use(...)` middleware for body readers. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
-  </Accordion>
-  <Accordion title="405 Method Not Allowed on my routes">
-    `.Methods("POST")` restricts the route to POST only — a GET to the same path returns 405. Make sure your test request uses POST, and note that method names are case-sensitive uppercase (`"POST"`, not `"post"`).
-  </Accordion>
-  <Accordion title="400 error mentioning the from address">
-    The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
-  </Accordion>
+ <Accordion title="401 from the API">
+ The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+ </Accordion>
+ <Accordion title="Webhook verification always fails">
+ Something consumed the request body before `ParseRequest` ran. Check `r.Use(...)` middleware for body readers. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
+ </Accordion>
+ <Accordion title="405 Method Not Allowed on my routes">
+ `.Methods("POST")` restricts the route to POST only: a GET to the same path returns 405. Make sure your test request uses POST, and note that method names are case-sensitive uppercase (`"POST"`, not `"post"`).
+ </Accordion>
+ <Accordion title="400 error mentioning the from address">
+ The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+ </Accordion>
 </AccordionGroup>

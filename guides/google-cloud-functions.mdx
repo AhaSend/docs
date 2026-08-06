@@ -1,11 +1,11 @@
 ---
-title: "How to Send Email from Google Cloud Functions in Go"
-sidebarTitle: "Google Cloud Functions"
-description: "Send transactional email from Google Cloud Functions in Go with the Functions Framework and the AhaSend email API, plus verified delivery webhooks."
-keywords: ["google cloud functions go send email", "golang transactional email cloud functions", "cloud run functions go email", "ahasend go sdk", "cloud functions email api"]
+title: "How to Send Email with Cloud Run Functions (Go)"
+sidebarTitle: "Cloud Run Functions"
+description: "Send transactional email from Cloud Run functions (formerly Google Cloud Functions) in Go with the Functions Framework and the AhaSend Go SDK."
+keywords: ["cloud run functions go email", "google cloud functions go send email", "golang transactional email cloud functions", "ahasend go sdk", "cloud functions email api"]
 ---
 
-Send transactional email from Google Cloud Functions in Go — now [Cloud Run functions](https://cloud.google.com/functions) (2nd gen) — using the AhaSend Go SDK to send messages and receive delivery webhooks. The [Functions Framework for Go](https://github.com/GoogleCloudPlatform/functions-framework-go) hands your code a standard `http.ResponseWriter` and `*http.Request`, so the SDK — including `verifier.ParseRequest` — works with no adaptation.
+[Cloud Run functions](https://cloud.google.com/functions), renamed from Cloud Functions in August 2024, run Go through the [Functions Framework](https://github.com/GoogleCloudPlatform/functions-framework-go), which hands each invocation a standard `http.ResponseWriter` and `*http.Request`. The SDK, `verifier.ParseRequest` included, needs no adaptation.
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ Send transactional email from Google Cloud Functions in Go — now [Cloud Run fu
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 - A Google Cloud project with the `gcloud` CLI configured
 
-## Install the dependencies
+## Install the Dependencies
 
 ```bash
 go mod init example.com/emailfns
@@ -22,9 +22,9 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/GoogleCloudPlatform/functions-framework-go
 ```
 
-## Write the Google Cloud Functions code
+## Write the Cloud Run Functions Code
 
-Cloud Run functions in Go live in a non-`main` package. Register each HTTP function in `init()` with `functions.HTTP`; the registered name is what you point `--entry-point` at when deploying. Initialize the SDK client at package level too — `init()` runs once per instance, so the client (with its rate-limit, retry, and idempotency state) is reused across every warm invocation instead of being rebuilt per request.
+Cloud Run functions in Go live in a non-`main` package. Register each HTTP function in `init()` with `functions.HTTP`; the registered name is what you point `--entry-point` at when deploying. Initialize the SDK client at package level too: `init()` runs once per instance, so the client (with its rate-limit, retry, and idempotency state) is reused across every warm invocation instead of being rebuilt per request.
 
 ```go function.go
 package emailfns
@@ -47,8 +47,8 @@ import (
 
 var (
 	ahasendClient *api.APIClient
-	accountID     uuid.UUID
-	verifier      *webhooks.WebhookVerifier
+	accountID uuid.UUID
+	verifier *webhooks.WebhookVerifier
 )
 
 func init() {
@@ -70,7 +70,7 @@ func init() {
 
 type welcomeInput struct {
 	Email string `json:"email"`
-	Name  string `json:"name"`
+	Name string `json:"name"`
 }
 
 func sendWelcome(w http.ResponseWriter, r *http.Request) {
@@ -81,9 +81,9 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := requests.CreateMessageRequest{
-		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
-		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
-		Subject:     "Welcome to Your App!",
+		From: common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+		Recipients: []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
+		Subject: "Welcome to Your App!",
 		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
 		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
 	}
@@ -137,13 +137,13 @@ func ahaSendWebhook(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send, so retries can never double-send.
+The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice.
 
 <Note>
 Both functions live in the same source package, so `init()` runs for both deployments. Set all three environment variables on each function, or the shared `init()` will fail at cold start.
 </Note>
 
-## Store the API key in Secret Manager
+## Store the API Key in Secret Manager
 
 Environment variables set with `--set-env-vars` are visible to anyone who can describe the function. Keep the API key (and webhook secret) in Secret Manager instead:
 
@@ -156,29 +156,27 @@ Grant the function's runtime service account the **Secret Manager Secret Accesso
 
 ## Deploy
 
-Deploy each entry point as its own function from the same source directory:
+Deploy each entry point as its own function from the same source directory. The `gcloud functions` commands are unchanged by the rename, and `--gen2` targets 2nd gen:
 
 ```bash
 gcloud functions deploy send-welcome \
-  --gen2 --runtime=go122 --trigger-http --source=. \
-  --entry-point=SendWelcome \
-  --set-env-vars AHASEND_ACCOUNT_ID=your-account-uuid \
-  --set-secrets AHASEND_API_KEY=ahasend-api-key:latest,AHASEND_WEBHOOK_SECRET=ahasend-webhook-secret:latest
+ --gen2 --runtime=go122 --trigger-http --source=. \
+ --entry-point=SendWelcome \
+ --set-env-vars AHASEND_ACCOUNT_ID=your-account-uuid \
+ --set-secrets AHASEND_API_KEY=ahasend-api-key:latest,AHASEND_WEBHOOK_SECRET=ahasend-webhook-secret:latest
 
 gcloud functions deploy ahasend-webhook \
-  --gen2 --runtime=go122 --trigger-http --source=. \
-  --entry-point=AhaSendWebhook --allow-unauthenticated \
-  --set-env-vars AHASEND_ACCOUNT_ID=your-account-uuid \
-  --set-secrets AHASEND_API_KEY=ahasend-api-key:latest,AHASEND_WEBHOOK_SECRET=ahasend-webhook-secret:latest
+ --gen2 --runtime=go122 --trigger-http --source=. \
+ --entry-point=AhaSendWebhook --allow-unauthenticated \
+ --set-env-vars AHASEND_ACCOUNT_ID=your-account-uuid \
+ --set-secrets AHASEND_API_KEY=ahasend-api-key:latest,AHASEND_WEBHOOK_SECRET=ahasend-webhook-secret:latest
 ```
 
-The webhook function must be `--allow-unauthenticated` — AhaSend can't attach Google IAM credentials. Authentication happens via the HMAC signature the verifier checks. Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at the URL `gcloud` prints for `ahasend-webhook`, and copy its secret into the `ahasend-webhook-secret` secret exactly as shown (including the `aha-whsec-` prefix).
+The webhook function must be `--allow-unauthenticated`. AhaSend can't attach Google IAM credentials. Authentication happens via the HMAC signature the verifier checks. Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at the URL `gcloud` prints for `ahasend-webhook`, and copy its secret into the `ahasend-webhook-secret` secret exactly as shown (including the `aha-whsec-` prefix).
 
-<Tip>
-Return 200 promptly and do slow processing asynchronously (Cloud Tasks or Pub/Sub work well here) — AhaSend retries webhooks that don't get a timely 2xx.
-</Tip>
+Return 200 promptly and do slow processing asynchronously with Cloud Tasks or Pub/Sub, because AhaSend retries webhooks that don't get a timely 2xx.
 
-## Test locally
+## Test Locally
 
 The Functions Framework can serve your function as a local HTTP server. Add a small `main` package:
 
@@ -209,36 +207,37 @@ Then pick which registered function to serve with `FUNCTION_TARGET`:
 
 ```bash
 FUNCTION_TARGET=SendWelcome AHASEND_API_KEY=aha-sk-... \
-  AHASEND_ACCOUNT_ID=your-account-uuid AHASEND_WEBHOOK_SECRET=aha-whsec-... \
-  go run ./cmd
+ AHASEND_ACCOUNT_ID=your-account-uuid AHASEND_WEBHOOK_SECRET=aha-whsec-... \
+ go run ./cmd
 ```
 
-## Going further
+## Going Further
 
-- **Templating** — set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends** — `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags** — set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
-- **Cold starts** — because the client and verifier are built in `init()`, that cost is paid once per instance and amortized across all warm invocations. Setting `--min-instances=1` removes cold starts entirely for latency-sensitive sends.
-- **Other platforms** — deploying on Azure instead? See the [Azure Functions guide](/guides/azure-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
+- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
+- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Cold starts**: because the client and verifier are built in `init()`, that cost is paid once per instance and amortized across all warm invocations. Setting `--min-instances=1` removes cold starts entirely for latency-sensitive sends.
+- **Other platforms**: deploying on Azure instead? See the [Azure Functions guide](/guides/azure-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
+- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Deploy fails with an entry point error">
-    The `--entry-point` value must exactly match the name registered with `functions.HTTP` (`SendWelcome`, `AhaSendWebhook`) — it is the registered name, not the Go function name, and it's case-sensitive. Also confirm the source package isn't `package main`.
-  </Accordion>
-  <Accordion title="Function crashes at startup after deploy">
-    Check the Cloud Logging output. The usual causes: an environment variable missing on one of the two functions (both run the same `init()`), or the runtime service account lacking `roles/secretmanager.secretAccessor` on a secret referenced by `--set-secrets` — the instance then fails before your code runs.
-  </Accordion>
-  <Accordion title="Webhook verification always fails">
-    Confirm the secret in Secret Manager matches the dashboard exactly, including the `aha-whsec-` prefix (watch for a trailing newline — use `printf`, not `echo`, when creating the secret). `ParseRequest` must be the first thing to read the request body on that route.
-  </Accordion>
-  <Accordion title="401 from the AhaSend API">
-    The API key is missing, malformed, or revoked. Verify the secret binding (`--set-secrets AHASEND_API_KEY=...`) is present on the function and the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
-  </Accordion>
-  <Accordion title="400 error mentioning the from address">
-    The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
-  </Accordion>
+ <Accordion title="Deploy fails with an entry point error">
+ The `--entry-point` value must exactly match the name registered with `functions.HTTP` (`SendWelcome`, `AhaSendWebhook`): it is the registered name, not the Go function name, and it's case-sensitive. Also confirm the source package isn't `package main`.
+ </Accordion>
+ <Accordion title="Function crashes at startup after deploy">
+ Check the Cloud Logging output. The usual causes: an environment variable missing on one of the two functions (both run the same `init()`), or the runtime service account lacking `roles/secretmanager.secretAccessor` on a secret referenced by `--set-secrets`: the instance then fails before your code runs.
+ </Accordion>
+ <Accordion title="Webhook verification always fails">
+ Confirm the secret in Secret Manager matches the dashboard exactly, including the `aha-whsec-` prefix (watch for a trailing newline: use `printf`, not `echo`, when creating the secret). `ParseRequest` must be the first thing to read the request body on that route.
+ </Accordion>
+ <Accordion title="401 from the AhaSend API">
+ The API key is missing, malformed, or revoked. Verify the secret binding (`--set-secrets AHASEND_API_KEY=...`) is present on the function and the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+ </Accordion>
+ <Accordion title="400 error mentioning the from address">
+ The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+ </Accordion>
 </AccordionGroup>

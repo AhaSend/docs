@@ -1,11 +1,11 @@
 ---
-title: "How to Send Transactional Email with ElysiaJS"
+title: "How to Send Email with ElysiaJS"
 sidebarTitle: "ElysiaJS"
 description: "Send transactional email from an ElysiaJS app on Bun in under 5 minutes with the AhaSend SDK, plus signed webhook verification."
 keywords: ["elysiajs send email", "elysia transactional email", "bun email api elysia", "ahasend elysia", "elysia webhook email"]
 ---
 
-Send your first transactional email from an [ElysiaJS](https://elysiajs.com) app on Bun using the official AhaSend SDK, then verify webhooks with the SDK's generic verifier. The SDK targets Node.js 22+, and Bun implements the `node:crypto` and `node:buffer` built-ins it depends on, so everything, including webhook signature verification, works natively on Bun.
+[ElysiaJS](https://elysiajs.com) runs on Bun, which implements the `node:crypto` and `node:buffer` built-ins the SDK depends on. Elysia has no dedicated adapter, so the webhook route calls the generic `WebhookVerifier` on the raw request body.
 
 ## Prerequisites
 
@@ -35,8 +35,6 @@ yarn add @ahasend/sdk elysia
 
 </CodeGroup>
 
-[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still v0.x, so the API may change before 1.0: pin the exact version in production (`bun add @ahasend/sdk@0.1.0`).
-
 ## Configure Environment Variables
 
 Add your credentials to `.env`. Bun loads it automatically, no dotenv needed:
@@ -47,26 +45,18 @@ AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
-<Warning>
-The API key grants full send access to your account. Keep it server-side, never ship it in a browser bundle.
-</Warning>
-
 ## Create the Client
 
-Create the client once at module scope and reuse it across requests: it maintains its own connection pooling, retry, and idempotency state:
+Create the client once at module scope and reuse it across requests:
 
 ```ts src/lib/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
+ apiKey: process.env.AHASEND_API_KEY!,
+ accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
-
-<Tip>
-If you prefer pure env-driven configuration, `AhaSendClient.fromEnv()` builds a client from the `AHASEND_*` variables directly.
-</Tip>
 
 ## Send an Email from an Elysia Route
 
@@ -78,48 +68,46 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend";
 
 const app = new Elysia()
-  .post(
-    "/api/welcome",
-    async ({ body, set }) => {
-      try {
-        const result = await ahasend.messages.send({
-          from: { email: "hello@yourdomain.com", name: "Your App" },
-          recipients: [{ email: body.email, name: body.name }],
-          subject: "Welcome to Your App!",
-          html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-          text_content: "Welcome aboard! We're glad you're here.",
-        });
+ .post(
+ "/api/welcome",
+ async ({ body, set }) => {
+ try {
+ const result = await ahasend.messages.send({
+ from: { email: "hello@yourdomain.com", name: "Your App" },
+ recipients: [{ email: body.email, name: body.name }],
+ subject: "Welcome to Your App!",
+ html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+ text_content: "Welcome aboard! We're glad you're here.",
+ });
 
-        const rejected = result.data.filter((r) => r.status === "error");
-        if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+ const rejected = result.data.filter((r) => r.status === "error");
+ if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
-        return { statuses: result.data.map((r) => r.status) }; // ["queued"]
-      } catch (err) {
-        if (err instanceof AhaSendAPIError) {
-          console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-          set.status = 502;
-          return { error: "Failed to send email" };
-        }
-        throw err;
-      }
-    },
-    {
-      body: t.Object({
-        email: t.String({ format: "email" }),
-        name: t.Optional(t.String()),
-      }),
-    },
-  )
-  .listen(3000);
+ return { statuses: result.data.map((r) => r.status) }; // ["queued"]
+ } catch (err) {
+ if (err instanceof AhaSendAPIError) {
+ console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+ set.status = 502;
+ return { error: "Failed to send email" };
+ }
+ throw err;
+ }
+ },
+ {
+ body: t.Object({
+ email: t.String({ format: "email" }),
+ name: t.Optional(t.String()),
+ }),
+ },
+ )
+ .listen(3000);
 ```
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a 5xx can still send twice. Local rate-limit pacing is a separate, opt-in feature (`rateLimit: { enabled: true }`) that is off by default.
+The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
 
-<Note>
-Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
-</Note>
+Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks
 
@@ -127,43 +115,43 @@ There is no Elysia-specific adapter, so use the generic `WebhookVerifier`, which
 
 ```ts src/index.ts
 import {
-  AhaSendWebhookVerificationError,
-  WebhookVerifier,
-  isKnownWebhookEvent,
+ AhaSendWebhookVerificationError,
+ WebhookVerifier,
+ isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 // add to the chain before .listen(3000)
 app.post("/webhooks/ahasend", async ({ request, set }) => {
-  let event;
-  try {
-    // request.text() works because `body` was never accessed on this route,
-    // so Elysia hasn't consumed the request stream.
-    event = verifier.parse(request.headers, await request.text());
-  } catch (err) {
-    if (err instanceof AhaSendWebhookVerificationError) {
-      set.status = 400;
-      return;
-    }
-    throw err;
-  }
+ let event;
+ try {
+ // request.text() works because `body` was never accessed on this route,
+ // so Elysia hasn't consumed the request stream.
+ event = verifier.parse(request.headers, await request.text());
+ } catch (err) {
+ if (err instanceof AhaSendWebhookVerificationError) {
+ set.status = 400;
+ return;
+ }
+ throw err;
+ }
 
-  if (isKnownWebhookEvent(event)) {
-    switch (event.type) {
-      case "message.delivered":
-        console.log(`Delivered to ${event.data.recipient}`);
-        break;
-      case "message.bounced":
-        console.log(`Bounced: ${event.data.recipient}`);
-        break;
-      case "message.opened":
-        console.log(`Opened by ${event.data.recipient}`);
-        break;
-    }
-  }
+ if (isKnownWebhookEvent(event)) {
+ switch (event.type) {
+ case "message.delivered":
+ console.log(`Delivered to ${event.data.recipient}`);
+ break;
+ case "message.bounced":
+ console.log(`Bounced: ${event.data.recipient}`);
+ break;
+ case "message.opened":
+ console.log(`Opened by ${event.data.recipient}`);
+ break;
+ }
+ }
 
-  set.status = 200;
+ set.status = 200;
 });
 ```
 
@@ -177,22 +165,23 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). Prefer a plain server or a different router? See the [Bun](/guides/bun) and [Hono](/guides/hono) guides.
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Prefer a plain server or a different router? See the [Bun](/guides/bun) and [Hono](/guides/hono) guides.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Webhook verification always returns 400">
-    The most common cause on Elysia is a consumed body: a `body` schema on the webhook route, or a global hook/plugin that touches `body`, drains the request stream before `request.text()` runs. Keep the route schema-free, or read `await request.text()` before anything else touches the context. Also confirm `AHASEND_WEBHOOK_SECRET` matches the dashboard value exactly (including the `aha-whsec-` prefix).
-  </Accordion>
-  <Accordion title="422 validation error from Elysia instead of my handler running">
-    Elysia rejects requests that fail the `t.Object` body schema before your handler executes. Check the client is sending `Content-Type: application/json` and the field names match the schema.
-  </Accordion>
-  <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. Bun only auto-loads `.env` from the directory you run `bun` in. Verify with `console.log(process.env.AHASEND_API_KEY?.slice(0, 8))`.
-  </Accordion>
-  <Accordion title="400 error mentioning the from address">
-    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
-  </Accordion>
+ <Accordion title="Webhook verification always returns 400">
+ The most common cause on Elysia is a consumed body: a `body` schema on the webhook route, or a global hook/plugin that touches `body`, drains the request stream before `request.text()` runs. Keep the route schema-free, or read `await request.text()` before anything else touches the context. Also confirm `AHASEND_WEBHOOK_SECRET` matches the dashboard value exactly (including the `aha-whsec-` prefix).
+ </Accordion>
+ <Accordion title="422 validation error from Elysia instead of my handler running">
+ Elysia rejects requests that fail the `t.Object` body schema before your handler executes. Check the client is sending `Content-Type: application/json` and the field names match the schema.
+ </Accordion>
+ <Accordion title="401 AhaSendAuthenticationError">
+ The API key is missing, malformed, or revoked. Bun only auto-loads `.env` from the directory you run `bun` in. Verify with `console.log(process.env.AHASEND_API_KEY?.slice(0, 8))`.
+ </Accordion>
+ <Accordion title="400 error mentioning the from address">
+ The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+ </Accordion>
 </AccordionGroup>

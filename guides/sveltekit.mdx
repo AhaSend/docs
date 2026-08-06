@@ -1,11 +1,11 @@
 ---
-title: "How to Send Transactional Email with SvelteKit"
+title: "How to Send Email with SvelteKit"
 sidebarTitle: "SvelteKit"
 description: "Send transactional email from SvelteKit 2 server endpoints with the AhaSend Node.js SDK, keep keys in private env modules, and verify webhooks."
 keywords: ["sveltekit send email", "sveltekit transactional email", "sveltekit server endpoint email", "ahasend sveltekit", "sveltekit webhook verification"]
 ---
 
-Send your first transactional email from a [SvelteKit](https://svelte.dev/docs/kit) 2 app in under five minutes using the official AhaSend Node.js SDK inside `+server.ts` endpoints, then wire up webhooks to react to deliveries, bounces, and opens in real time.
+Read the key from [SvelteKit](https://svelte.dev/docs/kit)'s `$env/dynamic/private`, never the `PUBLIC_` variants, and a leaked key becomes a build error instead of a production incident.
 
 ## Prerequisites
 
@@ -35,8 +35,6 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-The SDK is still on [`0.x`](https://www.npmjs.com/package/@ahasend/sdk), so its API can change before 1.0. Pin the exact version in production: `npm install @ahasend/sdk@0.1.0`.
-
 ## Configure Environment Variables
 
 Add your credentials to `.env`, which SvelteKit (via Vite) loads automatically in development:
@@ -47,32 +45,24 @@ AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
-SvelteKit splits env access into four modules. For secrets, always use a **private** one:
+Read secrets from a **private** env module. Both work:
 
-- `$env/dynamic/private`: read at runtime from `process.env`. Best for deployments where env vars are injected at start-up (Docker, most PaaS).
-- `$env/static/private`: inlined at build time; the build fails if a variable is missing.
-
-<Warning>
-`$env/dynamic/public` and `$env/static/public` only expose variables prefixed with `PUBLIC_`, and those are shipped to the browser. Never name the key `PUBLIC_AHASEND_API_KEY`: anyone could read it from your client bundle and send email as you. Unprefixed variables are refused by the public modules and can't be imported into client code at all, which is exactly what you want.
-</Warning>
+- `$env/dynamic/private`: read at runtime from `process.env`, for deployments that inject variables at start-up.
+- `$env/static/private`: inlined at build time, and the build fails if a variable is missing.
 
 ## Create the Client
 
-Create the client once at module scope and reuse it across requests: it maintains its own connection pooling and retry state. SvelteKit refuses to bundle `$lib/server/` modules into client code, so keep it there:
+Create the client once at module scope and reuse it across requests. SvelteKit refuses to bundle `$lib/server/` modules into client code, so keep it there:
 
 ```ts src/lib/server/ahasend.ts
 import { env } from "$env/dynamic/private";
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
-  apiKey: env.AHASEND_API_KEY!,
-  accountId: env.AHASEND_ACCOUNT_ID!,
+ apiKey: env.AHASEND_API_KEY!,
+ accountId: env.AHASEND_ACCOUNT_ID!,
 });
 ```
-
-<Tip>
-If you prefer pure env-driven configuration, `AhaSendClient.fromEnv()` builds a client from the `AHASEND_*` variables in `process.env` directly.
-</Tip>
 
 ## Send an Email from a SvelteKit Endpoint
 
@@ -83,36 +73,34 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "$lib/server/ahasend";
 
 export const POST: RequestHandler = async ({ request }) => {
-  const { email, name } = await request.json();
+ const { email, name } = await request.json();
 
-  try {
-    const result = await ahasend.messages.send({
-      from: { email: "hello@yourdomain.com", name: "Your App" },
-      recipients: [{ email, name }],
-      subject: "Welcome to Your App!",
-      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-      text_content: "Welcome aboard! We're glad you're here.",
-    });
+ try {
+ const result = await ahasend.messages.send({
+ from: { email: "hello@yourdomain.com", name: "Your App" },
+ recipients: [{ email, name }],
+ subject: "Welcome to Your App!",
+ html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+ text_content: "Welcome aboard! We're glad you're here.",
+ });
 
-    const rejected = result.data.filter((r) => r.status === "error");
-    return json({ queued: result.data.length - rejected.length, rejected });
-  } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-      return json({ error: "Failed to send email" }, { status: 502 });
-    }
-    throw err;
-  }
+ const rejected = result.data.filter((r) => r.status === "error");
+ return json({ queued: result.data.length - rejected.length, rejected });
+ } catch (err) {
+ if (err instanceof AhaSendAPIError) {
+ console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+ return json({ error: "Failed to send email" }, { status: 502 });
+ }
+ throw err;
+ }
 };
 ```
 
 A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
 
-The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send; stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after one can still send twice. Local request pacing is opt-in (`rateLimit.enabled`) and off by default. Form actions in `+page.server.ts` can call `ahasend.messages.send()` the same way.
+The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive. Form actions in `+page.server.ts` can call `ahasend.messages.send()` the same way.
 
-<Note>
-Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
-</Note>
+Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks
 
@@ -126,30 +114,30 @@ import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
 let verifier: WebhookVerifier | undefined;
 
 export const POST: RequestHandler = async ({ request }) => {
-  verifier ??= new WebhookVerifier(env.AHASEND_WEBHOOK_SECRET!);
+ verifier ??= new WebhookVerifier(env.AHASEND_WEBHOOK_SECRET!);
 
-  let event;
-  try {
-    event = verifier.parse(request.headers, await request.text());
-  } catch {
-    return new Response(null, { status: 400 });
-  }
+ let event;
+ try {
+ event = verifier.parse(request.headers, await request.text());
+ } catch {
+ return new Response(null, { status: 400 });
+ }
 
-  if (isKnownWebhookEvent(event)) {
-    switch (event.type) {
-      case "message.delivered":
-        console.log(`Delivered to ${event.data.recipient}`);
-        break;
-      case "message.bounced":
-        console.log(`Bounced: ${event.data.recipient}`);
-        break;
-      case "message.opened":
-        console.log(`Opened by ${event.data.recipient}`);
-        break;
-    }
-  }
+ if (isKnownWebhookEvent(event)) {
+ switch (event.type) {
+ case "message.delivered":
+ console.log(`Delivered to ${event.data.recipient}`);
+ break;
+ case "message.bounced":
+ console.log(`Bounced: ${event.data.recipient}`);
+ break;
+ case "message.opened":
+ console.log(`Opened by ${event.data.recipient}`);
+ break;
+ }
+ }
 
-  return new Response(null, { status: 200 });
+ return new Response(null, { status: 200 });
 };
 ```
 
@@ -157,26 +145,27 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Deployment**: the SDK requires Node.js 22+ and its built-ins (`node:crypto`, `node:buffer`), so use `@sveltejs/adapter-node` or a Node serverless target (Vercel/Netlify Node functions). Edge adapters (Cloudflare, Vercel Edge) will not run the SDK; call the [REST API](https://ahasend.com/docs/api-reference) with `fetch` there instead.
+- **Deployment**: use `@sveltejs/adapter-node` or a Node serverless target. Edge adapters cannot run the SDK.
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). The same server-side pattern works in the other meta-frameworks: see the [Next.js](/guides/nextjs) and [Nuxt](/guides/nuxt) guides.
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. The same server-side pattern works in the other meta-frameworks: see the [Next.js](/guides/nextjs) and [Nuxt](/guides/nuxt) guides.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Cannot import $env/static/private into client-side code">
-    You imported the AhaSend client (or an env module) from a component or `+page.ts` that runs in the browser. Move all SDK usage into `+server.ts`, `+page.server.ts`, or `$lib/server/` modules: SvelteKit enforces this boundary for you.
-  </Accordion>
-  <Accordion title="API key visible in the browser bundle">
-    The variable was prefixed with `PUBLIC_` and imported via a public env module. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from `$env/dynamic/private` or `$env/static/private`.
-  </Accordion>
-  <Accordion title="Error about window/document or node:crypto on deploy">
-    Your adapter targets an edge runtime the SDK cannot run on. Switch to `@sveltejs/adapter-node` (or your host's Node functions runtime), or send via the REST API from edge code.
-  </Accordion>
-  <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. With `$env/static/private` a missing variable fails the build; with `$env/dynamic/private` it fails at request time. Confirm the variable is set in your production environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
-  </Accordion>
+ <Accordion title="Cannot import $env/static/private into client-side code">
+ You imported the AhaSend client (or an env module) from a component or `+page.ts` that runs in the browser. Move all SDK usage into `+server.ts`, `+page.server.ts`, or `$lib/server/` modules: SvelteKit enforces this boundary for you.
+ </Accordion>
+ <Accordion title="API key visible in the browser bundle">
+ The variable was prefixed with `PUBLIC_` and imported via a public env module. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from `$env/dynamic/private` or `$env/static/private`.
+ </Accordion>
+ <Accordion title="Error about window/document or node:crypto on deploy">
+ Your adapter targets an edge runtime the SDK cannot run on. Switch to `@sveltejs/adapter-node` (or your host's Node functions runtime), or send via the REST API from edge code.
+ </Accordion>
+ <Accordion title="401 AhaSendAuthenticationError">
+ The API key is missing, malformed, or revoked. With `$env/static/private` a missing variable fails the build; with `$env/dynamic/private` it fails at request time. Confirm the variable is set in your production environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+ </Accordion>
 </AccordionGroup>

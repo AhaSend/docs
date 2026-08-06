@@ -1,66 +1,90 @@
 ---
 title: "AhaSend Go SDK"
 sidebarTitle: "Go SDK"
-description: "Install and use ahasend-go, the official Go SDK for the AhaSend email API, with typed models, built-in retries and idempotency, and webhook verification."
+description: "The official Go SDK for AhaSend: typed models for every endpoint, built-in retries and idempotency, and a Standard Webhooks verifier for any net/http router."
 keywords: ["ahasend go sdk", "golang transactional email", "go email api client", "ahasend-go", "golang send email api"]
 icon: "golang"
 ---
 
-[`ahasend-go`](https://github.com/AhaSend/ahasend-go) is the official Go SDK for the AhaSend API. It covers every endpoint with typed models, paces and retries requests for you, attaches idempotency keys automatically, and ships a Standard Webhooks verifier that works with any `net/http` router.
+[`ahasend-go`](https://github.com/AhaSend/ahasend-go) is the official Go SDK for AhaSend. Typed models for every endpoint, retries and idempotency keys handled for you, and a Standard Webhooks verifier that drops into any `net/http` router.
 
-This page covers the SDK itself. For wiring it into a specific framework, see the [integration guides](/guides).
+This page is the SDK reference. To wire it into a specific framework, pick a guide from the sidebar.
 
-## Requirements
-
-- **Go 1.18 or later.** The only runtime dependency is `github.com/google/uuid`.
-- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain, an API key (`aha-sk-…`), and your account ID.
-
-<Warning>
-  The API key grants full send access to your account. Keep it in environment variables or a secret manager, never in source control.
-</Warning>
-
-## Installation
+## Install
 
 ```bash
 go get github.com/AhaSend/ahasend-go
 ```
 
-The SDK is still pre-1.0, so pin the version in your `go.mod` and read the changelog before upgrading.
+Go 1.18 or later. The only runtime dependency is `github.com/google/uuid`. The SDK is pre-1.0, so pin the version in your `go.mod` and read the changelog before upgrading.
 
-## Create the Client
+## Send Your First Email
 
-Create the client once at startup and share it. It holds rate-limit, retry, and idempotency state.
-
-```go
+```go main.go
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
+	"github.com/AhaSend/ahasend-go"
 	"github.com/AhaSend/ahasend-go/api"
+	"github.com/AhaSend/ahasend-go/models/common"
+	"github.com/AhaSend/ahasend-go/models/requests"
 	"github.com/google/uuid"
 )
 
-var (
-	client    *api.APIClient
-	accountID uuid.UUID
-)
-
 func main() {
-	var err error
-	accountID, err = uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
+	accountID, err := uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
 	if err != nil {
 		log.Fatalf("invalid AHASEND_ACCOUNT_ID: %v", err)
 	}
 
-	client = api.NewAPIClient(api.WithAPIKey(os.Getenv("AHASEND_API_KEY")))
+	client := api.NewAPIClient(api.WithAPIKey(os.Getenv("AHASEND_API_KEY")))
+
+	response, _, err := client.MessagesAPI.CreateMessage(
+		context.Background(),
+		accountID,
+		requests.CreateMessageRequest{
+			From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+			Recipients:  []common.Recipient{{Email: "user@example.com", Name: ahasend.String("Jane")}},
+			Subject:     "Welcome to Your App",
+			HtmlContent: ahasend.String("<h1>Welcome aboard</h1>"),
+			TextContent: ahasend.String("Welcome aboard"),
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, r := range response.Data {
+		if r.ID != nil {
+			log.Printf("queued: %s", *r.ID)
+		}
+	}
 }
 ```
 
+Run it with `go run main.go`. Set the sandbox field on the request while you are testing and nothing is delivered, though the message still runs the full validation and queuing path and still fires webhooks. See [Sandbox Mode](/send-api/sandbox).
+
+Note the loop. `Recipients` takes up to 100 addresses and each one becomes its own message, so `response.Data` holds one entry per recipient. Reading `Data[0]` and calling it done would hide the rest.
+
+Optional fields are pointers, so the SDK exports helpers such as `ahasend.String()` to build them inline. Beyond the fields above: `Tags []string`, `Substitutions map[string]interface{}` for `{{ variable }}` templating, plus attachments, scheduling, tracking, and retention.
+
+## Configure the Client
+
+Build the client once at startup and share it. It holds rate-limit, retry, and idempotency state.
+
 `api.NewAPIClientFromEnv()` builds the same client from the `AHASEND_*` environment variables. To override the key for a single request, put it on the context with `context.WithValue(ctx, api.ContextAccessToken, key)`.
 
-### Configuration
+| Option | Purpose |
+| --- | --- |
+| `api.WithAPIKey(key)` | Your API key, required |
+| `api.WithRetryConfig(cfg)` | Retry policy: attempts, backoff strategy, delays |
+| `client.SetSendMessageRateLimit(rps, burst)` | Pace outbound sends |
+| `client.SetStatisticsRateLimit(rps, burst)` | Pace statistics calls, which are limited harder |
+| `api.ContextAccessToken` | Override the key for a single request via context |
 
 ```go
 retryConfig := api.RetryConfig{
@@ -80,67 +104,7 @@ client.SetSendMessageRateLimit(500, 1000) // requests per second, burst
 client.SetStatisticsRateLimit(10, 20)
 ```
 
-## Send an Email
-
-```go
-import (
-	"github.com/AhaSend/ahasend-go"
-	"github.com/AhaSend/ahasend-go/models/common"
-	"github.com/AhaSend/ahasend-go/models/requests"
-)
-
-message := requests.CreateMessageRequest{
-	From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
-	Recipients:  []common.Recipient{{Email: "user@example.com", Name: ahasend.String("Jane")}},
-	Subject:     "Welcome to Your App",
-	HtmlContent: ahasend.String("<h1>Welcome aboard</h1>"),
-	TextContent: ahasend.String("Welcome aboard"),
-}
-
-response, _, err := client.MessagesAPI.CreateMessage(ctx, accountID, message)
-if err != nil {
-	// handle, see Error Handling below
-}
-
-if len(response.Data) > 0 && response.Data[0].ID != nil {
-	log.Printf("queued: %s", *response.Data[0].ID)
-}
-```
-
-Optional fields take pointers, so the SDK exports helpers such as `ahasend.String()` to build them inline. `Recipients` accepts up to 100 addresses and each one receives its own message, so `response.Data` carries one entry per recipient. Check every entry rather than assuming the first one represents the whole call.
-
-Other useful request fields: `Tags []string`, `Substitutions map[string]interface{}` for Jinja2 templating with `{{ variable }}`, plus attachments, scheduling, tracking, and retention.
-
-### Idempotency
-
-The SDK attaches an idempotency key to every create operation and reuses it across its own retries. Supply your own when a duplicate would be expensive:
-
-```go
-response, _, err := client.MessagesAPI.CreateMessage(
-	ctx, accountID, message,
-	api.WithIdempotencyKey(fmt.Sprintf("order-confirmation-%s", orderID)),
-)
-```
-
-### Testing Without Sending
-
-Sandbox mode validates and accepts a request without delivering it. See [Sandbox Mode](/send-api/sandbox).
-
-## Services
-
-| Service | Description |
-| --- | --- |
-| `MessagesAPI` | Send messages, retrieve status and history, cancel |
-| `DomainsAPI` | Add, verify, and configure sending domains |
-| `WebhooksAPI` | Manage webhook endpoints |
-| `StatisticsAPI` | Deliverability, bounce, and delivery-time reports |
-| `SuppressionsAPI` | Manage suppression lists |
-| `RoutesAPI` | Inbound email routing |
-| `AccountsAPI` | Account and member management |
-| `APIKeysAPI` | API key management |
-| `SubAccountsAPI` | Sub accounts, usage, and child API keys |
-
-## Error Handling
+## Errors
 
 ```go
 import (
@@ -164,9 +128,38 @@ if errors.As(err, &apiErr) {
 }
 ```
 
-`apiErr` carries `StatusCode` and the raw response body in `Raw`. Rate-limited and server-error responses are retried with exponential backoff before they ever surface.
+`apiErr` carries `StatusCode` and the raw response body in `Raw`. Rate-limited and server-error responses are retried before they ever surface, so a `429` reaching your code means the retries are already spent.
 
-## Webhook Verification
+## Retries and Idempotency
+
+The SDK retries `429` and server errors with exponential backoff, and paces requests locally so a burst does not trip the limit in the first place. It attaches an idempotency key to every create operation and reuses that key across its own retries.
+
+<Note>
+  Stored outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, so a retry after a 5xx can still result in a second send. Pass your own key derived from a stable business identifier when a duplicate would be expensive.
+</Note>
+
+```go
+response, _, err := client.MessagesAPI.CreateMessage(
+	ctx, accountID, message,
+	api.WithIdempotencyKey(fmt.Sprintf("order-confirmation-%s", orderID)),
+)
+```
+
+## Services
+
+| Service | Description |
+| --- | --- |
+| `MessagesAPI` | Send messages, retrieve status and history, cancel |
+| `DomainsAPI` | Add, verify, and configure sending domains |
+| `WebhooksAPI` | Manage webhook endpoints |
+| `StatisticsAPI` | Deliverability, bounce, and delivery-time reports |
+| `SuppressionsAPI` | Manage suppression lists |
+| `RoutesAPI` | Inbound email routing |
+| `AccountsAPI` | Account and member management |
+| `APIKeysAPI` | API key management |
+| `SubAccountsAPI` | Sub accounts, usage, and child API keys |
+
+## Webhooks
 
 ```go
 import "github.com/AhaSend/ahasend-go/webhooks"
@@ -201,13 +194,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-`ParseRequest` reads and verifies an `*http.Request` directly, which covers chi, Echo, Gin, and gorilla/mux since they all wrap `net/http`. For fasthttp-based routers such as Fiber, read the body yourself and call `verifier.Parse(body, headers)` with an `http.Header` carrying `webhook-id`, `webhook-timestamp`, and `webhook-signature`.
+`ParseRequest` verifies an `*http.Request` directly, which covers chi, Echo, Gin, and gorilla/mux since they all wrap `net/http`. For fasthttp routers such as Fiber, read the body yourself and call `verifier.Parse(body, headers)` with an `http.Header` carrying `webhook-id`, `webhook-timestamp`, and `webhook-signature`.
 
 <Warning>
-  `ParseRequest` consumes the request body. If middleware has already read it, verification fails. Pass the webhook secret exactly as the dashboard shows it, including the `aha-whsec-` prefix.
+  `ParseRequest` consumes the request body, so verification fails if middleware has already read it. Pass the webhook secret exactly as the dashboard shows it, `aha-whsec-` prefix included.
 </Warning>
 
-Events implement the `webhooks.WebhookEvent` interface with `GetType()` and `GetTimestamp()`. All 11 types are covered, from `MessageDeliveredEvent` through `SuppressionCreatedEvent`, `DomainDNSErrorEvent`, and `RouteMessageEvent`. Helpers such as `webhooks.IsMessageEvent()` and `webhooks.GetMessageEventData()` handle the common cases without a full type switch.
+Events implement `webhooks.WebhookEvent` with `GetType()` and `GetTimestamp()`. All 11 types are covered, from `MessageDeliveredEvent` through `SuppressionCreatedEvent`, `DomainDNSErrorEvent`, and `RouteMessageEvent`. Helpers such as `webhooks.IsMessageEvent()` and `webhooks.GetMessageEventData()` handle the common cases without a full type switch.
 
 ## Framework Guides
 
@@ -215,13 +208,13 @@ Events implement the `webhooks.WebhookEvent` interface with `GetType()` and `Get
   <Card title="Gin" icon="golang" href="/guides/gin" />
   <Card title="Echo" icon="golang" href="/guides/echo" />
   <Card title="Fiber" icon="golang" href="/guides/fiber" />
-  <Card title="Chi" icon="golang" href="/guides/chi" />
-  <Card title="Gorilla Mux" icon="golang" href="/guides/gorilla-mux" />
-  <Card title="Google Cloud Functions" icon="google" href="/guides/google-cloud-functions" />
+  <Card title="chi" icon="golang" href="/guides/chi" />
+  <Card title="gorilla/mux" icon="golang" href="/guides/gorilla-mux" />
+  <Card title="Cloud Run Functions" icon="google" href="/guides/google-cloud-functions" />
 </CardGroup>
 
 Azure Functions is in the sidebar too. Building in Node.js instead? See the [Node.js SDK](/guides/nodejs-sdk).
 
 ## Source and Support
 
-The SDK is MIT licensed and developed at [github.com/AhaSend/ahasend-go](https://github.com/AhaSend/ahasend-go), with reference documentation on [pkg.go.dev](https://pkg.go.dev/github.com/AhaSend/ahasend-go). The [AhaSend CLI](https://github.com/AhaSend/ahasend-cli) is built on this SDK.
+MIT licensed, developed at [github.com/AhaSend/ahasend-go](https://github.com/AhaSend/ahasend-go), with reference docs on [pkg.go.dev](https://pkg.go.dev/github.com/AhaSend/ahasend-go). The [AhaSend CLI](https://github.com/AhaSend/ahasend-cli) is built on this SDK.

@@ -1,11 +1,11 @@
 ---
-title: "How to Send Transactional Email from AWS Lambda"
+title: "How to Send Email with AWS Lambda"
 sidebarTitle: "AWS Lambda"
-description: "Send transactional email from AWS Lambda in minutes: console quickstart, AhaSend SDK handler, and signed webhooks behind API Gateway or a Function URL."
+description: "Send transactional email from AWS Lambda with the AhaSend Node.js SDK, including bundling, environment config, and signed webhooks behind API Gateway."
 keywords: ["aws lambda send email", "lambda transactional email", "nodejs email api lambda", "ahasend aws lambda", "api gateway webhook email"]
 ---
 
-Sending transactional email from AWS Lambda needs no special configuration: the AhaSend SDK runs on Lambda's `nodejs22.x` runtime (or later) as-is. Start with the copy-paste console quickstart below to send a test email in two minutes, then switch to the SDK for real projects, where you get retries, idempotency, typed errors, and webhook verification.
+The one hard requirement is the runtime: the function must be on `nodejs22.x` or newer. Everything after that is ordinary Lambda work, and the handler below covers both API Gateway and Function URL event shapes.
 
 ## Prerequisites
 
@@ -13,39 +13,6 @@ Sending transactional email from AWS Lambda needs no special configuration: the 
 - A `nodejs22.x` (or later) Lambda runtime, since the SDK requires Node.js 22 or later
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
-
-## Quick Test in the Console
-
-The fastest way to see an email go out: create a function in the [Lambda console](https://console.aws.amazon.com/lambda) (Node.js 22.x or later), paste this into the editor, and hit **Test**. No packages, no build step: it calls the AhaSend REST API with the `fetch` built into the Node runtime:
-
-```js index.mjs
-export const handler = async () => {
-  const res = await fetch(
-    `https://api.ahasend.com/v2/accounts/${process.env.AHASEND_ACCOUNT_ID}/messages`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.AHASEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: { email: "hello@yourdomain.com", name: "Your App" },
-        recipients: [{ email: "you@example.com" }],
-        subject: "Hello from Lambda",
-        html_content: "<strong>It works!</strong>",
-        text_content: "It works!",
-      }),
-    },
-  );
-
-  const data = await res.json();
-  return { statusCode: res.ok ? 200 : res.status, body: JSON.stringify(data) };
-};
-```
-
-Before testing, add `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` under **Configuration → Environment variables**. Don't paste credentials into the code editor, where they end up in source control and console history.
-
-That's it for a smoke test. For anything beyond one, use the SDK: it retries transient failures, attaches idempotency keys, throws typed errors, and verifies webhooks.
 
 ## Install the SDK
 
@@ -69,72 +36,22 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still v0.x, so the API may change before 1.0: pin the exact version in production (`npm install @ahasend/sdk@0.1.0`).
-
-## The Lambda Send Handler
-
-Initialize the client **outside** the handler: module scope survives across warm invocations, so the client (and its connection pooling, retry, and idempotency state) is created once per execution environment instead of once per request:
-
-```ts src/send.ts
-import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
-
-const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
-});
-
-export const handler = async (
-  event: APIGatewayProxyEventV2,
-): Promise<APIGatewayProxyResultV2> => {
-  const { email, name } = JSON.parse(event.body ?? "{}");
-
-  try {
-    const result = await ahasend.messages.send({
-      from: { email: "hello@yourdomain.com", name: "Your App" },
-      recipients: [{ email, name }],
-      subject: "Welcome to Your App!",
-      html_content: "<h1>Welcome aboard</h1>",
-      text_content: "Welcome aboard",
-    });
-
-    const rejected = result.data.filter((r) => r.status === "error");
-    if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ statuses: result.data.map((r) => r.status) }), // ["queued"]
-    };
-  } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-      return { statusCode: 502, body: JSON.stringify({ error: "Failed to send email" }) };
-    }
-    throw err;
-  }
-};
-```
-
-A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
-
-The same handler shape works behind API Gateway (HTTP or REST APIs) and Lambda Function URLs, which both deliver the payload-v2 event format shown here.
-
 ## Configure Environment Variables
 
 In the console: **Lambda → your function → Configuration → Environment variables**, add `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_WEBHOOK_SECRET`. With SAM:
 
 ```yaml template.yaml
 Resources:
-  SendEmailFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Runtime: nodejs22.x
-      Handler: src/send.handler
-      Environment:
-        Variables:
-          AHASEND_API_KEY: "aha-sk-..."
-          AHASEND_ACCOUNT_ID: "your-account-uuid"
-          AHASEND_WEBHOOK_SECRET: "aha-whsec-..."
+ SendEmailFunction:
+ Type: AWS::Serverless::Function
+ Properties:
+ Runtime: nodejs22.x
+ Handler: src/send.handler
+ Environment:
+ Variables:
+ AHASEND_API_KEY: "aha-sk-..."
+ AHASEND_ACCOUNT_ID: "your-account-uuid"
+ AHASEND_WEBHOOK_SECRET: "aha-whsec-..."
 ```
 
 CDK (`environment: {...}` on `NodejsFunction`) and Terraform (`environment { variables = {...} }` on `aws_lambda_function`) work the same way.
@@ -143,23 +60,71 @@ CDK (`environment: {...}` on `NodejsFunction`) and Terraform (`environment { var
 Lambda environment variables are visible to anyone with read access to the function's configuration. For production, keep the API key in **AWS Secrets Manager** or an **SSM SecureString parameter** and resolve it at cold start (or via the Parameters and Secrets Lambda extension), rather than hardcoding it in your template.
 </Warning>
 
+## Send an Email from a Lambda Handler
+
+Initialize the client **outside** the handler: module scope survives across warm invocations, so the client (and its connection pooling, retry, and idempotency state) is created once per execution environment instead of once per request:
+
+```ts src/send.ts
+import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
+
+const ahasend = new AhaSendClient({
+ apiKey: process.env.AHASEND_API_KEY!,
+ accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+
+export const handler = async (
+ event: APIGatewayProxyEventV2,
+): Promise<APIGatewayProxyResultV2> => {
+ const { email, name } = JSON.parse(event.body ?? "{}");
+
+ try {
+ const result = await ahasend.messages.send({
+ from: { email: "hello@yourdomain.com", name: "Your App" },
+ recipients: [{ email, name }],
+ subject: "Welcome to Your App!",
+ html_content: "<h1>Welcome aboard</h1>",
+ text_content: "Welcome aboard",
+ });
+
+ const rejected = result.data.filter((r) => r.status === "error");
+ if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+
+ return {
+ statusCode: 200,
+ body: JSON.stringify({ statuses: result.data.map((r) => r.status) }), // ["queued"]
+ };
+ } catch (err) {
+ if (err instanceof AhaSendAPIError) {
+ console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+ return { statusCode: 502, body: JSON.stringify({ error: "Failed to send email" }) };
+ }
+ throw err;
+ }
+};
+```
+
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+
+The same handler shape works behind API Gateway (HTTP or REST APIs) and Lambda Function URLs, which both deliver the payload-v2 event format shown here.
+
 ## Bundling
 
 `@ahasend/sdk` ships both ESM and CJS builds, so it bundles cleanly with esbuild, whether you run esbuild directly, use SAM's esbuild build method, or CDK's `NodejsFunction`:
 
 ```bash
 esbuild src/send.ts --bundle --platform=node --target=node22 --format=esm \
-  --outfile=dist/send.mjs
+ --outfile=dist/send.mjs
 ```
 
 With SAM, add to the function:
 
 ```yaml
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Format: esm
-        Target: node22
+ Metadata:
+ BuildMethod: esbuild
+ BuildProperties:
+ Format: esm
+ Target: node22
 ```
 
 ## Handle Webhooks
@@ -168,66 +133,107 @@ Put a second Lambda (or a second route on the same one) behind API Gateway and p
 
 ```ts src/webhook.ts
 import {
-  WebhookVerifier,
-  isKnownWebhookEvent,
-  AhaSendWebhookVerificationError,
+ WebhookVerifier,
+ isKnownWebhookEvent,
+ AhaSendWebhookVerificationError,
 } from "@ahasend/sdk/webhooks";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 export const handler = async (
-  event: APIGatewayProxyEventV2,
+ event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
-  const rawBody = event.isBase64Encoded
-    ? Buffer.from(event.body ?? "", "base64")
-    : (event.body ?? "");
+ const rawBody = event.isBase64Encoded
+ ? Buffer.from(event.body ?? "", "base64")
+ : (event.body ?? "");
 
-  try {
-    const webhookEvent = verifier.parse(
-      event.headers as Record<string, string>,
-      rawBody,
-    );
+ try {
+ const webhookEvent = verifier.parse(
+ event.headers as Record<string, string>,
+ rawBody,
+ );
 
-    if (isKnownWebhookEvent(webhookEvent)) {
-      switch (webhookEvent.type) {
-        case "message.delivered":
-          console.log(`Delivered to ${webhookEvent.data.recipient}`);
-          break;
-        case "message.bounced":
-          console.log(`Bounced: ${webhookEvent.data.recipient}`);
-          break;
-      }
-    }
+ if (isKnownWebhookEvent(webhookEvent)) {
+ switch (webhookEvent.type) {
+ case "message.delivered":
+ console.log(`Delivered to ${webhookEvent.data.recipient}`);
+ break;
+ case "message.bounced":
+ console.log(`Bounced: ${webhookEvent.data.recipient}`);
+ break;
+ }
+ }
 
-    return { statusCode: 200 };
-  } catch (err) {
-    if (err instanceof AhaSendWebhookVerificationError) {
-      return { statusCode: 400 };
-    }
-    throw err;
-  }
+ return { statusCode: 200 };
+ } catch (err) {
+ if (err instanceof AhaSendWebhookVerificationError) {
+ return { statusCode: 400 };
+ }
+ throw err;
+ }
 };
 ```
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at the API Gateway invoke URL (e.g. `https://abc123.execute-api.us-east-1.amazonaws.com/webhooks/ahasend`), and copy the secret into `AHASEND_WEBHOOK_SECRET` exactly as shown, including the `aha-whsec-` prefix.
 
-<Note>
-Return the 2xx as soon as the event is verified and persisted. If processing takes longer than the AhaSend delivery timeout, acknowledge first and hand the work to SQS or an async Lambda invocation.
-</Note>
+Return the 2xx as soon as the event is verified and persisted, and hand slower processing to SQS or an async Lambda invocation.
 
 Deploying serverless elsewhere too? The same patterns apply on [Vercel](/guides/vercel), and edge runtimes get a fetch-only variant in the [Cloudflare Workers guide](/guides/cloudflare-workers).
+
+## Quick Test in the Console
+
+If you want to confirm your credentials work before wiring up a project, you can send one message straight from the console with no build step at all. Create a function in the [Lambda console](https://console.aws.amazon.com/lambda) (Node.js 22.x or later), paste this into the editor, and hit **Test**. No packages, no build step: it calls the AhaSend REST API with the `fetch` built into the Node runtime:
+
+```js index.mjs
+export const handler = async () => {
+ const res = await fetch(
+ `https://api.ahasend.com/v2/accounts/${process.env.AHASEND_ACCOUNT_ID}/messages`,
+ {
+ method: "POST",
+ headers: {
+ "Content-Type": "application/json",
+ Authorization: `Bearer ${process.env.AHASEND_API_KEY}`,
+ },
+ body: JSON.stringify({
+ from: { email: "hello@yourdomain.com", name: "Your App" },
+ recipients: [{ email: "you@example.com" }],
+ subject: "Hello from Lambda",
+ html_content: "<strong>It works!</strong>",
+ text_content: "It works!",
+ }),
+ },
+ );
+
+ const data = await res.json();
+ return { statusCode: res.ok ? 200 : res.status, body: JSON.stringify(data) };
+};
+```
+
+Before testing, add `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` under **Configuration → Environment variables**. Don't paste credentials into the code editor, where they end up in source control and console history.
+
+This is a smoke test, not a pattern to build on. It has no retries, no idempotency key, and no typed errors, which is what the SDK adds above.
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries, and each one gets a separate, individually-substituted message.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-1234" }` as the second argument to `send()` to dedupe against your own identifiers, which matters because Lambda retries async invocations by default.
+- **Scheduling**: set `schedule: { first_attempt: "2026-09-01T09:00:00Z" }` to defer delivery.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes, and the [Node.js SDK page](/guides/nodejs-sdk) for client configuration in depth.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="401 AhaSendAuthenticationError">
-    The environment variables aren't set **on that function**: each Lambda has its own configuration, so a key added to the send function doesn't exist on the webhook function. Check Configuration → Environment variables for the exact function that's failing.
-  </Accordion>
-  <Accordion title="Webhook verification always returns 400">
-    Almost always a base64 issue: API Gateway delivered the body base64-encoded and it was verified as-is. Make sure you check `event.isBase64Encoded` and decode with `Buffer.from(event.body, "base64")` before calling `verifier.parse()`.
-  </Accordion>
-  <Accordion title="Function times out during sends">
-    The default Lambda timeout (3s) is shorter than the SDK's retry window: the SDK retries transient failures up to 3 times with backoff on top of a 30s per-attempt timeout. Raise the function timeout well above that, or tighten the SDK with `retry: { maxRetries: 1 }` and `timeoutMs: 5_000` so it gives up before Lambda does. Both can also be passed per call as the trailing options argument to `send()`.
-  </Accordion>
+ <Accordion title="401 AhaSendAuthenticationError">
+ The environment variables aren't set **on that function**: each Lambda has its own configuration, so a key added to the send function doesn't exist on the webhook function. Check Configuration → Environment variables for the exact function that's failing.
+ </Accordion>
+ <Accordion title="Webhook verification always returns 400">
+ Almost always a base64 issue: API Gateway delivered the body base64-encoded and it was verified as-is. Make sure you check `event.isBase64Encoded` and decode with `Buffer.from(event.body, "base64")` before calling `verifier.parse()`.
+ </Accordion>
+ <Accordion title="Function times out during sends">
+ The default Lambda timeout (3s) is shorter than the SDK's retry window: the SDK retries transient failures up to 3 times with backoff on top of a 30s per-attempt timeout. Raise the function timeout well above that, or tighten the SDK with `retry: { maxRetries: 1 }` and `timeoutMs: 5_000` so it gives up before Lambda does. Both can also be passed per call as the trailing options argument to `send()`.
+ </Accordion>
 </AccordionGroup>

@@ -1,11 +1,11 @@
 ---
-title: "How to Send Transactional Email with Nuxt"
+title: "How to Send Email with Nuxt"
 sidebarTitle: "Nuxt"
 description: "Send transactional email from Nuxt 3/4 server routes with the AhaSend Node.js SDK, map runtimeConfig env vars, and verify webhooks in Nitro."
 keywords: ["nuxt send email", "nuxt transactional email", "nuxt server routes email", "ahasend nuxt", "nitro webhook verification"]
 ---
 
-Send your first transactional email from a [Nuxt](https://nuxt.com) 3 or 4 app in under five minutes using the official AhaSend Node.js SDK inside Nitro server routes, then wire up webhooks to react to deliveries, bounces, and opens in real time.
+In [Nuxt](https://nuxt.com), declare the AhaSend credentials in the top-level, server-only section of `runtimeConfig`: anything under `runtimeConfig.public` is serialized into the client payload.
 
 ## Prerequisites
 
@@ -35,20 +35,18 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-The SDK is still on [`0.x`](https://www.npmjs.com/package/@ahasend/sdk), so its API can change before 1.0. Pin the exact version in production: `npm install @ahasend/sdk@0.1.0`.
-
 ## Configure Environment Variables
 
 Declare the keys in `runtimeConfig` so Nuxt maps them from `NUXT_`-prefixed environment variables at runtime:
 
 ```ts nuxt.config.ts
 export default defineNuxtConfig({
-  runtimeConfig: {
-    // server-only: never put these under runtimeConfig.public
-    ahasendApiKey: "",
-    ahasendAccountId: "",
-    ahasendWebhookSecret: "",
-  },
+ runtimeConfig: {
+ // server-only: never put these under runtimeConfig.public
+ ahasendApiKey: "",
+ ahasendAccountId: "",
+ ahasendWebhookSecret: "",
+ },
 });
 ```
 
@@ -62,13 +60,9 @@ NUXT_AHASEND_WEBHOOK_SECRET=aha-whsec-...
 Anything under `runtimeConfig.public` (or a `NUXT_PUBLIC_`-prefixed variable) is serialized into the client payload and readable by anyone in the browser. Keep all AhaSend credentials in the top-level, server-only section of `runtimeConfig`.
 </Warning>
 
-<Note>
-Prefer plain env vars? The SDK also reads `process.env` directly on the server: set `AHASEND_API_KEY` / `AHASEND_ACCOUNT_ID` and call `AhaSendClient.fromEnv()`. `runtimeConfig` is the more idiomatic Nuxt approach and is used below.
-</Note>
-
 ## Create the Client
 
-Create the client once at module scope and reuse it across requests: it maintains its own connection pooling and retry state:
+Create the client once at module scope and reuse it across requests:
 
 ```ts server/utils/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
@@ -76,14 +70,14 @@ import { AhaSendClient } from "@ahasend/sdk";
 let client: AhaSendClient | undefined;
 
 export function useAhaSend(): AhaSendClient {
-  if (!client) {
-    const config = useRuntimeConfig();
-    client = new AhaSendClient({
-      apiKey: config.ahasendApiKey,
-      accountId: config.ahasendAccountId,
-    });
-  }
-  return client;
+ if (!client) {
+ const config = useRuntimeConfig();
+ client = new AhaSendClient({
+ apiKey: config.ahasendApiKey,
+ accountId: config.ahasendAccountId,
+ });
+ }
+ return client;
 }
 ```
 
@@ -95,36 +89,34 @@ Files in `server/utils/` are auto-imported in all server routes, so `useAhaSend(
 import { AhaSendAPIError } from "@ahasend/sdk";
 
 export default defineEventHandler(async (event) => {
-  const { email, name } = await readBody(event);
+ const { email, name } = await readBody(event);
 
-  try {
-    const result = await useAhaSend().messages.send({
-      from: { email: "hello@yourdomain.com", name: "Your App" },
-      recipients: [{ email, name }],
-      subject: "Welcome to Your App!",
-      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-      text_content: "Welcome aboard! We're glad you're here.",
-    });
+ try {
+ const result = await useAhaSend().messages.send({
+ from: { email: "hello@yourdomain.com", name: "Your App" },
+ recipients: [{ email, name }],
+ subject: "Welcome to Your App!",
+ html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+ text_content: "Welcome aboard! We're glad you're here.",
+ });
 
-    const rejected = result.data.filter((r) => r.status === "error");
-    return { queued: result.data.length - rejected.length, rejected };
-  } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-      throw createError({ statusCode: 502, statusMessage: "Failed to send email" });
-    }
-    throw err;
-  }
+ const rejected = result.data.filter((r) => r.status === "error");
+ return { queued: result.data.length - rejected.length, rejected };
+ } catch (err) {
+ if (err instanceof AhaSendAPIError) {
+ console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+ throw createError({ statusCode: 502, statusMessage: "Failed to send email" });
+ }
+ throw err;
+ }
 });
 ```
 
 A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
 
-The SDK automatically retries transient failures (408, 429, 5xx, network errors) with exponential backoff and attaches an idempotency key to every send; stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after one can still send twice. Local request pacing is opt-in (`rateLimit.enabled`) and off by default.
+The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
 
-<Note>
-Testing without delivering real mail? Add `sandbox: true` to the send request: the API validates and accepts it, but nothing leaves the platform.
-</Note>
+Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks
 
@@ -136,33 +128,33 @@ import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
 let verifier: WebhookVerifier | undefined;
 
 export default defineEventHandler(async (event) => {
-  verifier ??= new WebhookVerifier(useRuntimeConfig().ahasendWebhookSecret);
+ verifier ??= new WebhookVerifier(useRuntimeConfig().ahasendWebhookSecret);
 
-  let webhookEvent;
-  try {
-    webhookEvent = verifier.parse(
-      getHeaders(event) as Record<string, string>,
-      (await readRawBody(event, false))!,
-    );
-  } catch {
-    throw createError({ statusCode: 400, statusMessage: "Invalid signature" });
-  }
+ let webhookEvent;
+ try {
+ webhookEvent = verifier.parse(
+ getHeaders(event) as Record<string, string>,
+ (await readRawBody(event, false))!,
+ );
+ } catch {
+ throw createError({ statusCode: 400, statusMessage: "Invalid signature" });
+ }
 
-  if (!isKnownWebhookEvent(webhookEvent)) return null; // future event type: acknowledge & ignore
+ if (!isKnownWebhookEvent(webhookEvent)) return null; // future event type: acknowledge & ignore
 
-  switch (webhookEvent.type) {
-    case "message.delivered":
-      console.log(`Delivered to ${webhookEvent.data.recipient}`);
-      break;
-    case "message.bounced":
-      console.log(`Bounced: ${webhookEvent.data.recipient}`);
-      break;
-    case "message.opened":
-      console.log(`Opened by ${webhookEvent.data.recipient}`);
-      break;
-  }
+ switch (webhookEvent.type) {
+ case "message.delivered":
+ console.log(`Delivered to ${webhookEvent.data.recipient}`);
+ break;
+ case "message.bounced":
+ console.log(`Bounced: ${webhookEvent.data.recipient}`);
+ break;
+ case "message.opened":
+ console.log(`Opened by ${webhookEvent.data.recipient}`);
+ break;
+ }
 
-  return null; // 200 OK
+ return null; // 200 OK
 });
 ```
 
@@ -170,26 +162,27 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Deployment**: the SDK requires Node.js 22+ and its built-ins (`node:crypto`, `node:buffer`), so deploy with a Node-compatible Nitro preset: `node-server`, Vercel (Node functions), Netlify functions, etc. Edge presets (`cloudflare`, `vercel-edge`) will not work; for those, call the [REST API](https://ahasend.com/docs/api-reference) with `fetch` instead.
+- **Deployment**: use a Node-compatible Nitro preset such as `node-server`, Vercel Node functions, or Netlify functions. Edge presets cannot run the SDK.
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes (`client.domains`, `client.suppressions`, `client.statistics`, and more). The same server-route pattern works in the other meta-frameworks too: see the [SvelteKit](/guides/sveltekit) and [Next.js](/guides/nextjs) guides.
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. The same server-route pattern works in the other meta-frameworks too: see the [SvelteKit](/guides/sveltekit) and [Next.js](/guides/nextjs) guides.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Webhook verification always returns 400">
-    You read the body with `readBody`, which JSON-parses it and destroys the exact bytes the HMAC was computed over. Use `readRawBody(event, false)` in the webhook route and pass its result to `verifier.parse()` unchanged.
-  </Accordion>
-  <Accordion title="401 AhaSendAuthenticationError">
-    The API key never reached the client. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
-  </Accordion>
-  <Accordion title="Error about window/document or node:crypto on deploy">
-    Your Nitro preset targets an edge runtime the SDK cannot run on. Switch to a Node preset (`nitro: { preset: "node-server" }` or your host's Node functions) or send via the REST API from edge code.
-  </Accordion>
-  <Accordion title="400 error mentioning the from address">
-    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
-  </Accordion>
+ <Accordion title="Webhook verification always returns 400">
+ You read the body with `readBody`, which JSON-parses it and destroys the exact bytes the HMAC was computed over. Use `readRawBody(event, false)` in the webhook route and pass its result to `verifier.parse()` unchanged.
+ </Accordion>
+ <Accordion title="401 AhaSendAuthenticationError">
+ The API key never reached the client. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
+ </Accordion>
+ <Accordion title="Error about window/document or node:crypto on deploy">
+ Your Nitro preset targets an edge runtime the SDK cannot run on. Switch to a Node preset (`nitro: { preset: "node-server" }` or your host's Node functions) or send via the REST API from edge code.
+ </Accordion>
+ <Accordion title="400 error mentioning the from address">
+ The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+ </Accordion>
 </AccordionGroup>

@@ -1,15 +1,11 @@
 ---
-title: "How to Send Email from Azure Functions in Go"
+title: "How to Send Email with Azure Functions (Go)"
 sidebarTitle: "Azure Functions"
 description: "Send transactional email from Azure Functions in Go using custom handlers and the AhaSend email API, with HMAC-verified delivery webhooks."
 keywords: ["azure functions go send email", "golang transactional email azure functions", "azure functions custom handler go", "ahasend go sdk", "azure functions email api"]
 ---
 
-Send transactional email from Azure Functions in Go with the AhaSend Go SDK, using Azure's custom handler support to send messages and receive delivery webhooks.
-
-<Note>
-Go has no first-class Azure Functions runtime. Instead, Azure supports **custom handlers**: your function app is a plain HTTP server binary, and the Functions host proxies each function invocation to it over local HTTP. With `enableForwardingHttpRequest: true` the host forwards the original HTTP request untouched, so standard `net/http` code — including the SDK's `verifier.ParseRequest` — works exactly as it would in any Go web server.
-</Note>
+On Azure, a Go function is a **custom handler**: a small HTTP server the Functions host forwards requests to. Ordinary `net/http` code works, including the SDK's `verifier.ParseRequest`.
 
 ## Prerequisites
 
@@ -18,20 +14,20 @@ Go has no first-class Azure Functions runtime. Instead, Azure supports **custom 
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 - An Azure Function App, the [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) (`func`), and the Azure CLI (`az`)
 
-## Project layout
+## Project Layout
 
-A custom handler app pairs one Go binary with the standard Functions metadata files — one folder per function:
+A custom handler app pairs one Go binary with the standard Functions metadata files, one folder per function:
 
 ```text
 .
 ├── host.json
-├── local.settings.json      # local dev only — never commit
+├── local.settings.json # local dev only, never commit
 ├── SendWelcome/
-│   └── function.json
+│ └── function.json
 ├── AhaSendWebhook/
-│   └── function.json
+│ └── function.json
 ├── main.go
-└── handler                  # compiled Go binary
+└── handler # compiled Go binary
 ```
 
 ## Install the SDK
@@ -40,7 +36,7 @@ A custom handler app pairs one Go binary with the standard Functions metadata fi
 go mod init yourapp && go get github.com/AhaSend/ahasend-go
 ```
 
-## Configure the Functions host
+## Configure the Functions Host
 
 <Steps>
 <Step title="host.json">
@@ -49,18 +45,18 @@ Point the host at your compiled binary and enable HTTP request forwarding:
 
 ```json host.json
 {
-  "version": "2.0",
-  "customHandler": {
-    "description": {
-      "defaultExecutablePath": "handler"
-    },
-    "enableForwardingHttpRequest": true
-  }
+ "version": "2.0",
+ "customHandler": {
+ "description": {
+ "defaultExecutablePath": "handler"
+ },
+ "enableForwardingHttpRequest": true
+ }
 }
 ```
 
 <Warning>
-`enableForwardingHttpRequest: true` is what makes this guide work. Without it, the host wraps every request in a JSON envelope instead of forwarding the raw HTTP request — plain JSON decoding and webhook signature verification both break.
+`enableForwardingHttpRequest: true` is what makes this guide work. Without it, the host wraps every request in a JSON envelope instead of forwarding the raw HTTP request: plain JSON decoding and webhook signature verification both break.
 </Warning>
 
 </Step>
@@ -70,78 +66,76 @@ Each folder name becomes the function name and its default route (`/api/SendWelc
 
 ```json SendWelcome/function.json
 {
-  "bindings": [
-    {
-      "type": "httpTrigger",
-      "direction": "in",
-      "name": "req",
-      "methods": ["post"],
-      "authLevel": "function"
-    },
-    {
-      "type": "http",
-      "direction": "out",
-      "name": "res"
-    }
-  ]
+ "bindings": [
+ {
+ "type": "httpTrigger",
+ "direction": "in",
+ "name": "req",
+ "methods": ["post"],
+ "authLevel": "function"
+ },
+ {
+ "type": "http",
+ "direction": "out",
+ "name": "res"
+ }
+ ]
 }
 ```
 
 ```json AhaSendWebhook/function.json
 {
-  "bindings": [
-    {
-      "type": "httpTrigger",
-      "direction": "in",
-      "name": "req",
-      "methods": ["post"],
-      "authLevel": "anonymous"
-    },
-    {
-      "type": "http",
-      "direction": "out",
-      "name": "res"
-    }
-  ]
+ "bindings": [
+ {
+ "type": "httpTrigger",
+ "direction": "in",
+ "name": "req",
+ "methods": ["post"],
+ "authLevel": "anonymous"
+ },
+ {
+ "type": "http",
+ "direction": "out",
+ "name": "res"
+ }
+ ]
 }
 ```
 
-The webhook endpoint is `anonymous` because AhaSend can't send Azure function keys — authentication happens via the HMAC signature the verifier checks instead.
+The webhook endpoint is `anonymous` because AhaSend can't send Azure function keys. Authentication happens via the HMAC signature the verifier checks instead.
 
 </Step>
 </Steps>
 
-## Configure app settings
+## Configure App Settings
 
 Azure Function App settings are exposed to your binary as environment variables. Set them in the Portal under **Function App → Environment variables**, or with the CLI:
 
 ```bash
 az functionapp config appsettings set \
-  --name your-function-app --resource-group your-rg \
-  --settings AHASEND_API_KEY=aha-sk-... \
-             AHASEND_ACCOUNT_ID=your-account-uuid \
-             AHASEND_WEBHOOK_SECRET=aha-whsec-...
+ --name your-function-app --resource-group your-rg \
+ --settings AHASEND_API_KEY=aha-sk-... \
+ AHASEND_ACCOUNT_ID=your-account-uuid \
+ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
 For local development, put the same values in `local.settings.json`:
 
 ```json local.settings.json
 {
-  "IsEncrypted": false,
-  "Values": {
-    "FUNCTIONS_WORKER_RUNTIME": "custom",
-    "AHASEND_API_KEY": "aha-sk-...",
-    "AHASEND_ACCOUNT_ID": "your-account-uuid",
-    "AHASEND_WEBHOOK_SECRET": "aha-whsec-..."
-  }
+ "IsEncrypted": false,
+ "Values": {
+ "FUNCTIONS_WORKER_RUNTIME": "custom",
+ "AHASEND_API_KEY": "aha-sk-...",
+ "AHASEND_ACCOUNT_ID": "your-account-uuid",
+ "AHASEND_WEBHOOK_SECRET": "aha-whsec-..."
+ }
 }
 ```
 
-<Warning>
-`local.settings.json` contains secrets. Add it to `.gitignore` — never commit it.
-</Warning>
+`local.settings.json` contains secrets, so add it to `.gitignore`.
 
-## Write the Azure Functions handler
+## Write the Azure Functions Handler
 
 The binary is an ordinary `net/http` server. The only Azure-specific detail is the listen port: the host tells you where to listen via `FUNCTIONS_CUSTOMHANDLER_PORT`. Create the SDK client and webhook verifier once at startup and reuse them across invocations.
 
@@ -165,8 +159,8 @@ import (
 
 var (
 	ahasendClient *api.APIClient
-	accountID     uuid.UUID
-	verifier      *webhooks.WebhookVerifier
+	accountID uuid.UUID
+	verifier *webhooks.WebhookVerifier
 )
 
 func main() {
@@ -194,7 +188,7 @@ func main() {
 
 type welcomeInput struct {
 	Email string `json:"email"`
-	Name  string `json:"name"`
+	Name string `json:"name"`
 }
 
 func sendWelcome(w http.ResponseWriter, r *http.Request) {
@@ -205,9 +199,9 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := requests.CreateMessageRequest{
-		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
-		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
-		Subject:     "Welcome to Your App!",
+		From: common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+		Recipients: []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
+		Subject: "Welcome to Your App!",
 		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
 		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
 	}
@@ -233,11 +227,11 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send, so retries can never double-send.
+The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice.
 
-## Handle webhooks
+## Handle Webhooks
 
-Because the host forwards the original HTTP request, the SDK's `ParseRequest` works directly — it verifies the HMAC signature, guards against replays, and returns a typed event:
+Because the host forwards the original HTTP request, the SDK's `ParseRequest` works directly: it verifies the HMAC signature, guards against replays, and returns a typed event:
 
 ```go webhook.go
 package main
@@ -281,11 +275,9 @@ func handleAhaSendWebhook(w http.ResponseWriter, r *http.Request) {
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-function-app.azurewebsites.net/api/AhaSendWebhook`, and copy its secret into the `AHASEND_WEBHOOK_SECRET` app setting exactly as shown (including the `aha-whsec-` prefix).
 
-<Tip>
-Return 200 promptly and do slow processing asynchronously — AhaSend retries webhooks that don't get a timely 2xx.
-</Tip>
+Return 200 promptly and do slow processing asynchronously, because AhaSend retries webhooks that don't get a timely 2xx.
 
-## Build and deploy
+## Build and Deploy
 
 Function Apps on the Linux Consumption plan run linux/amd64, so cross-compile, then publish with Core Tools:
 
@@ -294,34 +286,35 @@ GOOS=linux GOARCH=amd64 go build -o handler
 func azure functionapp publish your-function-app
 ```
 
-For local testing, build for your own OS and run `func start` — the host reads `local.settings.json` and proxies to your binary. In CI, run the same two commands after `az login` (or use a deployment workflow such as the official Azure Functions GitHub Action).
+For local testing, build for your own OS and run `func start`: the host reads `local.settings.json` and proxies to your binary. In CI, run the same two commands after `az login` (or use a deployment workflow such as the official Azure Functions GitHub Action).
 
-## Going further
+## Going Further
 
-- **Templating** — set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends** — `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags** — set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
-- **Idempotency** — pass `api.WithIdempotencyKey("order-1234")` to `CreateMessage` to dedupe sends against your own identifiers.
-- **Other platforms** — deploying on Google Cloud instead? See the [Google Cloud Functions guide](/guides/google-cloud-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
+- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
+- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Idempotency**: pass `api.WithIdempotencyKey("order-1234")` to `CreateMessage` to dedupe sends against your own identifiers.
+- **Other platforms**: deploying on Google Cloud instead? See the [Cloud Run functions guide](/guides/google-cloud-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
+- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Webhook verification always fails, or JSON decoding sees a strange envelope">
-    Check that `enableForwardingHttpRequest` is `true` in `host.json`. Without it the host sends your binary a JSON invocation envelope instead of the raw request, so the body your code sees is not what AhaSend signed and `ParseRequest` (and plain `json.Decode`) fail.
-  </Accordion>
-  <Accordion title="Functions host can't start the handler">
-    Verify `defaultExecutablePath` matches the binary name you deployed, that the binary was built with `GOOS=linux GOARCH=amd64` for a Linux plan, and that it listens on `FUNCTIONS_CUSTOMHANDLER_PORT` — hardcoding a port makes the host time out waiting for the worker.
-  </Accordion>
-  <Accordion title="401 from the AhaSend API">
-    The API key is missing, malformed, or revoked. Confirm the `AHASEND_API_KEY` app setting is present in the Function App environment (Portal → Environment variables) — `local.settings.json` values are not deployed to Azure.
-  </Accordion>
-  <Accordion title="401 calling the send endpoint">
-    `SendWelcome` uses `authLevel: "function"`, so requests need a function key: `https://your-function-app.azurewebsites.net/api/SendWelcome?code=<function-key>`.
-  </Accordion>
-  <Accordion title="400 error mentioning the from address">
-    The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
-  </Accordion>
+ <Accordion title="Webhook verification always fails, or JSON decoding sees a strange envelope">
+ Check that `enableForwardingHttpRequest` is `true` in `host.json`. Without it the host sends your binary a JSON invocation envelope instead of the raw request, so the body your code sees is not what AhaSend signed and `ParseRequest` (and plain `json.Decode`) fail.
+ </Accordion>
+ <Accordion title="Functions host can't start the handler">
+ Verify `defaultExecutablePath` matches the binary name you deployed, that the binary was built with `GOOS=linux GOARCH=amd64` for a Linux plan, and that it listens on `FUNCTIONS_CUSTOMHANDLER_PORT`. Hardcoding a port makes the host time out waiting for the worker.
+ </Accordion>
+ <Accordion title="401 from the AhaSend API">
+ The API key is missing, malformed, or revoked. Confirm the `AHASEND_API_KEY` app setting is present in the Function App environment (Portal → Environment variables). `local.settings.json` values are not deployed to Azure.
+ </Accordion>
+ <Accordion title="401 calling the send endpoint">
+ `SendWelcome` uses `authLevel: "function"`, so requests need a function key: `https://your-function-app.azurewebsites.net/api/SendWelcome?code=<function-key>`.
+ </Accordion>
+ <Accordion title="400 error mentioning the from address">
+ The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+ </Accordion>
 </AccordionGroup>

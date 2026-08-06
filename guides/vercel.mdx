@@ -1,11 +1,21 @@
 ---
-title: "How to Deploy Email-Sending Apps to Vercel"
+title: "How to Send Email with Vercel"
 sidebarTitle: "Vercel"
 description: "Deploy email-sending apps to Vercel with the AhaSend Node.js SDK: Node runtime functions, environment variables, and webhook endpoints."
 keywords: ["vercel deploy email app", "vercel transactional email", "vercel serverless functions email", "ahasend vercel", "nextjs vercel email"]
 ---
 
-Deploying email-sending apps to Vercel works out of the box as long as the AhaSend SDK runs in [Vercel Functions](https://vercel.com/docs/functions) on the **Node.js runtime**. That covers Next.js route handlers and server actions, as well as plain `api/` serverless functions in any other framework Vercel supports. This guide covers the deployment side; for building the app itself, see the framework guides ([Next.js](/guides/nextjs), [Express](/guides/express)).
+The AhaSend SDK has to run in [Vercel Functions](https://vercel.com/docs/functions) on the **Node.js runtime**, not Edge. This guide covers the deployment side; for building the app itself, see the [Next.js](/guides/nextjs) and [Express](/guides/express) guides.
+
+## Prerequisites
+
+- A [Vercel account](https://vercel.com) and a project to deploy, with the Node.js 22 runtime selected
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Use the Node.js 22 Runtime
+
+The SDK requires **Node.js 22 or later**, so every function that imports it must run on Node 22+. Set it in **Project → Settings → Node.js Version** (choose **22.x**); the setting applies to deployments built after the change, so redeploy afterwards. An `engines` field in `package.json` (`"node": ">=22"`) keeps local development and CI on the same version.
 
 <Warning>
 The SDK uses `node:crypto` and does **not** work on the Edge runtime or in Edge Middleware. In Next.js, pin any route that touches the SDK to Node.js:
@@ -17,14 +27,6 @@ export const runtime = "nodejs";
 If you must send from an edge context, call the [REST API](https://ahasend.com/docs/api-reference) with `fetch` instead.
 </Warning>
 
-## Use the Node.js 22 Runtime
-
-The SDK requires **Node.js 22 or later**, so every function that imports it must run on Node 22+. Set it in **Project → Settings → Node.js Version** (choose **22.x**); the setting applies to deployments built after the change, so redeploy afterwards. An `engines` field in `package.json` (`"node": ">=22"`) keeps local development and CI on the same version.
-
-<Note>
-[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is still on `0.x` and its API can change before 1.0. Install an exact version in production: `npm install @ahasend/sdk@0.1.0`.
-</Note>
-
 ## A Minimal Send Function
 
 A Next.js App Router route handler (the same client works in any Node.js Vercel Function):
@@ -35,23 +37,23 @@ import { AhaSendClient } from "@ahasend/sdk";
 export const runtime = "nodejs";
 
 const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
+ apiKey: process.env.AHASEND_API_KEY!,
+ accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 
 export async function POST(req: Request) {
-  const { email, name } = await req.json();
+ const { email, name } = await req.json();
 
-  const result = await ahasend.messages.send({
-    from: { email: "hello@yourdomain.com", name: "Your App" },
-    recipients: [{ email, name }],
-    subject: "Welcome to Your App!",
-    html_content: "<h1>Welcome aboard</h1>",
-    text_content: "Welcome aboard",
-  });
+ const result = await ahasend.messages.send({
+ from: { email: "hello@yourdomain.com", name: "Your App" },
+ recipients: [{ email, name }],
+ subject: "Welcome to Your App!",
+ html_content: "<h1>Welcome aboard</h1>",
+ text_content: "Welcome aboard",
+ });
 
-  const rejected = result.data.filter((r) => r.status === "error");
-  return Response.json({ queued: result.data.length - rejected.length, rejected });
+ const rejected = result.data.filter((r) => r.status === "error");
+ return Response.json({ queued: result.data.length - rejected.length, rejected });
 }
 ```
 
@@ -62,21 +64,21 @@ Module scope survives across warm invocations of the same function instance, so 
 ## Set Environment Variables
 
 <Steps>
-  <Step title="Add the variables">
-    In the Vercel dashboard, go to **Project → Settings → Environment Variables** and add `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and (if you use webhooks) `AHASEND_WEBHOOK_SECRET`. Or use the CLI:
+ <Step title="Add the variables">
+ In the Vercel dashboard, go to **Project → Settings → Environment Variables** and add `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and (if you use webhooks) `AHASEND_WEBHOOK_SECRET`. Or use the CLI:
 
-    ```bash
-    vercel env add AHASEND_API_KEY
-    vercel env add AHASEND_ACCOUNT_ID
-    vercel env add AHASEND_WEBHOOK_SECRET
-    ```
-  </Step>
-  <Step title="Pick the environments">
-    Each variable is scoped per environment: **Production**, **Preview**, and **Development**. Set at least Production and Preview; consider a separate API key for Preview so test deployments never send with your production key.
-  </Step>
-  <Step title="Redeploy">
-    Environment variable changes only apply to **new deployments**. Trigger a redeploy (or `vercel --prod`) after adding or editing them.
-  </Step>
+ ```bash
+ vercel env add AHASEND_API_KEY
+ vercel env add AHASEND_ACCOUNT_ID
+ vercel env add AHASEND_WEBHOOK_SECRET
+ ```
+ </Step>
+ <Step title="Pick the environments">
+ Each variable is scoped per environment: **Production**, **Preview**, and **Development**. Set at least Production and Preview; consider a separate API key for Preview so test deployments never send with your production key.
+ </Step>
+ <Step title="Redeploy">
+ Environment variable changes only apply to **new deployments**. Trigger a redeploy (or `vercel --prod`) after adding or editing them.
+ </Step>
 </Steps>
 
 <Warning>
@@ -102,23 +104,29 @@ https://your-app.vercel.app/api/webhooks/ahasend
 
 In Next.js, the SDK's `nextRouteHandler` adapter from `@ahasend/sdk/webhooks` does the signature verification for you: see the [Next.js guide](/guides/nextjs) for the full handler. Remember to export `export const runtime = "nodejs"` from the webhook route too.
 
-<Note>
-Vercel Functions stop executing once the response is returned (and are killed at the invocation timeout). Do your webhook processing before responding, keep it fast, and return a 2xx promptly, because AhaSend retries deliveries that don't get a timely 2xx. For heavy work, enqueue a job and acknowledge immediately.
-</Note>
+Vercel Functions stop executing once the response is returned and are killed at the invocation timeout, so do your webhook processing before responding, return a 2xx promptly, and enqueue a job for anything heavy.
+
+## Going Further
+
+- **Framework detail**: the [Next.js guide](/guides/nextjs) covers route handlers, server actions, and the `nextRouteHandler` webhook adapter in full.
+- **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for timeouts, retries, and idempotency options.
+- **Comparable serverless model**: [AWS Lambda](/guides/aws-lambda) has the same cold-start and module-scope characteristics if you deploy to both.
+- **Safer previews**: set `sandbox: true` on sends from preview deployments, so the API validates and accepts the request without delivering anything.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Error at import time: SDK detects an unsupported environment">
-    The route is running on the Edge runtime. Add `export const runtime = "nodejs"` to the route file, and make sure the SDK isn't imported from `middleware.ts` (Edge Middleware can't run it at all).
-  </Accordion>
-  <Accordion title="Install or runtime error about an unsupported Node.js version">
-    The project is building on an older runtime. The SDK declares `engines.node >= 22`. Set **Settings → Node.js Version** to **22.x** and redeploy so the functions run on Node 22+.
-  </Accordion>
-  <Accordion title="401 AhaSendAuthenticationError after deploying">
-    The variable isn't set for the environment you deployed to, or you added it after the deployment was built. Check the environment scoping under **Settings → Environment Variables** and redeploy.
-  </Accordion>
-  <Accordion title="Webhook deliveries time out">
-    The handler does slow work before responding. Return the 2xx fast; move processing to a queue or background job.
-  </Accordion>
+ <Accordion title="Error at import time: SDK detects an unsupported environment">
+ The route is running on the Edge runtime. Add `export const runtime = "nodejs"` to the route file, and make sure the SDK isn't imported from `middleware.ts` (Edge Middleware can't run it at all).
+ </Accordion>
+ <Accordion title="Install or runtime error about an unsupported Node.js version">
+ The project is building on an older runtime. The SDK declares `engines.node >= 22`. Set **Settings → Node.js Version** to **22.x** and redeploy so the functions run on Node 22+.
+ </Accordion>
+ <Accordion title="401 AhaSendAuthenticationError after deploying">
+ The variable isn't set for the environment you deployed to, or you added it after the deployment was built. Check the environment scoping under **Settings → Environment Variables** and redeploy.
+ </Accordion>
+ <Accordion title="Webhook deliveries time out">
+ The handler does slow work before responding. Return the 2xx fast; move processing to a queue or background job.
+ </Accordion>
 </AccordionGroup>
