@@ -49,32 +49,32 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
 ## Sending email (AhaSend)
 
 - Use the official SDK: `@ahasend/sdk` on npm, Node.js 22 or later.
- Do not invent a package name and do not hand-roll fetch calls.
+  Do not invent a package name and do not hand-roll fetch calls.
 - Server-side only. The constructor throws in browsers, service workers,
- and edge runtimes. On edge, call
- POST https://api.ahasend.com/v2/accounts/{account_id}/messages directly.
+  and edge runtimes. On edge, call
+  POST https://api.ahasend.com/v2/accounts/{account_id}/messages directly.
 - Construct the client ONCE at module scope, never per request:
- `new AhaSendClient({ apiKey, accountId })`.
+  `new AhaSendClient({ apiKey, accountId })`.
 - Send with `client.messages.send({ from, recipients, subject,
- html_content, text_content })`. Body fields are snake_case. `from` is
- `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
- 1 to 100 entries, each getting its own message.
+  html_content, text_content })`. Body fields are snake_case. `from` is
+  `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
+  1 to 100 entries, each getting its own message.
 - The response is multi-status (HTTP 202): `result.data` has one entry per
- recipient, and a recipient can come back `status: "error"` with a null
- `id` while the promise resolves. Inspect every entry.
+  recipient, and a recipient can come back `status: "error"` with a null
+  `id` while the promise resolves. Inspect every entry.
 - Per-recipient templating: pass `substitutions` and use `{{ variable }}`
- in the subject or body.
+  in the subject or body.
 - Errors are typed. Catch `AhaSendAPIError` / `AhaSendRateLimitError` from
- `@ahasend/sdk` and match on `err.status` or `err.code`, never on text.
+  `@ahasend/sdk` and match on `err.status` or `err.code`, never on text.
 - Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
- Signature checks need the RAW request body.
+  Signature checks need the RAW request body.
 - Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from the environment.
- Never hardcode or commit them.
+  Never hardcode or commit them.
 - For testing, set `sandbox: true` so nothing is delivered, and use
- `sandbox_result` to simulate an outcome: "deliver", "bounce", "defer",
- "fail", or "suppress".
+  `sandbox_result` to simulate an outcome: "deliver", "bounce", "defer",
+  "fail", or "suppress".
 - Other languages: Go uses github.com/AhaSend/ahasend-go. There is no
- Python SDK yet, so Python calls the REST API directly.
+  Python SDK yet, so Python calls the REST API directly.
 ```
 
 Every request now inherits these constraints. In the Claude app there's no project file, so paste the same facts into your message, or point Claude at AhaSend's machine-readable doc index at `https://ahasend.com/docs/llms.txt`. The equivalent for an AI editor is a rules file, as in the [Cursor guide](/guides/cursor).
@@ -93,27 +93,25 @@ Here is the send the plan should produce:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 
 export async function sendWelcome(user: { email: string; firstName: string }) {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [
- { email: user.email, substitutions: { first_name: user.firstName } },
- ],
- subject: "Welcome {{ first_name }}",
- text_content: "Thanks for signing up, {{ first_name }}.",
- html_content: "<p>Thanks for signing up, {{ first_name }}.</p>",
- sandbox: process.env.NODE_ENV !== "production",
- });
+  const result = await ahasend.messages.send({
+    from: { email: "hello@yourdomain.com", name: "Your App" },
+    recipients: [{ email: user.email, substitutions: { first_name: user.firstName } }],
+    subject: "Welcome {{ first_name }}",
+    text_content: "Thanks for signing up, {{ first_name }}.",
+    html_content: "<p>Thanks for signing up, {{ first_name }}.</p>",
+    sandbox: process.env.NODE_ENV !== "production",
+  });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) {
- console.warn(`${rejected.length} recipient(s) rejected`);
- }
- return result;
+  const rejected = result.data.filter((r) => r.status === "error");
+  if (rejected.length > 0) {
+    console.warn(`${rejected.length} recipient(s) rejected`);
+  }
+  return result;
 }
 ```
 
@@ -127,17 +125,17 @@ Claude can execute the script it just wrote and check its own work. Ask it to ad
 import { AhaSendClient } from "@ahasend/sdk";
 
 const client = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY,
- accountId: process.env.AHASEND_ACCOUNT_ID,
+  apiKey: process.env.AHASEND_API_KEY,
+  accountId: process.env.AHASEND_ACCOUNT_ID,
 });
 
 const result = await client.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email: "test@example.com", name: "Ada" }],
- subject: "Welcome aboard",
- text_content: "Testing the workflow.",
- sandbox: true,
- sandbox_result: "bounce", // rehearse the failure path
+  from: { email: "hello@yourdomain.com", name: "Your App" },
+  recipients: [{ email: "test@example.com", name: "Ada" }],
+  subject: "Welcome aboard",
+  text_content: "Testing the workflow.",
+  sandbox: true,
+  sandbox_result: "bounce", // rehearse the failure path
 });
 
 console.log(result.data.map((r) => r.status));
@@ -158,7 +156,7 @@ Confirm three things before you merge, even though Claude ran its own tests:
 Then merge, set `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` in your hosting platform's secret store, turn `sandbox` off in production, and send one message to an address you control.
 
 <Warning>
-Webhook signature verification needs the raw request body. If Claude mounted a global JSON parser in front of the webhook route, verification will fail no matter how correct the secret is. The [Express guide](/guides/express) shows the correct mounting order.
+  Webhook signature verification needs the raw request body. If Claude mounted a global JSON parser in front of the webhook route, verification will fail no matter how correct the secret is. The [Express guide](/guides/express) shows the correct mounting order.
 </Warning>
 
 ## Going Further
@@ -171,18 +169,18 @@ Webhook signature verification needs the raw request body. If Claude mounted a g
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Claude wrote code against a package that isn't installed">
- Add `@ahasend/sdk` to `package.json` yourself before prompting, and confirm `CLAUDE.md` sits at the repo root where Claude Code loads it. In a long session, `/clear` and restart so the file is read fresh.
- </Accordion>
- <Accordion title="The sandbox script fails with a Node version error">
- The SDK declares `engines.node >= 22` and uses Node's built-in fetch. Check `node --version` in the terminal Claude is using, not just your shell, since a version manager can leave the agent on an older runtime.
- </Accordion>
- <Accordion title="Bounce webhook never reaches the handler">
- Sandbox sends fire the matching webhook, but only if a webhook is configured in the dashboard and pointed at a URL AhaSend can reach. During local development, expose the endpoint through a tunnel and check the secret is copied exactly, including the `aha-whsec-` prefix.
- </Accordion>
- <Accordion title="A recipient came back with status error and a null id">
- That's the multi-status response working as designed: the request was accepted, that address was not. The most common cause is a suppressed address from an earlier hard bounce. Inspect `result.data` entry by entry and check the suppression list in the dashboard.
- </Accordion>
+  <Accordion title="Claude wrote code against a package that isn't installed">
+    Add `@ahasend/sdk` to `package.json` yourself before prompting, and confirm `CLAUDE.md` sits at the repo root where Claude Code loads it. In a long session, `/clear` and restart so the file is read fresh.
+  </Accordion>
+  <Accordion title="The sandbox script fails with a Node version error">
+    The SDK declares `engines.node >= 22` and uses Node's built-in fetch. Check `node --version` in the terminal Claude is using, not just your shell, since a version manager can leave the agent on an older runtime.
+  </Accordion>
+  <Accordion title="Bounce webhook never reaches the handler">
+    Sandbox sends fire the matching webhook, but only if a webhook is configured in the dashboard and pointed at a URL AhaSend can reach. During local development, expose the endpoint through a tunnel and check the secret is copied exactly, including the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="A recipient came back with status error and a null id">
+    That's the multi-status response working as designed: the request was accepted, that address was not. The most common cause is a suppressed address from an earlier hard bounce. Inspect `result.data` entry by entry and check the suppression list in the dashboard.
+  </Accordion>
 </AccordionGroup>
 
 Every endpoint the SDK exposes is in the [API reference](/api-reference).

@@ -55,8 +55,8 @@ Create the client once at module scope and reuse it across requests:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -72,29 +72,33 @@ import { ahasend } from "./lib/ahasend.js";
 const app = Fastify({ logger: true });
 
 app.post<{ Body: { email: string; name?: string } }>(
- "/api/welcome",
- async (request, reply) => {
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email: request.body.email, name: request.body.name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  "/api/welcome",
+  async (request, reply) => {
+    try {
+      const result = await ahasend.messages.send({
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: request.body.email, name: request.body.name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) request.log.warn({ count: rejected.length }, "Recipients rejected");
+      const rejected = result.data.filter((r) => r.status === "error");
+      if (rejected.length > 0)
+        request.log.warn({ count: rejected.length }, "Recipients rejected");
 
- return { statuses: result.data.map((r) => r.status) }; // ["queued"]
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- request.log.error({ status: err.status, requestId: err.requestId }, "AhaSend error");
- return reply.code(502).send({ error: "Failed to send email" });
- }
- throw err;
- }
- },
+      return { statuses: result.data.map((r) => r.status) }; // ["queued"]
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        request.log.error(
+          { status: err.status, requestId: err.requestId },
+          "AhaSend error",
+        );
+        return reply.code(502).send({ error: "Failed to send email" });
+      }
+      throw err;
+    }
+  },
 );
 
 await app.listen({ port: 3000 });
@@ -113,9 +117,9 @@ The SDK ships a dedicated Fastify adapter that verifies the HMAC signature, guar
 ```ts server.ts
 import rawBody from "fastify-raw-body";
 import {
- WebhookVerifier,
- fastifyWebhookHandler,
- isKnownWebhookEvent,
+  WebhookVerifier,
+  fastifyWebhookHandler,
+  isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
 
 await app.register(rawBody, { field: "rawBody", global: false });
@@ -123,23 +127,23 @@ await app.register(rawBody, { field: "rawBody", global: false });
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 app.post(
- "/webhooks/ahasend",
- { config: { rawBody: true } },
- fastifyWebhookHandler(verifier, async (event) => {
- if (!isKnownWebhookEvent(event)) return; // future event type, acknowledge & ignore
+  "/webhooks/ahasend",
+  { config: { rawBody: true } },
+  fastifyWebhookHandler(verifier, async (event) => {
+    if (!isKnownWebhookEvent(event)) return; // future event type, acknowledge & ignore
 
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
- }),
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }),
 );
 ```
 
@@ -160,16 +164,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Webhook route always returns 400">
- The adapter couldn't find a raw body. Confirm `fastify-raw-body` is registered **before** the webhook route is declared, that the route options include `config: { rawBody: true }`, and that the plugin was registered with `field: "rawBody"` (the adapter reads `request.rawBody`).
- </Accordion>
- <Accordion title="fastify-raw-body fails to register">
- Match the plugin major to your Fastify major: `fastify-raw-body` v5 targets Fastify v5, v4 targets Fastify v4. A version mismatch throws a plugin-compatibility error at registration time.
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="Webhook route always returns 400">
+    The adapter couldn't find a raw body. Confirm `fastify-raw-body` is registered **before** the webhook route is declared, that the route options include `config: { rawBody: true }`, and that the plugin was registered with `field: "rawBody"` (the adapter reads `request.rawBody`).
+  </Accordion>
+  <Accordion title="fastify-raw-body fails to register">
+    Match the plugin major to your Fastify major: `fastify-raw-body` v5 targets Fastify v5, v4 targets Fastify v4. A version mismatch throws a plugin-compatibility error at registration time.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

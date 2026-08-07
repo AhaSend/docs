@@ -20,7 +20,7 @@ Verify the domain and create the key in the [dashboard](https://dash.ahasend.com
 ## Add the Key as a Server-Side Vercel Variable
 
 <Warning>
-If v0 already put your key in a `NEXT_PUBLIC_` variable or referenced it from a client component, treat it as leaked. Delete the variable, rotate the key in the dashboard, and only then continue.
+  If v0 already put your key in a `NEXT_PUBLIC_` variable or referenced it from a client component, treat it as leaked. Delete the variable, rotate the key in the dashboard, and only then continue.
 </Warning>
 
 In your Vercel project, open **Settings → Environment Variables** and add:
@@ -68,8 +68,8 @@ Create the client once at module scope and reuse it. It keeps its own connection
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -89,30 +89,30 @@ import { ahasend } from "@/lib/ahasend";
 export const runtime = "nodejs"; // the SDK does not run on the Edge runtime
 
 export async function POST(request: Request) {
- const { email, name } = await request.json();
+  const { email, name } = await request.json();
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "You're all set",
- html_content: `<p>Thanks ${name}, your account is confirmed.</p>`,
- text_content: `Thanks ${name}, your account is confirmed.`,
- sandbox: true, // flip to false when you're ready to send for real
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "You're all set",
+      html_content: `<p>Thanks ${name}, your account is confirmed.</p>`,
+      text_content: `Thanks ${name}, your account is confirmed.`,
+      sandbox: true, // flip to false when you're ready to send for real
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- return NextResponse.json({
- queued: result.data.length - rejected.length,
- rejected,
- });
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
- return NextResponse.json({ error: "Failed to send email" }, { status: 502 });
- }
- throw err;
- }
+    const rejected = result.data.filter((r) => r.status === "error");
+    return NextResponse.json({
+      queued: result.data.length - rejected.length,
+      rejected,
+    });
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+      return NextResponse.json({ error: "Failed to send email" }, { status: 502 });
+    }
+    throw err;
+  }
 }
 ```
 
@@ -126,9 +126,9 @@ Have v0 build the form to POST to your route:
 
 ```tsx components/signup-form.tsx
 const res = await fetch("/api/send-email", {
- method: "POST",
- headers: { "Content-Type": "application/json" },
- body: JSON.stringify({ email, name }),
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, name }),
 });
 ```
 
@@ -145,15 +145,15 @@ Rehearse the failures too. Add `sandbox_result: "bounce"` to simulate a hard bou
 The mistake this guide prevents is invisible in the preview, so run one deliberate check.
 
 <Steps>
- <Step title="Search the repo for the key">
- No `aha-sk-` string and no `NEXT_PUBLIC_AHASEND...` variable anywhere in client code. The key should exist only as a server-side Vercel variable, read only in server code. If v0 slipped it into either, that value is already public: remove it and rotate the key.
- </Step>
- <Step title="Confirm the form posts to your route">
- The form POSTs to `/api/send-email`, not to `api.ahasend.com`. The browser hits your route; only the route hits AhaSend.
- </Step>
- <Step title="Redeploy after adding variables">
- Otherwise `process.env.AHASEND_API_KEY` is `undefined` and every send returns 401.
- </Step>
+  <Step title="Search the repo for the key">
+    No `aha-sk-` string and no `NEXT_PUBLIC_AHASEND...` variable anywhere in client code. The key should exist only as a server-side Vercel variable, read only in server code. If v0 slipped it into either, that value is already public: remove it and rotate the key.
+  </Step>
+  <Step title="Confirm the form posts to your route">
+    The form POSTs to `/api/send-email`, not to `api.ahasend.com`. The browser hits your route; only the route hits AhaSend.
+  </Step>
+  <Step title="Redeploy after adding variables">
+    Otherwise `process.env.AHASEND_API_KEY` is `undefined` and every send returns 401.
+  </Step>
 </Steps>
 
 ## Going Further
@@ -169,16 +169,16 @@ See the [API reference](/api-reference) for every field and endpoint the SDK exp
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Error about window, document, or node:crypto on deploy">
- The route is running on the Edge runtime, which the SDK does not support. Add `export const runtime = "nodejs"` to every route that imports `@ahasend/sdk`. If a route must stay on the Edge, call the REST API with `fetch` from there instead.
- </Accordion>
- <Accordion title="process.env.AHASEND_API_KEY is undefined in production">
- The variable was added after the last deploy, or only to the Development environment. Add it to Production and Preview, then redeploy.
- </Accordion>
- <Accordion title="API key visible in the browser bundle">
- You prefixed the variable with `NEXT_PUBLIC_`. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from server code.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="Error about window, document, or node:crypto on deploy">
+    The route is running on the Edge runtime, which the SDK does not support. Add `export const runtime = "nodejs"` to every route that imports `@ahasend/sdk`. If a route must stay on the Edge, call the REST API with `fetch` from there instead.
+  </Accordion>
+  <Accordion title="process.env.AHASEND_API_KEY is undefined in production">
+    The variable was added after the last deploy, or only to the Development environment. Add it to Production and Preview, then redeploy.
+  </Accordion>
+  <Accordion title="API key visible in the browser bundle">
+    You prefixed the variable with `NEXT_PUBLIC_`. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from server code.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

@@ -42,22 +42,22 @@ In the console: **Lambda → your function → Configuration → Environment var
 
 ```yaml template.yaml
 Resources:
- SendEmailFunction:
- Type: AWS::Serverless::Function
- Properties:
- Runtime: nodejs22.x
- Handler: src/send.handler
- Environment:
- Variables:
- AHASEND_API_KEY: "aha-sk-..."
- AHASEND_ACCOUNT_ID: "your-account-uuid"
- AHASEND_WEBHOOK_SECRET: "aha-whsec-..."
+  SendEmailFunction:
+  Type: AWS::Serverless::Function
+  Properties:
+  Runtime: nodejs22.x
+  Handler: src/send.handler
+  Environment:
+  Variables:
+  AHASEND_API_KEY: "aha-sk-..."
+  AHASEND_ACCOUNT_ID: "your-account-uuid"
+  AHASEND_WEBHOOK_SECRET: "aha-whsec-..."
 ```
 
 CDK (`environment: {...}` on `NodejsFunction`) and Terraform (`environment { variables = {...} }` on `aws_lambda_function`) work the same way.
 
 <Warning>
-Lambda environment variables are visible to anyone with read access to the function's configuration. For production, keep the API key in **AWS Secrets Manager** or an **SSM SecureString parameter** and resolve it at cold start (or via the Parameters and Secrets Lambda extension), rather than hardcoding it in your template.
+  Lambda environment variables are visible to anyone with read access to the function's configuration. For production, keep the API key in **AWS Secrets Manager** or an **SSM SecureString parameter** and resolve it at cold start (or via the Parameters and Secrets Lambda extension), rather than hardcoding it in your template.
 </Warning>
 
 ## Send an Email from a Lambda Handler
@@ -69,38 +69,38 @@ import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 
 const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 
 export const handler = async (
- event: APIGatewayProxyEventV2,
+  event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
- const { email, name } = JSON.parse(event.body ?? "{}");
+  const { email, name } = JSON.parse(event.body ?? "{}");
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard</h1>",
- text_content: "Welcome aboard",
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard</h1>",
+      text_content: "Welcome aboard",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+    const rejected = result.data.filter((r) => r.status === "error");
+    if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
- return {
- statusCode: 200,
- body: JSON.stringify({ statuses: result.data.map((r) => r.status) }), // ["queued"]
- };
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return { statusCode: 502, body: JSON.stringify({ error: "Failed to send email" }) };
- }
- throw err;
- }
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ statuses: result.data.map((r) => r.status) }), // ["queued"]
+    };
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return { statusCode: 502, body: JSON.stringify({ error: "Failed to send email" }) };
+    }
+    throw err;
+  }
 };
 ```
 
@@ -114,17 +114,17 @@ The same handler shape works behind API Gateway (HTTP or REST APIs) and Lambda F
 
 ```bash
 esbuild src/send.ts --bundle --platform=node --target=node22 --format=esm \
- --outfile=dist/send.mjs
+  --outfile=dist/send.mjs
 ```
 
 With SAM, add to the function:
 
 ```yaml
- Metadata:
- BuildMethod: esbuild
- BuildProperties:
- Format: esm
- Target: node22
+Metadata:
+BuildMethod: esbuild
+BuildProperties:
+Format: esm
+Target: node22
 ```
 
 ## Handle Webhooks
@@ -133,45 +133,42 @@ Put a second Lambda (or a second route on the same one) behind API Gateway and p
 
 ```ts src/webhook.ts
 import {
- WebhookVerifier,
- isKnownWebhookEvent,
- AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+  AhaSendWebhookVerificationError,
 } from "@ahasend/sdk/webhooks";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 export const handler = async (
- event: APIGatewayProxyEventV2,
+  event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
- const rawBody = event.isBase64Encoded
- ? Buffer.from(event.body ?? "", "base64")
- : (event.body ?? "");
+  const rawBody = event.isBase64Encoded
+    ? Buffer.from(event.body ?? "", "base64")
+    : (event.body ?? "");
 
- try {
- const webhookEvent = verifier.parse(
- event.headers as Record<string, string>,
- rawBody,
- );
+  try {
+    const webhookEvent = verifier.parse(event.headers as Record<string, string>, rawBody);
 
- if (isKnownWebhookEvent(webhookEvent)) {
- switch (webhookEvent.type) {
- case "message.delivered":
- console.log(`Delivered to ${webhookEvent.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${webhookEvent.data.recipient}`);
- break;
- }
- }
+    if (isKnownWebhookEvent(webhookEvent)) {
+      switch (webhookEvent.type) {
+        case "message.delivered":
+          console.log(`Delivered to ${webhookEvent.data.recipient}`);
+          break;
+        case "message.bounced":
+          console.log(`Bounced: ${webhookEvent.data.recipient}`);
+          break;
+      }
+    }
 
- return { statusCode: 200 };
- } catch (err) {
- if (err instanceof AhaSendWebhookVerificationError) {
- return { statusCode: 400 };
- }
- throw err;
- }
+    return { statusCode: 200 };
+  } catch (err) {
+    if (err instanceof AhaSendWebhookVerificationError) {
+      return { statusCode: 400 };
+    }
+    throw err;
+  }
 };
 ```
 
@@ -187,26 +184,26 @@ If you want to confirm your credentials work before wiring up a project, you can
 
 ```js index.mjs
 export const handler = async () => {
- const res = await fetch(
- `https://api.ahasend.com/v2/accounts/${process.env.AHASEND_ACCOUNT_ID}/messages`,
- {
- method: "POST",
- headers: {
- "Content-Type": "application/json",
- Authorization: `Bearer ${process.env.AHASEND_API_KEY}`,
- },
- body: JSON.stringify({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email: "you@example.com" }],
- subject: "Hello from Lambda",
- html_content: "<strong>It works!</strong>",
- text_content: "It works!",
- }),
- },
- );
+  const res = await fetch(
+    `https://api.ahasend.com/v2/accounts/${process.env.AHASEND_ACCOUNT_ID}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.AHASEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: "you@example.com" }],
+        subject: "Hello from Lambda",
+        html_content: "<strong>It works!</strong>",
+        text_content: "It works!",
+      }),
+    },
+  );
 
- const data = await res.json();
- return { statusCode: res.ok ? 200 : res.status, body: JSON.stringify(data) };
+  const data = await res.json();
+  return { statusCode: res.ok ? 200 : res.status, body: JSON.stringify(data) };
 };
 ```
 
@@ -227,13 +224,13 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="401 AhaSendAuthenticationError">
- The environment variables aren't set **on that function**: each Lambda has its own configuration, so a key added to the send function doesn't exist on the webhook function. Check Configuration → Environment variables for the exact function that's failing.
- </Accordion>
- <Accordion title="Webhook verification always returns 400">
- Almost always a base64 issue: API Gateway delivered the body base64-encoded and it was verified as-is. Make sure you check `event.isBase64Encoded` and decode with `Buffer.from(event.body, "base64")` before calling `verifier.parse()`.
- </Accordion>
- <Accordion title="Function times out during sends">
- The default Lambda timeout (3s) is shorter than the SDK's retry window: the SDK retries transient failures up to 3 times with backoff on top of a 30s per-attempt timeout. Raise the function timeout well above that, or tighten the SDK with `retry: { maxRetries: 1 }` and `timeoutMs: 5_000` so it gives up before Lambda does. Both can also be passed per call as the trailing options argument to `send()`.
- </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The environment variables aren't set **on that function**: each Lambda has its own configuration, so a key added to the send function doesn't exist on the webhook function. Check Configuration → Environment variables for the exact function that's failing.
+  </Accordion>
+  <Accordion title="Webhook verification always returns 400">
+    Almost always a base64 issue: API Gateway delivered the body base64-encoded and it was verified as-is. Make sure you check `event.isBase64Encoded` and decode with `Buffer.from(event.body, "base64")` before calling `verifier.parse()`.
+  </Accordion>
+  <Accordion title="Function times out during sends">
+    The default Lambda timeout (3s) is shorter than the SDK's retry window: the SDK retries transient failures up to 3 times with backoff on top of a 30s per-attempt timeout. Raise the function timeout well above that, or tighten the SDK with `retry: { maxRetries: 1 }` and `timeoutMs: 5_000` so it gives up before Lambda does. Both can also be passed per call as the trailing options argument to `send()`.
+  </Accordion>
 </AccordionGroup>

@@ -53,8 +53,8 @@ Create the client once at module scope and reuse it across requests:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -69,26 +69,26 @@ const app = express();
 app.use(express.json());
 
 app.post("/api/welcome", async (req, res) => {
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email: req.body.email, name: req.body.name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email: req.body.email, name: req.body.name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+    const rejected = result.data.filter((r) => r.status === "error");
+    if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
- res.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return res.status(502).json({ error: "Failed to send email" });
- }
- throw err;
- }
+    res.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return res.status(502).json({ error: "Failed to send email" });
+    }
+    throw err;
+  }
 });
 
 app.listen(3000);
@@ -106,31 +106,31 @@ The SDK ships a dedicated Express adapter that verifies the HMAC signature, guar
 
 ```ts server.ts
 import {
- WebhookVerifier,
- expressWebhookHandler,
- isKnownWebhookEvent,
+  WebhookVerifier,
+  expressWebhookHandler,
+  isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 // register BEFORE app.use(express.json())
 app.post(
- "/webhooks/ahasend",
- expressWebhookHandler(verifier, async (event) => {
- if (!isKnownWebhookEvent(event)) return; // future event type, acknowledge & ignore
+  "/webhooks/ahasend",
+  expressWebhookHandler(verifier, async (event) => {
+    if (!isKnownWebhookEvent(event)) return; // future event type, acknowledge & ignore
 
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
- }),
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }),
 );
 ```
 
@@ -149,13 +149,13 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
- </Accordion>
- <Accordion title="The webhook route errors out with an already-parsed body">
- A body parser ran before the adapter. The adapter treats this as a setup error and passes it to `next`, so it surfaces through your error middleware rather than as a signature failure. The fix is to stop parsing that route: register it before any global `express.json()`, or scope the parser to your other routes. Don't add `express.raw()`: the adapter reads the raw stream itself, and a parser in front of it will always break verification.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="The webhook route errors out with an already-parsed body">
+    A body parser ran before the adapter. The adapter treats this as a setup error and passes it to `next`, so it surfaces through your error middleware rather than as a signature failure. The fix is to stop parsing that route: register it before any global `express.json()`, or scope the parser to your other routes. Don't add `express.raw()`: the adapter reads the raw stream itself, and a parser in front of it will always break verification.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

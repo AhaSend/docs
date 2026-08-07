@@ -103,10 +103,10 @@ Every method also takes a trailing options object:
 
 ```ts
 await ahasend.messages.send(body, {
-  idempotencyKey: `order-${orderId}`,   // drive the key from your own identifier
-  timeoutMs: 5_000,                     // override the per-attempt timeout
-  retry: { maxRetries: 1 },             // restrict retries, or false to disable
-  signal: AbortSignal.timeout(10_000),  // cancel the request
+  idempotencyKey: `order-${orderId}`, // drive the key from your own identifier
+  timeoutMs: 5_000, // override the per-attempt timeout
+  retry: { maxRetries: 1 }, // restrict retries, or false to disable
+  signal: AbortSignal.timeout(10_000), // cancel the request
   headers: { "x-trace-id": traceId },
 });
 ```

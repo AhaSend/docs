@@ -21,7 +21,7 @@ Set the AhaSend side up in the [dashboard](https://dash.ahasend.com) before Bolt
 Two rules apply whichever shape your project takes. Never call AhaSend from the frontend or from a client-side Supabase hook: that ships your API key to the browser, where any visitor can read it out of your JavaScript. And put the key where the send runs, not where the site is served. Bolt Hosting and Netlify settings configure your *frontend* host, so a key set there is invisible to a Supabase Edge Function.
 
 <Warning>
-If Bolt already put the key in a `VITE_`-prefixed variable or referenced it from a client component, that value is public. Remove it and rotate the key in the dashboard before you continue.
+  If Bolt already put the key in a `VITE_`-prefixed variable or referenced it from a client component, that value is public. Remove it and rotate the key in the dashboard before you continue.
 </Warning>
 
 Bolt projects end up in one of two shapes, and they need different code. Decide which one you have before prompting:
@@ -52,43 +52,40 @@ Bolt should generate something close to this:
 
 ```ts supabase/functions/send-receipt/index.ts
 Deno.serve(async (req) => {
- const { email, name, orderId, total } = await req.json();
+  const { email, name, orderId, total } = await req.json();
 
- const accountId = Deno.env.get("AHASEND_ACCOUNT_ID");
- const apiKey = Deno.env.get("AHASEND_API_KEY");
+  const accountId = Deno.env.get("AHASEND_ACCOUNT_ID");
+  const apiKey = Deno.env.get("AHASEND_API_KEY");
 
- const res = await fetch(
- `https://api.ahasend.com/v2/accounts/${accountId}/messages`,
- {
- method: "POST",
- headers: {
- "Authorization": `Bearer ${apiKey}`,
- "Content-Type": "application/json",
- "Idempotency-Key": `order-${orderId}`,
- },
- body: JSON.stringify({
- from: { email: "orders@yourdomain.com", name: "Your Store" },
- recipients: [{ email, name }],
- subject: `Order ${orderId} confirmed`,
- html_content: `<p>Thanks ${name}, order ${orderId} for $${total} is confirmed.</p>`,
- text_content: `Thanks ${name}, order ${orderId} for $${total} is confirmed.`,
- sandbox: true, // set to false when you're ready to send for real
- }),
- },
- );
+  const res = await fetch(`https://api.ahasend.com/v2/accounts/${accountId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": `order-${orderId}`,
+    },
+    body: JSON.stringify({
+      from: { email: "orders@yourdomain.com", name: "Your Store" },
+      recipients: [{ email, name }],
+      subject: `Order ${orderId} confirmed`,
+      html_content: `<p>Thanks ${name}, order ${orderId} for $${total} is confirmed.</p>`,
+      text_content: `Thanks ${name}, order ${orderId} for $${total} is confirmed.`,
+      sandbox: true, // set to false when you're ready to send for real
+    }),
+  });
 
- if (res.status !== 202) {
- console.error(`AhaSend error ${res.status}`);
- return new Response(JSON.stringify({ error: "Failed to send email" }), { status: 502 });
- }
+  if (res.status !== 202) {
+    console.error(`AhaSend error ${res.status}`);
+    return new Response(JSON.stringify({ error: "Failed to send email" }), { status: 502 });
+  }
 
- const result = await res.json();
- const rejected = result.data.filter((r) => r.status === "error");
+  const result = await res.json();
+  const rejected = result.data.filter((r) => r.status === "error");
 
- // 200 here is this function's reply to your frontend, not AhaSend's.
- return new Response(JSON.stringify({ queued: result.data.length - rejected.length }), {
- status: 200,
- });
+  // 200 here is this function's reply to your frontend, not AhaSend's.
+  return new Response(JSON.stringify({ queued: result.data.length - rejected.length }), {
+    status: 200,
+  });
 });
 ```
 
@@ -120,29 +117,29 @@ and make sure the host runs Node.js 22 or later. Create the client once at modul
 import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
 
 const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 
 export async function sendReceipt(email: string, name: string, orderId: string) {
- try {
- const result = await ahasend.messages.send({
- from: { email: "orders@yourdomain.com", name: "Your Store" },
- recipients: [{ email, name }],
- subject: `Order ${orderId} confirmed`,
- html_content: `<p>Thanks ${name}, order ${orderId} is confirmed.</p>`,
- text_content: `Thanks ${name}, order ${orderId} is confirmed.`,
- sandbox: true,
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "orders@yourdomain.com", name: "Your Store" },
+      recipients: [{ email, name }],
+      subject: `Order ${orderId} confirmed`,
+      html_content: `<p>Thanks ${name}, order ${orderId} is confirmed.</p>`,
+      text_content: `Thanks ${name}, order ${orderId} is confirmed.`,
+      sandbox: true,
+    });
 
- return result.data.filter((r) => r.status === "error");
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
- return null;
- }
- throw err;
- }
+    return result.data.filter((r) => r.status === "error");
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+      return null;
+    }
+    throw err;
+  }
 }
 ```
 
@@ -165,15 +162,15 @@ Rehearse the failures too. Add `sandbox_result: "bounce"` to simulate a hard bou
 Your deployed backend and frontend live in different homes. Before you call it done:
 
 <Steps>
- <Step title="Search for the key in frontend code and host settings">
- No `aha-sk-` string anywhere in the frontend, and no AhaSend variable in Bolt Hosting or Netlify settings unless that host is also running your Node backend. The key belongs where the send runs.
- </Step>
- <Step title="Confirm the browser calls your backend">
- The frontend calls your Edge Function or your Node route; only that backend talks to `api.ahasend.com`.
- </Step>
- <Step title="Flip sandbox off deliberately">
- Read the flag from a secret or environment variable so you can switch without editing code, then send one real test to an address you control.
- </Step>
+  <Step title="Search for the key in frontend code and host settings">
+    No `aha-sk-` string anywhere in the frontend, and no AhaSend variable in Bolt Hosting or Netlify settings unless that host is also running your Node backend. The key belongs where the send runs.
+  </Step>
+  <Step title="Confirm the browser calls your backend">
+    The frontend calls your Edge Function or your Node route; only that backend talks to `api.ahasend.com`.
+  </Step>
+  <Step title="Flip sandbox off deliberately">
+    Read the flag from a secret or environment variable so you can switch without editing code, then send one real test to an address you control.
+  </Step>
 </Steps>
 
 ## Going Further
@@ -186,16 +183,16 @@ Your deployed backend and frontend live in different homes. Before you call it d
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Error importing @ahasend/sdk: node:crypto not found">
- You installed the SDK in an Edge Function. It targets Node.js 22 or later and does not run on Deno's edge runtime. Use the `fetch` approach in Option A, or move the send to a Node backend.
- </Accordion>
- <Accordion title="undefined API key at runtime">
- The key was set on the frontend host instead of where the send runs. For an Edge Function, use `supabase secrets set` and redeploy the function afterward.
- </Accordion>
- <Accordion title="The send works in the preview but not after deploy">
- The WebContainer preview and the deployed app are different environments with different secrets. Check that the deployed backend has the secrets set, then look at the dashboard logs: a message that never reached AhaSend leaves no log line.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="Error importing @ahasend/sdk: node:crypto not found">
+    You installed the SDK in an Edge Function. It targets Node.js 22 or later and does not run on Deno's edge runtime. Use the `fetch` approach in Option A, or move the send to a Node backend.
+  </Accordion>
+  <Accordion title="undefined API key at runtime">
+    The key was set on the frontend host instead of where the send runs. For an Edge Function, use `supabase secrets set` and redeploy the function afterward.
+  </Accordion>
+  <Accordion title="The send works in the preview but not after deploy">
+    The WebContainer preview and the deployed app are different environments with different secrets. Check that the deployed backend has the secrets set, then look at the dashboard logs: a message that never reached AhaSend leaves no log line.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

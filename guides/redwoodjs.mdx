@@ -50,7 +50,7 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
 <Warning>
-Redwood's `includeEnvironmentVariables` setting in `redwood.toml` allowlists variables for the **web side**, baking them into the browser bundle. Never add any `AHASEND_*` variable there: the api side needs no allowlist and the key must stay server-only.
+  Redwood's `includeEnvironmentVariables` setting in `redwood.toml` allowlists variables for the **web side**, baking them into the browser bundle. Never add any `AHASEND_*` variable there: the api side needs no allowlist and the key must stay server-only.
 </Warning>
 
 ## Create the Client
@@ -61,8 +61,8 @@ Create the client once at module scope and reuse it across invocations:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -76,30 +76,30 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "src/lib/ahasend";
 
 export const handler = async (event: APIGatewayEvent) => {
- const { email, name } = JSON.parse(event.body ?? "{}");
+  const { email, name } = JSON.parse(event.body ?? "{}");
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
+    const rejected = result.data.filter((r) => r.status === "error");
 
- return {
- statusCode: 200,
- body: JSON.stringify({ queued: result.data.length - rejected.length, rejected }),
- };
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return { statusCode: 502, body: JSON.stringify({ error: "Failed to send email" }) };
- }
- throw err;
- }
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ queued: result.data.length - rejected.length, rejected }),
+    };
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return { statusCode: 502, body: JSON.stringify({ error: "Failed to send email" }) };
+    }
+    throw err;
+  }
 };
 ```
 
@@ -114,15 +114,21 @@ If sending belongs to your GraphQL flow (say, after `createUser`), put the send 
 ```ts api/src/services/emails/emails.ts
 import { ahasend } from "src/lib/ahasend";
 
-export const sendWelcomeEmail = async ({ email, name }: { email: string; name?: string }) => {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- text_content: "Welcome aboard! We're glad you're here.",
- });
- const rejected = result.data.filter((r) => r.status === "error");
- return { queued: result.data.length - rejected.length, rejected };
+export const sendWelcomeEmail = async ({
+  email,
+  name,
+}: {
+  email: string;
+  name?: string;
+}) => {
+  const result = await ahasend.messages.send({
+    from: { email: "hello@yourdomain.com", name: "Your App" },
+    recipients: [{ email, name }],
+    subject: "Welcome to Your App!",
+    text_content: "Welcome aboard! We're glad you're here.",
+  });
+  const rejected = result.data.filter((r) => r.status === "error");
+  return { queued: result.data.length - rejected.length, rejected };
 };
 ```
 
@@ -139,32 +145,32 @@ import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 export const handler = async (event: APIGatewayEvent) => {
- const rawBody = event.isBase64Encoded
- ? Buffer.from(event.body ?? "", "base64").toString("utf-8")
- : (event.body ?? "");
+  const rawBody = event.isBase64Encoded
+    ? Buffer.from(event.body ?? "", "base64").toString("utf-8")
+    : (event.body ?? "");
 
- let webhookEvent;
- try {
- webhookEvent = verifier.parse(event.headers as Record<string, string>, rawBody);
- } catch {
- return { statusCode: 400, body: "" };
- }
+  let webhookEvent;
+  try {
+    webhookEvent = verifier.parse(event.headers as Record<string, string>, rawBody);
+  } catch {
+    return { statusCode: 400, body: "" };
+  }
 
- if (isKnownWebhookEvent(webhookEvent)) {
- switch (webhookEvent.type) {
- case "message.delivered":
- console.log(`Delivered to ${webhookEvent.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${webhookEvent.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${webhookEvent.data.recipient}`);
- break;
- }
- }
+  if (isKnownWebhookEvent(webhookEvent)) {
+    switch (webhookEvent.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${webhookEvent.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${webhookEvent.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${webhookEvent.data.recipient}`);
+        break;
+    }
+  }
 
- return { statusCode: 200, body: "" };
+  return { statusCode: 200, body: "" };
 };
 ```
 
@@ -183,16 +189,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Webhook verification always returns 400">
- Most often the body was base64-encoded by the provider: check `event.isBase64Encoded` and decode with `Buffer.from(event.body, "base64")` before calling `verifier.parse()`, as shown above. Also confirm `AHASEND_WEBHOOK_SECRET` includes the `aha-whsec-` prefix.
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is in `.env` (restart `yarn rw dev` after editing it) or set in your deploy provider's environment, and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
- </Accordion>
- <Accordion title="Variable undefined on the web side">
- That's by design. Do not fix it by adding `AHASEND_*` keys to `includeEnvironmentVariables`, which would embed them in the browser bundle. Email must always go through the api side (a function or service).
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="Webhook verification always returns 400">
+    Most often the body was base64-encoded by the provider: check `event.isBase64Encoded` and decode with `Buffer.from(event.body, "base64")` before calling `verifier.parse()`, as shown above. Also confirm `AHASEND_WEBHOOK_SECRET` includes the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is in `.env` (restart `yarn rw dev` after editing it) or set in your deploy provider's environment, and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="Variable undefined on the web side">
+    That's by design. Do not fix it by adding `AHASEND_*` keys to `includeEnvironmentVariables`, which would embed them in the browser bundle. Email must always go through the api side (a function or service).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

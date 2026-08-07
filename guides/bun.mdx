@@ -30,7 +30,7 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
 <Note>
-Bun loads `.env` automatically, no `dotenv` package or `--env-file` flag needed. The variables are available on `process.env` (and `Bun.env`) as soon as your script starts.
+  Bun loads `.env` automatically, no `dotenv` package or `--env-file` flag needed. The variables are available on `process.env` (and `Bun.env`) as soon as your script starts.
 </Note>
 
 ## Create the Client
@@ -41,8 +41,8 @@ Create the client once at module scope and reuse it across requests:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -55,37 +55,37 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend";
 
 Bun.serve({
- port: 3000,
- async fetch(req) {
- const url = new URL(req.url);
+  port: 3000,
+  async fetch(req) {
+    const url = new URL(req.url);
 
- if (req.method === "POST" && url.pathname === "/api/welcome") {
- const { email, name } = await req.json();
+    if (req.method === "POST" && url.pathname === "/api/welcome") {
+      const { email, name } = await req.json();
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+      try {
+        const result = await ahasend.messages.send({
+          from: { email: "hello@yourdomain.com", name: "Your App" },
+          recipients: [{ email, name }],
+          subject: "Welcome to Your App!",
+          html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+          text_content: "Welcome aboard! We're glad you're here.",
+        });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+        const rejected = result.data.filter((r) => r.status === "error");
+        if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
- return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return Response.json({ error: "Failed to send email" }, { status: 502 });
- }
- throw err;
- }
- }
+        return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+      } catch (err) {
+        if (err instanceof AhaSendAPIError) {
+          console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+          return Response.json({ error: "Failed to send email" }, { status: 502 });
+        }
+        throw err;
+      }
+    }
 
- return new Response("Not found", { status: 404 });
- },
+    return new Response("Not found", { status: 404 });
+  },
 });
 ```
 
@@ -106,28 +106,28 @@ const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 // inside the fetch handler:
 if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
- let event;
- try {
- event = verifier.parse(req.headers, await req.text());
- } catch {
- return new Response("Invalid signature", { status: 400 });
- }
+  let event;
+  try {
+    event = verifier.parse(req.headers, await req.text());
+  } catch {
+    return new Response("Invalid signature", { status: 400 });
+  }
 
- if (isKnownWebhookEvent(event)) {
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
- }
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }
 
- return new Response(null, { status: 200 });
+  return new Response(null, { status: 200 });
 }
 ```
 
@@ -146,16 +146,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key is missing, malformed, or revoked. Bun only auto-loads `.env` from the directory you run `bun` in. If you start the server from a subdirectory, the file won't be picked up. Log `process.env.AHASEND_API_KEY?.slice(0, 8)` to confirm it's loaded.
- </Accordion>
- <Accordion title="Webhook verification fails with 400">
- Make sure you pass `await req.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes key order and whitespace, so the signature no longer matches.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
- <Accordion title="SDK works locally but you plan to deploy to an edge platform">
- The SDK relies on `node:crypto` and `node:buffer`. Bun provides both, but Cloudflare Workers and other edge runtimes don't. See the [Cloudflare Workers guide](/guides/cloudflare-workers) for the REST-API approach there.
- </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Bun only auto-loads `.env` from the directory you run `bun` in. If you start the server from a subdirectory, the file won't be picked up. Log `process.env.AHASEND_API_KEY?.slice(0, 8)` to confirm it's loaded.
+  </Accordion>
+  <Accordion title="Webhook verification fails with 400">
+    Make sure you pass `await req.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes key order and whitespace, so the signature no longer matches.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+  <Accordion title="SDK works locally but you plan to deploy to an edge platform">
+    The SDK relies on `node:crypto` and `node:buffer`. Bun provides both, but Cloudflare Workers and other edge runtimes don't. See the [Cloudflare Workers guide](/guides/cloudflare-workers) for the REST-API approach there.
+  </Accordion>
 </AccordionGroup>

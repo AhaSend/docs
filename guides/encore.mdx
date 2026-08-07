@@ -60,11 +60,11 @@ const ahasendAccountId = secret("AhaSendAccountId");
 let client: AhaSendClient | undefined;
 
 export function ahasend(): AhaSendClient {
- client ??= new AhaSendClient({
- apiKey: ahasendApiKey(),
- accountId: ahasendAccountId(),
- });
- return client;
+  client ??= new AhaSendClient({
+    apiKey: ahasendApiKey(),
+    accountId: ahasendAccountId(),
+  });
+  return client;
 }
 ```
 
@@ -78,28 +78,28 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./ahasend";
 
 export const sendWelcome = api(
- { expose: true, method: "POST", path: "/welcome" },
- async ({ email, name }: { email: string; name: string }) => {
- try {
- const result = await ahasend().messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  { expose: true, method: "POST", path: "/welcome" },
+  async ({ email, name }: { email: string; name: string }) => {
+    try {
+      const result = await ahasend().messages.send({
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email, name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+      const rejected = result.data.filter((r) => r.status === "error");
+      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
- return { statuses: result.data.map((r) => r.status) }; // ["queued"]
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- }
- throw err;
- }
- },
+      return { statuses: result.data.map((r) => r.status) }; // ["queued"]
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      }
+      throw err;
+    }
+  },
 );
 ```
 
@@ -110,8 +110,8 @@ Run it locally:
 ```bash
 encore run
 curl -X POST http://localhost:4000/welcome \
- -H "Content-Type: application/json" \
- -d '{"email": "user@example.com", "name": "Jane"}'
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "name": "Jane"}'
 ```
 
 Add `sandbox: true` to the send request to validate it without delivering anything.
@@ -124,9 +124,9 @@ Signature verification needs the **raw request body**, which Encore's typed endp
 import { api } from "encore.dev/api";
 import { secret } from "encore.dev/config";
 import {
- WebhookVerifier,
- isKnownWebhookEvent,
- AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+  AhaSendWebhookVerificationError,
 } from "@ahasend/sdk/webhooks";
 
 const ahasendWebhookSecret = secret("AhaSendWebhookSecret");
@@ -134,39 +134,39 @@ const ahasendWebhookSecret = secret("AhaSendWebhookSecret");
 let verifier: WebhookVerifier | undefined;
 
 export const ahasendWebhook = api.raw(
- { expose: true, path: "/webhooks/ahasend", method: "POST" },
- async (req, resp) => {
- verifier ??= new WebhookVerifier(ahasendWebhookSecret());
+  { expose: true, path: "/webhooks/ahasend", method: "POST" },
+  async (req, resp) => {
+    verifier ??= new WebhookVerifier(ahasendWebhookSecret());
 
- const chunks: Buffer[] = [];
- for await (const chunk of req) chunks.push(chunk as Buffer);
- const rawBody = Buffer.concat(chunks);
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const rawBody = Buffer.concat(chunks);
 
- try {
- const event = verifier.parse(req.headers, rawBody);
+    try {
+      const event = verifier.parse(req.headers, rawBody);
 
- if (isKnownWebhookEvent(event)) {
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- }
- }
+      if (isKnownWebhookEvent(event)) {
+        switch (event.type) {
+          case "message.delivered":
+            console.log(`Delivered to ${event.data.recipient}`);
+            break;
+          case "message.bounced":
+            console.log(`Bounced: ${event.data.recipient}`);
+            break;
+        }
+      }
 
- resp.writeHead(200);
- resp.end();
- } catch (err) {
- if (err instanceof AhaSendWebhookVerificationError) {
- resp.writeHead(400);
- resp.end();
- return;
- }
- throw err;
- }
- },
+      resp.writeHead(200);
+      resp.end();
+    } catch (err) {
+      if (err instanceof AhaSendWebhookVerificationError) {
+        resp.writeHead(400);
+        resp.end();
+        return;
+      }
+      throw err;
+    }
+  },
 );
 ```
 
@@ -187,13 +187,13 @@ See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration options
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Secret not found when calling the endpoint">
- Secrets are per-environment. If it works locally but fails when deployed, you set `--type local` but not `--type prod` (or the environment type you deployed to).
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- The `AhaSendApiKey` secret holds a missing, malformed, or revoked key. Re-set it and verify the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
- </Accordion>
- <Accordion title="Webhook verification always returns 400">
- Either the endpoint isn't `api.raw` (typed endpoints consume the raw body), or `AhaSendWebhookSecret` doesn't match the dashboard value exactly.
- </Accordion>
+  <Accordion title="Secret not found when calling the endpoint">
+    Secrets are per-environment. If it works locally but fails when deployed, you set `--type local` but not `--type prod` (or the environment type you deployed to).
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The `AhaSendApiKey` secret holds a missing, malformed, or revoked key. Re-set it and verify the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="Webhook verification always returns 400">
+    Either the endpoint isn't `api.raw` (typed endpoints consume the raw body), or `AhaSendWebhookSecret` doesn't match the dashboard value exactly.
+  </Accordion>
 </AccordionGroup>

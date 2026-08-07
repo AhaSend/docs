@@ -46,7 +46,7 @@ import { defineConfig } from "astro/config";
 import node from "@astrojs/node";
 
 export default defineConfig({
- adapter: node({ mode: "standalone" }),
+  adapter: node({ mode: "standalone" }),
 });
 ```
 
@@ -65,7 +65,7 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 Server-side code reads these via `import.meta.env`.
 
 <Warning>
-In Astro, only env vars prefixed with `PUBLIC_` are exposed to client-side code, so never name it `PUBLIC_AHASEND_API_KEY`, or the key ships in your client bundle to every visitor. Unprefixed variables like `AHASEND_API_KEY` stay server-only.
+  In Astro, only env vars prefixed with `PUBLIC_` are exposed to client-side code, so never name it `PUBLIC_AHASEND_API_KEY`, or the key ships in your client bundle to every visitor. Unprefixed variables like `AHASEND_API_KEY` stay server-only.
 </Warning>
 
 ## Create the Client
@@ -76,8 +76,8 @@ Create the client once at module scope and reuse it across requests:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: import.meta.env.AHASEND_API_KEY,
- accountId: import.meta.env.AHASEND_ACCOUNT_ID,
+  apiKey: import.meta.env.AHASEND_API_KEY,
+  accountId: import.meta.env.AHASEND_ACCOUNT_ID,
 });
 ```
 
@@ -93,28 +93,28 @@ import { ahasend } from "../../lib/ahasend";
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
- const { email, name } = await request.json();
+  const { email, name } = await request.json();
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+    const rejected = result.data.filter((r) => r.status === "error");
+    if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
- return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return Response.json({ error: "Failed to send email" }, { status: 502 });
- }
- throw err;
- }
+    return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return Response.json({ error: "Failed to send email" }, { status: 502 });
+    }
+    throw err;
+  }
 };
 ```
 
@@ -137,28 +137,28 @@ export const prerender = false;
 const verifier = new WebhookVerifier(import.meta.env.AHASEND_WEBHOOK_SECRET);
 
 export const POST: APIRoute = async ({ request }) => {
- let event;
- try {
- event = verifier.parse(request.headers, await request.text());
- } catch {
- return new Response("Invalid signature", { status: 400 });
- }
+  let event;
+  try {
+    event = verifier.parse(request.headers, await request.text());
+  } catch {
+    return new Response("Invalid signature", { status: 400 });
+  }
 
- if (isKnownWebhookEvent(event)) {
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
- }
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }
 
- return new Response(null, { status: 200 });
+  return new Response(null, { status: 200 });
 };
 ```
 
@@ -176,16 +176,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="POST returns 404 or a static HTML page">
- The route was prerendered at build time. Add `export const prerender = false` to the endpoint (or set `output: "server"` globally) and make sure an adapter is configured. On-demand endpoints don't work with a purely static build.
- </Accordion>
- <Accordion title="import.meta.env.AHASEND_API_KEY is undefined">
- Unprefixed variables are only available server-side, so check you're not reading it inside a client component or a `<script>` tag. Also note Astro loads `.env` from the project root; production hosts need the variables set in their own dashboard.
- </Accordion>
- <Accordion title="Webhook verification fails with 400">
- Pass `await request.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await request.json())`: re-serialization changes byte layout, so the signature no longer matches.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="POST returns 404 or a static HTML page">
+    The route was prerendered at build time. Add `export const prerender = false` to the endpoint (or set `output: "server"` globally) and make sure an adapter is configured. On-demand endpoints don't work with a purely static build.
+  </Accordion>
+  <Accordion title="import.meta.env.AHASEND_API_KEY is undefined">
+    Unprefixed variables are only available server-side, so check you're not reading it inside a client component or a `<script>` tag. Also note Astro loads `.env` from the project root; production hosts need the variables set in their own dashboard.
+  </Accordion>
+  <Accordion title="Webhook verification fails with 400">
+    Pass `await request.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await request.json())`: re-serialization changes byte layout, so the signature no longer matches.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

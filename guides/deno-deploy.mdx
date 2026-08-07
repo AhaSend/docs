@@ -43,8 +43,8 @@ Create the client once at module scope and reuse it across requests:
 import { AhaSendClient } from "npm:@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: Deno.env.get("AHASEND_API_KEY")!,
- accountId: Deno.env.get("AHASEND_ACCOUNT_ID")!,
+  apiKey: Deno.env.get("AHASEND_API_KEY")!,
+  accountId: Deno.env.get("AHASEND_ACCOUNT_ID")!,
 });
 ```
 
@@ -57,34 +57,34 @@ import { AhaSendAPIError } from "npm:@ahasend/sdk";
 import { ahasend } from "./lib/ahasend.ts";
 
 Deno.serve(async (req) => {
- const url = new URL(req.url);
+  const url = new URL(req.url);
 
- if (req.method === "POST" && url.pathname === "/api/welcome") {
- const { email, name } = await req.json();
+  if (req.method === "POST" && url.pathname === "/api/welcome") {
+    const { email, name } = await req.json();
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+    try {
+      const result = await ahasend.messages.send({
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email, name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+      const rejected = result.data.filter((r) => r.status === "error");
+      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
- return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return Response.json({ error: "Failed to send email" }, { status: 502 });
- }
- throw err;
- }
- }
+      return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+        return Response.json({ error: "Failed to send email" }, { status: 502 });
+      }
+      throw err;
+    }
+  }
 
- return new Response("Not found", { status: 404 });
+  return new Response("Not found", { status: 404 });
 });
 ```
 
@@ -105,28 +105,28 @@ const verifier = new WebhookVerifier(Deno.env.get("AHASEND_WEBHOOK_SECRET")!);
 
 // inside the Deno.serve handler:
 if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
- let event;
- try {
- event = verifier.parse(req.headers, await req.text());
- } catch {
- return new Response("Invalid signature", { status: 400 });
- }
+  let event;
+  try {
+    event = verifier.parse(req.headers, await req.text());
+  } catch {
+    return new Response("Invalid signature", { status: 400 });
+  }
 
- if (isKnownWebhookEvent(event)) {
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
- }
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }
 
- return new Response(null, { status: 200 });
+  return new Response(null, { status: 200 });
 }
 ```
 
@@ -153,16 +153,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="PermissionDenied running locally">
- Deno is permission-scoped: the SDK needs `--allow-net` (to reach `api.ahasend.com`) and `--allow-env` (to read the `AHASEND_*` variables). On Deno Deploy both are granted automatically.
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- `Deno.env.get("AHASEND_API_KEY")` returned `undefined`. Locally you likely forgot `--env-file`; on Deno Deploy check the project's environment variables and redeploy (new values apply to new deployments/instances).
- </Accordion>
- <Accordion title="Webhook verification fails with 400">
- Pass `await req.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes byte layout, so the signature no longer matches. Also confirm the secret includes the `aha-whsec-` prefix.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="PermissionDenied running locally">
+    Deno is permission-scoped: the SDK needs `--allow-net` (to reach `api.ahasend.com`) and `--allow-env` (to read the `AHASEND_*` variables). On Deno Deploy both are granted automatically.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    `Deno.env.get("AHASEND_API_KEY")` returned `undefined`. Locally you likely forgot `--env-file`; on Deno Deploy check the project's environment variables and redeploy (new values apply to new deployments/instances).
+  </Accordion>
+  <Accordion title="Webhook verification fails with 400">
+    Pass `await req.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes byte layout, so the signature no longer matches. Also confirm the secret includes the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

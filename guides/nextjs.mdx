@@ -46,7 +46,7 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
 <Warning>
-Never prefix these variables with `NEXT_PUBLIC_`. Next.js inlines every `NEXT_PUBLIC_*` variable into the browser bundle at build time. A `NEXT_PUBLIC_AHASEND_API_KEY` would hand full send access to anyone who opens DevTools. Unprefixed variables stay server-side.
+  Never prefix these variables with `NEXT_PUBLIC_`. Next.js inlines every `NEXT_PUBLIC_*` variable into the browser bundle at build time. A `NEXT_PUBLIC_AHASEND_API_KEY` would hand full send access to anyone who opens DevTools. Unprefixed variables stay server-side.
 </Warning>
 
 ## Create the Client
@@ -57,8 +57,8 @@ Create the client once at module scope and reuse it across requests:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -72,26 +72,26 @@ import { ahasend } from "@/lib/ahasend";
 export const runtime = "nodejs"; // the SDK does not run on the Edge runtime
 
 export async function POST(request: Request) {
- const { email, name } = await request.json();
+  const { email, name } = await request.json();
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- return NextResponse.json({ queued: result.data.length - rejected.length, rejected });
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return NextResponse.json({ error: "Failed to send email" }, { status: 502 });
- }
- throw err;
- }
+    const rejected = result.data.filter((r) => r.status === "error");
+    return NextResponse.json({ queued: result.data.length - rejected.length, rejected });
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return NextResponse.json({ error: "Failed to send email" }, { status: 502 });
+    }
+    throw err;
+  }
 }
 ```
 
@@ -109,14 +109,14 @@ Server Actions run on the server too, so the same client works, which is handy f
 import { ahasend } from "@/lib/ahasend";
 
 export async function sendWelcome(email: string, name: string) {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- text_content: "Welcome aboard! We're glad you're here.",
- });
- const rejected = result.data.filter((r) => r.status === "error");
- return { queued: result.data.length - rejected.length, rejected };
+  const result = await ahasend.messages.send({
+    from: { email: "hello@yourdomain.com", name: "Your App" },
+    recipients: [{ email, name }],
+    subject: "Welcome to Your App!",
+    text_content: "Welcome aboard! We're glad you're here.",
+  });
+  const rejected = result.data.filter((r) => r.status === "error");
+  return { queued: result.data.length - rejected.length, rejected };
 }
 ```
 
@@ -128,9 +128,9 @@ The SDK ships a dedicated App Router adapter, `nextRouteHandler`, that reads the
 
 ```ts app/api/webhooks/ahasend/route.ts
 import {
- WebhookVerifier,
- nextRouteHandler,
- isKnownWebhookEvent,
+  WebhookVerifier,
+  nextRouteHandler,
+  isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
 
 export const runtime = "nodejs"; // webhook verification uses node:crypto
@@ -138,23 +138,23 @@ export const runtime = "nodejs"; // webhook verification uses node:crypto
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 export const POST = nextRouteHandler(verifier, async (event) => {
- if (!isKnownWebhookEvent(event)) {
- return new Response(null, { status: 200 }); // future event type: acknowledge & ignore
- }
+  if (!isKnownWebhookEvent(event)) {
+    return new Response(null, { status: 200 }); // future event type: acknowledge & ignore
+  }
 
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
+  switch (event.type) {
+    case "message.delivered":
+      console.log(`Delivered to ${event.data.recipient}`);
+      break;
+    case "message.bounced":
+      console.log(`Bounced: ${event.data.recipient}`);
+      break;
+    case "message.opened":
+      console.log(`Opened by ${event.data.recipient}`);
+      break;
+  }
 
- return new Response(null, { status: 200 });
+  return new Response(null, { status: 200 });
 });
 ```
 
@@ -174,16 +174,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Error about window/document or node:crypto on deploy">
- The route is running on the Edge runtime, which the SDK does not support. Add `export const runtime = "nodejs"` to every route that imports `@ahasend/sdk` or `@ahasend/sdk/webhooks`. If you must send from an Edge function, call the [REST API](https://ahasend.com/docs/api-reference) directly with `fetch` instead.
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in `.env.local` (restart `next dev` after editing it) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). In production, set the variable in your hosting provider's environment settings.
- </Accordion>
- <Accordion title="API key visible in the browser bundle">
- You prefixed the variable with `NEXT_PUBLIC_`. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and only read it from server code (Route Handlers, Server Actions, Server Components).
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="Error about window/document or node:crypto on deploy">
+    The route is running on the Edge runtime, which the SDK does not support. Add `export const runtime = "nodejs"` to every route that imports `@ahasend/sdk` or `@ahasend/sdk/webhooks`. If you must send from an Edge function, call the [REST API](https://ahasend.com/docs/api-reference) directly with `fetch` instead.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in `.env.local` (restart `next dev` after editing it) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). In production, set the variable in your hosting provider's environment settings.
+  </Accordion>
+  <Accordion title="API key visible in the browser bundle">
+    You prefixed the variable with `NEXT_PUBLIC_`. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and only read it from server code (Route Handlers, Server Actions, Server Components).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

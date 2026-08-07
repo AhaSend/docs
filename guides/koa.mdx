@@ -55,8 +55,8 @@ Create the client once at module scope and reuse it across requests:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -73,28 +73,28 @@ const app = new Koa();
 const router = new Router();
 
 router.post("/api/welcome", async (ctx) => {
- const { email, name } = ctx.request.body as { email: string; name?: string };
+  const { email, name } = ctx.request.body as { email: string; name?: string };
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- ctx.body = { queued: result.data.length - rejected.length, rejected: rejected.length };
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- ctx.status = 502;
- ctx.body = { error: "Failed to send email" };
- return;
- }
- throw err;
- }
+    const rejected = result.data.filter((r) => r.status === "error");
+    ctx.body = { queued: result.data.length - rejected.length, rejected: rejected.length };
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      ctx.status = 502;
+      ctx.body = { error: "Failed to send email" };
+      return;
+    }
+    throw err;
+  }
 });
 
 app.use(bodyParser());
@@ -115,42 +115,42 @@ There is no Koa-specific adapter, so use the generic `WebhookVerifier`. It needs
 ```ts server.ts
 import getRawBody from "raw-body";
 import {
- AhaSendWebhookVerificationError,
- WebhookVerifier,
- isKnownWebhookEvent,
+  AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 const webhookRouter = new Router();
 
 webhookRouter.post("/webhooks/ahasend", async (ctx) => {
- const raw = await getRawBody(ctx.req, { limit: "1mb" });
+  const raw = await getRawBody(ctx.req, { limit: "1mb" });
 
- try {
- const event = verifier.parse(ctx.req.headers, raw);
+  try {
+    const event = verifier.parse(ctx.req.headers, raw);
 
- if (isKnownWebhookEvent(event)) {
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
- }
+    if (isKnownWebhookEvent(event)) {
+      switch (event.type) {
+        case "message.delivered":
+          console.log(`Delivered to ${event.data.recipient}`);
+          break;
+        case "message.bounced":
+          console.log(`Bounced: ${event.data.recipient}`);
+          break;
+        case "message.opened":
+          console.log(`Opened by ${event.data.recipient}`);
+          break;
+      }
+    }
 
- ctx.status = 200;
- } catch (err) {
- if (err instanceof AhaSendWebhookVerificationError) {
- ctx.status = 400;
- return;
- }
- throw err;
- }
+    ctx.status = 200;
+  } catch (err) {
+    if (err instanceof AhaSendWebhookVerificationError) {
+      ctx.status = 400;
+      return;
+    }
+    throw err;
+  }
 });
 
 // Register BEFORE bodyParser() so the webhook body reaches us unparsed:
@@ -176,16 +176,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Webhook handler hangs or verification always fails">
- The body parser ran before your webhook route and drained the request stream, so `getRawBody(ctx.req)` has nothing left to read. Register the webhook router before `bodyParser()` (as above), or configure the parser to skip the webhook path. Also note the raw body must come from `ctx.req` (the Node request), not `ctx.request` (Koa's wrapper).
- </Accordion>
- <Accordion title="ctx.request.body is undefined in the send route">
- `bodyParser()` must be registered before the router that reads parsed bodies. Check middleware order and that the client sends `Content-Type: application/json`.
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="Webhook handler hangs or verification always fails">
+    The body parser ran before your webhook route and drained the request stream, so `getRawBody(ctx.req)` has nothing left to read. Register the webhook router before `bodyParser()` (as above), or configure the parser to skip the webhook path. Also note the raw body must come from `ctx.req` (the Node request), not `ctx.request` (Koa's wrapper).
+  </Accordion>
+  <Accordion title="ctx.request.body is undefined in the send route">
+    `bodyParser()` must be registered before the router that reads parsed bodies. Check middleware order and that the client sends `Content-Type: application/json`.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

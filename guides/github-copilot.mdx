@@ -66,7 +66,7 @@ Put the real interface in the issue so the agent cannot invent a client library 
 That issue rules out a hallucinated package, pins the constructor and the method, names the response shape, and states the security rule. The agent plans against those constraints and opens a PR that reflects them.
 
 <Tip>
-To apply these rules to *every* task the agent picks up, put them in a `.github/copilot-instructions.md` file. The coding agent reads it as standing context, the same way it reads your tests, so "use the SDK, key stays server-side, check every recipient" becomes a default it carries into every email-related PR rather than something you retype each time.
+  To apply these rules to *every* task the agent picks up, put them in a `.github/copilot-instructions.md` file. The coding agent reads it as standing context, the same way it reads your tests, so "use the SDK, key stays server-side, check every recipient" becomes a default it carries into every email-related PR rather than something you retype each time.
 </Tip>
 
 ## Step 3: Review the Pull Request
@@ -81,36 +81,36 @@ When the agent finishes, it requests your review. The agent can only push to bra
 import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
 
 const client = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 
 export async function POST(req: Request) {
- const { email, name, orderId } = await req.json();
+  const { email, name, orderId } = await req.json();
 
- try {
- const result = await client.messages.send({
- from: { email: "orders@yourdomain.com", name: "Your Store" },
- recipients: [{ email, name }],
- subject: `Order ${orderId} confirmed`,
- text_content: `Thanks ${name}, order ${orderId} is confirmed.`,
- html_content: `<p>Thanks ${name}, order ${orderId} is confirmed.</p>`,
- sandbox: process.env.NODE_ENV !== "production",
- });
+  try {
+    const result = await client.messages.send({
+      from: { email: "orders@yourdomain.com", name: "Your Store" },
+      recipients: [{ email, name }],
+      subject: `Order ${orderId} confirmed`,
+      text_content: `Thanks ${name}, order ${orderId} is confirmed.`,
+      html_content: `<p>Thanks ${name}, order ${orderId} is confirmed.</p>`,
+      sandbox: process.env.NODE_ENV !== "production",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) {
- console.warn(`${rejected.length} recipient(s) rejected`);
- }
+    const rejected = result.data.filter((r) => r.status === "error");
+    if (rejected.length > 0) {
+      console.warn(`${rejected.length} recipient(s) rejected`);
+    }
 
- return Response.json({ statuses: result.data.map((r) => r.status) });
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
- return new Response("Failed to send email", { status: 502 });
- }
- throw err;
- }
+    return Response.json({ statuses: result.data.map((r) => r.status) });
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+      return new Response("Failed to send email", { status: 502 });
+    }
+    throw err;
+  }
 }
 ```
 
@@ -125,7 +125,7 @@ The agent runs in a GitHub Actions environment and can execute code, including a
 Use a dedicated sandbox credential, not your production key. AhaSend lets you create a credential that is always in sandbox mode, so any send made with it is simulated regardless of the request body. With that key in the `copilot` environment, the agent can run an integration test that sends through the SDK, gets a real queued result back, and confirms the wiring end to end. Nothing is delivered and nothing is billed. Sandbox keys and the `sandbox_result` outcomes (`deliver`, `bounce`, `defer`, `fail`, `suppress`) are covered in the [sandbox mode guide](/send-api/sandbox).
 
 <Warning>
-Never put your production API key in the `copilot` environment. The agent's logs and its pull request description are both places a key can end up in plain text.
+  Never put your production API key in the `copilot` environment. The agent's logs and its pull request description are both places a key can end up in plain text.
 </Warning>
 
 Skip this step and the agent still writes correct code from the issue's constraints; you verify the first live send yourself after merging.
@@ -148,18 +148,18 @@ Once the diff passes the review checks and, if you set it up, the sandbox test i
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="The agent's test run fails with a Node version error">
- The SDK declares `engines.node >= 22`. The agent's environment follows the repo, so set `engines.node` in `package.json` and pin Node 22 in your CI workflow's `actions/setup-node` step, then re-run the agent.
- </Accordion>
- <Accordion title="The PR hand-rolls fetch calls instead of using the SDK">
- Either the dependency wasn't committed to `main` before you opened the issue, or the issue didn't name the package. Comment `@copilot replace the raw fetch calls with the @ahasend/sdk client` and push the constraint into `.github/copilot-instructions.md` so the next task inherits it.
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError in the agent's run">
- The `copilot` Actions environment either doesn't have `AHASEND_API_KEY` or has a revoked one. Repository and organization secrets are deliberately invisible to the agent, so the key must live in that environment specifically.
- </Accordion>
- <Accordion title="The generated code throws on startup in an edge route">
- The SDK is Node-only and its constructor throws if it detects a browser, service worker, or edge runtime. Move the send to a Node runtime route, or call the REST API directly from the edge. See [Cloudflare Workers](/guides/cloudflare-workers) for that pattern.
- </Accordion>
+  <Accordion title="The agent's test run fails with a Node version error">
+    The SDK declares `engines.node >= 22`. The agent's environment follows the repo, so set `engines.node` in `package.json` and pin Node 22 in your CI workflow's `actions/setup-node` step, then re-run the agent.
+  </Accordion>
+  <Accordion title="The PR hand-rolls fetch calls instead of using the SDK">
+    Either the dependency wasn't committed to `main` before you opened the issue, or the issue didn't name the package. Comment `@copilot replace the raw fetch calls with the @ahasend/sdk client` and push the constraint into `.github/copilot-instructions.md` so the next task inherits it.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError in the agent's run">
+    The `copilot` Actions environment either doesn't have `AHASEND_API_KEY` or has a revoked one. Repository and organization secrets are deliberately invisible to the agent, so the key must live in that environment specifically.
+  </Accordion>
+  <Accordion title="The generated code throws on startup in an edge route">
+    The SDK is Node-only and its constructor throws if it detects a browser, service worker, or edge runtime. Move the send to a Node runtime route, or call the REST API directly from the edge. See [Cloudflare Workers](/guides/cloudflare-workers) for that pattern.
+  </Accordion>
 </AccordionGroup>
 
 Every endpoint the SDK exposes is in the [API reference](/api-reference).

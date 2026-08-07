@@ -22,8 +22,8 @@ Any app that sends with the SDK, for example:
 import { AhaSendClient } from "@ahasend/sdk";
 
 const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 
 // ...routes that call ahasend.messages.send({ from: { email: "hello@yourdomain.com" }, ... })
@@ -32,7 +32,7 @@ const ahasend = new AhaSendClient({
 A send returns a **multi-status** result, one entry in `result.data` per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds, so check every entry: `const rejected = result.data.filter((r) => r.status === "error")`.
 
 <Note>
-Railway injects a `PORT` environment variable and routes public traffic to it. Make sure your server listens on it:
+  Railway injects a `PORT` environment variable and routes public traffic to it. Make sure your server listens on it:
 
 ```ts
 app.listen(Number(process.env.PORT) || 3000);
@@ -45,7 +45,7 @@ The SDK requires **Node.js 22 or later**, and Railway's builder picks a default 
 
 ```json package.json
 {
- "engines": { "node": ">=22" }
+  "engines": { "node": ">=22" }
 }
 ```
 
@@ -54,33 +54,33 @@ Nixpacks reads that field; you can also set `NIXPACKS_NODE_VERSION=22` as a serv
 ## Deploy
 
 <Steps>
- <Step title="Create or link the project">
- ```bash
- railway init # new project
- # or, inside an existing project's repo:
- railway link
- ```
- </Step>
- <Step title="Set the variables">
- In the Railway dashboard, open your service and go to **Variables**, or use the CLI:
+  <Step title="Create or link the project">
+```bash
+railway init # new project
+# or, inside an existing project's repo:
+railway link
+```
+</Step>
+<Step title="Set the variables">
+  In the Railway dashboard, open your service and go to **Variables**, or use the CLI:
 
- ```bash
- railway variables --set "AHASEND_API_KEY=aha-sk-..." \
- --set "AHASEND_ACCOUNT_ID=your-account-uuid" \
- --set "AHASEND_WEBHOOK_SECRET=aha-whsec-..."
- ```
+```bash
+railway variables --set "AHASEND_API_KEY=aha-sk-..." \
+  --set "AHASEND_ACCOUNT_ID=your-account-uuid" \
+  --set "AHASEND_WEBHOOK_SECRET=aha-whsec-..."
+```
 
- Railway can **seal** a variable so its value can never be read back from the dashboard, a good fit for the API key. If several services need the same credentials, define them once as **shared variables** at the project level and reference them from each service.
- </Step>
- <Step title="Deploy">
- Push straight from your machine:
+    Railway can **seal** a variable so its value can never be read back from the dashboard, a good fit for the API key. If several services need the same credentials, define them once as **shared variables** at the project level and reference them from each service.
+</Step>
+<Step title="Deploy">
+  Push straight from your machine:
 
- ```bash
- railway up
- ```
+```bash
+railway up
+```
 
- Or connect the GitHub repo in the service settings, and Railway builds and deploys on every push. Variable changes trigger a redeploy so the new values are picked up.
- </Step>
+    Or connect the GitHub repo in the service settings, and Railway builds and deploys on every push. Variable changes trigger a redeploy so the new values are picked up.
+</Step>
 </Steps>
 
 ## Expose a Public Webhook URL on Railway
@@ -104,13 +104,13 @@ Because Railway processes are long-lived, the SDK's Express webhook adapter (see
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Deployment is live but the URL returns 502">
- The app isn't listening on Railway's assigned port. Bind to `process.env.PORT` (and host `0.0.0.0` if your framework asks for one).
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError in production">
- The variable is set on a different service or environment than the one that deployed. Check the service's **Variables** tab and confirm the latest deploy happened after you set them.
- </Accordion>
- <Accordion title="Webhook verification fails on Railway but works locally">
- `AHASEND_WEBHOOK_SECRET` must be copied exactly as shown in the AhaSend dashboard, including the `aha-whsec-` prefix. Watch for shells or quoting stripping characters when using `railway variables --set`.
- </Accordion>
+  <Accordion title="Deployment is live but the URL returns 502">
+    The app isn't listening on Railway's assigned port. Bind to `process.env.PORT` (and host `0.0.0.0` if your framework asks for one).
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError in production">
+    The variable is set on a different service or environment than the one that deployed. Check the service's **Variables** tab and confirm the latest deploy happened after you set them.
+  </Accordion>
+  <Accordion title="Webhook verification fails on Railway but works locally">
+    `AHASEND_WEBHOOK_SECRET` must be copied exactly as shown in the AhaSend dashboard, including the `aha-whsec-` prefix. Watch for shells or quoting stripping characters when using `railway variables --set`.
+  </Accordion>
 </AccordionGroup>

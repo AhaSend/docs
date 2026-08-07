@@ -41,12 +41,12 @@ Declare the keys in `runtimeConfig` so Nuxt maps them from `NUXT_`-prefixed envi
 
 ```ts nuxt.config.ts
 export default defineNuxtConfig({
- runtimeConfig: {
- // server-only: never put these under runtimeConfig.public
- ahasendApiKey: "",
- ahasendAccountId: "",
- ahasendWebhookSecret: "",
- },
+  runtimeConfig: {
+    // server-only: never put these under runtimeConfig.public
+    ahasendApiKey: "",
+    ahasendAccountId: "",
+    ahasendWebhookSecret: "",
+  },
 });
 ```
 
@@ -57,7 +57,7 @@ NUXT_AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
 <Warning>
-Anything under `runtimeConfig.public` (or a `NUXT_PUBLIC_`-prefixed variable) is serialized into the client payload and readable by anyone in the browser. Keep all AhaSend credentials in the top-level, server-only section of `runtimeConfig`.
+  Anything under `runtimeConfig.public` (or a `NUXT_PUBLIC_`-prefixed variable) is serialized into the client payload and readable by anyone in the browser. Keep all AhaSend credentials in the top-level, server-only section of `runtimeConfig`.
 </Warning>
 
 ## Create the Client
@@ -70,14 +70,14 @@ import { AhaSendClient } from "@ahasend/sdk";
 let client: AhaSendClient | undefined;
 
 export function useAhaSend(): AhaSendClient {
- if (!client) {
- const config = useRuntimeConfig();
- client = new AhaSendClient({
- apiKey: config.ahasendApiKey,
- accountId: config.ahasendAccountId,
- });
- }
- return client;
+  if (!client) {
+    const config = useRuntimeConfig();
+    client = new AhaSendClient({
+      apiKey: config.ahasendApiKey,
+      accountId: config.ahasendAccountId,
+    });
+  }
+  return client;
 }
 ```
 
@@ -89,26 +89,26 @@ Files in `server/utils/` are auto-imported in all server routes, so `useAhaSend(
 import { AhaSendAPIError } from "@ahasend/sdk";
 
 export default defineEventHandler(async (event) => {
- const { email, name } = await readBody(event);
+  const { email, name } = await readBody(event);
 
- try {
- const result = await useAhaSend().messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  try {
+    const result = await useAhaSend().messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- return { queued: result.data.length - rejected.length, rejected };
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- throw createError({ statusCode: 502, statusMessage: "Failed to send email" });
- }
- throw err;
- }
+    const rejected = result.data.filter((r) => r.status === "error");
+    return { queued: result.data.length - rejected.length, rejected };
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      throw createError({ statusCode: 502, statusMessage: "Failed to send email" });
+    }
+    throw err;
+  }
 });
 ```
 
@@ -128,33 +128,33 @@ import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
 let verifier: WebhookVerifier | undefined;
 
 export default defineEventHandler(async (event) => {
- verifier ??= new WebhookVerifier(useRuntimeConfig().ahasendWebhookSecret);
+  verifier ??= new WebhookVerifier(useRuntimeConfig().ahasendWebhookSecret);
 
- let webhookEvent;
- try {
- webhookEvent = verifier.parse(
- getHeaders(event) as Record<string, string>,
- (await readRawBody(event, false))!,
- );
- } catch {
- throw createError({ statusCode: 400, statusMessage: "Invalid signature" });
- }
+  let webhookEvent;
+  try {
+    webhookEvent = verifier.parse(
+      getHeaders(event) as Record<string, string>,
+      (await readRawBody(event, false))!,
+    );
+  } catch {
+    throw createError({ statusCode: 400, statusMessage: "Invalid signature" });
+  }
 
- if (!isKnownWebhookEvent(webhookEvent)) return null; // future event type: acknowledge & ignore
+  if (!isKnownWebhookEvent(webhookEvent)) return null; // future event type: acknowledge & ignore
 
- switch (webhookEvent.type) {
- case "message.delivered":
- console.log(`Delivered to ${webhookEvent.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${webhookEvent.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${webhookEvent.data.recipient}`);
- break;
- }
+  switch (webhookEvent.type) {
+    case "message.delivered":
+      console.log(`Delivered to ${webhookEvent.data.recipient}`);
+      break;
+    case "message.bounced":
+      console.log(`Bounced: ${webhookEvent.data.recipient}`);
+      break;
+    case "message.opened":
+      console.log(`Opened by ${webhookEvent.data.recipient}`);
+      break;
+  }
 
- return null; // 200 OK
+  return null; // 200 OK
 });
 ```
 
@@ -173,16 +173,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Webhook verification always returns 400">
- You read the body with `readBody`, which JSON-parses it and destroys the exact bytes the HMAC was computed over. Use `readRawBody(event, false)` in the webhook route and pass its result to `verifier.parse()` unchanged.
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key never reached the client. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
- </Accordion>
- <Accordion title="Error about window/document or node:crypto on deploy">
- Your Nitro preset targets an edge runtime the SDK cannot run on. Switch to a Node preset (`nitro: { preset: "node-server" }` or your host's Node functions) or send via the REST API from edge code.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="Webhook verification always returns 400">
+    You read the body with `readBody`, which JSON-parses it and destroys the exact bytes the HMAC was computed over. Use `readRawBody(event, false)` in the webhook route and pass its result to `verifier.parse()` unchanged.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key never reached the client. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
+  </Accordion>
+  <Accordion title="Error about window/document or node:crypto on deploy">
+    Your Nitro preset targets an edge runtime the SDK cannot run on. Switch to a Node preset (`nitro: { preset: "node-server" }` or your host's Node functions) or send via the REST API from edge code.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

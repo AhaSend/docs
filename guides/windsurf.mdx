@@ -13,15 +13,15 @@ Brief Cascade well and it will wire up email correctly, then you brief it again 
 Cascade writes and runs code, but it can't verify your domain or create your credentials. Do these two things in the [AhaSend dashboard](https://dash.ahasend.com) first.
 
 <Steps>
- <Step title="Verify a Sending Domain">
- Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). AhaSend checks DNS continuously, so a half-configured domain fails loudly at send time rather than quietly tanking deliverability.
- </Step>
- <Step title="Create an API Key">
- Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` instead of `messages:send:all`: if it leaks, the damage is one domain's outbound mail. Grab your **account ID** too.
- </Step>
- <Step title="Put Both in Your Environment">
- Set `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` in `.env`, and keep that file out of git. We'll tell Cascade that explicitly, because left to its habits it might not.
- </Step>
+  <Step title="Verify a Sending Domain">
+    Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). AhaSend checks DNS continuously, so a half-configured domain fails loudly at send time rather than quietly tanking deliverability.
+  </Step>
+  <Step title="Create an API Key">
+    Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` instead of `messages:send:all`: if it leaks, the damage is one domain's outbound mail. Grab your **account ID** too.
+  </Step>
+  <Step title="Put Both in Your Environment">
+    Set `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` in `.env`, and keep that file out of git. We'll tell Cascade that explicitly, because left to its habits it might not.
+  </Step>
 </Steps>
 
 You'll also need Node.js 22 or later, which is the minimum the SDK supports.
@@ -62,29 +62,29 @@ Rules live as Markdown in a `.windsurf/rules/` directory at your repo root. Crea
 When this project sends email, use the official AhaSend Node.js SDK.
 
 - Package: `@ahasend/sdk` on npm, Node.js 22 or later. Do not invent a
- package name and do not hand-roll fetch calls to the REST API.
+  package name and do not hand-roll fetch calls to the REST API.
 - Server-side only. The constructor throws if it detects a browser, a
- service worker, or an edge runtime. On edge, call
- POST https://api.ahasend.com/v2/accounts/{account_id}/messages directly.
+  service worker, or an edge runtime. On edge, call
+  POST https://api.ahasend.com/v2/accounts/{account_id}/messages directly.
 - Construct the client ONCE at module scope, never per request:
- `new AhaSendClient({ apiKey, accountId })`.
+  `new AhaSendClient({ apiKey, accountId })`.
 - Send with `client.messages.send({ from, recipients, subject,
- html_content, text_content })`. Body fields are snake_case. `from` is
- `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
- 1 to 100 entries, and each recipient gets a separate message.
+  html_content, text_content })`. Body fields are snake_case. `from` is
+  `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
+  1 to 100 entries, and each recipient gets a separate message.
 - The response is multi-status (HTTP 202). `result.data` has one entry per
- recipient, and a recipient can come back `status: "error"` with a null
- `id` while the promise resolves. Check every entry, not just the first.
+  recipient, and a recipient can come back `status: "error"` with a null
+  `id` while the promise resolves. Check every entry, not just the first.
 - Errors are typed. Catch `AhaSendAPIError` and `AhaSendRateLimitError`
- from `@ahasend/sdk`, and match on `err.status` or `err.code`, never on
- message text.
+  from `@ahasend/sdk`, and match on `err.status` or `err.code`, never on
+  message text.
 - Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
- Signature checks need the RAW request body.
+  Signature checks need the RAW request body.
 - Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from the environment.
- Never hardcode or commit them.
+  Never hardcode or commit them.
 - For testing, set `sandbox: true` in the send body.
 - Other languages: Go uses github.com/AhaSend/ahasend-go. There is no
- Python SDK yet, so Python calls the REST API directly.
+  Python SDK yet, so Python calls the REST API directly.
 ```
 
 To start from a draft, point Cascade at AhaSend's machine-readable doc index at `https://ahasend.com/docs/llms.txt`, ask it to write the rule from those pages, then check the result against the list above.
@@ -101,18 +101,18 @@ description: Add a transactional email send via the AhaSend SDK
 # Add AhaSend email
 
 1. If `lib/ahasend.ts` does not exist, create it: import `AhaSendClient`
- from `@ahasend/sdk` and export one client built from
- `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. Module scope only.
+   from `@ahasend/sdk` and export one client built from
+   `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. Module scope only.
 2. In the target handler, import that client and call
- `client.messages.send({ from, recipients, subject, html_content,
- text_content })`. Body fields are snake_case.
+   `client.messages.send({ from, recipients, subject, html_content,
+   text_content })`. Body fields are snake_case.
 3. Filter `result.data` for entries with `status === "error"` and log
- how many recipients were rejected. Never read only `result.data[0]`.
+   how many recipients were rejected. Never read only `result.data[0]`.
 4. Wrap the call in a try/catch for `AhaSendAPIError` and log
- `err.status` and `err.requestId`, never the whole error object.
+   `err.status` and `err.requestId`, never the whole error object.
 5. Set `sandbox: true` while building so nothing is delivered.
 6. Run the send once in sandbox and confirm every recipient came back
- queued before reporting done.
+   queued before reporting done.
 ```
 
 Adding email to a new screen is now one invocation, and because the recipe encodes the same facts as your Rules file, every replay lands the integration the same way.
@@ -130,8 +130,8 @@ Here is the code the Workflow is grounded against:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -140,24 +140,24 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "../lib/ahasend.js";
 
 try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email: user.email, name: user.name }],
- subject: "Welcome aboard",
- text_content: "Thanks for signing up.",
- html_content: "<p>Thanks for signing up.</p>",
- });
+  const result = await ahasend.messages.send({
+    from: { email: "hello@yourdomain.com", name: "Your App" },
+    recipients: [{ email: user.email, name: user.name }],
+    subject: "Welcome aboard",
+    text_content: "Thanks for signing up.",
+    html_content: "<p>Thanks for signing up.</p>",
+  });
 
- const rejected = result.data.filter((r) => r.status === "error");
- if (rejected.length > 0) {
- console.warn(`${rejected.length} recipient(s) rejected`);
- }
+  const rejected = result.data.filter((r) => r.status === "error");
+  if (rejected.length > 0) {
+    console.warn(`${rejected.length} recipient(s) rejected`);
+  }
 } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
- } else {
- throw err;
- }
+  if (err instanceof AhaSendAPIError) {
+    console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+  } else {
+    throw err;
+  }
 }
 ```
 
@@ -167,12 +167,12 @@ Cascade can run terminal commands, so the agent that wrote the integration can a
 
 ```ts
 const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email: "test@example.com", name: "Ada" }],
- subject: "Welcome aboard",
- text_content: "Thanks for signing up.",
- sandbox: true,
- sandbox_result: "bounce", // rehearse the failure path
+  from: { email: "hello@yourdomain.com", name: "Your App" },
+  recipients: [{ email: "test@example.com", name: "Ada" }],
+  subject: "Welcome aboard",
+  text_content: "Thanks for signing up.",
+  sandbox: true,
+  sandbox_result: "bounce", // rehearse the failure path
 });
 ```
 
@@ -187,7 +187,7 @@ Confirm three things before you commit:
 - **The key comes from the environment.** An agent editing several files can drift a secret into the wrong one. Confirm the key is read from `process.env` and never written to anything git tracks.
 
 <Warning>
-If Cascade scaffolds frontend code, make sure the key never lands in a client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`). Anything with those prefixes ships to the browser.
+  If Cascade scaffolds frontend code, make sure the key never lands in a client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`). Anything with those prefixes ships to the browser.
 </Warning>
 
 ## Going Further
@@ -200,18 +200,18 @@ If Cascade scaffolds frontend code, make sure the key never lands in a client-ex
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Cascade ignores the Rules file">
- Confirm the file is under `.windsurf/rules/` at the repo root, not in a subdirectory, and that the rule's activation mode allows Cascade to apply it. A rule set to manual activation only loads when you reference it. Installing `@ahasend/sdk` first is the strongest signal either way.
- </Accordion>
- <Accordion title="The Workflow runs but skips the sandbox check">
- Workflow steps are instructions, not a script. Make the last step an explicit, checkable assertion ("confirm every entry in result.data has status queued before reporting done") rather than a vague "test it".
- </Accordion>
- <Accordion title="The generated code throws AhaSendConfigurationError on startup">
- The SDK refuses to run in a browser, service worker, or edge runtime, and it checks at construction time. Move the send to a Node runtime route, or call the REST API directly from the edge. See [Cloudflare Workers](/guides/cloudflare-workers) for that pattern.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard, and see [the quickstart](/quickstart) if you haven't added one yet.
- </Accordion>
+  <Accordion title="Cascade ignores the Rules file">
+    Confirm the file is under `.windsurf/rules/` at the repo root, not in a subdirectory, and that the rule's activation mode allows Cascade to apply it. A rule set to manual activation only loads when you reference it. Installing `@ahasend/sdk` first is the strongest signal either way.
+  </Accordion>
+  <Accordion title="The Workflow runs but skips the sandbox check">
+    Workflow steps are instructions, not a script. Make the last step an explicit, checkable assertion ("confirm every entry in result.data has status queued before reporting done") rather than a vague "test it".
+  </Accordion>
+  <Accordion title="The generated code throws AhaSendConfigurationError on startup">
+    The SDK refuses to run in a browser, service worker, or edge runtime, and it checks at construction time. Move the send to a Node runtime route, or call the REST API directly from the edge. See [Cloudflare Workers](/guides/cloudflare-workers) for that pattern.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard, and see [the quickstart](/quickstart) if you haven't added one yet.
+  </Accordion>
 </AccordionGroup>
 
 Every endpoint the SDK exposes is in the [API reference](/api-reference).

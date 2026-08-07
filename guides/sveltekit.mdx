@@ -59,8 +59,8 @@ import { env } from "$env/dynamic/private";
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
- apiKey: env.AHASEND_API_KEY!,
- accountId: env.AHASEND_ACCOUNT_ID!,
+  apiKey: env.AHASEND_API_KEY!,
+  accountId: env.AHASEND_ACCOUNT_ID!,
 });
 ```
 
@@ -73,26 +73,26 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "$lib/server/ahasend";
 
 export const POST: RequestHandler = async ({ request }) => {
- const { email, name } = await request.json();
+  const { email, name } = await request.json();
 
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- return json({ queued: result.data.length - rejected.length, rejected });
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return json({ error: "Failed to send email" }, { status: 502 });
- }
- throw err;
- }
+    const rejected = result.data.filter((r) => r.status === "error");
+    return json({ queued: result.data.length - rejected.length, rejected });
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return json({ error: "Failed to send email" }, { status: 502 });
+    }
+    throw err;
+  }
 };
 ```
 
@@ -114,30 +114,30 @@ import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
 let verifier: WebhookVerifier | undefined;
 
 export const POST: RequestHandler = async ({ request }) => {
- verifier ??= new WebhookVerifier(env.AHASEND_WEBHOOK_SECRET!);
+  verifier ??= new WebhookVerifier(env.AHASEND_WEBHOOK_SECRET!);
 
- let event;
- try {
- event = verifier.parse(request.headers, await request.text());
- } catch {
- return new Response(null, { status: 400 });
- }
+  let event;
+  try {
+    event = verifier.parse(request.headers, await request.text());
+  } catch {
+    return new Response(null, { status: 400 });
+  }
 
- if (isKnownWebhookEvent(event)) {
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
- }
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }
 
- return new Response(null, { status: 200 });
+  return new Response(null, { status: 200 });
 };
 ```
 
@@ -156,16 +156,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Cannot import $env/static/private into client-side code">
- You imported the AhaSend client (or an env module) from a component or `+page.ts` that runs in the browser. Move all SDK usage into `+server.ts`, `+page.server.ts`, or `$lib/server/` modules: SvelteKit enforces this boundary for you.
- </Accordion>
- <Accordion title="API key visible in the browser bundle">
- The variable was prefixed with `PUBLIC_` and imported via a public env module. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from `$env/dynamic/private` or `$env/static/private`.
- </Accordion>
- <Accordion title="Error about window/document or node:crypto on deploy">
- Your adapter targets an edge runtime the SDK cannot run on. Switch to `@sveltejs/adapter-node` (or your host's Node functions runtime), or send via the REST API from edge code.
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key is missing, malformed, or revoked. With `$env/static/private` a missing variable fails the build; with `$env/dynamic/private` it fails at request time. Confirm the variable is set in your production environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
- </Accordion>
+  <Accordion title="Cannot import $env/static/private into client-side code">
+    You imported the AhaSend client (or an env module) from a component or `+page.ts` that runs in the browser. Move all SDK usage into `+server.ts`, `+page.server.ts`, or `$lib/server/` modules: SvelteKit enforces this boundary for you.
+  </Accordion>
+  <Accordion title="API key visible in the browser bundle">
+    The variable was prefixed with `PUBLIC_` and imported via a public env module. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from `$env/dynamic/private` or `$env/static/private`.
+  </Accordion>
+  <Accordion title="Error about window/document or node:crypto on deploy">
+    Your adapter targets an edge runtime the SDK cannot run on. Switch to `@sveltejs/adapter-node` (or your host's Node functions runtime), or send via the REST API from edge code.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. With `$env/static/private` a missing variable fails the build; with `$env/dynamic/private` it fails at request time. Confirm the variable is set in your production environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
 </AccordionGroup>

@@ -55,9 +55,9 @@ import { MailController } from "./mail/mail.controller";
 import { WebhookController } from "./mail/webhook.controller";
 
 @Module({
- imports: [ConfigModule.forRoot({ isGlobal: true })],
- controllers: [MailController, WebhookController],
- providers: [AhaSendService],
+  imports: [ConfigModule.forRoot({ isGlobal: true })],
+  controllers: [MailController, WebhookController],
+  providers: [AhaSendService],
 })
 export class AppModule {}
 ```
@@ -73,26 +73,26 @@ import { AhaSendClient } from "@ahasend/sdk";
 
 @Injectable()
 export class AhaSendService {
- readonly client: AhaSendClient;
+  readonly client: AhaSendClient;
 
- constructor(config: ConfigService) {
- this.client = new AhaSendClient({
- apiKey: config.getOrThrow<string>("AHASEND_API_KEY"),
- accountId: config.getOrThrow<string>("AHASEND_ACCOUNT_ID"),
- });
- }
+  constructor(config: ConfigService) {
+    this.client = new AhaSendClient({
+      apiKey: config.getOrThrow<string>("AHASEND_API_KEY"),
+      accountId: config.getOrThrow<string>("AHASEND_ACCOUNT_ID"),
+    });
+  }
 
- async sendWelcome(email: string, name?: string) {
- const result = await this.client.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
- const rejected = result.data.filter((r) => r.status === "error");
- return { queued: result.data.length - rejected.length, rejected: rejected.length };
- }
+  async sendWelcome(email: string, name?: string) {
+    const result = await this.client.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
+    const rejected = result.data.filter((r) => r.status === "error");
+    return { queued: result.data.length - rejected.length, rejected: rejected.length };
+  }
 }
 ```
 
@@ -107,20 +107,20 @@ import { AhaSendService } from "./ahasend.service";
 
 @Controller("api")
 export class MailController {
- constructor(private readonly ahasend: AhaSendService) {}
+  constructor(private readonly ahasend: AhaSendService) {}
 
- @Post("welcome")
- async welcome(@Body() body: { email: string; name?: string }) {
- try {
- return await this.ahasend.sendWelcome(body.email, body.name);
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- throw new BadGatewayException("Failed to send email");
- }
- throw err;
- }
- }
+  @Post("welcome")
+  async welcome(@Body() body: { email: string; name?: string }) {
+    try {
+      return await this.ahasend.sendWelcome(body.email, body.name);
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+        throw new BadGatewayException("Failed to send email");
+      }
+      throw err;
+    }
+  }
 }
 ```
 
@@ -137,8 +137,8 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
- const app = await NestFactory.create(AppModule, { rawBody: true });
- await app.listen(3000);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
+  await app.listen(3000);
 }
 bootstrap();
 ```
@@ -147,51 +147,51 @@ Then verify and dispatch in a controller:
 
 ```ts mail/webhook.controller.ts
 import {
- BadRequestException,
- Controller,
- HttpCode,
- Post,
- Req,
- type RawBodyRequest,
+  BadRequestException,
+  Controller,
+  HttpCode,
+  Post,
+  Req,
+  type RawBodyRequest,
 } from "@nestjs/common";
 import type { Request } from "express";
 import {
- AhaSendWebhookVerificationError,
- WebhookVerifier,
- isKnownWebhookEvent,
+  AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 @Controller("webhooks")
 export class WebhookController {
- @Post("ahasend")
- @HttpCode(200)
- handle(@Req() req: RawBodyRequest<Request>) {
- let event;
- try {
- event = verifier.parse(req.headers, req.rawBody!);
- } catch (err) {
- if (err instanceof AhaSendWebhookVerificationError) {
- throw new BadRequestException("Invalid webhook signature");
- }
- throw err;
- }
+  @Post("ahasend")
+  @HttpCode(200)
+  handle(@Req() req: RawBodyRequest<Request>) {
+    let event;
+    try {
+      event = verifier.parse(req.headers, req.rawBody!);
+    } catch (err) {
+      if (err instanceof AhaSendWebhookVerificationError) {
+        throw new BadRequestException("Invalid webhook signature");
+      }
+      throw err;
+    }
 
- if (!isKnownWebhookEvent(event)) return; // future event type: acknowledge & ignore
+    if (!isKnownWebhookEvent(event)) return; // future event type: acknowledge & ignore
 
- switch (event.type) {
- case "message.delivered":
- console.log(`Delivered to ${event.data.recipient}`);
- break;
- case "message.bounced":
- console.log(`Bounced: ${event.data.recipient}`);
- break;
- case "message.opened":
- console.log(`Opened by ${event.data.recipient}`);
- break;
- }
- }
+    switch (event.type) {
+      case "message.delivered":
+        console.log(`Delivered to ${event.data.recipient}`);
+        break;
+      case "message.bounced":
+        console.log(`Bounced: ${event.data.recipient}`);
+        break;
+      case "message.opened":
+        console.log(`Opened by ${event.data.recipient}`);
+        break;
+    }
+  }
 }
 ```
 
@@ -210,16 +210,16 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="req.rawBody is undefined">
- Nest only captures the raw body when you pass `{ rawBody: true }` to `NestFactory.create`. Without it, `verifier.parse` receives `undefined` and throws. If you use the Fastify platform (`NestFastifyApplication`), `rawBody: true` works there too: the raw bytes land on `req.rawBody` the same way.
- </Accordion>
- <Accordion title="Webhook endpoint returns 400 for every delivery">
- Beyond a missing raw body, check that `AHASEND_WEBHOOK_SECRET` matches the dashboard value exactly (including the `aha-whsec-` prefix) and that no proxy in front of Nest rewrites the request body (which invalidates the HMAC).
- </Accordion>
- <Accordion title="401 AhaSendAuthenticationError">
- The API key is missing, malformed, or revoked. `config.getOrThrow` fails fast at boot if the variable isn't loaded. Verify `.env` sits in the project root and `ConfigModule.forRoot` runs before `AhaSendService` is instantiated.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="req.rawBody is undefined">
+    Nest only captures the raw body when you pass `{ rawBody: true }` to `NestFactory.create`. Without it, `verifier.parse` receives `undefined` and throws. If you use the Fastify platform (`NestFastifyApplication`), `rawBody: true` works there too: the raw bytes land on `req.rawBody` the same way.
+  </Accordion>
+  <Accordion title="Webhook endpoint returns 400 for every delivery">
+    Beyond a missing raw body, check that `AHASEND_WEBHOOK_SECRET` matches the dashboard value exactly (including the `aha-whsec-` prefix) and that no proxy in front of Nest rewrites the request body (which invalidates the HMAC).
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. `config.getOrThrow` fails fast at boot if the variable isn't loaded. Verify `.env` sits in the project root and `ConfigModule.forRoot` runs before `AhaSendService` is instantiated.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

@@ -21,7 +21,7 @@ Lovable cannot verify your sending domain or create your credentials. Those step
 Anything the browser can read, a visitor can read, so the key never goes in frontend code or in a `VITE_`-prefixed variable, which ships to the browser by design.
 
 <Warning>
-If you ever find yourself typing your API key into a variable with a `VITE_` prefix, stop. That one is public. Rotate the key before continuing.
+  If you ever find yourself typing your API key into a variable with a `VITE_` prefix, stop. That one is public. Rotate the key before continuing.
 </Warning>
 
 In your Lovable project, enable Lovable Cloud in the project's backend settings. That gives your app server-side functions and a place to keep secrets. Then open the Secrets section and add two values:
@@ -45,45 +45,42 @@ The function it generates should look close to this:
 
 ```ts supabase/functions/send-welcome-email/index.ts
 Deno.serve(async (req) => {
- const { email, name } = await req.json();
+  const { email, name } = await req.json();
 
- const accountId = Deno.env.get("AHASEND_ACCOUNT_ID");
- const apiKey = Deno.env.get("AHASEND_API_KEY");
+  const accountId = Deno.env.get("AHASEND_ACCOUNT_ID");
+  const apiKey = Deno.env.get("AHASEND_API_KEY");
 
- const res = await fetch(
- `https://api.ahasend.com/v2/accounts/${accountId}/messages`,
- {
- method: "POST",
- headers: {
- "Authorization": `Bearer ${apiKey}`,
- "Content-Type": "application/json",
- "Idempotency-Key": crypto.randomUUID(),
- },
- body: JSON.stringify({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email, name }],
- subject: "Welcome aboard",
- html_content: `<p>Thanks for signing up, ${name}.</p>`,
- text_content: `Thanks for signing up, ${name}.`,
- sandbox: true, // flip to false when you're ready to send for real
- }),
- },
- );
+  const res = await fetch(`https://api.ahasend.com/v2/accounts/${accountId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+    body: JSON.stringify({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email, name }],
+      subject: "Welcome aboard",
+      html_content: `<p>Thanks for signing up, ${name}.</p>`,
+      text_content: `Thanks for signing up, ${name}.`,
+      sandbox: true, // flip to false when you're ready to send for real
+    }),
+  });
 
- if (res.status !== 202) {
- console.error(`AhaSend error ${res.status}`);
- return new Response(JSON.stringify({ error: "Failed to send email" }), {
- status: 502,
- });
- }
+  if (res.status !== 202) {
+    console.error(`AhaSend error ${res.status}`);
+    return new Response(JSON.stringify({ error: "Failed to send email" }), {
+      status: 502,
+    });
+  }
 
- const result = await res.json();
- const rejected = result.data.filter((r) => r.status === "error");
+  const result = await res.json();
+  const rejected = result.data.filter((r) => r.status === "error");
 
- // 200 here is this function's reply to your frontend, not AhaSend's.
- return new Response(JSON.stringify({ queued: result.data.length - rejected.length }), {
- status: 200,
- });
+  // 200 here is this function's reply to your frontend, not AhaSend's.
+  return new Response(JSON.stringify({ queued: result.data.length - rejected.length }), {
+    status: 200,
+  });
 });
 ```
 
@@ -96,16 +93,16 @@ The 202 body is also multi-status. `data` carries one entry per recipient, and a
 Lovable's preview will not catch this mistake for you. Use Lovable's code view to confirm two things.
 
 <Steps>
- <Step title="The key is referenced only inside the Edge Function">
- Via `Deno.env.get()`, and nowhere else. If you see your key, anything starting with `aha-sk-`, or a `VITE_AHASEND...` variable anywhere in the frontend, send Lovable back: "Move the AhaSend call into the Edge Function and remove the key from the frontend entirely." Then rotate the key.
- </Step>
- <Step title="The frontend calls your Edge Function">
- Which then calls AhaSend, not the other way around. The browser should be talking to your own backend, never directly to `api.ahasend.com`.
- </Step>
+  <Step title="The key is referenced only inside the Edge Function">
+    Via `Deno.env.get()`, and nowhere else. If you see your key, anything starting with `aha-sk-`, or a `VITE_AHASEND...` variable anywhere in the frontend, send Lovable back: "Move the AhaSend call into the Edge Function and remove the key from the frontend entirely." Then rotate the key.
+  </Step>
+  <Step title="The frontend calls your Edge Function">
+    Which then calls AhaSend, not the other way around. The browser should be talking to your own backend, never directly to `api.ahasend.com`.
+  </Step>
 </Steps>
 
 <Tip>
-If you are not comfortable reading the code, ask Lovable directly: "Is my AhaSend API key exposed anywhere in the frontend bundle?" Then verify its answer against the two checks above rather than taking the success toast at face value.
+  If you are not comfortable reading the code, ask Lovable directly: "Is my AhaSend API key exposed anywhere in the frontend bundle?" Then verify its answer against the two checks above rather than taking the success toast at face value.
 </Tip>
 
 ## Test in Sandbox Mode
@@ -126,16 +123,16 @@ Sandbox also lets you rehearse the unhappy paths. Add `"sandbox_result": "bounce
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="Error importing @ahasend/sdk: node:crypto not found">
- Expected. The SDK targets Node.js 22 or later and does not run on Supabase Edge Functions. Use the `fetch` approach above; the request and response shapes are identical.
- </Accordion>
- <Accordion title="401 from api.ahasend.com">
- The secret is not set, or the function was deployed before the secret existed. Re-check the Secrets section in Lovable Cloud, redeploy the function, and confirm the key has a send scope.
- </Accordion>
- <Accordion title="The frontend gets a CORS error calling the Edge Function">
- Supabase Edge Functions need to answer the preflight `OPTIONS` request with `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers`. Ask Lovable to add CORS headers to the function. This is a function concern, not an AhaSend one.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="Error importing @ahasend/sdk: node:crypto not found">
+    Expected. The SDK targets Node.js 22 or later and does not run on Supabase Edge Functions. Use the `fetch` approach above; the request and response shapes are identical.
+  </Accordion>
+  <Accordion title="401 from api.ahasend.com">
+    The secret is not set, or the function was deployed before the secret existed. Re-check the Secrets section in Lovable Cloud, redeploy the function, and confirm the key has a send scope.
+  </Accordion>
+  <Accordion title="The frontend gets a CORS error calling the Edge Function">
+    Supabase Edge Functions need to answer the preflight `OPTIONS` request with `Access-Control-Allow-Origin` and `Access-Control-Allow-Headers`. Ask Lovable to add CORS headers to the function. This is a function concern, not an AhaSend one.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

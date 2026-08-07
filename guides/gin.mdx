@@ -46,7 +46,7 @@ import (
 
 var (
 	ahasendClient *api.APIClient
-	accountID uuid.UUID
+	accountID     uuid.UUID
 )
 
 func main() {
@@ -84,7 +84,7 @@ import (
 
 type welcomeInput struct {
 	Email string `json:"email" binding:"required,email"`
-	Name string `json:"name"`
+	Name  string `json:"name"`
 }
 
 func sendWelcome(c *gin.Context) {
@@ -95,9 +95,9 @@ func sendWelcome(c *gin.Context) {
 	}
 
 	message := requests.CreateMessageRequest{
-		From: common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
-		Recipients: []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
-		Subject: "Welcome to Your App!",
+		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
+		Subject:     "Welcome to Your App!",
 		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
 		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
 	}
@@ -198,13 +198,13 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every servic
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="401 from the API">
- The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
- </Accordion>
- <Accordion title="Webhook verification always fails">
- Something consumed the request body before `ParseRequest` ran. Check for logging or body-buffering middleware on the webhook route. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
- </Accordion>
- <Accordion title="400 error mentioning the from address">
- The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
- </Accordion>
+  <Accordion title="401 from the API">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="Webhook verification always fails">
+    Something consumed the request body before `ParseRequest` ran. Check for logging or body-buffering middleware on the webhook route. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
 </AccordionGroup>

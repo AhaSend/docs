@@ -47,7 +47,7 @@ AHASEND_ACCOUNT_ID=your-account-uuid
 ```
 
 <Warning>
-Any env var prefixed with `VITE_` is **embedded into the client bundle as plain text** and shipped to every visitor. Never create `VITE_AHASEND_API_KEY`: anyone who opens DevTools can read it and send email from your account. The SDK also refuses to construct in a browser, so there is no client-side shortcut: email always goes through your server.
+  Any env var prefixed with `VITE_` is **embedded into the client bundle as plain text** and shipped to every visitor. Never create `VITE_AHASEND_API_KEY`: anyone who opens DevTools can read it and send email from your account. The SDK also refuses to construct in a browser, so there is no client-side shortcut: email always goes through your server.
 </Warning>
 
 Then a minimal send route:
@@ -57,32 +57,32 @@ import express from "express";
 import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
 
 const ahasend = new AhaSendClient({
- apiKey: process.env.AHASEND_API_KEY!,
- accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 
 const app = express();
 app.use(express.json());
 
 app.post("/api/welcome", async (req, res) => {
- try {
- const result = await ahasend.messages.send({
- from: { email: "hello@yourdomain.com", name: "Your App" },
- recipients: [{ email: req.body.email, name: req.body.name }],
- subject: "Welcome to Your App!",
- html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
- text_content: "Welcome aboard! We're glad you're here.",
- });
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [{ email: req.body.email, name: req.body.name }],
+      subject: "Welcome to Your App!",
+      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+      text_content: "Welcome aboard! We're glad you're here.",
+    });
 
- const rejected = result.data.filter((r) => r.status === "error");
- res.json({ queued: result.data.length - rejected.length, rejected });
- } catch (err) {
- if (err instanceof AhaSendAPIError) {
- console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
- return res.status(502).json({ error: "Failed to send email" });
- }
- throw err;
- }
+    const rejected = result.data.filter((r) => r.status === "error");
+    res.json({ queued: result.data.length - rejected.length, rejected });
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      return res.status(502).json({ error: "Failed to send email" });
+    }
+    throw err;
+  }
 });
 
 app.listen(3000);
@@ -100,11 +100,11 @@ Vite's dev server can forward API calls to your backend, so the frontend talks t
 import { defineConfig } from "vite";
 
 export default defineConfig({
- server: {
- proxy: {
- "/api": "http://localhost:3000",
- },
- },
+  server: {
+    proxy: {
+      "/api": "http://localhost:3000",
+    },
+  },
 });
 ```
 
@@ -116,14 +116,14 @@ Now the frontend triggers email with an ordinary `fetch`, with no SDK and no key
 
 ```ts src/lib/sendWelcome.ts
 export async function sendWelcome(email: string, name: string) {
- const res = await fetch("/api/welcome", {
- method: "POST",
- headers: { "Content-Type": "application/json" },
- body: JSON.stringify({ email, name }),
- });
+  const res = await fetch("/api/welcome", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, name }),
+  });
 
- if (!res.ok) throw new Error("Failed to send welcome email");
- return res.json() as Promise<{ queued: number; rejected: unknown[] }>;
+  if (!res.ok) throw new Error("Failed to send welcome email");
+  return res.json() as Promise<{ queued: number; rejected: unknown[] }>;
 }
 ```
 
@@ -146,16 +146,16 @@ Webhook handling also belongs on the backend: AhaSend POSTs signed events to a p
 ## Troubleshooting
 
 <AccordionGroup>
- <Accordion title="The SDK throws on import or construction in the browser">
- Working as intended: the client detects browser scopes and refuses to start so your API key can't leak. Move the send code into the backend and call it via `fetch("/api/...")`.
- </Accordion>
- <Accordion title="fetch('/api/welcome') returns the Vite index.html or a 404">
- The dev proxy isn't matching. Confirm the `server.proxy` entry is in `vite.config.ts`, restart the dev server after editing the config, and check the backend is actually listening on port 3000.
- </Accordion>
- <Accordion title="Works in dev, 404s in production">
- `server.proxy` is dev-only: it does nothing for the built app. In production, configure your reverse proxy or hosting platform to route `/api` to the backend process.
- </Accordion>
- <Accordion title="import.meta.env.VITE_AHASEND_API_KEY is visible in the bundle">
- That's exactly what the `VITE_` prefix does: it inlines the value into client code. Delete the variable, rotate the key in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) (treat it as compromised), and keep the new one in the backend's `.env` only.
- </Accordion>
+  <Accordion title="The SDK throws on import or construction in the browser">
+    Working as intended: the client detects browser scopes and refuses to start so your API key can't leak. Move the send code into the backend and call it via `fetch("/api/...")`.
+  </Accordion>
+  <Accordion title="fetch('/api/welcome') returns the Vite index.html or a 404">
+    The dev proxy isn't matching. Confirm the `server.proxy` entry is in `vite.config.ts`, restart the dev server after editing the config, and check the backend is actually listening on port 3000.
+  </Accordion>
+  <Accordion title="Works in dev, 404s in production">
+    `server.proxy` is dev-only: it does nothing for the built app. In production, configure your reverse proxy or hosting platform to route `/api` to the backend process.
+  </Accordion>
+  <Accordion title="import.meta.env.VITE_AHASEND_API_KEY is visible in the bundle">
+    That's exactly what the `VITE_` prefix does: it inlines the value into client code. Delete the variable, rotate the key in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) (treat it as compromised), and keep the new one in the backend's `.env` only.
+  </Accordion>
 </AccordionGroup>
