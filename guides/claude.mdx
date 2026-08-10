@@ -50,9 +50,10 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
 
 - Use the official SDK: `@ahasend/sdk` on npm, Node.js 22 or later.
   Do not invent a package name and do not hand-roll fetch calls.
-- Server-side only. The constructor throws in browsers, service workers,
-  and edge runtimes. On edge, call
-  POST https://api.ahasend.com/v2/accounts/{account_id}/messages directly.
+- Server-side only. Supported runtimes: Node.js 22, 24, 26, Deno latest
+  2.x, Bun latest, Cloudflare workerd (no `nodejs_compat` needed), and
+  Vercel Edge. The constructor refuses browsers and browser service
+  workers, so the key never reaches client code.
 - Construct the client ONCE at module scope, never per request:
   `new AhaSendClient({ apiKey, accountId })`.
 - Send with `client.messages.send({ from, recipients, subject,
@@ -67,7 +68,9 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
 - Errors are typed. Catch `AhaSendAPIError` / `AhaSendRateLimitError` from
   `@ahasend/sdk` and match on `err.status` or `err.code`, never on text.
 - Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
-  Signature checks need the RAW request body.
+  Signature checks need the RAW request body. `parse()` and `verify()`
+  are async: `await verifier.parse(headers, rawBody)`. The Express,
+  Fastify and Next.js adapters await internally.
 - Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from the environment.
   Never hardcode or commit them.
 - For testing, set `sandbox: true` so nothing is delivered, and use

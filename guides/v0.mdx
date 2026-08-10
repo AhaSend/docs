@@ -1,7 +1,7 @@
 ---
 title: "How to Send Email from a v0-Generated App"
 sidebarTitle: "v0"
-description: "Add transactional email to a v0 Next.js app with the AhaSend SDK: send from a Route Handler on the Node.js runtime, with your API key out of the bundle."
+description: "Add transactional email to a v0 Next.js app with the AhaSend SDK: send from a Route Handler, with your API key out of the bundle."
 keywords: ["v0 send email", "v0 vercel email integration", "v0 ahasend", "v0 next.js transactional email", "v0 generated app send email"]
 icon: "wand-magic-sparkles"
 ---
@@ -54,11 +54,7 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-It requires Node.js 22 or later.
-
-<Warning>
-  Every route that imports the SDK needs `export const runtime = "nodejs"`. It does not run on Vercel's Edge runtime.
-</Warning>
+On the Node.js runtime it requires Node.js 22 or later. Routes that import it also run on Vercel's Edge runtime, so no runtime pin is needed.
 
 ## Create the Client
 
@@ -77,7 +73,7 @@ export const ahasend = new AhaSendClient({
 
 Name the architecture in the prompt, or v0 reaches for the client. The phrase that does the work is *Route Handler*:
 
-> "Add a Next.js Route Handler at `app/api/send-email/route.ts` that sends a confirmation email with the `@ahasend/sdk` package. Export `const runtime = "nodejs"`. Import the shared client from `lib/ahasend.ts`, which reads `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from `process.env`. These are server-only, never `NEXT_PUBLIC_`. The form component must POST to `/api/send-email`; it must never call AhaSend directly and must never reference the API key."
+> "Add a Next.js Route Handler at `app/api/send-email/route.ts` that sends a confirmation email with the `@ahasend/sdk` package. Import the shared client from `lib/ahasend.ts`, which reads `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from `process.env`. These are server-only, never `NEXT_PUBLIC_`. The form component must POST to `/api/send-email`; it must never call AhaSend directly and must never reference the API key."
 
 What v0 generates should land close to this:
 
@@ -85,8 +81,6 @@ What v0 generates should land close to this:
 import { NextResponse } from "next/server";
 import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "@/lib/ahasend";
-
-export const runtime = "nodejs"; // the SDK does not run on the Edge runtime
 
 export async function POST(request: Request) {
   const { email, name } = await request.json();
@@ -161,7 +155,7 @@ The mistake this guide prevents is invisible in the preview, so run one delibera
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries, each of which gets its own message.
 - **Webhooks**: the SDK's `nextRouteHandler` verifies signatures for you. The [Next.js guide](/guides/nextjs) has the full setup.
-- **Deployment details**: the [Vercel guide](/guides/vercel) covers environment variable scoping, the Node.js runtime requirement, and function limits.
+- **Deployment details**: the [Vercel guide](/guides/vercel) covers environment variable scoping, runtime choice, and function limits.
 - Building in a different AI tool? See [Lovable](/guides/lovable) and [Bolt.new](/guides/bolt-new).
 
 See the [API reference](/api-reference) for every field and endpoint the SDK exposes.
@@ -169,8 +163,8 @@ See the [API reference](/api-reference) for every field and endpoint the SDK exp
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Error about window, document, or node:crypto on deploy">
-    The route is running on the Edge runtime, which the SDK does not support. Add `export const runtime = "nodejs"` to every route that imports `@ahasend/sdk`. If a route must stay on the Edge, call the REST API with `fetch` from there instead.
+  <Accordion title="Error about an unsupported environment on deploy">
+    If the route runs on the Edge runtime, you are on an SDK version older than 0.2.0, which is where edge support landed: upgrade with `npm install @ahasend/sdk@latest` and redeploy. If the error mentions a browser environment, the SDK is being imported from a client component: move the send into the Route Handler.
   </Accordion>
   <Accordion title="process.env.AHASEND_API_KEY is undefined in production">
     The variable was added after the last deploy, or only to the Development environment. Add it to Production and Preview, then redeploy.

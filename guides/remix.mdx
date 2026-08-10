@@ -122,7 +122,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-Handle webhooks in a resource route. Signature verification needs the raw body, so read it with `request.text()`; `verifier.parse()` accepts the Fetch `Headers` object directly:
+Handle webhooks in a resource route. Signature verification needs the raw body, so read it with `request.text()`; `verifier.parse()` accepts the Fetch `Headers` object directly and is asynchronous as of 0.2.0, so await it:
 
 ```ts app/routes/webhooks.ahasend.ts
 import type { ActionFunctionArgs } from "@remix-run/node";
@@ -133,7 +133,7 @@ const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 export async function action({ request }: ActionFunctionArgs) {
   let event;
   try {
-    event = verifier.parse(request.headers, await request.text());
+    event = await verifier.parse(request.headers, await request.text());
   } catch {
     return new Response(null, { status: 400 });
   }
@@ -160,7 +160,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Deployment**: the Remix App Server, the Express adapter, and Node serverless targets all work. Edge deploys cannot run the SDK.
+- **Deployment**: the Remix App Server, the Express adapter, and Node serverless targets all work, and so do edge targets such as Cloudflare and Vercel Edge. Edge deploys need `@ahasend/sdk` 0.2.0 or later.
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
@@ -174,8 +174,8 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
   <Accordion title="Build error: server-only module referenced by client">
     A component imported `ahasend.server.ts` (or `@ahasend/sdk` directly) outside a loader/action. Keep all SDK imports inside `.server.ts` modules or server-only exports: the `.server` suffix is what tells the compiler to exclude them from the browser bundle.
   </Accordion>
-  <Accordion title="Error about window/document or node:crypto on deploy">
-    You deployed to an edge runtime (e.g. Cloudflare) that the SDK does not support. Move email sending to a Node deployment target, or call the REST API directly from edge code.
+  <Accordion title="Error about window or document on deploy">
+    Edge runtimes such as Cloudflare are supported from `@ahasend/sdk` 0.2.0 onwards, so upgrade if you are still on 0.1.0. Read the API key from the platform's own binding, never from a client-exposed variable.
   </Accordion>
   <Accordion title="Webhook verification always returns 400">
     The body passed to `verifier.parse()` must be the exact raw bytes AhaSend sent. Don't call `request.json()` first: a request body can only be read once. Read it with `request.text()` and pass that string straight to the verifier. Also confirm `AHASEND_WEBHOOK_SECRET` includes the `aha-whsec-` prefix.

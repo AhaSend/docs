@@ -143,7 +143,7 @@ async function bootstrap() {
 bootstrap();
 ```
 
-Then verify and dispatch in a controller:
+Then verify and dispatch in a controller. `verifier.parse()` is asynchronous as of 0.2.0, so the handler awaits it:
 
 ```ts mail/webhook.controller.ts
 import {
@@ -167,10 +167,10 @@ const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 export class WebhookController {
   @Post("ahasend")
   @HttpCode(200)
-  handle(@Req() req: RawBodyRequest<Request>) {
+  async handle(@Req() req: RawBodyRequest<Request>) {
     let event;
     try {
-      event = verifier.parse(req.headers, req.rawBody!);
+      event = await verifier.parse(req.headers, req.rawBody!);
     } catch (err) {
       if (err instanceof AhaSendWebhookVerificationError) {
         throw new BadRequestException("Invalid webhook signature");

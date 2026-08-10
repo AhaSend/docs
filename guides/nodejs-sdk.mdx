@@ -32,11 +32,23 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-Node.js 22 or later. TypeScript declarations ship with the package, so there is no `@types` to add. Your `tsconfig.json` needs `moduleResolution` set to `Bundler`, `Node16`, or `NodeNext`, and either `"lib": ["DOM"]` or `@types/node` for the `fetch`, `Request`, `Response`, and `AbortSignal` globals.
+TypeScript declarations ship with the package, so there is no `@types` to add. Your `tsconfig.json` needs `moduleResolution` set to `Bundler`, `Node16`, or `NodeNext`, and either `"lib": ["DOM"]` or `@types/node` for the `fetch`, `Request`, `Response`, and `AbortSignal` globals.
 
-<Note>
-  The SDK needs `node:crypto` and `node:buffer`, so the constructor throws in browsers, service workers, and edge runtimes including Cloudflare Workers, Vercel Edge, and Supabase Edge Functions. On those, call the [REST API](/api-reference) with `fetch`. The [Cloudflare Workers guide](/guides/cloudflare-workers) has the full pattern, webhook verification included.
-</Note>
+### Supported Runtimes
+
+| Runtime | Versions |
+| --- | --- |
+| Node.js | 22, 24, 26 |
+| Deno | latest 2.x |
+| Bun | latest |
+| Cloudflare workerd | supported, and `nodejs_compat` is not required |
+| Vercel Edge | supported |
+
+Edge runtime support landed in 0.2.0. On 0.1.0 the constructor refuses anything that is not Node.
+
+<Warning>
+  Browsers and browser Service Workers are refused, because the API key grants full send access and anything the browser can read, a visitor can read. `dangerouslyAllowBrowser: true` exists only for browser-shaped server test environments.
+</Warning>
 
 ## Send Your First Email
 
@@ -177,7 +189,7 @@ for await (const message of ahasend.messages.iterate({ status: "Delivered" })) {
 import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
-const event = verifier.parse(request.headers, rawBody);
+const event = await verifier.parse(request.headers, rawBody);
 
 if (isKnownWebhookEvent(event)) {
   switch (event.type) {
@@ -190,8 +202,10 @@ if (isKnownWebhookEvent(event)) {
 ```
 
 <Warning>
-  Verification needs the **raw request body**, the exact bytes AhaSend sent. If a JSON body parser runs first the signature can no longer be checked, and the adapters treat that as a setup error. Pass the webhook secret exactly as the dashboard shows it, `aha-whsec-` prefix included.
+  `parse()` and `verify()` are asynchronous as of 0.2.0, since signing moved to Web Crypto. Await them before treating the body as trusted. The Express, Fastify and Next.js adapters await internally, so they need no change.
 </Warning>
+
+Verification needs the **raw request body**, the exact bytes AhaSend sent. If a JSON body parser runs first the signature can no longer be checked, and the adapters treat that as a setup error. Pass the webhook secret exactly as the dashboard shows it, `aha-whsec-` prefix included.
 
 Timestamp checking rejects stale deliveries, but it does not deduplicate a valid one replayed inside the window. Commit each `webhook-id` durably and make your side effects idempotent.
 

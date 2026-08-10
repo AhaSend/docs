@@ -118,7 +118,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks with a Raw Endpoint
 
-Signature verification needs the **raw request body**, which Encore's typed endpoints parse away. Use `api.raw` instead: its handler receives a Node `IncomingMessage`, so you collect the body chunks into a Buffer and hand them to the verifier along with the headers:
+Signature verification needs the **raw request body**, which Encore's typed endpoints parse away. Use `api.raw` instead: its handler receives a Node `IncomingMessage`, so you collect the body chunks into a Buffer and hand them to the verifier along with the headers. `verifier.parse()` is asynchronous as of 0.2.0, so await it:
 
 ```ts email/webhooks.ts
 import { api } from "encore.dev/api";
@@ -143,7 +143,7 @@ export const ahasendWebhook = api.raw(
     const rawBody = Buffer.concat(chunks);
 
     try {
-      const event = verifier.parse(req.headers, rawBody);
+      const event = await verifier.parse(req.headers, rawBody);
 
       if (isKnownWebhookEvent(event)) {
         switch (event.type) {

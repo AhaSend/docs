@@ -129,7 +129,7 @@ Target: node22
 
 ## Handle Webhooks
 
-Put a second Lambda (or a second route on the same one) behind API Gateway and point your AhaSend webhook at its URL. API Gateway hands you the raw body as a string on `event.body`, but it may be **base64-encoded**, so check `event.isBase64Encoded` before verifying:
+Put a second Lambda (or a second route on the same one) behind API Gateway and point your AhaSend webhook at its URL. API Gateway hands you the raw body as a string on `event.body`, but it may be **base64-encoded**, so check `event.isBase64Encoded` before verifying. `verifier.parse()` is asynchronous as of 0.2.0, so await it:
 
 ```ts src/webhook.ts
 import {
@@ -149,7 +149,7 @@ export const handler = async (
     : (event.body ?? "");
 
   try {
-    const webhookEvent = verifier.parse(event.headers as Record<string, string>, rawBody);
+    const webhookEvent = await verifier.parse(event.headers as Record<string, string>, rawBody);
 
     if (isKnownWebhookEvent(webhookEvent)) {
       switch (webhookEvent.type) {
@@ -176,7 +176,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 Return the 2xx as soon as the event is verified and persisted, and hand slower processing to SQS or an async Lambda invocation.
 
-Deploying serverless elsewhere too? The same patterns apply on [Vercel](/guides/vercel), and edge runtimes get a fetch-only variant in the [Cloudflare Workers guide](/guides/cloudflare-workers).
+Deploying serverless elsewhere too? The same patterns apply on [Vercel](/guides/vercel), and edge runtimes run the same SDK from 0.2.0 onwards: see the [Cloudflare Workers guide](/guides/cloudflare-workers).
 
 ## Quick Test in the Console
 

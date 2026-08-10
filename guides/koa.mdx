@@ -110,7 +110,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-There is no Koa-specific adapter, so use the generic `WebhookVerifier`. It needs the **raw request body**, but a Koa body parser drains the request stream for every route it sees. Put the webhook route in its own router and register it **before** `bodyParser()`, then read the raw bytes from the Node request (`ctx.req`) with the [`raw-body`](https://github.com/stream-utils/raw-body) package:
+There is no Koa-specific adapter, so use the generic `WebhookVerifier`. Its `parse()` is asynchronous as of 0.2.0, so await it. It needs the **raw request body**, but a Koa body parser drains the request stream for every route it sees. Put the webhook route in its own router and register it **before** `bodyParser()`, then read the raw bytes from the Node request (`ctx.req`) with the [`raw-body`](https://github.com/stream-utils/raw-body) package:
 
 ```ts server.ts
 import getRawBody from "raw-body";
@@ -127,7 +127,7 @@ webhookRouter.post("/webhooks/ahasend", async (ctx) => {
   const raw = await getRawBody(ctx.req, { limit: "1mb" });
 
   try {
-    const event = verifier.parse(ctx.req.headers, raw);
+    const event = await verifier.parse(ctx.req.headers, raw);
 
     if (isKnownWebhookEvent(event)) {
       switch (event.type) {

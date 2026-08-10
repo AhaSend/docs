@@ -136,7 +136,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-Redwood functions use the Lambda-style event, which already carries the raw body as a string, exactly what signature verification needs. One catch: some providers deliver the body base64-encoded, so check `event.isBase64Encoded` and decode first:
+Redwood functions use the Lambda-style event, which already carries the raw body as a string, exactly what signature verification needs. `verifier.parse()` is asynchronous as of 0.2.0, so await it. One catch: some providers deliver the body base64-encoded, so check `event.isBase64Encoded` and decode first:
 
 ```ts api/src/functions/ahasendWebhook.ts
 import type { APIGatewayEvent } from "aws-lambda";
@@ -151,7 +151,7 @@ export const handler = async (event: APIGatewayEvent) => {
 
   let webhookEvent;
   try {
-    webhookEvent = verifier.parse(event.headers as Record<string, string>, rawBody);
+    webhookEvent = await verifier.parse(event.headers as Record<string, string>, rawBody);
   } catch {
     return { statusCode: 400, body: "" };
   }

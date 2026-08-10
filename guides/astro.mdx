@@ -51,7 +51,7 @@ export default defineConfig({
 ```
 
 <Note>
-  Use the Node adapter, or another Node-compatible host such as Bun. Edge adapters (Cloudflare, Vercel Edge) cannot run the SDK: see the [Cloudflare Workers guide](/guides/cloudflare-workers) for those.
+  The SDK runs on the Node adapter and on edge adapters alike (Cloudflare, Vercel Edge), so pick whichever suits your host. Edge adapters need `@ahasend/sdk` 0.2.0 or later; for Cloudflare specifics see the [Cloudflare Workers guide](/guides/cloudflare-workers).
 </Note>
 
 ## Configure Environment Variables
@@ -126,7 +126,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-Astro endpoints receive a standard `Request`, so `verifier.parse()` takes `request.headers` and the raw body from `request.text()` directly, no adapter needed. Read the body as text, not JSON, so the verifier sees the exact bytes AhaSend signed.
+Astro endpoints receive a standard `Request`, so `verifier.parse()` takes `request.headers` and the raw body from `request.text()` directly, no adapter needed. `parse()` is asynchronous as of 0.2.0, so await it. Read the body as text, not JSON, so the verifier sees the exact bytes AhaSend signed.
 
 ```ts src/pages/api/webhooks/ahasend.ts
 import type { APIRoute } from "astro";
@@ -139,7 +139,7 @@ const verifier = new WebhookVerifier(import.meta.env.AHASEND_WEBHOOK_SECRET);
 export const POST: APIRoute = async ({ request }) => {
   let event;
   try {
-    event = verifier.parse(request.headers, await request.text());
+    event = await verifier.parse(request.headers, await request.text());
   } catch {
     return new Response("Invalid signature", { status: 400 });
   }

@@ -69,8 +69,6 @@ import { NextResponse } from "next/server";
 import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "@/lib/ahasend";
 
-export const runtime = "nodejs"; // the SDK does not run on the Edge runtime
-
 export async function POST(request: Request) {
   const { email, name } = await request.json();
 
@@ -133,8 +131,6 @@ import {
   isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
 
-export const runtime = "nodejs"; // webhook verification uses node:crypto
-
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 export const POST = nextRouteHandler(verifier, async (event) => {
@@ -166,7 +162,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Deploying to Vercel?** The [Vercel guide](/guides/vercel) covers environment variable scoping, the Node.js runtime requirement, and webhook endpoints on Vercel Functions.
+- **Deploying to Vercel?** The [Vercel guide](/guides/vercel) covers environment variable scoping, runtime choice, and webhook endpoints on Vercel Functions.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Building a standalone API server instead? Start from the [Express guide](/guides/express).
@@ -174,8 +170,8 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Error about window/document or node:crypto on deploy">
-    The route is running on the Edge runtime, which the SDK does not support. Add `export const runtime = "nodejs"` to every route that imports `@ahasend/sdk` or `@ahasend/sdk/webhooks`. If you must send from an Edge function, call the [REST API](https://ahasend.com/docs/api-reference) directly with `fetch` instead.
+  <Accordion title="Error about an unsupported environment on the Edge runtime">
+    You are on an older SDK version. The Edge runtime is supported from 0.2.0, so upgrade with `npm install @ahasend/sdk@latest` and remove any `export const runtime = "nodejs"` pin you added as a workaround. Routes importing the SDK now run on either runtime.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
     The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in `.env.local` (restart `next dev` after editing it) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). In production, set the variable in your hosting provider's environment settings.

@@ -5,7 +5,7 @@ description: "Send transactional email on Deno Deploy in minutes with the AhaSen
 keywords: ["deno deploy send email", "deno transactional email", "deno email api", "ahasend deno", "deno deploy webhooks"]
 ---
 
-Deno 2's Node compatibility layer covers what the SDK needs, so an `npm:` specifier runs it locally and on [Deno Deploy](https://deno.com/deploy), with no `package.json` anywhere.
+The latest Deno 2.x is an officially supported runtime for the SDK, so an `npm:` specifier runs it locally and on [Deno Deploy](https://deno.com/deploy), with no `package.json` anywhere.
 
 ## Prerequisites
 
@@ -96,7 +96,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-The webhooks module lives on its own subpath, so importing it doesn't pull in the API client. `verifier.parse()` accepts the Fetch `Headers` object and raw body string straight off the `Request`. Read the body with `req.text()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed.
+The webhooks module lives on its own subpath, so importing it doesn't pull in the API client. `verifier.parse()` accepts the Fetch `Headers` object and raw body string straight off the `Request`, and it is asynchronous as of 0.2.0, so await it. Read the body with `req.text()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed.
 
 ```ts main.ts
 import { WebhookVerifier, isKnownWebhookEvent } from "npm:@ahasend/sdk/webhooks";
@@ -107,7 +107,7 @@ const verifier = new WebhookVerifier(Deno.env.get("AHASEND_WEBHOOK_SECRET")!);
 if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
   let event;
   try {
-    event = verifier.parse(req.headers, await req.text());
+    event = await verifier.parse(req.headers, await req.text());
   } catch {
     return new Response("Invalid signature", { status: 400 });
   }
@@ -148,7 +148,7 @@ deno deploy
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Running on another modern runtime? The same SDK works on [Bun](/guides/bun), and edge platforms get a fetch-only variant in the [Cloudflare Workers guide](/guides/cloudflare-workers).
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Running on another modern runtime? The same SDK works on [Bun](/guides/bun), and on edge platforms from 0.2.0 onwards: see the [Cloudflare Workers guide](/guides/cloudflare-workers).
 
 ## Troubleshooting
 

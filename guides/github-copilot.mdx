@@ -60,7 +60,8 @@ Put the real interface in the issue so the agent cannot invent a client library 
 > - The response is multi-status: `result.data` has one entry per recipient, and a recipient can come back `status: "error"` while the promise resolves. Check every entry, not just the first.
 > - Catch `AhaSendAPIError` from `@ahasend/sdk` and match on `err.status`, never on message text.
 > - Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from server-side environment variables. Never hardcode them and never expose them to the client.
-> - Send from server-side code only (an API route or controller), never from the browser. The SDK throws if it detects an edge runtime.
+> - Send from server-side code only (an API route or controller), never from the browser. Supported runtimes are Node.js 22, 24 and 26, Deno latest 2.x, Bun latest, Cloudflare workerd (no `nodejs_compat` needed), and Vercel Edge. The constructor refuses browsers and browser service workers.
+> - If the task involves webhooks, verify with `WebhookVerifier` from `@ahasend/sdk/webhooks` against the RAW body. `parse()` and `verify()` are async, so `await verifier.parse(headers, rawBody)`. The Express, Fastify and Next.js adapters await internally.
 > - Set `sandbox: true` in the send body so tests don't deliver real mail.
 
 That issue rules out a hallucinated package, pins the constructor and the method, names the response shape, and states the security rule. The agent plans against those constraints and opens a PR that reflects them.
@@ -158,7 +159,7 @@ Once the diff passes the review checks and, if you set it up, the sandbox test i
     The `copilot` Actions environment either doesn't have `AHASEND_API_KEY` or has a revoked one. Repository and organization secrets are deliberately invisible to the agent, so the key must live in that environment specifically.
   </Accordion>
   <Accordion title="The generated code throws on startup in an edge route">
-    The SDK is Node-only and its constructor throws if it detects a browser, service worker, or edge runtime. Move the send to a Node runtime route, or call the REST API directly from the edge. See [Cloudflare Workers](/guides/cloudflare-workers) for that pattern.
+    Edge runtimes are supported from 0.2.0, so upgrade the dependency and re-run the agent. If the error names a browser environment instead, the client ended up in frontend code: move the send to a server-side route. See [Cloudflare Workers](/guides/cloudflare-workers) for the Workers setup.
   </Accordion>
 </AccordionGroup>
 

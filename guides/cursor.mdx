@@ -52,10 +52,10 @@ When this project sends email, use the official AhaSend Node.js SDK.
 
 - Package: `@ahasend/sdk` on npm. Node.js 22 or later. Do not invent a
   different package name and do not hand-roll fetch calls to the REST API.
-- Server-side only. The constructor throws if it detects a browser, a
-  service worker, or an edge runtime (Cloudflare Workers, Vercel Edge).
-  On edge, call POST https://api.ahasend.com/v2/accounts/{account_id}/messages
-  directly instead.
+- Server-side only. Supported runtimes: Node.js 22, 24, 26, Deno latest
+  2.x, Bun latest, Cloudflare workerd (no `nodejs_compat` needed), and
+  Vercel Edge. The constructor refuses browsers and browser service
+  workers, so the key never reaches client code.
 - Construct the client ONCE at module scope, never per request:
   `new AhaSendClient({ apiKey, accountId })`.
 - Send with `client.messages.send({ from, recipients, subject,
@@ -69,7 +69,10 @@ When this project sends email, use the official AhaSend Node.js SDK.
 - Errors are typed. Catch `AhaSendAPIError` and `AhaSendRateLimitError`
   from `@ahasend/sdk`, and match on `err.status` or `err.code`, never on
   message text.
-- Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
+- Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`,
+  against the RAW request body. `parse()` and `verify()` are async:
+  `await verifier.parse(headers, rawBody)`. The Express, Fastify and
+  Next.js adapters await internally.
 - Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from environment
   variables. Never hardcode them, never write them to a committed file,
   never expose them to the browser.
@@ -169,7 +172,7 @@ Ask Cursor to "add an integration test that sends in sandbox mode and asserts ev
     The rule file isn't being applied, or it isn't specific enough. Confirm the file lives under `.cursor/rules/` in the repo root, and install `@ahasend/sdk` before prompting: an agent that sees the dependency in `package.json` rarely invents an alternative. Naming the package in the prompt itself also helps for a single request.
   </Accordion>
   <Accordion title="The generated code throws AhaSendConfigurationError on startup">
-    The SDK refuses to run in a browser, service worker, or edge runtime, and it checks at construction time. If Cursor put the client in an edge route (Vercel Edge, Cloudflare Workers, middleware), move the send to a Node runtime route, or call the REST API directly from the edge. See [Cloudflare Workers](/guides/cloudflare-workers) for the edge pattern.
+    The SDK checks its environment at construction time and refuses to run in a browser or browser service worker, which is what protects your key. If Cursor put the client in a client component, move the send to a server route. Edge routes (Vercel Edge, Cloudflare Workers) are supported from 0.2.0, so upgrade if one of those is throwing. See [Cloudflare Workers](/guides/cloudflare-workers) for the Workers setup.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError in the agent's test run">
     The API key is missing, malformed, or revoked. Check that your `.env` is loaded in the terminal Cursor is using (`node --env-file=.env`), and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` or domain-scoped send permission.

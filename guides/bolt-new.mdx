@@ -1,7 +1,7 @@
 ---
 title: "How to Send Email from a Bolt.new Project"
 sidebarTitle: "Bolt.new"
-description: "Add transactional email to a Bolt.new app: the AhaSend SDK on a Node backend, REST from a Supabase Edge Function, with the key stored where the send runs."
+description: "Add transactional email to a Bolt.new app with the AhaSend SDK, on a Node backend or a Supabase Edge Function, with the key stored where the send runs."
 keywords: ["bolt.new email integration", "bolt.new send email", "bolt.new ahasend", "bolt new transactional email", "bolt.new supabase edge function email"]
 icon: "bolt"
 ---
@@ -24,76 +24,18 @@ Two rules apply whichever shape your project takes. Never call AhaSend from the 
   If Bolt already put the key in a `VITE_`-prefixed variable or referenced it from a client component, that value is public. Remove it and rotate the key in the dashboard before you continue.
 </Warning>
 
-Bolt projects end up in one of two shapes, and they need different code. Decide which one you have before prompting:
+Bolt projects end up in one of two shapes, a Supabase Edge Function or a Node server, and [`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) runs on both. Use it either way. What differs is only where the key lives:
 
-| Your backend | How to send | Where the key goes |
-| --- | --- | --- |
-| Supabase Edge Function (Deno, edge runtime) | REST API with `fetch` | Supabase secrets |
-| Node server (Express, Fastify, Nitro, deployed to a Node host) | `@ahasend/sdk` | That host's environment variables |
+| Your backend | Where the key goes |
+| --- | --- |
+| Supabase Edge Function (Deno) | Supabase secrets, read with `Deno.env.get()` |
+| Node server (Express, Fastify, Nitro, deployed to a Node host) | That host's environment variables, read from `process.env` |
 
-[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) requires Node.js 22 or later and uses `node:crypto` and `node:buffer`, and its constructor rejects service-worker-like scopes. It does not run on Supabase Edge Functions, so those call the REST API directly, which is one `fetch` and no dependency.
+Supabase Edge Functions run on Deno, so they need SDK 0.2.0 or later, which is where Deno and edge runtime support landed. On Node hosts the SDK needs Node.js 22 or later.
 
-## Option A: Supabase Edge Function with the REST API
+## Send with the SDK
 
-Connect Supabase through Bolt's integration panel, then add your credentials as Supabase secrets, not Bolt or Netlify variables:
-
-```bash
-supabase secrets set AHASEND_API_KEY=aha-sk-your-key
-supabase secrets set AHASEND_ACCOUNT_ID=your-account-uuid
-```
-
-The Supabase dashboard does the same under your project's Edge Functions settings. These are encrypted and injected only into your Edge Functions at runtime.
-
-Name the architecture in the prompt, or Bolt reaches for a client-side hook:
-
-> "Add a Supabase Edge Function called `send-receipt` that emails an order confirmation through AhaSend. Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from the environment with `Deno.env.get()`. POST to `https://api.ahasend.com/v2/accounts/{account_id}/messages` using a Bearer token. Treat HTTP 202 as success. The frontend must call this Edge Function, it must never call AhaSend directly and must never contain the API key."
-
-Bolt should generate something close to this:
-
-```ts supabase/functions/send-receipt/index.ts
-Deno.serve(async (req) => {
-  const { email, name, orderId, total } = await req.json();
-
-  const accountId = Deno.env.get("AHASEND_ACCOUNT_ID");
-  const apiKey = Deno.env.get("AHASEND_API_KEY");
-
-  const res = await fetch(`https://api.ahasend.com/v2/accounts/${accountId}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": `order-${orderId}`,
-    },
-    body: JSON.stringify({
-      from: { email: "orders@yourdomain.com", name: "Your Store" },
-      recipients: [{ email, name }],
-      subject: `Order ${orderId} confirmed`,
-      html_content: `<p>Thanks ${name}, order ${orderId} for $${total} is confirmed.</p>`,
-      text_content: `Thanks ${name}, order ${orderId} for $${total} is confirmed.`,
-      sandbox: true, // set to false when you're ready to send for real
-    }),
-  });
-
-  if (res.status !== 202) {
-    console.error(`AhaSend error ${res.status}`);
-    return new Response(JSON.stringify({ error: "Failed to send email" }), { status: 502 });
-  }
-
-  const result = await res.json();
-  const rejected = result.data.filter((r) => r.status === "error");
-
-  // 200 here is this function's reply to your frontend, not AhaSend's.
-  return new Response(JSON.stringify({ queued: result.data.length - rejected.length }), {
-    status: 200,
-  });
-});
-```
-
-The same REST pattern, with a webhook verifier written in WebCrypto, is in the [Cloudflare Workers guide](/guides/cloudflare-workers).
-
-## Option B: Node Server with the SDK
-
-If Bolt scaffolded a Node backend, install the SDK, which handles retries, idempotency, and typed errors:
+Install the SDK, which handles retries, idempotency, and typed errors:
 
 <CodeGroup>
 
@@ -111,7 +53,22 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-and make sure the host runs Node.js 22 or later. Create the client once at module scope, then send:
+In a Supabase Edge Function there is nothing to install: Deno resolves the package from the import specifier, `import { AhaSendClient } from "npm:@ahasend/sdk"`.
+
+If you are on Supabase, add your credentials as Supabase secrets, not Bolt or Netlify variables:
+
+```bash
+supabase secrets set AHASEND_API_KEY=aha-sk-your-key
+supabase secrets set AHASEND_ACCOUNT_ID=your-account-uuid
+```
+
+The Supabase dashboard does the same under your project's Edge Functions settings. These are encrypted and injected only into your Edge Functions at runtime. On a Node host, set the same two variables in that host's environment settings.
+
+Name the architecture in the prompt, or Bolt reaches for a client-side hook:
+
+> "Add a backend endpoint called `send-receipt` that emails an order confirmation with the `@ahasend/sdk` package. Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from the server environment and pass them to `new AhaSendClient()` at module scope. Treat HTTP 202 as success. The frontend must call this endpoint, it must never call AhaSend directly and must never contain the API key."
+
+Create the client once at module scope, then send:
 
 ```ts server/email.ts
 import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
@@ -143,13 +100,15 @@ export async function sendReceipt(email: string, name: string, orderId: string) 
 }
 ```
 
+Inside a Supabase Edge Function the code is the same, except that Deno has no `process.env`: read the two secrets with `Deno.env.get("AHASEND_API_KEY")` and `Deno.env.get("AHASEND_ACCOUNT_ID")` and pass them to the constructor, then call `sendReceipt` from your `Deno.serve` handler.
+
 Full framework setup lives in the [Express](/guides/express) and [Next.js](/guides/nextjs) guides.
 
 ## Handle the 202 Response
 
-Either way, success is **202**, not 200: AhaSend has accepted and queued your message for asynchronous delivery. A handler that expects 200 reports failures that did not happen.
+Success is **202**, not 200: AhaSend has accepted and queued your message for asynchronous delivery. A handler that expects 200 reports failures that did not happen.
 
-The 202 body is multi-status: it carries one result per recipient. An individual recipient can come back `status: "error"` with a null `id`, a suppressed address for example, while the request succeeded and, with the SDK, while the promise resolves. Inspect every entry, not just the first.
+The 202 body is multi-status: it carries one result per recipient. An individual recipient can come back `status: "error"` with a null `id`, a suppressed address for example, while the request succeeded and the promise resolves. Inspect every entry, not just the first.
 
 ## Test in Sandbox Mode
 
@@ -177,14 +136,14 @@ Your deployed backend and frontend live in different homes. Before you call it d
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries, each of which gets its own message.
-- **Idempotency**: pass your own key (`Idempotency-Key` header, or `{ idempotencyKey: "order-123" }` with the SDK) so a double-click cannot send twice. Stored outcomes replay for 24 hours, but 5xx outcomes are not stored.
+- **Idempotency**: pass your own key as `{ idempotencyKey: "order-123" }`, the second argument to `send()`, so a double-click cannot send twice. Stored outcomes replay for 24 hours, but 5xx outcomes are not stored.
 - Building in a different AI tool? See [v0](/guides/v0) and [Lovable](/guides/lovable). See the [API reference](/api-reference) for every field.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Error importing @ahasend/sdk: node:crypto not found">
-    You installed the SDK in an Edge Function. It targets Node.js 22 or later and does not run on Deno's edge runtime. Use the `fetch` approach in Option A, or move the send to a Node backend.
+  <Accordion title="Error importing @ahasend/sdk in a Supabase Edge Function">
+    You are on an SDK version older than 0.2.0, which is where Deno and edge runtime support landed. Upgrade to 0.2.0 or later and redeploy the function.
   </Accordion>
   <Accordion title="undefined API key at runtime">
     The key was set on the frontend host instead of where the send runs. For an Edge Function, use `supabase secrets set` and redeploy the function afterward.

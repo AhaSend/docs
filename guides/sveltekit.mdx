@@ -104,7 +104,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-Signature verification needs the raw body, so read it with `request.text()` and pass it to `verifier.parse()` together with the request headers; the verifier accepts a Fetch `Headers` object directly:
+Signature verification needs the raw body, so read it with `request.text()` and pass it to `verifier.parse()` together with the request headers; the verifier accepts a Fetch `Headers` object directly. `parse()` is asynchronous as of 0.2.0, so await it:
 
 ```ts src/routes/api/webhooks/ahasend/+server.ts
 import type { RequestHandler } from "./$types";
@@ -118,7 +118,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   let event;
   try {
-    event = verifier.parse(request.headers, await request.text());
+    event = await verifier.parse(request.headers, await request.text());
   } catch {
     return new Response(null, { status: 400 });
   }
@@ -145,7 +145,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Deployment**: use `@sveltejs/adapter-node` or a Node serverless target. Edge adapters cannot run the SDK.
+- **Deployment**: `@sveltejs/adapter-node` and Node serverless targets both work, and so do edge adapters such as `adapter-cloudflare` and Vercel Edge. Edge adapters need `@ahasend/sdk` 0.2.0 or later.
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
@@ -162,8 +162,8 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
   <Accordion title="API key visible in the browser bundle">
     The variable was prefixed with `PUBLIC_` and imported via a public env module. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from `$env/dynamic/private` or `$env/static/private`.
   </Accordion>
-  <Accordion title="Error about window/document or node:crypto on deploy">
-    Your adapter targets an edge runtime the SDK cannot run on. Switch to `@sveltejs/adapter-node` (or your host's Node functions runtime), or send via the REST API from edge code.
+  <Accordion title="Error about window or document on deploy">
+    Edge adapters are supported from `@ahasend/sdk` 0.2.0 onwards, so upgrade if you are still on 0.1.0. Keep the key in `$env/dynamic/private` or the platform binding, never in a `PUBLIC_` variable.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
     The API key is missing, malformed, or revoked. With `$env/static/private` a missing variable fails the build; with `$env/dynamic/private` it fails at request time. Confirm the variable is set in your production environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).

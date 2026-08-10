@@ -120,7 +120,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-Signature verification needs the **raw request body**, so use `readRawBody(event, false)` (the `false` skips string decoding and returns the untouched bytes as a `Buffer`, which the verifier accepts), not `readBody`, which parses JSON and discards the original bytes:
+Signature verification needs the **raw request body**, and `verifier.parse()` is asynchronous as of 0.2.0, so await it. Use `readRawBody(event, false)` (the `false` skips string decoding and returns the untouched bytes as a `Buffer`, which the verifier accepts), not `readBody`, which parses JSON and discards the original bytes:
 
 ```ts server/api/webhooks/ahasend.post.ts
 import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
@@ -132,7 +132,7 @@ export default defineEventHandler(async (event) => {
 
   let webhookEvent;
   try {
-    webhookEvent = verifier.parse(
+    webhookEvent = await verifier.parse(
       getHeaders(event) as Record<string, string>,
       (await readRawBody(event, false))!,
     );
@@ -162,7 +162,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Deployment**: use a Node-compatible Nitro preset such as `node-server`, Vercel Node functions, or Netlify functions. Edge presets cannot run the SDK.
+- **Deployment**: Node presets such as `node-server`, Vercel Node functions or Netlify functions all work, and so do edge presets such as Cloudflare and Vercel Edge. Edge presets need `@ahasend/sdk` 0.2.0 or later.
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
@@ -179,8 +179,8 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
   <Accordion title="401 AhaSendAuthenticationError">
     The API key never reached the client. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
   </Accordion>
-  <Accordion title="Error about window/document or node:crypto on deploy">
-    Your Nitro preset targets an edge runtime the SDK cannot run on. Switch to a Node preset (`nitro: { preset: "node-server" }` or your host's Node functions) or send via the REST API from edge code.
+  <Accordion title="Error about window or document on deploy">
+    Edge presets are supported from `@ahasend/sdk` 0.2.0 onwards, so upgrade if you are still on 0.1.0. Read secrets from the preset's own binding rather than a `NUXT_PUBLIC_` variable, which would put the API key in the client bundle.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
