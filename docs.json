@@ -90,6 +90,7 @@
               "security/2fa",
               "security/2fa-enforcement",
               "security/scoped-credentials",
+              "security/ip-allow-lists",
               "security/reputation-shield",
               "security/sso"
             ]
