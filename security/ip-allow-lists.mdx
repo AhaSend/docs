@@ -1,0 +1,138 @@
+---
+title: "IP Allow Lists"
+sidebarTitle: "IP Allow Lists"
+description: "Restrict which IP addresses can use an API key"
+icon: "network-wired"
+---
+
+An IP allow list restricts an API key to a set of IP addresses. Once a key has an allow list, requests made with it from anywhere else are rejected, so a leaked key is useless outside your own infrastructure.
+
+<Info>
+**Scope of this feature:** IP allow lists apply to Management API keys only. SMTP credentials and sending credentials are not affected.
+</Info>
+
+## How it works
+
+Every API key carries an `ip_allow_list`. It is empty by default, and an empty list means no restriction, so existing keys keep working exactly as before.
+
+When the list is not empty:
+
+* Requests from an IP covered by an entry are processed normally.
+* Requests from any other IP are rejected on every endpoint, regardless of the scopes granted to the key.
+* Changes take effect immediately.
+
+The IP check runs before scope validation, so it is not another permission dimension. It is a gate in front of the key.
+
+<Note>
+**Prefer static addresses you own and control.** An allow list is only as stable as the IPs behind it. Egress from a fixed NAT gateway, a bastion host, or a dedicated server works well. Dynamic addresses do not.
+</Note>
+
+## Blocked requests
+
+A request made with a restricted key from an IP that is not covered by the list is rejected with **HTTP 403** on every v2 endpoint, whatever the key's scopes allow.
+
+```json theme={null}
+{
+  "message": "Error message"
+}
+```
+
+<Warning>
+**Do not parse the error message.** The API returns no stable machine-readable error code, and several conditions share HTTP 403. Treat any 403 as a request your key was not permitted to make, and check the key's allow list and scopes to find out which applied.
+</Warning>
+
+IP allow list checks run before the idempotency layer, so a blocked request is never stored or replayed against an `Idempotency-Key`. Retrying the same request from an allowed IP with the same key executes normally.
+
+## Supported entries
+
+You can enter individual addresses or CIDR ranges, in IPv4 or IPv6:
+
+| Entry | Meaning |
+| --- | --- |
+| `203.0.113.4` | A single IPv4 address, stored as `203.0.113.4/32` |
+| `2001:db8::1` | A single IPv6 address, stored as `2001:db8::1/128` |
+| `198.51.100.0/24` | An IPv4 range covering 256 addresses |
+
+A few rules apply when you save:
+
+* Entries are canonicalized, which means host bits are masked, and duplicates are removed.
+* A key can hold up to 100 entries after de-duplication. A longer list is rejected.
+* The allow-all prefixes `0.0.0.0/0` and `::/0` are rejected. To remove a restriction, clear the list instead.
+
+## Configure in the dashboard
+
+<Steps>
+  <Step title="Open your API keys" icon="gear">
+    Go to **Settings** and then **API Keys**.
+  </Step>
+
+  <Step title="Edit the key" icon="pen">
+    Click **Edit** on the key you want to restrict and scroll to the **IP Allow List** section at the bottom.
+  </Step>
+
+  <Step title="Add addresses or ranges" icon="plus">
+    Click **Add IP address or range** and enter one address or CIDR range per field. Repeat for each entry you need.
+  </Step>
+
+  <Step title="Save and confirm" icon="check">
+    Save the change. Because this affects who can use the key, you are asked to confirm your identity before the change is applied.
+  </Step>
+</Steps>
+
+To lift the restriction again, delete every entry and save. An empty list allows all IPs.
+
+## Configure with the Management API
+
+Set the `ip_allow_list` field when you [create a key](/api-reference/api-keys/create-api-key), or when you [update an existing one](/api-reference/api-keys/update-api-key). The same field is available on the sub-account API key endpoints.
+
+```bash theme={null}
+curl -X POST "https://api.ahasend.com/v2/accounts/{account_id}/api-keys" \
+  -H "Authorization: Bearer aha-sk-your-64-character-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "label": "Production API Key",
+    "scopes": ["messages:send:all", "domains:read"],
+    "ip_allow_list": ["203.0.113.0/24", "198.51.100.7"]
+  }'
+```
+
+To change the list on an existing key, send a `PUT` to the key's endpoint:
+
+```bash theme={null}
+curl -X PUT "https://api.ahasend.com/v2/accounts/{account_id}/api-keys/{key_id}" \
+  -H "Authorization: Bearer aha-sk-your-64-character-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ip_allow_list": ["203.0.113.0/24"]
+  }'
+```
+
+An update replaces the list rather than merging into it, so send the complete set of entries you want the key to keep:
+
+| Value sent | Result |
+| --- | --- |
+| Field omitted, or `null` | The existing list is left unchanged |
+| `[]` | The list is cleared, and the key becomes usable from any IP |
+| `["203.0.113.0/24"]` | The list is replaced with exactly these entries |
+
+The field is always present on API key responses. An empty array means the key can be used from any IP.
+
+<Warning>
+**Self-lockout protection:** If a key updates its own allow list to a value that excludes the IP the request is coming from, the update is rejected with **HTTP 409** and nothing is persisted. Updating a sub-account key from a parent key has no such guard, so check the sub-account's egress IP before you restrict its keys.
+</Warning>
+
+## Related documentation
+
+<CardGroup cols={3}>
+  <Card title="Scoped API Keys" icon="key" href="/security/scoped-credentials">
+    Restrict what a key can do with domain and permission scoping
+  </Card>
+
+  <Card title="API Key Scopes" icon="list" href="/api-reference/scopes">
+    Complete reference of available permission scopes
+  </Card>
+
+  <Card title="Create API Key" icon="code" href="/api-reference/api-keys/create-api-key">
+    Endpoint reference including the `ip_allow_list` field
+  </Card>
+</CardGroup>
