@@ -5,24 +5,24 @@ description: "Send transactional email on Deno Deploy in minutes with the AhaSen
 keywords: ["deno deploy send email", "deno transactional email", "deno email api", "ahasend deno", "deno deploy webhooks"]
 ---
 
-The SDK's release gates run its packed artifact on the latest Deno 2.x. Deno Deploy can run npm packages without a Node build step, but its managed runtime may lag that tested version, and the SDK security policy currently limits production security support to Node.js 22 or later. Validate the pinned SDK on Deno Deploy before production and treat Deno compatibility separately from security-fix support.
+Deno Deploy can run npm packages without a Node build step, so you can use the AhaSend SDK directly from a Deno application.
 
 ## Prerequisites
 
-- Deno 2 locally, and a [Deno Deploy](https://console.deno.com) organization and application
+- Deno installed locally, and a [Deno Deploy](https://console.deno.com) organization and application
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) scoped to `messages:send:{your-domain}`, and your account ID
 - For webhook side effects, a database operation that can atomically commit a unique `webhook-id` and durable work
 
 ## Import the SDK
 
-The SDK is pre-1.0, so resolve and save an exact version rather than allowing an inline specifier to drift:
+Add the SDK to your Deno project:
 
 ```bash
-deno add --save-exact npm:@ahasend/sdk
+deno add npm:@ahasend/sdk
 ```
 
-This writes the exact npm version to `deno.json`; commit both `deno.json` and `deno.lock`, and review the SDK changelog before upgrading. Import the saved bare specifier:
+This writes the dependency to `deno.json`. Commit both `deno.json` and `deno.lock`, then import the saved bare specifier:
 
 ```ts
 import { AhaSendClient } from "@ahasend/sdk";
@@ -59,7 +59,7 @@ export const ahasend = new AhaSendClient({
 
 ## Send an Email from a Deno.serve Route
 
-The same `Deno.serve` handler API runs locally and on Deno Deploy, although the runtime version and permission model differ as noted above:
+The same `Deno.serve` handler API runs locally and on Deno Deploy, although their permission models differ:
 
 ```ts main.ts
 import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
