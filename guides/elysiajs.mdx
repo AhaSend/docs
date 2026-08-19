@@ -9,7 +9,7 @@ keywords: ["elysiajs send email", "elysia transactional email", "bun email api e
 
 ## Prerequisites
 
-- The latest stable Bun release
+- Bun installed
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 
@@ -203,7 +203,7 @@ app
   .listen(3000);
 ```
 
-`verifier.parse()` accepts the Fetch `Headers` object from `request.headers` directly, and it is asynchronous as of 0.2.0, so await it. Keep `parse: "none"`, and keep the webhook route free of plugins or hooks that consume `request.body` before the handler.
+`verifier.parse()` accepts the Fetch `Headers` object from `request.headers` directly, and it is asynchronous, so await it. Keep `parse: "none"`, and keep the webhook route free of plugins or hooks that consume `request.body` before the handler.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
