@@ -9,28 +9,31 @@ The webhook route is where [Express](https://expressjs.com) apps usually go wron
 
 ## Prerequisites
 
-- Node.js 22 or later
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{domain}` scope for your sending domain (or `messages:send:all` if it must cover multiple domains), and your account ID
 
 ## Install the SDK
 
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk
+npm install @ahasend/sdk express
+npm install --save-dev typescript @types/express @types/node
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk
+pnpm add @ahasend/sdk express
+pnpm add --save-dev typescript @types/express @types/node
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk
+yarn add @ahasend/sdk express
+yarn add --dev typescript @types/express @types/node
 ```
 
 ```bash bun
-bun add @ahasend/sdk
+bun add @ahasend/sdk express
+bun add --dev typescript @types/express @types/node
 ```
 
 </CodeGroup>
@@ -43,6 +46,7 @@ Add your credentials to `.env` (and load them with `node --env-file=.env` or `do
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
 ```
 
 ## Create the Client
@@ -61,48 +65,86 @@ export const ahasend = new AhaSendClient({
 ## Send an Email from an Express Route
 
 ```ts server.ts
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend.js";
 
 const app = express();
-app.use(express.json());
+const welcomeEndpointToken = process.env.WELCOME_ENDPOINT_TOKEN;
+if (!welcomeEndpointToken) throw new Error("WELCOME_ENDPOINT_TOKEN is required");
 
-app.post("/api/welcome", async (req, res) => {
-  try {
-    const result = await ahasend.messages.send({
-      from: { email: "hello@yourdomain.com", name: "Your App" },
-      recipients: [{ email: req.body.email, name: req.body.name }],
-      subject: "Welcome to Your App!",
-      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-      text_content: "Welcome aboard! We're glad you're here.",
-    });
-
-    const rejected = result.data.filter((r) => r.status === "error");
-    if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
-
-    res.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
-  } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-      return res.status(502).json({ error: "Failed to send email" });
+app.post(
+  "/api/welcome",
+  (req, res, next) => {
+    if (req.get("authorization") !== `Bearer ${welcomeEndpointToken}`) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
     }
-    throw err;
-  }
-});
+    next();
+  },
+  express.json({ limit: "16kb" }),
+  async (req, res) => {
+    const { email, name } = req.body ?? {};
+    if (
+      typeof email !== "string" ||
+      email.length === 0 ||
+      (name !== undefined && typeof name !== "string")
+    ) {
+      res.status(400).json({ error: "Invalid request body" });
+      return;
+    }
 
-app.listen(3000);
+    try {
+      const result = await ahasend.messages.send({
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email, name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      });
+
+      const rejected = result.data.filter((r) => r.status === "error");
+      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+
+      res.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+        res.status(502).json({ error: "Failed to send email" });
+        return;
+      }
+      throw err;
+    }
+  },
+);
+
+const opaqueErrorHandler: ErrorRequestHandler = (err, _req, res, next) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+
+  const candidate =
+    typeof err === "object" && err !== null && "status" in err
+      ? (err as { status?: unknown }).status
+      : undefined;
+  const status = candidate === 400 || candidate === 413 ? candidate : 500;
+  console.error("Request failed");
+  res.status(status).json({ error: status === 500 ? "Internal server error" : "Invalid request" });
+};
 ```
+
+Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`. Serve it only over HTTPS. For a user-facing endpoint, replace the token with your application's authentication and authorization, validate addresses according to your product's rules, and rate-limit sends. The route-specific JSON parser authenticates before reading the body and leaves the webhook stream untouched.
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
+The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. When a duplicate would be expensive, pass a stable key from your business operation as the second argument: `ahasend.messages.send(message, { idempotencyKey: "welcome-user-123" })`.
 
 Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks
 
-The SDK ships a dedicated Express adapter that verifies the HMAC signature, guards against replays, and hands you a typed event. Mount `expressWebhookHandler` **directly** on the route: on Express 5.x it reads and size-bounds the raw request stream itself, so you don't need `express.raw()` (or any other body parser) in front of it. Register the route **before** any global `express.json()` middleware, or the body will already be parsed by the time the adapter runs.
+The SDK ships a dedicated Express adapter that verifies the HMAC signature and timestamp, then hands you a typed event. Mount `expressWebhookHandler` **directly** on the route: it reads and size-bounds the raw request stream itself, so you don't need `express.raw()` (or any other body parser) in front of it. Do not put a global `express.json()` middleware before this route, or the body will already be parsed by the time the adapter runs.
 
 ```ts server.ts
 import {
@@ -113,7 +155,7 @@ import {
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
-// register BEFORE app.use(express.json())
+// No body parser is mounted on this path.
 app.post(
   "/webhooks/ahasend",
   expressWebhookHandler(verifier, async (event) => {
@@ -121,28 +163,38 @@ app.post(
 
     switch (event.type) {
       case "message.delivered":
-        console.log(`Delivered to ${event.data.recipient}`);
+        console.log("Message delivered");
         break;
       case "message.bounced":
-        console.log(`Bounced: ${event.data.recipient}`);
+        console.log("Message bounced");
         break;
       case "message.opened":
-        console.log(`Opened by ${event.data.recipient}`);
+        console.log("Message opened");
         break;
     }
-  }),
+  }, { maxBodyBytes: 1_000_000 }),
 );
+
+// Error middleware must be registered after every route.
+app.use(opaqueErrorHandler);
+app.listen(3000);
 ```
 
+The adapter sends an empty `200` after the handler completes, an empty `400` for invalid signatures or payloads, and an empty `413` above `maxBodyBytes`. Set your reverse proxy's body limit to the same value or lower, and serve the webhook only over HTTPS.
+
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+<Warning>
+  Timestamp verification is not replay deduplication. Before adding side effects, atomically persist the verified `webhook-id` header together with durable queue/outbox work. Acknowledge an already-recorded ID without processing it again, and make the worker idempotent.
+</Warning>
 
 ## Going Further
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour. The first attempt must be in the future and within seven days of the request.
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+- **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself, use the encoded string as `data`, and set `base64: true`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. On a different Node framework? The same SDK powers the [Fastify](/guides/fastify) and [NestJS](/guides/nestjs) guides.
 
@@ -150,7 +202,7 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 
 <AccordionGroup>
   <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). Do not print any part of the key while troubleshooting.
   </Accordion>
   <Accordion title="The webhook route errors out with an already-parsed body">
     A body parser ran before the adapter. The adapter treats this as a setup error and passes it to `next`, so it surfaces through your error middleware rather than as a signature failure. The fix is to stop parsing that route: register it before any global `express.json()`, or scope the parser to your other routes. Don't add `express.raw()`: the adapter reads the raw stream itself, and a parser in front of it will always break verification.
