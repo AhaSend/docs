@@ -9,33 +9,32 @@ keywords: ["koa send email", "koa transactional email", "koa email api", "ahasen
 
 ## Prerequisites
 
-- Node.js 22 or later
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](/send-api/credentials) with the domain-specific `messages:send:{your-domain}` scope, and your account ID
 
 ## Install the SDK
 
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk @koa/router @koa/bodyparser raw-body
+npm install @ahasend/sdk koa @koa/router @koa/bodyparser raw-body @types/koa
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk @koa/router @koa/bodyparser raw-body
+pnpm add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body @types/koa
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk @koa/router @koa/bodyparser raw-body
+yarn add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body @types/koa
 ```
 
 ```bash bun
-bun add @ahasend/sdk @koa/router @koa/bodyparser raw-body
+bun add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body @types/koa
 ```
 
 </CodeGroup>
 
-`@koa/bodyparser` is the maintained successor to `koa-bodyparser` and supports Koa v2 and v3; `raw-body` is only needed for webhooks, where signature verification requires the raw, unparsed request body.
+`raw-body` is only needed for webhooks, where signature verification requires the exact, unparsed request bytes.
 
 ## Configure Environment Variables
 
@@ -45,7 +44,11 @@ Add your credentials to `.env` (and load them with `node --env-file=.env` or `do
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
+AHASEND_DELIVERY_MODE=sandbox
+WELCOME_ENDPOINT_TOKEN=a-long-random-server-to-server-token
 ```
+
+Keep these values in your deployment platform's secret store. The examples require an explicit `sandbox` or `live` delivery mode and refuse to start for any other value.
 
 ## Create the Client
 
@@ -54,26 +57,70 @@ Create the client once at module scope and reuse it across requests:
 ```ts lib/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
+const deliveryMode = requireEnv("AHASEND_DELIVERY_MODE");
+if (deliveryMode !== "sandbox" && deliveryMode !== "live") {
+  throw new Error("AHASEND_DELIVERY_MODE must be sandbox or live");
+}
+
 export const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: requireEnv("AHASEND_API_KEY"),
+  accountId: requireEnv("AHASEND_ACCOUNT_ID"),
 });
+export const sandboxMode = deliveryMode === "sandbox";
+export const welcomeToken = requireEnv("WELCOME_ENDPOINT_TOKEN");
 ```
 
 ## Send an Email from a Koa Route
 
 ```ts server.ts
+import { createHash, timingSafeEqual } from "node:crypto";
 import Koa from "koa";
+import type { Middleware } from "koa";
 import Router from "@koa/router";
 import { bodyParser } from "@koa/bodyparser";
 import { AhaSendAPIError } from "@ahasend/sdk";
-import { ahasend } from "./lib/ahasend.js";
+import { ahasend, sandboxMode, welcomeToken } from "./lib/ahasend.js";
 
 const app = new Koa();
 const router = new Router();
+const expectedTokenHash = createHash("sha256").update(welcomeToken).digest();
+const uuidPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-router.post("/api/welcome", async (ctx) => {
-  const { email, name } = ctx.request.body as { email: string; name?: string };
+const requireWelcomeToken: Middleware = async (ctx, next) => {
+  const authorization = ctx.get("authorization");
+  const provided = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  const providedHash = createHash("sha256").update(provided).digest();
+  if (!provided || !timingSafeEqual(providedHash, expectedTokenHash)) {
+    ctx.status = 401;
+    return;
+  }
+  await next();
+};
+
+router.post("/api/welcome", requireWelcomeToken, async (ctx) => {
+  const input = ctx.request.body as Record<string, unknown>;
+  const eventID = input?.event_id;
+  const email = input?.email;
+  const name = input?.name;
+  if (
+    typeof eventID !== "string" ||
+    !uuidPattern.test(eventID) ||
+    typeof email !== "string" ||
+    email.length > 320 ||
+    !emailPattern.test(email) ||
+    (name !== undefined && (typeof name !== "string" || name.length > 200))
+  ) {
+    ctx.status = 400;
+    ctx.body = { error: "Invalid request" };
+    return;
+  }
 
   try {
     const result = await ahasend.messages.send({
@@ -82,13 +129,29 @@ router.post("/api/welcome", async (ctx) => {
       subject: "Welcome to Your App!",
       html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
       text_content: "Welcome aboard! We're glad you're here.",
-    });
+      sandbox: sandboxMode,
+    }, { idempotencyKey: `welcome-${eventID}` });
 
-    const rejected = result.data.filter((r) => r.status === "error");
-    ctx.body = { queued: result.data.length - rejected.length, rejected: rejected.length };
+    const accepted = result.data.filter((entry) =>
+      entry.status === "queued" || entry.status === "scheduled"
+    );
+    const rejected = result.data.length - accepted.length;
+    if (rejected > 0 || accepted.length === 0) {
+      console.error("AhaSend rejected recipients", { count: rejected });
+      ctx.status = 502;
+      ctx.body = { error: "Email was not accepted" };
+      return;
+    }
+
+    ctx.status = 202;
+    ctx.body = { queued: accepted.length };
   } catch (err) {
     if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      console.error("AhaSend request failed", {
+        status: err.status,
+        code: err.code,
+        requestId: err.requestId,
+      });
       ctx.status = 502;
       ctx.body = { error: "Failed to send email" };
       return;
@@ -97,69 +160,91 @@ router.post("/api/welcome", async (ctx) => {
   }
 });
 
-app.use(bodyParser());
+app.on("error", () => console.error("Unhandled request error"));
+app.use(bodyParser({ enableTypes: ["json"], jsonLimit: "64kb" }));
 app.use(router.routes()).use(router.allowedMethods());
-app.listen(3000);
+
+const server = app.listen(Number(process.env.PORT ?? 3000));
+server.requestTimeout = 30_000;
+server.headersTimeout = 10_000;
+server.keepAliveTimeout = 5_000;
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, () => {
+    server.close((error) => {
+      if (error) process.exitCode = 1;
+    });
+  });
+}
 ```
 
 A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
+This is a server-to-server route protected by a dedicated bearer token. For a browser-facing route, use your application's session authentication and authorization and load the recipient from server-authoritative storage. Never expose the token in client-side code or logs.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+The stable business-event key protects retries outside the SDK's internal retry loop. Reuse an idempotency key only for the exact same request payload and never log it. Stored non-server-error outcomes can be replayed for 24 hours, but a `5xx` releases the key for re-execution; reconcile an uncertain outcome before another send when duplicates are unacceptable.
 
 ## Handle Webhooks
 
-There is no Koa-specific adapter, so use the generic `WebhookVerifier`. Its `parse()` is asynchronous as of 0.2.0, so await it. It needs the **raw request body**, but a Koa body parser drains the request stream for every route it sees. Put the webhook route in its own router and register it **before** `bodyParser()`, then read the raw bytes from the Node request (`ctx.req`) with the [`raw-body`](https://github.com/stream-utils/raw-body) package:
+There is no Koa-specific adapter, so use the asynchronous generic `WebhookVerifier`. It needs the **raw request body**. Put the webhook route in its own router before `bodyParser()`, then read the exact bytes from the Node request (`ctx.req`) with the [`raw-body`](https://github.com/stream-utils/raw-body) package. Timestamp validation rejects stale signatures but does not deduplicate a valid delivery replayed inside the tolerance window.
 
 ```ts server.ts
 import getRawBody from "raw-body";
 import {
   AhaSendWebhookVerificationError,
+  type AnyWebhookEvent,
   WebhookVerifier,
   isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
 
-const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
-const webhookRouter = new Router();
+interface WebhookStore {
+  // Atomically commit webhookId and durable work for event.
+  // Return false when that ID was already committed.
+  enqueueOnce(webhookId: string, event: AnyWebhookEvent): Promise<boolean>;
+}
 
-webhookRouter.post("/webhooks/ahasend", async (ctx) => {
-  const raw = await getRawBody(ctx.req, { limit: "1mb" });
+export function createAhaSendWebhookRouter(secret: string, store: WebhookStore): Router {
+  const verifier = new WebhookVerifier(secret);
+  const webhookRouter = new Router();
 
-  try {
-    const event = await verifier.parse(ctx.req.headers, raw);
-
-    if (isKnownWebhookEvent(event)) {
-      switch (event.type) {
-        case "message.delivered":
-          console.log(`Delivered to ${event.data.recipient}`);
-          break;
-        case "message.bounced":
-          console.log(`Bounced: ${event.data.recipient}`);
-          break;
-        case "message.opened":
-          console.log(`Opened by ${event.data.recipient}`);
-          break;
-      }
-    }
-
-    ctx.status = 200;
-  } catch (err) {
-    if (err instanceof AhaSendWebhookVerificationError) {
-      ctx.status = 400;
+  webhookRouter.post("/webhooks/ahasend", async (ctx) => {
+    let raw: Buffer;
+    try {
+      raw = await getRawBody(ctx.req, { limit: 30_000_000 });
+    } catch (error) {
+      ctx.status =
+        typeof error === "object" && error !== null && "status" in error && error.status === 413
+          ? 413
+          : 400;
       return;
     }
-    throw err;
-  }
-});
 
-// Register BEFORE bodyParser() so the webhook body reaches us unparsed:
-app.use(webhookRouter.routes());
-app.use(bodyParser());
-app.use(router.routes()).use(router.allowedMethods());
+    try {
+      const event = await verifier.parse(ctx.req.headers, raw);
+      if (!isKnownWebhookEvent(event)) {
+        ctx.status = 204;
+        return;
+      }
+
+      const webhookID = ctx.get("webhook-id");
+      const accepted = await store.enqueueOnce(webhookID, event);
+      ctx.status = accepted ? 202 : 200;
+    } catch (error) {
+      if (error instanceof AhaSendWebhookVerificationError) {
+        ctx.status = error.reason === "body_too_large" ? 413 : 400;
+        return;
+      }
+      throw error;
+    }
+  });
+
+  return webhookRouter;
+}
 ```
 
-Because the webhook router runs first and its handler doesn't call `next()`, `bodyParser()` never touches webhook requests. Alternatively, keep a single middleware chain and skip the parser for that path: `app.use((ctx, next) => ctx.path === "/webhooks/ahasend" ? next() : bodyParser()(ctx, next))`. The two-router setup is easier to reason about, though.
+Create this router at startup with `AHASEND_WEBHOOK_SECRET` and your durable store. Mount `webhookRouter.routes()` and `webhookRouter.allowedMethods()` before `bodyParser()`. The matched handler does not call `next()`, so the parser never consumes its stream. Do not start the server if the secret or store initialization fails.
+
+`enqueueOnce` must atomically store the verified `webhook-id` and a durable work/outbox record, retaining the ID for at least the delivery and retry horizon. Process that work idempotently outside the request. A duplicate receives `2xx` without enqueuing again; a storage error propagates as `5xx` so AhaSend can retry. Do not launch untracked background promises from the request. Apply body-size and concurrency limits at the reverse proxy, and never log raw bodies, signatures, whole events/errors, subjects, addresses, or message content.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
@@ -167,7 +252,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Scheduling**: set `schedule.first_attempt` to a future RFC 3339 timestamp to defer delivery.
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
@@ -183,7 +268,7 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
     `bodyParser()` must be registered before the router that reads parsed bodies. Check middleware order and that the client sends `Content-Type: application/json`.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded (log `process.env.AHASEND_API_KEY?.slice(0, 8)`) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, revoked, or does not authorize the sending domain. Verify `AHASEND_API_KEY` is loaded and review the [API credentials guide](/send-api/credentials) without printing any part of the key.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
