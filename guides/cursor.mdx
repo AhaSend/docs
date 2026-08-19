@@ -15,7 +15,7 @@ Cursor writes the code, but it can't create your account or verify your domain. 
 1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). Unverified domains cannot send and produce an API error.
 2. **Create an API key.** Follow the [API credentials guide](/send-api/credentials). Scope it to `messages:send:{your-domain}` instead of `messages:send:all`: if the key ever leaks, the damage is limited to one domain's outbound mail. You'll also need your **account ID**.
 
-You'll also need Node.js 22 or later, which is the SDK's production support boundary. Put the key and account ID in your local environment. If you use a `.env` file, create it yourself, ensure it is ignored by git before adding values, and never paste its contents into Cursor or ask the agent to read or print it. Cursor routes AI requests through its backend, so choose the Privacy Mode appropriate for your project. For a Cursor Cloud Agent, use its dashboard secret store instead of committing credentials or including them in an environment snapshot.
+You'll also need Node.js installed. Put the key and account ID in your local environment. If you use a `.env` file, create it yourself, ensure it is ignored by git before adding values, and never paste its contents into Cursor or ask the agent to read or print it. Cursor routes AI requests through its backend, so choose the Privacy Mode appropriate for your project. For a Cursor Cloud Agent, use its dashboard secret store instead of committing credentials or including them in an environment snapshot.
 
 ## Step 1: Install the SDK
 
@@ -24,24 +24,22 @@ Do this before you prompt anything. An agent that finds `@ahasend/sdk` already i
 <CodeGroup>
 
 ```bash npm
-npm install --save-exact @ahasend/sdk
+npm install @ahasend/sdk
 ```
 
 ```bash pnpm
-pnpm add --save-exact @ahasend/sdk
+pnpm add @ahasend/sdk
 ```
 
 ```bash yarn
-yarn add --exact @ahasend/sdk
+yarn add @ahasend/sdk
 ```
 
 ```bash bun
-bun add --exact @ahasend/sdk
+bun add @ahasend/sdk
 ```
 
 </CodeGroup>
-
-The SDK is pre-1.0. Pin the exact production version, commit the lockfile, and review the changelog before upgrading.
 
 ## Step 2: Write a Cursor Rule File
 
@@ -58,10 +56,9 @@ alwaysApply: true
 
 When this project sends email, use the official AhaSend Node.js SDK.
 
-- Package: `@ahasend/sdk` on npm. Node.js 22 or later. Do not invent a
+- Package: `@ahasend/sdk` on npm. Do not invent a
   different package name and do not hand-roll fetch calls to the REST API.
-- Server-side only. The production security-support boundary is Node.js 22
-  or later. Keep this module out of browser bundles. The constructor refuses
+- Server-side only. Keep this module out of browser bundles. The constructor refuses
   browsers and browser service workers by default, but that is only a
   backstop and does not make exposing a bearer key safe.
 - Construct the client ONCE at module scope, never per request:
@@ -200,7 +197,7 @@ Ask Cursor to "add an integration test that sends in sandbox mode and asserts ev
     The rule file isn't being applied, or it isn't specific enough. Confirm that it has a `.mdc` extension and `alwaysApply: true`, then check that **ahasend-email** appears under Active Rules. Install `@ahasend/sdk` before prompting; naming the package in the prompt itself also helps for a single request.
   </Accordion>
   <Accordion title="The generated code throws AhaSendConfigurationError on startup">
-    Common causes are a missing or malformed API key, a non-UUID account ID, or construction in a browser-like runtime. If Cursor put the client in a client component, move the send to a server route. The constructor check is only a backstop; keeping credentials out of browser bundles is what protects them. The SDK security policy's production support boundary is Node.js 22 or later.
+    Common causes are a missing or malformed API key, a non-UUID account ID, or construction in a browser-like runtime. If Cursor put the client in a client component, move the send to a server route. The constructor check is only a backstop; keeping credentials out of browser bundles is what protects them.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError in the agent's test run">
     The API key is missing, malformed, or revoked. Check that your `.env` is loaded in the terminal Cursor is using (`node --env-file=.env`), and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` or domain-scoped send permission.
