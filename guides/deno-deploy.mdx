@@ -5,27 +5,32 @@ description: "Send transactional email on Deno Deploy in minutes with the AhaSen
 keywords: ["deno deploy send email", "deno transactional email", "deno email api", "ahasend deno", "deno deploy webhooks"]
 ---
 
-The latest Deno 2.x is an officially supported runtime for the SDK, so an `npm:` specifier runs it locally and on [Deno Deploy](https://deno.com/deploy), with no `package.json` anywhere.
+The SDK's release gates run its packed artifact on the latest Deno 2.x. Deno Deploy can run npm packages without a Node build step, but its managed runtime may lag that tested version, and the SDK security policy currently limits production security support to Node.js 22 or later. Validate the pinned SDK on Deno Deploy before production and treat Deno compatibility separately from security-fix support.
 
 ## Prerequisites
 
-- Deno 2 locally, and a [Deno Deploy](https://dash.deno.com) project
+- Deno 2 locally, and a [Deno Deploy](https://console.deno.com) organization and application
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) scoped to `messages:send:{your-domain}`, and your account ID
+- For webhook side effects, a database operation that can atomically commit a unique `webhook-id` and durable work
 
 ## Import the SDK
 
-No install step is required, import straight from npm:
+The SDK is pre-1.0, so resolve and save an exact version rather than allowing an inline specifier to drift:
 
-```ts
-import { AhaSendClient } from "npm:@ahasend/sdk";
+```bash
+deno add --save-exact npm:@ahasend/sdk
 ```
 
-If you prefer bare specifiers, run `deno add npm:@ahasend/sdk` to pin the package in `deno.json`, then import from `"@ahasend/sdk"` as usual.
+This writes the exact npm version to `deno.json`; commit both `deno.json` and `deno.lock`, and review the SDK changelog before upgrading. Import the saved bare specifier:
+
+```ts
+import { AhaSendClient } from "@ahasend/sdk";
+```
 
 ## Configure Environment Variables
 
-On Deno Deploy, set the variables in your project's dashboard under **Settings → Environment Variables**:
+On Deno Deploy, add the variables to the application under **Settings → Environment Variables** and mark all three as **Secrets**. Attach live credentials only to the Production context. If preview revisions need email tests, give the Development context separate domain-scoped sandbox credentials and a separate webhook secret; do not expose production credentials to code from development branches.
 
 ```bash
 AHASEND_API_KEY=aha-sk-...
@@ -33,14 +38,18 @@ AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
-For local development, put the same values in a `.env` file and run with `deno run --env-file --allow-net --allow-env main.ts`.
+For local development, create `.env` yourself and ensure it is ignored by git before adding values. Run with only the permissions this example needs:
+
+```bash
+deno run --env-file=.env --allow-net=0.0.0.0:8000,api.ahasend.com --allow-env=AHASEND_API_KEY,AHASEND_ACCOUNT_ID,AHASEND_WEBHOOK_SECRET main.ts
+```
 
 ## Create the Client
 
 Create the client once at module scope and reuse it across requests:
 
 ```ts lib/ahasend.ts
-import { AhaSendClient } from "npm:@ahasend/sdk";
+import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
   apiKey: Deno.env.get("AHASEND_API_KEY")!,
@@ -50,37 +59,49 @@ export const ahasend = new AhaSendClient({
 
 ## Send an Email from a Deno.serve Route
 
-`Deno.serve` works identically locally and on Deno Deploy:
+The same `Deno.serve` handler API runs locally and on Deno Deploy, although the runtime version and permission model differ as noted above:
 
 ```ts main.ts
-import { AhaSendAPIError } from "npm:@ahasend/sdk";
+import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend.ts";
+import { requireAuthenticatedSignup } from "./lib/auth.ts";
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
 
   if (req.method === "POST" && url.pathname === "/api/welcome") {
-    const { email, name } = await req.json();
+    const user = await requireAuthenticatedSignup(req);
+    if (!user) return new Response(null, { status: 401 });
 
     try {
-      const result = await ahasend.messages.send({
-        from: { email: "hello@yourdomain.com", name: "Your App" },
-        recipients: [{ email, name }],
-        subject: "Welcome to Your App!",
-        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-        text_content: "Welcome aboard! We're glad you're here.",
-      });
+      const result = await ahasend.messages.send(
+        {
+          from: { email: "hello@yourdomain.com", name: "Your App" },
+          recipients: [{ email: user.email, name: user.name }],
+          subject: "Welcome to Your App!",
+          html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+          text_content: "Welcome aboard! We're glad you're here.",
+        },
+        { idempotencyKey: `welcome-${user.signupId}` },
+      );
 
       const rejected = result.data.filter((r) => r.status === "error");
       if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
-      return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+      return Response.json(
+        { statuses: result.data.map((r) => r.status) },
+        { status: rejected.length === 0 ? 202 : 502 },
+      );
     } catch (err) {
-      if (err instanceof AhaSendAPIError) {
-        console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+      if (isAhaSendError(err)) {
+        console.error("AhaSend request failed", {
+          ...(err instanceof AhaSendAPIError ? { status: err.status, requestId: err.requestId } : {}),
+          errorCode: err.code,
+        });
         return Response.json({ error: "Failed to send email" }, { status: 502 });
       }
-      throw err;
+      console.error("Unexpected welcome-email handler failure");
+      return Response.json({ error: "Failed to send email" }, { status: 500 });
     }
   }
 
@@ -88,79 +109,118 @@ Deno.serve(async (req) => {
 });
 ```
 
+`requireAuthenticatedSignup` represents your application's session/authorization check and returns the immutable signup snapshot used for this message. Do not expose an endpoint that accepts an arbitrary recipient from an unauthenticated request; authorize it, validate inputs at the trust boundary, and rate-limit it.
+
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
+The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. Reuse a stable `idempotencyKey` only for the exact same request payload. Stored message results expire after 24 hours, so reconcile an uncertain operation rather than assuming a later retry is deduplicated.
 
 Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks
 
-The webhooks module lives on its own subpath, so importing it doesn't pull in the API client. `verifier.parse()` accepts the Fetch `Headers` object and raw body string straight off the `Request`, and it is asynchronous as of 0.2.0, so await it. Read the body with `req.text()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed.
+The webhooks module lives on its own subpath, so importing it doesn't pull in the API client. `verifier.parse()` accepts Fetch `Headers` and raw bytes and must be awaited. Bound the request while reading its stream, then pass those exact bytes rather than parsing and re-serializing JSON.
 
 ```ts main.ts
-import { WebhookVerifier, isKnownWebhookEvent } from "npm:@ahasend/sdk/webhooks";
+import { AhaSendWebhookVerificationError, WebhookVerifier } from "@ahasend/sdk/webhooks";
+import { webhookDeliveries } from "./lib/webhook-store.ts";
 
 const verifier = new WebhookVerifier(Deno.env.get("AHASEND_WEBHOOK_SECRET")!);
+const MAX_WEBHOOK_BODY_BYTES = 1_000_000;
+
+class WebhookBodyTooLargeError extends Error {}
+
+async function readRawBody(req: Request): Promise<Uint8Array> {
+  if (!req.body) return new Uint8Array();
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_WEBHOOK_BODY_BYTES) {
+        await reader.cancel();
+        throw new WebhookBodyTooLargeError();
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
 
 // inside the Deno.serve handler:
 if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
   let event;
   try {
-    event = await verifier.parse(req.headers, await req.text());
-  } catch {
-    return new Response("Invalid signature", { status: 400 });
-  }
-
-  if (isKnownWebhookEvent(event)) {
-    switch (event.type) {
-      case "message.delivered":
-        console.log(`Delivered to ${event.data.recipient}`);
-        break;
-      case "message.bounced":
-        console.log(`Bounced: ${event.data.recipient}`);
-        break;
-      case "message.opened":
-        console.log(`Opened by ${event.data.recipient}`);
-        break;
+    event = await verifier.parse(req.headers, await readRawBody(req));
+  } catch (error) {
+    if (error instanceof WebhookBodyTooLargeError) {
+      return new Response(null, { status: 413 });
     }
+    if (error instanceof AhaSendWebhookVerificationError) {
+      return new Response(null, { status: error.reason === "body_too_large" ? 413 : 400 });
+    }
+    return new Response(null, { status: 500 });
   }
 
-  return new Response(null, { status: 200 });
+  const webhookId = req.headers.get("webhook-id");
+  if (!webhookId) return new Response(null, { status: 400 });
+
+  try {
+    const accepted = await webhookDeliveries.enqueueOnce(webhookId, event);
+    return new Response(null, { status: accepted ? 202 : 200 });
+  } catch {
+    return new Response(null, { status: 500 });
+  }
 }
 ```
 
-Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-project.deno.dev/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+`webhookDeliveries.enqueueOnce` is application-owned: in one database transaction it must insert the unique verified `webhook-id` and durable work, returning `false` for an already-committed ID. Process that work separately with idempotent side effects. Do not merely insert the ID before doing work, and do not log recipient addresses, event/error objects, signatures, bodies, secrets, or idempotency keys.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.your-org.deno.net/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown, including the `aha-whsec-` prefix. Replace the example host with the production domain shown for your Deno Deploy application.
 
 ## Deploy
 
-Push to the GitHub repo linked to your Deno Deploy project, or deploy directly:
+Create or link an application at `console.deno.com`. GitHub-linked applications build on each push. For a local source deployment, make the organization, application, dynamic entrypoint, and production target explicit so a stale CLI context cannot deploy to the wrong app:
 
 ```bash
-deno deploy
+deno deploy create --org your-org --app your-app --source local --runtime-mode dynamic --entrypoint main.ts --region global
+deno deploy --org your-org --app your-app --prod
 ```
 
 ## Going Further
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour; the first attempt must be in the future and within 7 days.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()`, reuse it only for the exact same payload, and account for the 24-hour result-retention window.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Running on another modern runtime? The same SDK works on [Bun](/guides/bun), and on edge platforms from 0.2.0 onwards: see the [Cloudflare Workers guide](/guides/cloudflare-workers).
+See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Running on another modern runtime? Review both the runtime compatibility inventory and the SDK security policy before production; the [Bun](/guides/bun) and [Cloudflare Workers](/guides/cloudflare-workers) guides cover their platform-specific setup.
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="PermissionDenied running locally">
-    Deno is permission-scoped: the SDK needs `--allow-net` (to reach `api.ahasend.com`) and `--allow-env` (to read the `AHASEND_*` variables). On Deno Deploy both are granted automatically.
+    Local Deno is permission-scoped: allow the listener and `api.ahasend.com`, plus only the three `AHASEND_*` variables shown above. The managed Deno Deploy runtime currently runs applications with `--allow-all`; custom runtime permission flags cannot be passed there.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
-    `Deno.env.get("AHASEND_API_KEY")` returned `undefined`. Locally you likely forgot `--env-file`; on Deno Deploy check the project's environment variables and redeploy (new values apply to new deployments/instances).
+    The API key is missing, malformed, or revoked. Locally, confirm `.env` is loaded without printing it. On Deno Deploy, check that the three values are Secrets attached to the revision's Production or Development context, then deploy a new revision.
   </Accordion>
   <Accordion title="Webhook verification fails with 400">
-    Pass `await req.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes byte layout, so the signature no longer matches. Also confirm the secret includes the `aha-whsec-` prefix.
+    Pass the bounded raw bytes to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes byte layout, so the signature no longer matches. Also confirm the secret includes the `aha-whsec-` prefix.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
