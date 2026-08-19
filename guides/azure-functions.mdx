@@ -5,14 +5,14 @@ description: "Send transactional email from Azure Functions in Go using custom h
 keywords: ["azure functions go send email", "golang transactional email azure functions", "azure functions custom handler go", "ahasend go sdk", "azure functions email api"]
 ---
 
-On Azure, a Go function is a **custom handler**: a small HTTP server the Functions host forwards requests to. Ordinary `net/http` code works, including the SDK's `verifier.ParseRequest`.
+This guide runs Go as an Azure Functions **custom handler**: a small HTTP server the Functions host forwards requests to. Ordinary `net/http` code works, including the SDK's `verifier.ParseRequest`. Azure also has first-class Go support in public preview, which Microsoft recommends for new Go function apps; custom handlers remain supported across Azure Functions hosting options.
 
 ## Prerequisites
 
-- Go 1.18 or later
+- Go 1.19 or later
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
-- An Azure Function App, the [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) (`func`), and the Azure CLI (`az`)
+- A Linux/x64 Azure Function App configured for a custom handler (select .NET as the runtime stack when creating it), the [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) (`func`), and the Azure CLI (`az`)
 
 ## Project Layout
 
@@ -33,7 +33,7 @@ A custom handler app pairs one Go binary with the standard Functions metadata fi
 ## Install the SDK
 
 ```bash
-go mod init yourapp && go get github.com/AhaSend/ahasend-go
+go mod init example.com/yourapp && go get github.com/AhaSend/ahasend-go
 ```
 
 ## Configure the Functions Host
@@ -114,7 +114,8 @@ Azure Function App settings are exposed to your binary as environment variables.
 ```bash
 az functionapp config appsettings set \
   --name your-function-app --resource-group your-rg \
-  --settings AHASEND_API_KEY=aha-sk-... \
+  --settings FUNCTIONS_WORKER_RUNTIME=custom \
+  AHASEND_API_KEY=aha-sk-... \
   AHASEND_ACCOUNT_ID=your-account-uuid \
   AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
@@ -169,8 +170,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("invalid AHASEND_ACCOUNT_ID: %v", err)
 	}
-	ahasendClient = api.NewAPIClient(api.WithAPIKey(os.Getenv("AHASEND_API_KEY")))
-	verifier, err = webhooks.NewWebhookVerifier(os.Getenv("AHASEND_WEBHOOK_SECRET"))
+	apiKey := os.Getenv("AHASEND_API_KEY")
+	if apiKey == "" {
+		log.Fatal("AHASEND_API_KEY is required")
+	}
+	webhookSecret := os.Getenv("AHASEND_WEBHOOK_SECRET")
+	if webhookSecret == "" {
+		log.Fatal("AHASEND_WEBHOOK_SECRET is required")
+	}
+	ahasendClient = api.NewAPIClient(api.WithAPIKey(apiKey))
+	verifier, err = webhooks.NewWebhookVerifier(webhookSecret)
 	if err != nil {
 		log.Fatalf("failed to create webhook verifier: %v", err)
 	}
@@ -231,7 +240,7 @@ The SDK automatically retries rate-limited requests with exponential backoff and
 
 ## Handle Webhooks
 
-Because the host forwards the original HTTP request, the SDK's `ParseRequest` works directly: it verifies the HMAC signature, guards against replays, and returns a typed event:
+Because the host forwards the original HTTP request, the SDK's `ParseRequest` works directly: it verifies the HMAC signature, rejects timestamps outside its five-minute tolerance, and returns a typed event:
 
 ```go webhook.go
 package main
@@ -244,10 +253,16 @@ import (
 	"github.com/AhaSend/ahasend-go/webhooks"
 )
 
+const maxWebhookBodyBytes = 30_000_000
+
 func handleAhaSendWebhook(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxWebhookBodyBytes)
 	event, err := verifier.ParseRequest(r)
 	if err != nil {
+		var tooLarge *http.MaxBytesError
 		switch {
+		case errors.As(err, &tooLarge):
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
 		case errors.Is(err, webhooks.ErrMissingHeaders),
 			errors.Is(err, webhooks.ErrInvalidSignature),
 			errors.Is(err, webhooks.ErrExpiredTimestamp):
@@ -275,11 +290,13 @@ func handleAhaSendWebhook(w http.ResponseWriter, r *http.Request) {
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-function-app.azurewebsites.net/api/AhaSendWebhook`, and copy its secret into the `AHASEND_WEBHOOK_SECRET` app setting exactly as shown (including the `aha-whsec-` prefix).
 
-Return 200 promptly and do slow processing asynchronously, because AhaSend retries webhooks that don't get a timely 2xx.
+Timestamp checking is not complete replay protection: the same correctly signed delivery can be replayed inside the accepted window. Before acknowledging the webhook, atomically commit the `webhook-id` request header **together with** a durable work/outbox record, and ignore IDs already committed. Don't commit the ID separately: if the process fails before recording the work, a retry would look like a duplicate and the event would be lost.
+
+Return 200 promptly because AhaSend retries webhooks that don't get a timely 2xx. For slow work, durably enqueue it before returning and process it with a queue-triggered function. Don't start a background goroutine and return: Azure Functions can shut down the instance after the invocation completes.
 
 ## Build and Deploy
 
-Function Apps on the Linux Consumption plan run linux/amd64, so cross-compile, then publish with Core Tools:
+The Linux/x64 Function App used in this guide needs a linux/amd64 binary, so cross-compile, then publish with Core Tools:
 
 ```bash
 GOOS=linux GOARCH=amd64 go build -o handler
