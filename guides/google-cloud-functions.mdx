@@ -1,15 +1,15 @@
 ---
 title: "How to Send Email with Cloud Run Functions (Go)"
 sidebarTitle: "Cloud Run Functions"
-description: "Send transactional email from Cloud Run functions (formerly Google Cloud Functions) in Go with the Functions Framework and the AhaSend Go SDK."
+description: "Send transactional email from Cloud Run functions in Go with the Functions Framework and the AhaSend Go SDK."
 keywords: ["cloud run functions go email", "google cloud functions go send email", "golang transactional email cloud functions", "ahasend go sdk", "cloud functions email api"]
 ---
 
-[Cloud Run functions](https://cloud.google.com/functions), renamed from Cloud Functions in August 2024, run Go through the [Functions Framework](https://github.com/GoogleCloudPlatform/functions-framework-go), which hands each invocation a standard `http.ResponseWriter` and `*http.Request`. The SDK, `verifier.ParseRequest` included, needs no adaptation.
+[Cloud Run functions](https://cloud.google.com/functions) run Go through the [Functions Framework](https://github.com/GoogleCloudPlatform/functions-framework-go), which hands each invocation a standard `http.ResponseWriter` and `*http.Request`. The AhaSend SDK works directly with those standard HTTP types.
 
 ## Prerequisites
 
-- Go 1.18 or later
+- Go
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 - A Google Cloud project with the `gcloud` CLI configured
@@ -24,7 +24,7 @@ go get github.com/GoogleCloudPlatform/functions-framework-go
 
 ## Write the Cloud Run Functions Code
 
-Cloud Run functions in Go live in a non-`main` package. Register each HTTP function in `init()` with `functions.HTTP`; the registered name is what you point `--entry-point` at when deploying. Initialize the SDK client at package level too: `init()` runs once per instance, so the client (with its rate-limit, retry, and idempotency state) is reused across every warm invocation instead of being rebuilt per request.
+Cloud Run functions in Go live in a non-`main` package. Register each HTTP function in `init()` with `functions.HTTP`; the registered name is what you point `--entry-point` at when deploying. The dependency helpers below initialize once per instance and keep each deployed function from requiring the other function's credentials.
 
 ```go function.go
 package emailfns
@@ -32,9 +32,12 @@ package emailfns
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/AhaSend/ahasend-go"
 	"github.com/AhaSend/ahasend-go/api"
@@ -46,37 +49,95 @@ import (
 )
 
 var (
-	ahasendClient *api.APIClient
-	accountID     uuid.UUID
-	verifier      *webhooks.WebhookVerifier
+	sendOnce       sync.Once
+	ahasendClient  *api.APIClient
+	accountID      uuid.UUID
+	sendInitErr    error
+	webhookOnce    sync.Once
+	verifier       *webhooks.WebhookVerifier
+	webhookInitErr error
 )
 
 func init() {
 	functions.HTTP("SendWelcome", sendWelcome)
 	functions.HTTP("AhaSendWebhook", ahaSendWebhook)
+}
 
-	var err error
-	accountID, err = uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
-	if err != nil {
-		log.Fatalf("invalid AHASEND_ACCOUNT_ID: %v", err)
-	}
-	ahasendClient = api.NewAPIClient(api.WithAPIKey(os.Getenv("AHASEND_API_KEY")))
+func sendDependencies() (*api.APIClient, uuid.UUID, error) {
+	sendOnce.Do(func() {
+		apiKey := os.Getenv("AHASEND_API_KEY")
+		if apiKey == "" {
+			sendInitErr = errors.New("AHASEND_API_KEY is required")
+			return
+		}
 
-	verifier, err = webhooks.NewWebhookVerifier(os.Getenv("AHASEND_WEBHOOK_SECRET"))
-	if err != nil {
-		log.Fatalf("failed to create webhook verifier: %v", err)
-	}
+		var err error
+		accountID, err = uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
+		if err != nil {
+			sendInitErr = fmt.Errorf("invalid AHASEND_ACCOUNT_ID: %w", err)
+			return
+		}
+		ahasendClient = api.NewAPIClient(api.WithAPIKey(apiKey))
+	})
+	return ahasendClient, accountID, sendInitErr
+}
+
+func webhookVerifier() (*webhooks.WebhookVerifier, error) {
+	webhookOnce.Do(func() {
+		secret := os.Getenv("AHASEND_WEBHOOK_SECRET")
+		if secret == "" {
+			webhookInitErr = errors.New("AHASEND_WEBHOOK_SECRET is required")
+			return
+		}
+		verifier, webhookInitErr = webhooks.NewWebhookVerifier(secret)
+	})
+	return verifier, webhookInitErr
 }
 
 type welcomeInput struct {
-	Email string `json:"email"`
-	Name  string `json:"name"`
+	Email   string `json:"email"`
+	Name    string `json:"name"`
+	EventID string `json:"event_id"`
 }
 
 func sendWelcome(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 16*1024)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
 	var in welcomeInput
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Email == "" {
-		http.Error(w, "valid JSON with an email field is required", http.StatusBadRequest)
+	if err := decoder.Decode(&in); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if in.Email == "" || len(in.Email) > 320 || len(in.Name) > 100 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	eventID, err := uuid.Parse(in.EventID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	client, accountID, err := sendDependencies()
+	if err != nil {
+		log.Print("AhaSend send function configuration is invalid")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -88,11 +149,21 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
 	}
 
-	response, _, err := ahasendClient.MessagesAPI.CreateMessage(r.Context(), accountID, message)
+	response, _, err := client.MessagesAPI.CreateMessage(
+		r.Context(),
+		accountID,
+		message,
+		api.WithIdempotencyKey("welcome-"+eventID.String()),
+	)
 	if err != nil {
 		var apiErr *api.APIError
 		if errors.As(err, &apiErr) {
-			log.Printf("AhaSend error %d: %s", apiErr.StatusCode, string(apiErr.Raw))
+			log.Printf(
+				"AhaSend request failed: status=%d code=%s request_id=%s",
+				apiErr.StatusCode,
+				apiErr.Code,
+				apiErr.RequestID,
+			)
 			http.Error(w, "failed to send email", http.StatusBadGateway)
 			return
 		}
@@ -100,47 +171,52 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messageID := ""
-	if len(response.Data) > 0 && response.Data[0].ID != nil {
-		messageID = *response.Data[0].ID
+	if len(response.Data) != 1 || response.Data[0].Status == "error" || response.Data[0].ID == nil {
+		log.Printf("AhaSend recipients rejected: count=%d", len(response.Data))
+		http.Error(w, "recipient was not accepted", http.StatusBadGateway)
+		return
 	}
+	messageID := *response.Data[0].ID
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]string{"message_id": messageID})
 }
 
 func ahaSendWebhook(w http.ResponseWriter, r *http.Request) {
-	event, err := verifier.ParseRequest(r)
-	if err != nil {
-		switch {
-		case errors.Is(err, webhooks.ErrMissingHeaders),
-			errors.Is(err, webhooks.ErrInvalidSignature),
-			errors.Is(err, webhooks.ErrExpiredTimestamp):
-			w.WriteHeader(http.StatusUnauthorized)
-		default:
-			w.WriteHeader(http.StatusBadRequest)
-		}
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	switch e := event.(type) {
-	case *webhooks.MessageDeliveredEvent:
-		log.Printf("delivered to %s", e.Data.Recipient)
-	case *webhooks.MessageBouncedEvent:
-		log.Printf("bounced: %s", e.Data.Recipient)
-	case *webhooks.MessageOpenedEvent:
-		log.Printf("opened by %s", e.Data.Recipient)
-	default:
-		log.Printf("unhandled event type: %s", event.GetType())
+	verifier, err := webhookVerifier()
+	if err != nil {
+		log.Print("AhaSend webhook function configuration is invalid")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1_000_000)
+	event, err := verifier.ParseRequest(r)
+	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("AhaSend webhook accepted: type=%s", event.GetType())
 	w.WriteHeader(http.StatusOK)
 }
 ```
 
-The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice.
+The SDK automatically retries transient failures with backoff and attaches an idempotency key to every send. The stable key above also covers a later invocation for the same `event_id`, but stored outcomes expire after 24 hours and a 5xx is not stored. Reconcile an uncertain result before retrying, and persist `event_id` in your application if the welcome email must never be sent twice.
 
 <Note>
-  Both functions live in the same source package, so `init()` runs for both deployments. Set all three environment variables on each function, or the shared `init()` will fail at cold start.
+  Both entry points live in the same source package, but each dependency helper initializes only when its handler runs. Give the send function only the API key and account ID, and give the webhook function only the webhook secret.
 </Note>
 
 ## Store the API Key in Secret Manager
@@ -152,29 +228,44 @@ printf 'aha-sk-...' | gcloud secrets create ahasend-api-key --data-file=-
 printf 'aha-whsec-...' | gcloud secrets create ahasend-webhook-secret --data-file=-
 ```
 
-Grant the function's runtime service account the **Secret Manager Secret Accessor** role (`roles/secretmanager.secretAccessor`) on each secret so it can read them at startup.
+Create separate runtime service accounts and grant each one **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`) only on the secret its function needs. Replace `PROJECT_ID` below with your project ID:
+
+```bash
+gcloud iam service-accounts create ahasend-sender
+gcloud iam service-accounts create ahasend-webhook
+
+gcloud secrets add-iam-policy-binding ahasend-api-key \
+  --member=serviceAccount:ahasend-sender@PROJECT_ID.iam.gserviceaccount.com \
+  --role=roles/secretmanager.secretAccessor
+
+gcloud secrets add-iam-policy-binding ahasend-webhook-secret \
+  --member=serviceAccount:ahasend-webhook@PROJECT_ID.iam.gserviceaccount.com \
+  --role=roles/secretmanager.secretAccessor
+```
 
 ## Deploy
 
-Deploy each entry point as its own function from the same source directory. The `gcloud functions` commands are unchanged by the rename, and `--gen2` targets 2nd gen:
+Deploy each entry point as its own function from the same source directory:
 
 ```bash
 gcloud functions deploy send-welcome \
-  --gen2 --runtime=go122 --trigger-http --source=. \
+  --gen2 --runtime=go126 --trigger-http --source=. \
   --entry-point=SendWelcome \
+  --no-allow-unauthenticated \
+  --service-account=ahasend-sender@PROJECT_ID.iam.gserviceaccount.com \
   --set-env-vars AHASEND_ACCOUNT_ID=your-account-uuid \
-  --set-secrets AHASEND_API_KEY=ahasend-api-key:latest,AHASEND_WEBHOOK_SECRET=ahasend-webhook-secret:latest
+  --set-secrets AHASEND_API_KEY=ahasend-api-key:latest
 
 gcloud functions deploy ahasend-webhook \
-  --gen2 --runtime=go122 --trigger-http --source=. \
+  --gen2 --runtime=go126 --trigger-http --source=. \
   --entry-point=AhaSendWebhook --allow-unauthenticated \
-  --set-env-vars AHASEND_ACCOUNT_ID=your-account-uuid \
-  --set-secrets AHASEND_API_KEY=ahasend-api-key:latest,AHASEND_WEBHOOK_SECRET=ahasend-webhook-secret:latest
+  --service-account=ahasend-webhook@PROJECT_ID.iam.gserviceaccount.com \
+  --set-secrets AHASEND_WEBHOOK_SECRET=ahasend-webhook-secret:latest
 ```
 
-The webhook function must be `--allow-unauthenticated`. AhaSend can't attach Google IAM credentials. Authentication happens via the HMAC signature the verifier checks. Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at the URL `gcloud` prints for `ahasend-webhook`, and copy its secret into the `ahasend-webhook-secret` secret exactly as shown (including the `aha-whsec-` prefix).
+Keep the send function authenticated with IAM and grant its intended caller `roles/run.invoker`. The webhook function must be `--allow-unauthenticated` because AhaSend can't attach Google IAM credentials; authentication happens via the HMAC signature the verifier checks. Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at the URL `gcloud` prints for `ahasend-webhook`, and copy its secret into the `ahasend-webhook-secret` secret exactly as shown (including the `aha-whsec-` prefix).
 
-Return 200 promptly and do slow processing asynchronously with Cloud Tasks or Pub/Sub, because AhaSend retries webhooks that don't get a timely 2xx.
+Timestamp validation is not replay deduplication. Before adding side effects, atomically store the `webhook-id` header together with durable work; acknowledge a duplicate with `200` without enqueueing it again. Publish to Cloud Tasks or Pub/Sub before returning success, then perform slow work in the consumer. Cloud Run functions does not guarantee work started after the HTTP response will continue.
 
 ## Test Locally
 
@@ -207,7 +298,10 @@ Then pick which registered function to serve with `FUNCTION_TARGET`:
 
 ```bash
 FUNCTION_TARGET=SendWelcome AHASEND_API_KEY=aha-sk-... \
-  AHASEND_ACCOUNT_ID=your-account-uuid AHASEND_WEBHOOK_SECRET=aha-whsec-... \
+  AHASEND_ACCOUNT_ID=your-account-uuid \
+  go run ./cmd
+
+FUNCTION_TARGET=AhaSendWebhook AHASEND_WEBHOOK_SECRET=aha-whsec-... \
   go run ./cmd
 ```
 
@@ -216,7 +310,7 @@ FUNCTION_TARGET=SendWelcome AHASEND_API_KEY=aha-sk-... \
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
 - **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
 - **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
-- **Cold starts**: because the client and verifier are built in `init()`, that cost is paid once per instance and amortized across all warm invocations. Setting `--min-instances=1` removes cold starts entirely for latency-sensitive sends.
+- **Cold starts**: the client and verifier are cached per instance and reused across warm invocations. Setting `--min-instances=1` can reduce cold starts for latency-sensitive sends, but scaling and instance replacement can still start new instances.
 - **Other platforms**: deploying on Azure instead? See the [Azure Functions guide](/guides/azure-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
 - **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
 
@@ -228,8 +322,8 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every servic
   <Accordion title="Deploy fails with an entry point error">
     The `--entry-point` value must exactly match the name registered with `functions.HTTP` (`SendWelcome`, `AhaSendWebhook`): it is the registered name, not the Go function name, and it's case-sensitive. Also confirm the source package isn't `package main`.
   </Accordion>
-  <Accordion title="Function crashes at startup after deploy">
-    Check the Cloud Logging output. The usual causes: an environment variable missing on one of the two functions (both run the same `init()`), or the runtime service account lacking `roles/secretmanager.secretAccessor` on a secret referenced by `--set-secrets`: the instance then fails before your code runs.
+  <Accordion title="Function returns 500 after deploy">
+    Check the Cloud Logging output. Confirm the function has its required environment variables and that its runtime service account has `roles/secretmanager.secretAccessor` on the secret referenced by `--set-secrets`.
   </Accordion>
   <Accordion title="Webhook verification always fails">
     Confirm the secret in Secret Manager matches the dashboard exactly, including the `aha-whsec-` prefix (watch for a trailing newline: use `printf`, not `echo`, when creating the secret). `ParseRequest` must be the first thing to read the request body on that route.
