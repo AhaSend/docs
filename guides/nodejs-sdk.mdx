@@ -32,6 +32,16 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
+## Runtime Compatibility
+
+| Runtime | Supported versions |
+| --- | --- |
+| Node.js | 22, 24, and 26 |
+| Deno | Latest 2.x |
+| Bun | Latest |
+| Cloudflare workerd | Supported without `nodejs_compat` |
+| Vercel Edge | Supported |
+
 TypeScript declarations ship with the package, so there is no SDK-specific `@types` package to add. Use your runtime's normal types and a module-resolution mode that understands package `exports`.
 
 <Warning>
