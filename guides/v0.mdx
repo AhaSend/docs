@@ -6,18 +6,17 @@ keywords: ["v0 send email", "v0 vercel email integration", "v0 ahasend", "v0 nex
 icon: "wand-magic-sparkles"
 ---
 
-[v0](https://v0.app) thinks in client components, and a client component is the one place an API key can never live. Drawing that boundary is the work here, because v0 will not draw it for you.
+[v0](https://v0.app) can generate full-stack Next.js applications, including Route Handlers and other server-side code. When you ask it to add email, keep the AhaSend API key and SDK calls behind that server boundary.
 
 ## Prerequisites
 
-- Node.js 22 or later, set as the Node.js version in your Vercel project settings
 - A v0 project connected to a Vercel deployment
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a [verified sending domain](/domains)
 - An [API key](/send-api/credentials) with a send scope, plus your account ID
 
 Verify the domain and create the key in the [dashboard](https://dash.ahasend.com) first: the [quickstart](/quickstart) walks through both. Scope the key to `messages:send:{your-domain}` rather than `messages:send:all`, so a leak exposes one domain's outbound mail instead of your whole account.
 
-## Add the Key as a Server-Side Vercel Variable
+## Add Server-Side Vercel Variables
 
 <Warning>
   If v0 already put your key in a `NEXT_PUBLIC_` variable or referenced it from a client component, treat it as leaked. Delete the variable, rotate the key in the dashboard, and only then continue.
@@ -28,9 +27,12 @@ In your Vercel project, open **Settings → Environment Variables** and add:
 ```bash
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_DELIVERY_MODE=sandbox
 ```
 
-No `NEXT_PUBLIC_` prefix on either. Vercel encrypts them at rest and exposes them only to server-side code at runtime. Add the variables to the **Production** and **Preview** environments, not just Development, then **redeploy**. Vercel injects environment variables at build time, so a variable added after your last deploy reads back as `undefined` until you ship again.
+Do not use a `NEXT_PUBLIC_` prefix. Add the variables to the environments where the application runs, mark `AHASEND_API_KEY` as **Sensitive** for Preview and Production, and redeploy. Vercel makes environment variables available during builds and function execution, and changes apply only to new deployments.
+
+Next.js only includes variables prefixed with `NEXT_PUBLIC_` in the browser bundle. Project members with sufficient Vercel access can still view ordinary Vercel environment variables, which is why the API key should use the Sensitive option.
 
 ## Install the SDK
 
@@ -54,99 +56,136 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-On the Node.js runtime it requires Node.js 22 or later. Routes that import it also run on Vercel's Edge runtime, so no runtime pin is needed.
-
 ## Create the Client
 
-Create the client once at module scope and reuse it. It keeps its own connection pooling, retry, and idempotency state, which a fresh client per request throws away:
+Create the client once at module scope. This keeps retry, telemetry, idempotency, and local pacing configuration consistent across routes, and lets sends in one process share the SDK's process-local pacing queue.
 
 ```ts lib/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
 export const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: requireEnv("AHASEND_API_KEY"),
+  accountId: requireEnv("AHASEND_ACCOUNT_ID"),
 });
+
+const deliveryMode = requireEnv("AHASEND_DELIVERY_MODE");
+if (deliveryMode !== "sandbox" && deliveryMode !== "live") {
+  throw new Error("AHASEND_DELIVERY_MODE must be sandbox or live");
+}
+
+export const sandboxMode = deliveryMode === "sandbox";
 ```
 
 ## Ask v0 for a Route Handler
 
-Name the architecture in the prompt, or v0 reaches for the client. The phrase that does the work is *Route Handler*:
+Be explicit about the trust boundary. A public route that accepts any recipient address becomes an email relay, even though the API key itself stays hidden. Use a prompt like this:
 
-> "Add a Next.js Route Handler at `app/api/send-email/route.ts` that sends a confirmation email with the `@ahasend/sdk` package. Import the shared client from `lib/ahasend.ts`, which reads `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from `process.env`. These are server-only, never `NEXT_PUBLIC_`. The form component must POST to `/api/send-email`; it must never call AhaSend directly and must never reference the API key."
+> "Add a Next.js Route Handler at `app/api/send-confirmation/route.ts` that uses `@ahasend/sdk`. Import the shared client and sandbox setting from `lib/ahasend.ts`. Require the app's existing authenticated session and authorization checks. Load the pending confirmation record, recipient address, confirmation URL, and stable record ID from server-side storage; never accept these values or the idempotency key from the browser. Use a mode-prefixed stable idempotency key so sandbox and live sends cannot collide. Send from `hello@yourdomain.com`. Return only accepted and rejected counts, never recipient data or provider error text. The client component should POST an empty request to the route, handle non-success responses, and disable duplicate submission. Preserve the app's normal CSRF and abuse-prevention controls."
 
-What v0 generates should land close to this:
+Adapt the two application-specific imports below to your authentication and data layer. The key property is that the browser cannot choose the recipient or idempotency key:
 
-```ts app/api/send-email/route.ts
+```ts app/api/send-confirmation/route.ts
 import { NextResponse } from "next/server";
 import { AhaSendAPIError } from "@ahasend/sdk";
-import { ahasend } from "@/lib/ahasend";
+import { ahasend, sandboxMode } from "@/lib/ahasend";
+import { requireUser } from "@/lib/auth";
+import { getPendingEmailConfirmation } from "@/lib/email-confirmations";
 
 export async function POST(request: Request) {
-  const { email, name } = await request.json();
-
   try {
-    const result = await ahasend.messages.send({
-      from: { email: "hello@yourdomain.com", name: "Your App" },
-      recipients: [{ email, name }],
-      subject: "You're all set",
-      html_content: `<p>Thanks ${name}, your account is confirmed.</p>`,
-      text_content: `Thanks ${name}, your account is confirmed.`,
-      sandbox: true, // flip to false when you're ready to send for real
-    });
+    const user = await requireUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const rejected = result.data.filter((r) => r.status === "error");
-    return NextResponse.json({
-      queued: result.data.length - rejected.length,
-      rejected,
-    });
-  } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+    const confirmation = await getPendingEmailConfirmation(user.id);
+    if (!confirmation) {
+      return NextResponse.json({ error: "No pending confirmation" }, { status: 404 });
+    }
+
+    const result = await ahasend.messages.send(
+      {
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: confirmation.email }],
+        subject: "Confirm your email",
+        text_content: `Thanks for signing up. Confirm your email: ${confirmation.url}`,
+        sandbox: sandboxMode,
+      },
+      {
+        idempotencyKey: `${sandboxMode ? "sandbox" : "live"}-email-confirmation-${confirmation.id}`,
+      },
+    );
+
+    const rejected = result.data.filter((message) => message.status === "error").length;
+    const accepted = result.data.length - rejected;
+
+    if (accepted === 0 || rejected > 0) {
+      return NextResponse.json({ accepted, rejected }, { status: 502 });
+    }
+
+    return NextResponse.json({ accepted, rejected }, { status: 202 });
+  } catch (error) {
+    if (error instanceof AhaSendAPIError) {
+      console.error("AhaSend request failed", {
+        status: error.status,
+        code: error.code,
+        requestId: error.requestId,
+      });
       return NextResponse.json({ error: "Failed to send email" }, { status: 502 });
     }
-    throw err;
+    throw error;
   }
 }
 ```
 
-Check two details in review. The key is read from `process.env` inside a Route Handler, so it stays on the server and never enters the bundle. And the response is **multi-status**: AhaSend answers a send with HTTP 202 because it has accepted and queued the message, not finished delivering it, and `result.data` carries one entry per recipient. An individual recipient can come back `status: "error"` with a null `id`, a suppressed address for example, while the promise still resolves. Check every entry, not just the first.
+AhaSend send responses are multi-status: the promise can resolve while an individual recipient has `status: "error"`. Inspect every entry. Do not return or log a rejected entry because it contains the recipient and free-form provider error text.
 
-The SDK retries transient failures (408, 429, 5xx, network, timeout) with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after one can still send twice.
+The SDK retries only operations its generated policy marks safe, idempotent, or protected by a key. For an eligible operation it handles 408, 429, 5xx, network failures, and timeouts. An automatically generated send key covers one logical SDK call and its internal attempts. A new route request is a new logical call, so the example supplies a stable key derived from the server-side confirmation record. The mode prefix prevents a recent sandbox outcome from colliding with a live send. Reuse a key only for the exact same operation and payload.
 
 ## Call the Route from the Form
 
-Have v0 build the form to POST to your route:
+The browser sends neither the recipient nor any AhaSend credential:
 
 ```tsx components/signup-form.tsx
-const res = await fetch("/api/send-email", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, name }),
-});
+async function sendConfirmation() {
+  const response = await fetch("/api/send-confirmation", { method: "POST" });
+
+  if (!response.ok) {
+    throw new Error("The confirmation email could not be queued");
+  }
+
+  return response.json();
+}
 ```
 
-No key, no AhaSend URL, no Bearer token: the browser talks to your own route, and only your route talks to AhaSend.
+Disable the submit control while this request is pending. Keep the application's session, authorization, CSRF, and abuse-prevention controls on the route; idempotency prevents duplicate processing but is not authentication or rate limiting.
 
 ## Test in Sandbox Mode
 
-Keep the `sandbox: true` above while you build. In sandbox mode AhaSend runs your message through the full validation and queuing pipeline, fires every webhook, and logs it in your dashboard, then stops just short of delivery. It costs nothing and it cannot email a real person by accident.
+Keep `AHASEND_DELIVERY_MODE=sandbox` while you build. Sandbox mode accepts a normal request without delivering email, returns a normal-shaped response, and can trigger the applicable configured webhook events.
 
-Rehearse the failures too. Add `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`, and `"suppress"` for the rest, and confirm your route handles each. The full set is in the [sandbox mode guide](/send-api/sandbox). Then read the flag from an environment variable so you can switch without editing code, and send one real test to an address you control.
+Use `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`, and `"suppress"` for other outcomes, and confirm your event handling. The full set is in the [sandbox mode guide](/send-api/sandbox). When ready, deliberately change `AHASEND_DELIVERY_MODE` to `live`, redeploy, and send one test to an address you control. Do not derive this switch from `NODE_ENV`, because preview deployments commonly use production optimizations too.
 
 ## Audit Before You Ship
 
-The mistake this guide prevents is invisible in the preview, so run one deliberate check.
-
 <Steps>
-  <Step title="Search the repo for the key">
-    No `aha-sk-` string and no `NEXT_PUBLIC_AHASEND...` variable anywhere in client code. The key should exist only as a server-side Vercel variable, read only in server code. If v0 slipped it into either, that value is already public: remove it and rotate the key.
+  <Step title="Search the repo for credentials">
+    No `aha-sk-` string and no `NEXT_PUBLIC_AHASEND...` variable should appear in client code. If v0 exposed a key, remove it and rotate it.
   </Step>
-  <Step title="Confirm the form posts to your route">
-    The form POSTs to `/api/send-email`, not to `api.ahasend.com`. The browser hits your route; only the route hits AhaSend.
+  <Step title="Review the route's authority">
+    The form sends no recipient or confirmation link. The route authenticates and authorizes the user, then loads the recipient, confirmation URL, and stable record ID from server-side storage.
   </Step>
-  <Step title="Redeploy after adding variables">
-    Otherwise `process.env.AHASEND_API_KEY` is `undefined` and every send returns 401.
+  <Step title="Review responses and logs">
+    Return and log only aggregate counts, HTTP status, SDK error code, and request ID. Do not expose recipients, message content, whole SDK objects, error messages, or idempotency keys.
+  </Step>
+  <Step title="Redeploy after configuration changes">
+    Required variables fail fast during server module initialization. Fix the deployment configuration rather than catching and hiding that error.
   </Step>
 </Steps>
 
@@ -155,7 +194,7 @@ The mistake this guide prevents is invisible in the preview, so run one delibera
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries, each of which gets its own message.
 - **Webhooks**: the SDK's `nextRouteHandler` verifies signatures for you. The [Next.js guide](/guides/nextjs) has the full setup.
-- **Deployment details**: the [Vercel guide](/guides/vercel) covers environment variable scoping, runtime choice, and function limits.
+- **Deployment details**: the [Vercel guide](/guides/vercel) covers environment variable scoping and function limits.
 - Building in a different AI tool? See [Lovable](/guides/lovable) and [Bolt.new](/guides/bolt-new).
 
 See the [API reference](/api-reference) for every field and endpoint the SDK exposes.
@@ -163,14 +202,14 @@ See the [API reference](/api-reference) for every field and endpoint the SDK exp
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Error about an unsupported environment on deploy">
-    If the route runs on the Edge runtime, you are on an SDK version older than 0.2.0, which is where edge support landed: upgrade with `npm install @ahasend/sdk@latest` and redeploy. If the error mentions a browser environment, the SDK is being imported from a client component: move the send into the Route Handler.
+  <Accordion title="AhaSend import fails only in the browser">
+    The SDK is being imported by a client component. Move the import and send into the Route Handler, and make the component call that route with `fetch`.
   </Accordion>
-  <Accordion title="process.env.AHASEND_API_KEY is undefined in production">
-    The variable was added after the last deploy, or only to the Development environment. Add it to Production and Preview, then redeploy.
+  <Accordion title="An environment variable is undefined">
+    The variable may be missing from the deployment's selected environment or may have been added after its last deployment. Correct the environment assignment and redeploy.
   </Accordion>
   <Accordion title="API key visible in the browser bundle">
-    You prefixed the variable with `NEXT_PUBLIC_`. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from server code.
+    Remove the `NEXT_PUBLIC_` prefix, rotate the leaked key in the dashboard, and read the replacement only from server code.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
