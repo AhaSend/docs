@@ -9,7 +9,7 @@ In Astro the send has to live in an on-demand API endpoint, since pages are prer
 
 ## Prerequisites
 
-- An Astro 5 or later project on Node.js 22.12.0 or a later supported even-numbered release
+- An Astro project using the Node adapter
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 
@@ -51,7 +51,7 @@ export default defineConfig({
 ```
 
 <Note>
-  The SDK runs on the Node adapter and on Cloudflare's `workerd` runtime. Edge runtimes need `@ahasend/sdk` 0.2.0 or later; for Cloudflare specifics see the [Cloudflare Workers guide](/guides/cloudflare-workers). Astro's Vercel adapter runs on-demand routes in a serverless function; its optional Edge Function runs middleware only.
+  The SDK runs on the Node adapter and on Cloudflare's `workerd` runtime. For Cloudflare specifics, see the [Cloudflare Workers guide](/guides/cloudflare-workers). Astro's Vercel adapter runs on-demand routes in a serverless function; its optional Edge Function runs middleware only.
 </Note>
 
 ## Configure Environment Variables
@@ -159,7 +159,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-Astro endpoints receive a standard `Request`, so `verifier.parse()` can take `request.headers` and the raw body bytes directly, no adapter needed. `parse()` is asynchronous as of 0.2.0, so await it. Bound the body while reading it: verification rejects bodies over 30 MB, but calling `request.text()` or `request.arrayBuffer()` first would buffer an oversized unauthenticated request before that check runs.
+Astro endpoints receive a standard `Request`, so `verifier.parse()` can take `request.headers` and the raw body bytes directly, no adapter needed. `parse()` is asynchronous, so await it. Bound the body while reading it: verification rejects bodies over 30 MB, but calling `request.text()` or `request.arrayBuffer()` first would buffer an oversized unauthenticated request before that check runs.
 
 ```ts src/pages/api/webhooks/ahasend.ts
 import type { APIRoute } from "astro";
