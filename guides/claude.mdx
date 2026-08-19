@@ -6,16 +6,16 @@ keywords: ["claude ai email integration", "claude code email workflow", "claude 
 icon: "robot"
 ---
 
-Claude Code runs the code it writes, so it can send a test message and read the response back. That turns plausible code into observed-working code, as long as you hand it the real API first.
+Claude Code can run the code it writes after you approve the command and permit the required network access, so it can send a test message and read the response back. That turns plausible code into observed-working code, as long as you hand it the real API first.
 
 ## Prerequisites
 
 Claude can write and run code, but it can't verify your domain or mint your credentials. Do these two things in the [AhaSend dashboard](https://dash.ahasend.com) first:
 
-1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). AhaSend checks DNS continuously, so a half-configured domain fails loudly at send time instead of quietly landing in spam.
+1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). Unverified domains cannot send and produce an API error.
 2. **Create an API key.** Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` rather than `messages:send:all`: if it leaks, the blast radius is one domain's mail, not your whole account. Grab your **account ID** too.
 
-Put both in your environment as `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. You'll also need Node.js 22 or later, the minimum the SDK supports.
+Put both in your environment as `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. If you use the `.env` file shown later, create it yourself, ensure `.env` is ignored by git before adding the values, and do not paste the values into Claude or ask it to read or echo the file. Claude Code persists conversations and tool activity locally. You'll also need Node.js 22 or later, the minimum the SDK supports.
 
 ## Step 1: Install the SDK
 
@@ -24,22 +24,24 @@ Do this before you prompt. An agent that finds the dependency already present ha
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk
+npm install --save-exact @ahasend/sdk
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk
+pnpm add --save-exact @ahasend/sdk
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk
+yarn add --exact @ahasend/sdk
 ```
 
 ```bash bun
-bun add @ahasend/sdk
+bun add --exact @ahasend/sdk
 ```
 
 </CodeGroup>
+
+The SDK is still pre-1.0. Keep the installed version exact in production, commit the lockfile, and review its changelog before upgrading.
 
 ## Step 2: Write a CLAUDE.md With the Real API Facts
 
@@ -52,8 +54,9 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
   Do not invent a package name and do not hand-roll fetch calls.
 - Server-side only. Supported runtimes: Node.js 22, 24, 26, Deno latest
   2.x, Bun latest, Cloudflare workerd (no `nodejs_compat` needed), and
-  Vercel Edge. The constructor refuses browsers and browser service
-  workers, so the key never reaches client code.
+  Vercel Edge. Keep the client module out of browser bundles. The constructor
+  refuses browsers and browser service workers by default, but that is only a
+  backstop and does not make exposing a bearer key safe.
 - Construct the client ONCE at module scope, never per request:
   `new AhaSendClient({ apiKey, accountId })`.
 - Send with `client.messages.send({ from, recipients, subject,
@@ -71,8 +74,17 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
   Signature checks need the RAW request body. `parse()` and `verify()`
   are async: `await verifier.parse(headers, rawBody)`. The Express,
   Fastify and Next.js adapters await internally.
-- Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from the environment.
-  Never hardcode or commit them.
+- Webhooks can be delivered more than once. After verification, atomically
+  commit the `webhook-id` and durable work in the same transaction before
+  acknowledging it. Acknowledge an already-committed ID without processing
+  it again.
+- Read `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and
+  `AHASEND_WEBHOOK_SECRET` from the environment. Pass the webhook secret
+  exactly as the dashboard returns it, including the `aha-whsec-` prefix.
+  Never hardcode or commit these values.
+- Log only aggregate counts, appropriate opaque IDs, HTTP status, SDK error
+  code, and request ID. Never log addresses, message content, secrets,
+  request/response/event/error objects, `err.message`, or `err.body`.
 - For testing, set `sandbox: true` so nothing is delivered, and use
   `sandbox_result` to simulate an outcome: "deliver", "bounce", "defer",
   "fail", or "suppress".
@@ -80,13 +92,13 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
   Python SDK yet, so Python calls the REST API directly.
 ```
 
-Every request now inherits these constraints. In the Claude app there's no project file, so paste the same facts into your message, or point Claude at AhaSend's machine-readable doc index at `https://ahasend.com/docs/llms.txt`. The equivalent for an AI editor is a rules file, as in the [Cursor guide](/guides/cursor).
+Claude Code now loads these project instructions each session, but instructions are context rather than a guarantee, so review the generated code against them. In the Claude app, paste the same facts into your message, or, when web search and web fetch are enabled, point Claude at AhaSend's machine-readable doc index at `https://ahasend.com/docs/llms.txt`. The equivalent for an AI editor is a rules file, as in the [Cursor guide](/guides/cursor).
 
 ## Step 3: Ask for the Whole Workflow
 
 Don't ask for a send, ask for the flow, and name the steps:
 
-> "Build a signup-confirmation email workflow. When a new user is created, send them a welcome email with the AhaSend SDK, using `substitutions` for their first name. Add a webhook endpoint that verifies AhaSend events with `@ahasend/sdk/webhooks` and marks bounced addresses as undeliverable. Read credentials from the environment per CLAUDE.md. Build it in sandbox mode and run it to confirm it works before telling me it's done."
+> "Build a signup-confirmation email workflow. When a new user is created, send them a welcome email with the AhaSend SDK, using `substitutions` for their first name. Add a webhook endpoint that verifies AhaSend events with `@ahasend/sdk/webhooks`, deduplicates each verified `webhook-id` atomically with durable work, and marks bounced addresses as undeliverable. Read credentials from the environment per CLAUDE.md. Build it in sandbox mode and run it to confirm it works before telling me it's done."
 
 For a multi-file change like this, switch Claude Code into **Plan mode** first. It researches and proposes an approach before writing anything, so you can sign off on the shape before a line of code exists: a plan that separates the send, the template, and the bounce handler instead of one tangled function.
 
@@ -122,7 +134,7 @@ The `substitutions` object feeds AhaSend's Jinja-style templating, so `{{ first_
 
 ## Step 4: Run It in Sandbox Mode
 
-Claude can execute the script it just wrote and check its own work. Ask it to add a small runner and then run it.
+Claude can execute the script it just wrote after you approve the command and allow outbound HTTPS to `api.ahasend.com`. Ask it to add a small runner and then run it.
 
 ```js scripts/send-sandbox.mjs
 import { AhaSendClient } from "@ahasend/sdk";
@@ -144,7 +156,7 @@ const result = await client.messages.send({
 console.log(result.data.map((r) => r.status));
 ```
 
-Run it with `node --env-file=.env scripts/send-sandbox.mjs`. The message goes through the full validation and queuing pipeline, fires every webhook, costs nothing, and is never delivered. Claude runs the command, reads the output, and confirms the send was accepted. Setting `sandbox_result: "bounce"` makes AhaSend fire the bounce webhook, so Claude can verify the handler marks the address undeliverable. Every outcome is listed in the [sandbox mode guide](/send-api/sandbox), and each one triggers the matching webhook, so the whole pipeline gets tested, not just the happy path.
+Run it with `node --env-file=.env scripts/send-sandbox.mjs`. The message goes through validation and processing, triggers relevant configured webhooks, costs nothing, and is never delivered. Claude runs the command, reads the output, and confirms the send was accepted. To verify the handler too, first configure an AhaSend webhook that subscribes to bounce events and points to a URL AhaSend can reach; for local development, expose the handler through a tunnel. Copy the webhook secret into your environment as `AHASEND_WEBHOOK_SECRET` exactly as shown, including its `aha-whsec-` prefix, without pasting it into Claude. Then `sandbox_result: "bounce"` triggers the bounce webhook, and Claude can check the durable result after it arrives. Every outcome is listed in the [sandbox mode guide](/send-api/sandbox), and each one triggers the matching webhook, so the whole reachable pipeline gets tested, not just the happy path.
 
 Add this rule to `CLAUDE.md`: default `sandbox` to `true` everywhere except production, and drive it from an environment variable so going live is a config change, not a code edit.
 
@@ -152,11 +164,11 @@ Add this rule to `CLAUDE.md`: default `sandbox` to `true` everywhere except prod
 
 Confirm three things before you merge, even though Claude ran its own tests:
 
-- **The real package.** The import must be `@ahasend/sdk`. There is a Go SDK at `github.com/AhaSend/ahasend-go` and no Python SDK yet, so if the workflow spans languages, only the Node side should have a client library.
+- **The real package.** The TypeScript import must be `@ahasend/sdk`. Go uses `github.com/AhaSend/ahasend-go`; there is no Python SDK yet, so do not invent one—use the REST API from Python.
 - **Every recipient checked.** A promise that resolves means the request was accepted, not that every address was. Code reading `result.data[0]` and moving on will silently miss a suppressed recipient.
 - **The key lives in the environment.** Agents that touch many files can drift a secret into the wrong one. Confirm the key is read from `process.env` and never written to anything git tracks.
 
-Then merge, set `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` in your hosting platform's secret store, turn `sandbox` off in production, and send one message to an address you control.
+Then merge, set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_WEBHOOK_SECRET` in your hosting platform's secret store, turn `sandbox` off in production, and send one message to an address you control.
 
 <Warning>
   Webhook signature verification needs the raw request body. If Claude mounted a global JSON parser in front of the webhook route, verification will fail no matter how correct the secret is. The [Express guide](/guides/express) shows the correct mounting order.
@@ -164,7 +176,7 @@ Then merge, set `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` in your hosting platf
 
 ## Going Further
 
-- **Extend the loop to failure**: the same sandbox run that proves a send works will prove a bounce works. Ask Claude to drive `sandbox_result` through `bounce` and `suppressed` and assert on what your code does next.
+- **Extend the loop to failure**: with a configured, reachable webhook, the same sandbox workflow can prove the bounce path. Ask Claude to drive `sandbox_result` through `bounce` and `suppress` and assert on what your code does next.
 - **Templating and webhooks**: per-recipient `substitutions` cover personalised batches, and `@ahasend/sdk/webhooks` verifies delivery-event signatures. Both belong in `CLAUDE.md` so the next workflow starts from them.
 - Same grounding trick, different file: [Cursor](/guides/cursor) reads `.cursor/rules/`, [GitHub Copilot](/guides/github-copilot) reads `.github/copilot-instructions.md`, and [Windsurf](/guides/windsurf) reads `.windsurf/rules/`.
 - For the finished shape of the integration Claude is writing, see [Express](/guides/express), [Next.js](/guides/nextjs), or [NestJS](/guides/nestjs).
@@ -173,7 +185,7 @@ Then merge, set `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` in your hosting platf
 
 <AccordionGroup>
   <Accordion title="Claude wrote code against a package that isn't installed">
-    Add `@ahasend/sdk` to `package.json` yourself before prompting, and confirm `CLAUDE.md` sits at the repo root where Claude Code loads it. In a long session, `/clear` and restart so the file is read fresh.
+    Add `@ahasend/sdk` to `package.json` yourself before prompting. Run `/context` and check **Memory files** to confirm the intended `CLAUDE.md` loaded; use `/memory` to inspect or edit the configured files. Start a new session if you created the file after the current session began.
   </Accordion>
   <Accordion title="The sandbox script fails with a Node version error">
     The SDK declares `engines.node >= 22` and uses Node's built-in fetch. Check `node --version` in the terminal Claude is using, not just your shell, since a version manager can leave the agent on an older runtime.
