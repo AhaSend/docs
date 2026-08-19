@@ -1,128 +1,231 @@
 ---
 title: "How to Send Email with Vercel"
 sidebarTitle: "Vercel"
-description: "Deploy email-sending apps to Vercel with the AhaSend SDK: Node.js and Edge runtime functions, environment variables, and webhook endpoints."
+description: "Deploy email-sending apps to Vercel with the AhaSend SDK, environment variables, safe preview deployments, and verified webhook endpoints."
 keywords: ["vercel deploy email app", "vercel transactional email", "vercel serverless functions email", "ahasend vercel", "nextjs vercel email"]
 ---
 
-The AhaSend SDK runs in [Vercel Functions](https://vercel.com/docs/functions) on either the Node.js runtime or the Edge runtime. This guide covers the deployment side; for building the app itself, see the [Next.js](/guides/nextjs) and [Express](/guides/express) guides.
+The AhaSend SDK runs in [Vercel Functions](https://vercel.com/docs/functions).
+This guide covers deployment; for complete application handlers, see the
+[Next.js](/guides/nextjs) and [Express](/guides/express) guides.
 
 ## Prerequisites
 
-- A [Vercel account](https://vercel.com) and a project to deploy, on the Node.js 22 runtime or the Edge runtime
+- A [Vercel account](https://vercel.com) and a project to deploy
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) permitted to send from that domain, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
 
 ## Choose a Runtime
 
-From 0.2.0 the SDK works on both of Vercel's runtimes, so pick whichever suits the function.
-
-On the **Node.js runtime**, the SDK requires **Node.js 22 or later**. Set it in **Project → Settings → Node.js Version** (choose **22.x**); the setting applies to deployments built after the change, so redeploy afterwards. An `engines` field in `package.json` (`"node": ">=22"`) keeps local development and CI on the same version.
-
-On the **Edge runtime**, including Edge Middleware, the SDK works with no configuration and no `runtime` pin: it uses native Web Crypto and `fetch` rather than Node built-ins. Edge support landed in 0.2.0, so upgrade if you are on an earlier version.
+Use Vercel's default server runtime; no runtime setting is required for the SDK.
+Vercel recommends its Node.js runtime for new functions. If an existing route
+uses the Edge runtime, the SDK also works there using the runtime's Web APIs.
 
 <Warning>
-  The runtime choice does not change the security rule: the API key is server-side only. Never expose it to client code on either runtime.
+  The runtime choice does not change the security boundary. Import the SDK only
+  in server code and never expose an API key to browser code.
 </Warning>
 
-## A Minimal Send Function
+## Add a Server-Side Send Helper
 
-A Next.js App Router route handler (the same client works in any Vercel Function, on either runtime):
+Create the client at module scope and reuse it. This helper accepts an already
+authorized and validated business record; do not call it directly with
+untrusted browser input.
 
-```ts app/api/welcome/route.ts
-import { AhaSendClient } from "@ahasend/sdk";
+```ts lib/ahasend.ts
+import { AhaSendClient, isAhaSendError } from "@ahasend/sdk";
 
-const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
-});
+const ahasend = AhaSendClient.fromEnv();
 
-export async function POST(req: Request) {
-  const { email, name } = await req.json();
+export type WelcomeInput = {
+  signupId: string;
+  email: string;
+  name?: string;
+};
 
-  const result = await ahasend.messages.send({
-    from: { email: "hello@yourdomain.com", name: "Your App" },
-    recipients: [{ email, name }],
-    subject: "Welcome to Your App!",
-    html_content: "<h1>Welcome aboard</h1>",
-    text_content: "Welcome aboard",
-  });
+async function welcomeKey(signupId: string, sandbox: boolean): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(signupId),
+  );
+  const hex = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `welcome-${sandbox ? "sandbox" : "live"}-${hex}`;
+}
 
-  const rejected = result.data.filter((r) => r.status === "error");
-  return Response.json({ queued: result.data.length - rejected.length, rejected });
+export async function sendWelcomeEmail(input: WelcomeInput) {
+  const sandbox = process.env.AHASEND_SANDBOX === "true";
+
+  try {
+    const result = await ahasend.messages.send(
+      {
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: input.email, name: input.name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard</h1>",
+        text_content: "Welcome aboard",
+        sandbox,
+      },
+      { idempotencyKey: await welcomeKey(input.signupId, sandbox) },
+    );
+
+    const rejectedCount = result.data.filter(
+      (entry) => entry.status === "error",
+    ).length;
+    if (rejectedCount > 0) {
+      console.error("AhaSend rejected recipients", { rejectedCount });
+      throw new Error("Email could not be queued");
+    }
+
+    return { queued: result.data.length };
+  } catch (error) {
+    if (isAhaSendError(error)) {
+      const { code, status, requestId } = error.toJSON();
+      console.error("AhaSend request failed", { code, status, requestId });
+    }
+    throw new Error("Email could not be queued");
+  }
 }
 ```
 
-A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+Call this helper only after authenticating and authorizing the request. For a
+browser flow, derive `signupId`, `email`, and `name` from your server-side user
+record. For a backend-to-backend route, require a service credential, validate
+and bound the request body, and apply rate limits. The [Next.js
+guide](/guides/nextjs) provides a complete route-handler example.
 
-Module scope survives across warm invocations of the same function instance, so the client is created once, not per request.
+An accepted send is multi-status: `result.data` holds one result per recipient,
+and an entry can have `status: "error"` even when the request resolves. Reuse
+the same stable signup ID for retries of the same payload. A stored outcome can
+be replayed for the resulting idempotency key, but a server-error outcome may
+be re-executed and a stored result is not retained forever. The surrounding
+workflow must tolerate an uncertain duplicate. Live and sandbox sends use
+separate key namespaces so Preview cannot conflict with Production when both
+environments share an AhaSend account.
 
 ## Set Environment Variables
 
 <Steps>
-  <Step title="Add the variables">
-    In the Vercel dashboard, go to **Project → Settings → Environment Variables** and add `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and (if you use webhooks) `AHASEND_WEBHOOK_SECRET`. Or use the CLI:
+  <Step title="Add production variables">
+    In **Project → Settings → Environment Variables**, add
+    `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` for Production. Add
+    `AHASEND_WEBHOOK_SECRET` there if you use webhooks.
+  </Step>
+  <Step title="Configure safe previews">
+    For Preview, use a separate least-privilege API key and set
+    `AHASEND_SANDBOX=true`. Sandbox sends are validated but not delivered. Do
+    not make the production API key available to Preview deployments.
+  </Step>
+  <Step title="Redeploy">
+    Environment variable changes apply only to new deployments. Create a new
+    deployment after adding, changing, or rotating a value.
+  </Step>
+</Steps>
+
+You can also add values interactively with the CLI:
 
 ```bash
 vercel env add AHASEND_API_KEY
 vercel env add AHASEND_ACCOUNT_ID
 vercel env add AHASEND_WEBHOOK_SECRET
+vercel env add AHASEND_SANDBOX
 ```
-</Step>
-<Step title="Pick the environments">
-  Each variable is scoped per environment: **Production**, **Preview**, and **Development**. Set at least Production and Preview; consider a separate API key for Preview so test deployments never send with your production key.
-</Step>
-<Step title="Redeploy">
-  Environment variable changes only apply to **new deployments**. Trigger a redeploy (or `vercel --prod`) after adding or editing them.
-</Step>
-</Steps>
 
 <Warning>
-  Never prefix these variables with `NEXT_PUBLIC_`: that inlines them into the browser bundle and exposes your API key to anyone who opens dev tools.
+  Never prefix these variables with `NEXT_PUBLIC_`. That prefix exposes values
+  to browser code in a Next.js project. Rotate an API key immediately if it is
+  exposed.
 </Warning>
 
 ## Local Development
 
-Pull the Development-scoped variables into a local env file and run against them:
+`vercel dev` downloads Development-scoped variables into memory, so a local
+secret file is not required:
 
 ```bash
-vercel env pull .env.local
 vercel dev
 ```
 
+If you deliberately use `vercel env pull .env.local` instead, ensure
+`.env.local` is ignored by version control and never commit it.
+
 ## Webhooks on Vercel
 
-Point your webhook (created in the [AhaSend dashboard](https://dash.ahasend.com)) at:
+Point the webhook created in your [AhaSend
+dashboard](https://dash.ahasend.com) at a stable production route such as:
 
 ```
-https://your-app.vercel.app/api/webhooks/ahasend
+https://your-app.com/api/webhooks/ahasend
 ```
 
-In Next.js, the SDK's `nextRouteHandler` adapter from `@ahasend/sdk/webhooks` does the signature verification for you: see the [Next.js guide](/guides/nextjs) for the full handler. The adapter needs no runtime pin, and it awaits verification internally.
+In Next.js, use `nextRouteHandler` from `@ahasend/sdk/webhooks`. It reads and
+caps the exact raw request body, verifies the signature and timestamp, and only
+then invokes the application handler. The [Next.js guide](/guides/nextjs)
+contains the complete handler.
 
-Vercel Functions stop executing once the response is returned and are killed at the invocation timeout, so do your webhook processing before responding, return a 2xx promptly, and enqueue a job for anything heavy.
+Timestamp validation is not replay deduplication. Before returning a 2xx,
+atomically claim the verified `webhook-id` and enqueue durable work (or commit
+both through an outbox). Acknowledge a duplicate ID without enqueuing it again,
+and make consumers idempotent. Vercel Queues uses at-least-once delivery, so a
+queue consumer must also tolerate redelivery.
+
+Do not use an untracked promise for required webhook work. Vercel's
+post-response helpers remain bounded by the function timeout; use them for
+non-critical work, not as a replacement for durable persistence.
 
 ## Going Further
 
-- **Framework detail**: the [Next.js guide](/guides/nextjs) covers route handlers, server actions, and the `nextRouteHandler` webhook adapter in full.
+- **Framework detail**: the [Next.js guide](/guides/nextjs) covers authenticated route handlers, server actions, and the `nextRouteHandler` webhook adapter.
 - **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for timeouts, retries, and idempotency options.
-- **Comparable serverless model**: [AWS Lambda](/guides/aws-lambda) has the same cold-start and module-scope characteristics if you deploy to both.
-- **Safer previews**: set `sandbox: true` on sends from preview deployments, so the API validates and accepts the request without delivering anything.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+- **Durable processing**: use a durable queue or outbox for webhook work, and deduplicate both webhook deliveries and at-least-once queue messages.
+- **Safer previews**: keep `AHASEND_SANDBOX=true` in Preview and use credentials separate from Production.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`; binary data must be base64 encoded.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Error at import time: SDK detects an unsupported environment">
-    You are on an SDK version older than 0.2.0, which is where Edge runtime and Edge Middleware support landed. Upgrade with `npm install @ahasend/sdk@latest` and redeploy, then drop any `export const runtime = "nodejs"` pin you added as a workaround.
+  <Accordion title="SDK import fails in an Edge route">
+    Vercel recommends its default server runtime for new functions. Remove an
+    unnecessary Edge runtime setting and redeploy. If the route must remain on
+    Edge, confirm that the failure comes from another dependency or from using
+    CommonJS rather than ES module imports.
   </Accordion>
-  <Accordion title="Install or runtime error about an unsupported Node.js version">
-    The project is building on an older Node.js runtime. The SDK declares `engines.node >= 22`. Set **Settings → Node.js Version** to **22.x** and redeploy so the functions run on Node 22+.
+  <Accordion title="401 from AhaSend after deploying">
+    Confirm that the API key and account ID are set for the environment you
+    deployed to, that the key can send from `from.email`, and that you created a
+    new deployment after changing the variables.
   </Accordion>
-  <Accordion title="401 AhaSendAuthenticationError after deploying">
-    The variable isn't set for the environment you deployed to, or you added it after the deployment was built. Check the environment scoping under **Settings → Environment Variables** and redeploy.
+  <Accordion title="Preview deployment sends real mail">
+    Give Preview its own restricted key, set `AHASEND_SANDBOX=true`, and create
+    a new Preview deployment. Rotate the Production key if it was exposed to a
+    Preview environment that should not have it.
   </Accordion>
-  <Accordion title="Webhook deliveries time out">
-    The handler does slow work before responding. Return the 2xx fast; move processing to a queue or background job.
+  <Accordion title="Webhook deliveries time out or repeat">
+    Verify and atomically persist the delivery before responding, return a 2xx
+    promptly, and process the durable work idempotently. Do not rely on an
+    untracked promise or timestamp validation to prevent replay.
   </Accordion>
 </AccordionGroup>
