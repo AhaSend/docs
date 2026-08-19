@@ -1,21 +1,27 @@
 ---
 title: "How to Send Email with Vite"
 sidebarTitle: "Vite"
-description: "Send transactional email from a Vite app the safe way: an Express backend holds the AhaSend API key while your React, Vue, or Svelte frontend calls it."
+description: "Send transactional email from a Vite app safely: an Express backend holds the AhaSend API key while the browser calls an authenticated endpoint."
 keywords: ["vite send email", "vite transactional email", "vite email backend", "ahasend vite", "vite api proxy email"]
 ---
 
-[Vite](https://vite.dev) builds for the browser, so the AhaSend key needs a backend: this guide adds a small Express server plus a dev-server proxy. On a meta-framework, use its own guide instead, for example [Astro](/guides/astro).
+[Vite](https://vite.dev) builds browser applications, so AhaSend credentials and
+SDK calls belong in a backend. This guide adds an Express server and uses Vite's
+development proxy. On a meta-framework, use its server integration instead,
+for example [Astro](/guides/astro).
 
 ## Prerequisites
 
-- A Vite project (React, Vue, Svelte; the frontend framework doesn't matter) on Node.js 22 or later
+- A Vite project
+- An application authentication system that can identify the current user on the backend
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) permitted to send from that domain, and your account ID
 
-## 1. Add a Small Backend
+## 1. Add a Backend
 
-Install the SDK and Express **in the server directory, not the Vite app**: the key point is that `@ahasend/sdk` never appears in code Vite bundles:
+Install the SDK and Express in the package that runs your backend. A single
+repository can keep them at its root; what matters is that no module imported by
+the browser application imports `@ahasend/sdk`.
 
 <CodeGroup>
 
@@ -37,64 +43,113 @@ bun add @ahasend/sdk express
 
 </CodeGroup>
 
-The backend process must run on **Node.js 22 or later** (the SDK declares `engines.node >= 22`), which is separate from whatever Node version builds your frontend.
-
-Configure credentials in the server's `.env` (loaded with `node --env-file=.env` or `dotenv`), noting the absence of any `VITE_` prefix:
+Create an uncommitted backend environment file. Do not use a `VITE_` prefix:
 
 ```bash server/.env
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
 <Warning>
-  Any env var prefixed with `VITE_` is **embedded into the client bundle as plain text** and shipped to every visitor. Never create `VITE_AHASEND_API_KEY`: anyone who opens DevTools can read it and send email from your account. The SDK also refuses to construct in a browser, so there is no client-side shortcut: email always goes through your server.
+  Vite exposes variables with its client prefix through `import.meta.env` and
+  replaces them in the browser bundle. Never create
+  `VITE_AHASEND_API_KEY`. If the project customizes `envPrefix` or `define`,
+  ensure it does not expose or replace any `AHASEND_*` value. Rotate the key
+  immediately if it is exposed.
 </Warning>
 
-Then a minimal send route:
+Add `server/.env` to `.gitignore`. The backend below expects your authentication
+integration to export `authorizeWelcome`. That middleware must validate the
+user's server-side session, authorize this mutation, apply your CSRF defense,
+load the user from trusted storage, and set `res.locals.user`. Do not populate
+the user from request-body fields.
 
-```ts server/index.ts
+```js server/index.mjs
+import { createHash } from "node:crypto";
 import express from "express";
-import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
+import { AhaSendClient, isAhaSendError } from "@ahasend/sdk";
+import { authorizeWelcome } from "./auth.mjs";
 
-const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
+const ahasend = AhaSendClient.fromEnv();
+const app = express();
+
+function isUser(value) {
+  return (
+    value &&
+    typeof value === "object" &&
+    typeof value.signupId === "string" &&
+    value.signupId.length > 0 &&
+    typeof value.email === "string" &&
+    value.email.length > 0 &&
+    (value.name === undefined || typeof value.name === "string")
+  );
+}
+
+app.post("/api/welcome", authorizeWelcome, async (_req, res) => {
+  const user = res.locals.user;
+  if (!isUser(user)) {
+    res.status(500).json({ error: "Unable to load user" });
+    return;
+  }
+
+  const idempotencyKey = `welcome-${createHash("sha256")
+    .update(user.signupId)
+    .digest("hex")}`;
+
+  try {
+    const result = await ahasend.messages.send(
+      {
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: user.email, name: user.name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      },
+      { idempotencyKey },
+    );
+
+    const rejectedCount = result.data.filter(
+      (entry) => entry.status === "error",
+    ).length;
+    if (rejectedCount > 0) {
+      console.error("AhaSend rejected recipients", { rejectedCount });
+      res.status(502).json({ error: "Email could not be queued" });
+      return;
+    }
+
+    res.status(202).json({ queued: true });
+  } catch (error) {
+    if (isAhaSendError(error)) {
+      const { code, status, requestId } = error.toJSON();
+      console.error("AhaSend request failed", { code, status, requestId });
+    }
+    res.status(502).json({ error: "Email could not be queued" });
+  }
 });
 
-const app = express();
-app.use(express.json());
-
-app.post("/api/welcome", async (req, res) => {
-  try {
-    const result = await ahasend.messages.send({
-      from: { email: "hello@yourdomain.com", name: "Your App" },
-      recipients: [{ email: req.body.email, name: req.body.name }],
-      subject: "Welcome to Your App!",
-      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-      text_content: "Welcome aboard! We're glad you're here.",
-    });
-
-    const rejected = result.data.filter((r) => r.status === "error");
-    res.json({ queued: result.data.length - rejected.length, rejected });
-  } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-      return res.status(502).json({ error: "Failed to send email" });
-    }
-    throw err;
-  }
+app.use((_error, _req, res, _next) => {
+  console.error("Request failed");
+  res.status(500).json({ error: "Internal server error" });
 });
 
 app.listen(3000);
 ```
 
-A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+Apply a rate limit to the mutation in addition to authentication. The accepted
+send response is multi-status, so inspect every entry in `result.data`; a
+resolved request can still contain an entry with `status: "error"`.
 
-This is the same route as the [Express guide](/guides/express): see it for error handling details, webhooks, and sandbox testing. Any backend works here (Fastify, Hono on Node, a serverless function); Express is just the shortest to show.
+Reuse the same `signupId` only for retries of the same welcome-email payload.
+The stable, hashed key lets AhaSend replay a stored outcome without putting the
+raw identifier in request metadata. A server-error outcome may be re-executed,
+and stored results are not retained forever, so the surrounding workflow must
+tolerate an uncertain duplicate.
 
-## 2. Proxy /api to the Backend with Vite's Dev Server
+## 2. Proxy `/api` During Development
 
-Vite's dev server can forward API calls to your backend, so the frontend talks to a single origin and you avoid CORS entirely:
+Vite's development server can forward `/api` requests to the backend, keeping
+the browser on one origin:
 
 ```ts vite.config.ts
 import { defineConfig } from "vite";
@@ -108,54 +163,80 @@ export default defineConfig({
 });
 ```
 
-Run both processes during development: `vite` for the frontend and `node --env-file=.env server/index.ts` for the backend. In production, serve the built `dist/` folder and route `/api` to the backend at your reverse proxy (nginx, Caddy) or host.
+Run the frontend and backend as separate development processes:
 
-## 3. Call It from the Client
+```bash
+npm run dev
+node --env-file=server/.env server/index.mjs
+```
 
-Now the frontend triggers email with an ordinary `fetch`, with no SDK and no key:
+The `server.proxy` setting applies only to the development server. For
+production, build the frontend and serve `dist/` from static hosting; configure
+the hosting platform or reverse proxy to send `/api` to the backend. Do not use
+`vite preview` as a production server.
+
+## 3. Call the Authenticated Endpoint
+
+The browser sends no recipient or AhaSend credential. The backend derives the
+recipient from the authenticated session:
 
 ```ts src/lib/sendWelcome.ts
-export async function sendWelcome(email: string, name: string) {
-  const res = await fetch("/api/welcome", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, name }),
-  });
-
-  if (!res.ok) throw new Error("Failed to send welcome email");
-  return res.json() as Promise<{ queued: number; rejected: unknown[] }>;
+export async function sendWelcome(): Promise<void> {
+  const response = await fetch("/api/welcome", { method: "POST" });
+  if (!response.ok) throw new Error("Failed to send welcome email");
 }
 ```
 
-Call `sendWelcome()` from a form submit handler in React, Vue, or Svelte; it's framework-agnostic.
-
-Keep the recipient, subject, and template server-side, as above, where only `email` and `name` come from the client, and add your own auth or rate limiting so visitors can't turn the endpoint into a "send arbitrary email" relay.
+Call `sendWelcome()` from your React, Vue, or Svelte UI only as part of the
+authorized application flow. Keep the endpoint on the same origin in
+production as well as development, and configure the session cookie and CSRF
+protection in your authentication integration.
 
 ## Webhooks
 
-Webhook handling also belongs on the backend: AhaSend POSTs signed events to a public URL, which a frontend bundle can't receive. Follow the [Express guide's webhook section](/guides/express#handle-webhooks) on the same server you built above.
+Webhooks also belong on the backend. Mount the SDK's
+`expressWebhookHandler` directly on its route, with no `express.json()`,
+`express.raw()`, or other body parser in front of it. The adapter reads and
+caps the exact raw stream before it verifies the signature and timestamp. The
+[Express webhook guide](/guides/express#handle-webhooks) contains the handler.
+
+Timestamp verification is not replay deduplication. Before returning a 2xx,
+atomically persist the verified `webhook-id` with durable queue or outbox work.
+Acknowledge an already claimed ID without processing it again, and make the
+worker idempotent.
 
 ## Going Further
 
-- **Go deeper on your backend**: whichever server you picked, its guide covers sends, errors, and webhooks in full: [Express](/guides/express) or [Hono](/guides/hono).
-- **Adopt a meta-framework instead**: [Next.js](/guides/nextjs), [SvelteKit](/guides/sveltekit), [Nuxt](/guides/nuxt), and [Remix](/guides/remix) ship a server alongside the frontend, so there's no second process to run or proxy.
-- **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for timeouts, retries, and idempotency options on the backend client.
-- **Keep the boundary**: the split shown here is the whole point, so keep `@ahasend/sdk` out of anything Vite bundles, no matter which backend you land on.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+- **Backend details**: see [Express](/guides/express) for the webhook adapter and [Hono](/guides/hono) for another backend option.
+- **Meta-frameworks**: [Next.js](/guides/nextjs), [SvelteKit](/guides/sveltekit), [Nuxt](/guides/nuxt), and [Remix](/guides/remix) provide their own server integrations.
+- **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for backend timeouts, retries, and idempotency options.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`; binary data must be base64 encoded.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="The SDK throws on import or construction in the browser">
-    Working as intended: the client detects browser scopes and refuses to start so your API key can't leak. Move the send code into the backend and call it via `fetch("/api/...")`.
+  <Accordion title="The SDK appears in the browser bundle">
+    A module in the browser import graph imports the SDK. Move that module into
+    the backend package or directory and communicate with it through the
+    authenticated HTTP endpoint. Having the dependency in a shared
+    `package.json` does not bundle it by itself.
   </Accordion>
-  <Accordion title="fetch('/api/welcome') returns the Vite index.html or a 404">
-    The dev proxy isn't matching. Confirm the `server.proxy` entry is in `vite.config.ts`, restart the dev server after editing the config, and check the backend is actually listening on port 3000.
+  <Accordion title="fetch('/api/welcome') returns index.html or a 404">
+    During development, confirm the `server.proxy` entry is in
+    `vite.config.ts`, restart Vite after changing the config, and confirm the
+    backend listens on port 3000. In production, configure the hosting platform
+    or reverse proxy separately; Vite's development proxy is not deployed.
   </Accordion>
-  <Accordion title="Works in dev, 404s in production">
-    `server.proxy` is dev-only: it does nothing for the built app. In production, configure your reverse proxy or hosting platform to route `/api` to the backend process.
+  <Accordion title="import.meta.env.VITE_AHASEND_API_KEY is visible">
+    Remove the variable and rotate the exposed key in the
+    [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). Keep the
+    replacement only in the backend environment. Also inspect custom
+    `envPrefix` and `define` settings, and never print the key while
+    troubleshooting.
   </Accordion>
-  <Accordion title="import.meta.env.VITE_AHASEND_API_KEY is visible in the bundle">
-    That's exactly what the `VITE_` prefix does: it inlines the value into client code. Delete the variable, rotate the key in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) (treat it as compromised), and keep the new one in the backend's `.env` only.
+  <Accordion title="Webhook verification reports an already-parsed body">
+    A body parser ran before the adapter. Mount `expressWebhookHandler`
+    directly before any global parser, or scope parsers to routes that need
+    them. Do not add `express.raw()` in front of the adapter.
   </Accordion>
 </AccordionGroup>
