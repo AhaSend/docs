@@ -32,33 +32,29 @@ Two rules apply whichever shape your project takes. Never call AhaSend from the 
 | Supabase Edge Function (Deno) | Supabase secrets, read with `Deno.env.get()` |
 | Node server (Express, Fastify, Nitro, deployed to a Node host) | That host's environment variables, read from `process.env` |
 
-Bolt and Supabase server functions use the edge-function path below. AhaSend SDK 0.2.0 added Deno and edge runtime support; this guide pins that currently published version. On Node hosts the SDK needs Node.js 22 or later.
-
-<Warning>
-  The SDK 0.2.0 README, changelog, and release gates list Deno and edge runtimes as maintained, but its published security policy still limits security support to Node.js 22 or later and lists Deno and edge runtimes as outside that boundary. If your deployment requires an explicitly security-supported SDK runtime, use a separately deployed Node.js 22+ backend until that policy is reconciled.
-</Warning>
+Bolt and Supabase server functions use the edge-function path below.
 
 ## Send with the SDK
 
-Install an exact SDK version, which handles retries, idempotency, and typed errors. The SDK is still pre-1.0, so pin it and review the changelog before upgrading:
+Install the SDK, which handles retries, idempotency, and typed errors:
 
 <CodeGroup>
 
 ```bash npm
-npm install --save-exact @ahasend/sdk@0.2.0
+npm install @ahasend/sdk
 ```
 
 ```bash pnpm
-pnpm add --save-exact @ahasend/sdk@0.2.0
+pnpm add @ahasend/sdk
 ```
 
 ```bash bun
-bun add --exact @ahasend/sdk@0.2.0
+bun add @ahasend/sdk
 ```
 
 </CodeGroup>
 
-In a Bolt or Supabase server function there is nothing to install in the app package: import the pinned package with `import { AhaSendClient } from "npm:@ahasend/sdk@0.2.0"`.
+In a Bolt or Supabase server function there is nothing to install in the app package: import it with `import { AhaSendClient } from "npm:@ahasend/sdk"`.
 
 If you use Bolt Database, open the database icon, select **Secrets**, and create `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_SANDBOX` (set it to `true` while testing). Bolt makes database secrets available only to server functions.
 
@@ -74,7 +70,7 @@ The Supabase dashboard does the same under your project's Edge Functions setting
 
 Name the architecture in the prompt, or Bolt reaches for a client-side hook:
 
-> "Add an authenticated server function called `send-receipt` that emails an order confirmation with `@ahasend/sdk` 0.2.0. Accept only an order ID, verify on the server that the signed-in user owns that order, and load the recipient, name, and order details from the database instead of trusting them from the request body. Read `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_SANDBOX` from server-function secrets and create one `AhaSendClient` at module scope. Use a stable, sandbox-or-production-specific idempotency key for each order. Treat the resolved send as an accepted HTTP 202 response, but inspect every recipient result for `status: \"error\"`, and propagate request failures. The frontend must call this function and must never call AhaSend directly or contain the API key."
+> "Add an authenticated server function called `send-receipt` that emails an order confirmation with `@ahasend/sdk`. Accept only an order ID, verify on the server that the signed-in user owns that order, and load the recipient, name, and order details from the database instead of trusting them from the request body. Read `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_SANDBOX` from server-function secrets and create one `AhaSendClient` at module scope. Use a stable, sandbox-or-production-specific idempotency key for each order. Treat the resolved send as an accepted HTTP 202 response, but inspect every recipient result for `status: \"error\"`, and propagate request failures. The frontend must call this function and must never call AhaSend directly or contain the API key."
 
 Create the client once at module scope, then send:
 
@@ -166,7 +162,7 @@ Your deployed backend and frontend live in different homes. Before you call it d
 
 <AccordionGroup>
   <Accordion title="Error importing @ahasend/sdk in a Supabase Edge Function">
-    You are on an SDK version older than 0.2.0, which is where Deno and edge runtime support landed. Upgrade to 0.2.0 or later and redeploy the function.
+    Reinstall the current SDK release and redeploy the function. If the import still fails, confirm the function uses the `npm:` import shown above and inspect its deployment logs.
   </Accordion>
   <Accordion title="undefined API key at runtime">
     The key was set in the project preview or frontend host instead of where the send runs. For Bolt Database, use **Database > Secrets**. For your own Supabase project, use `supabase secrets set`; hosted Edge Functions receive updated secrets without a redeploy.
