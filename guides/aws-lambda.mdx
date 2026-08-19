@@ -10,7 +10,7 @@ The one hard requirement is the runtime: the function must be on `nodejs22.x` or
 ## Prerequisites
 
 - An AWS account and a deployment tool of your choice (console, SAM, CDK, Terraform)
-- A `nodejs22.x` (or later) Lambda runtime, since the SDK requires Node.js 22 or later
+- A Lambda function using the current Node.js runtime
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with either `messages:send:all` or a least-privilege domain scope such as `messages:send:yourdomain.com` matching the domain in `from.email`, and your account ID
 
@@ -141,7 +141,7 @@ Metadata:
 
 ## Handle Webhooks
 
-Put a second Lambda (or a second route on the same one) behind API Gateway and point your AhaSend webhook at its URL. API Gateway hands you the raw body as a string on `event.body`, but it may be **base64-encoded**, so check `event.isBase64Encoded` before verifying. `verifier.parse()` is asynchronous as of 0.2.0, so await it:
+Put a second Lambda (or a second route on the same one) behind API Gateway and point your AhaSend webhook at its URL. API Gateway hands you the raw body as a string on `event.body`, but it may be **base64-encoded**, so check `event.isBase64Encoded` before verifying. `verifier.parse()` is asynchronous, so await it:
 
 ```ts src/webhook.ts
 import {
@@ -194,7 +194,7 @@ Deploying serverless elsewhere too? See the [Vercel](/guides/vercel) and [Cloudf
 
 ## Quick Test in the Console
 
-If you want to confirm your credentials work before wiring up a project, you can send one message straight from the console with no build step at all. Create a function in the [Lambda console](https://console.aws.amazon.com/lambda) (Node.js 22.x or later), paste this into `index.mjs`, choose **Deploy**, and then choose **Test**. No packages, no build step: it calls the AhaSend REST API with the `fetch` built into the Node runtime:
+If you want to confirm your credentials work before wiring up a project, you can send one message straight from the console with no build step at all. Create a function with the current Node.js runtime in the [Lambda console](https://console.aws.amazon.com/lambda), paste this into `index.mjs`, choose **Deploy**, and then choose **Test**. No packages, no build step: it calls the AhaSend REST API with the `fetch` built into the Node runtime:
 
 ```js index.mjs
 export const handler = async () => {
