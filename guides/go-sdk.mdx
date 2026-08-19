@@ -10,13 +10,13 @@ icon: "golang"
 
 This page is the SDK reference. To wire it into a specific framework, pick a guide from the sidebar.
 
+Before sending, [verify a sending domain](/domains) and create an [API key](/send-api/credentials) plus an account ID. Give the key the domain-specific `messages:send:{your-domain}` scope when it only sends from one domain, and keep it in a server-side secret store.
+
 ## Install
 
 ```bash
 go get github.com/AhaSend/ahasend-go
 ```
-
-Go 1.18 or later. The only runtime dependency is `github.com/google/uuid`. The SDK is pre-1.0, so pin the version in your `go.mod` and read the changelog before upgrading.
 
 ## Send Your First Email
 
@@ -25,6 +25,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"os"
 
@@ -36,12 +38,21 @@ import (
 )
 
 func main() {
-	accountID, err := uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
-	if err != nil {
-		log.Fatalf("invalid AHASEND_ACCOUNT_ID: %v", err)
+	apiKey := os.Getenv("AHASEND_API_KEY")
+	if apiKey == "" {
+		log.Fatal("AHASEND_API_KEY is required")
+	}
+	welcomeEventID := os.Getenv("WELCOME_EVENT_ID")
+	if welcomeEventID == "" {
+		log.Fatal("WELCOME_EVENT_ID is required")
 	}
 
-	client := api.NewAPIClient(api.WithAPIKey(os.Getenv("AHASEND_API_KEY")))
+	accountID, err := uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
+	if err != nil {
+		log.Fatal("AHASEND_ACCOUNT_ID must be a UUID")
+	}
+
+	client := api.NewAPIClient(api.WithAPIKey(apiKey))
 
 	response, _, err := client.MessagesAPI.CreateMessage(
 		context.Background(),
@@ -52,21 +63,37 @@ func main() {
 			Subject:     "Welcome to Your App",
 			HtmlContent: ahasend.String("<h1>Welcome aboard</h1>"),
 			TextContent: ahasend.String("Welcome aboard"),
+			Sandbox:     ahasend.Bool(true),
 		},
+		api.WithIdempotencyKey(fmt.Sprintf("welcome-%s", welcomeEventID)),
 	)
 	if err != nil {
-		log.Fatal(err)
+		var apiErr *api.APIError
+		if errors.As(err, &apiErr) {
+			log.Printf("AhaSend request failed: status=%d code=%s request_id=%s", apiErr.StatusCode, apiErr.Code, apiErr.RequestID)
+		} else {
+			log.Print("AhaSend request failed")
+		}
+		os.Exit(1)
 	}
 
+	queued, rejected := 0, 0
 	for _, r := range response.Data {
-		if r.ID != nil {
-			log.Printf("queued: %s", *r.ID)
+		switch r.Status {
+		case "queued", "scheduled":
+			queued++
+		default:
+			rejected++
 		}
+	}
+	log.Printf("AhaSend result: queued=%d rejected=%d", queued, rejected)
+	if rejected > 0 {
+		os.Exit(1)
 	}
 }
 ```
 
-Run it with `go run main.go`. Set the sandbox field on the request while you are testing and nothing is delivered, though the message still runs the full validation and queuing path and still fires webhooks. See [Sandbox Mode](/send-api/sandbox).
+Run it with `go run main.go`. The example sets `Sandbox` to true, so nothing is delivered even though the message still runs through validation and fires the corresponding webhooks. Replace the example's idempotency key with a stable, server-derived identifier for the actual business operation. See [Sandbox Mode](/send-api/sandbox).
 
 Note the loop. `Recipients` takes up to 100 addresses and each one becomes its own message, so `response.Data` holds one entry per recipient. Reading `Data[0]` and calling it done would hide the rest.
 
@@ -76,7 +103,7 @@ Optional fields are pointers, so the SDK exports helpers such as `ahasend.String
 
 Build the client once at startup and share it. It holds rate-limit, retry, and idempotency state.
 
-`api.NewAPIClientFromEnv()` builds the same client from the `AHASEND_*` environment variables. To override the key for a single request, put it on the context with `context.WithValue(ctx, api.ContextAccessToken, key)`.
+`api.NewAPIClientFromEnv()` builds the same client from the `AHASEND_*` environment variables. To override the key for one call, pass `api.WithRequestAPIKey(key)` as that method's final request option. Keep `context.Context` for cancellation, deadlines, and request-scoped values rather than using it for optional parameters.
 
 | Option | Purpose |
 | --- | --- |
@@ -84,7 +111,7 @@ Build the client once at startup and share it. It holds rate-limit, retry, and i
 | `api.WithRetryConfig(cfg)` | Retry policy: attempts, backoff strategy, delays |
 | `client.SetSendMessageRateLimit(rps, burst)` | Pace outbound sends |
 | `client.SetStatisticsRateLimit(rps, burst)` | Pace statistics calls, which are limited harder |
-| `api.ContextAccessToken` | Override the key for a single request via context |
+| `api.WithRequestAPIKey(key)` | Override the key for one request |
 
 ```go
 retryConfig := api.RetryConfig{
@@ -100,15 +127,18 @@ client := api.NewAPIClient(
 	api.WithRetryConfig(retryConfig),
 )
 
-client.SetSendMessageRateLimit(500, 1000) // requests per second, burst
-client.SetStatisticsRateLimit(10, 20)
+client.SetSendMessageRateLimit(100, 200) // requests per second, burst
+client.SetStatisticsRateLimit(1, 1)
 ```
+
+These token buckets are local to one client instance. Configure them at or below the limits assigned to your account; they do not coordinate across application replicas and do not eliminate API `429` responses.
 
 ## Errors
 
 ```go
 import (
 	"errors"
+	"net/http"
 
 	"github.com/AhaSend/ahasend-go/api"
 )
@@ -123,16 +153,18 @@ if errors.As(err, &apiErr) {
 	case http.StatusForbidden:
 		// key lacks the required scope
 	case http.StatusTooManyRequests:
-		// surfaced only after retries are exhausted
+		// configured retries are exhausted, or retries are disabled
 	}
 }
 ```
 
-`apiErr` carries `StatusCode` and the raw response body in `Raw`. Rate-limited and server-error responses are retried before they ever surface, so a `429` reaching your code means the retries are already spent.
+`apiErr` also carries `Type`, `Code`, `RequestID`, `Message`, and the raw response body in `Raw`. Treat `Message`, `Raw`, and `err.Error()` as sensitive: an API response can repeat addresses, content, headers, or other request data. Log only allowlisted fields such as status, error type/code, request ID, and aggregate counts.
+
+When retries are enabled, a surfaced `429` or server error has exhausted the configured retry attempts. Disabling retries or setting the retry count to zero makes the first response surface immediately.
 
 ## Retries and Idempotency
 
-The SDK retries `429` and server errors with exponential backoff, and paces requests locally so a burst does not trip the limit in the first place. It attaches an idempotency key to every create operation and reuses that key across its own retries.
+The SDK retries network failures, `429`, and `5xx` responses with the configured backoff. Its optional local pacing reduces bursts from one client instance. It attaches an idempotency key to POST operations and reuses that key across its own retry attempts.
 
 <Note>
   Stored outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, so a retry after a 5xx can still result in a second send. Pass your own key derived from a stable business identifier when a duplicate would be expensive.
@@ -144,6 +176,8 @@ response, _, err := client.MessagesAPI.CreateMessage(
 	api.WithIdempotencyKey(fmt.Sprintf("order-confirmation-%s", orderID)),
 )
 ```
+
+Reuse a caller-provided key only for the same exact request payload, and never log it. If the original keyed request is still running, the API can return `409`; the SDK surfaces this as `api.ErrorTypeIdempotencyConflict` with `RetryAfter` and does not retry it automatically. For email sends, reconcile the business operation or explicitly decide whether a possible duplicate is preferable to a possible missed send before retrying with the same key.
 
 ## Services
 
@@ -158,49 +192,85 @@ response, _, err := client.MessagesAPI.CreateMessage(
 | `AccountsAPI` | Account and member management |
 | `APIKeysAPI` | API key management |
 | `SubAccountsAPI` | Sub accounts, usage, and child API keys |
+| `SMTPCredentialsAPI` | SMTP credential management |
+| `UtilityAPI` | API health check |
 
 ## Webhooks
 
 ```go
-import "github.com/AhaSend/ahasend-go/webhooks"
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
 
-verifier, err := webhooks.NewWebhookVerifier(os.Getenv("AHASEND_WEBHOOK_SECRET"))
-if err != nil {
-	log.Fatalf("failed to create verifier: %v", err)
+	"github.com/AhaSend/ahasend-go/webhooks"
+)
+
+const maxWebhookBodyBytes int64 = 30_000_000
+
+type webhookStore interface {
+	// EnqueueOnce atomically records webhookID and durable work for event.
+	// It returns false when that ID was already committed.
+	EnqueueOnce(ctx context.Context, webhookID string, event webhooks.WebhookEvent) (bool, error)
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	event, err := verifier.ParseRequest(r)
+func newWebhookHandler(store webhookStore) http.Handler {
+	secret := os.Getenv("AHASEND_WEBHOOK_SECRET")
+	if secret == "" {
+		panic("AHASEND_WEBHOOK_SECRET is required")
+	}
+	verifier, err := webhooks.NewWebhookVerifier(secret)
 	if err != nil {
-		switch {
-		case errors.Is(err, webhooks.ErrMissingHeaders),
-			errors.Is(err, webhooks.ErrInvalidSignature),
-			errors.Is(err, webhooks.ErrExpiredTimestamp):
-			w.WriteHeader(http.StatusUnauthorized)
-		default:
-			w.WriteHeader(http.StatusBadRequest)
+		panic("invalid AHASEND_WEBHOOK_SECRET")
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxWebhookBodyBytes)
+		event, err := verifier.ParseRequest(r)
+		if err != nil {
+			var maxBytesErr *http.MaxBytesError
+			switch {
+			case errors.As(err, &maxBytesErr):
+				w.WriteHeader(http.StatusRequestEntityTooLarge)
+			case errors.Is(err, webhooks.ErrMissingHeaders),
+				errors.Is(err, webhooks.ErrInvalidSignature),
+				errors.Is(err, webhooks.ErrExpiredTimestamp):
+				w.WriteHeader(http.StatusUnauthorized)
+			case errors.Is(err, webhooks.ErrUnknownEventType):
+				// Acknowledge a validly signed event this application does not use.
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				w.WriteHeader(http.StatusBadRequest)
+			}
+			return
 		}
-		return
-	}
 
-	switch e := event.(type) {
-	case *webhooks.MessageDeliveredEvent:
-		log.Printf("delivered to %s", e.Data.Recipient)
-	case *webhooks.MessageBouncedEvent:
-		log.Printf("bounced: %s", e.Data.Recipient)
-	}
+		webhookID := r.Header.Get(webhooks.HeaderWebhookID)
+		accepted, err := store.EnqueueOnce(r.Context(), webhookID, event)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !accepted {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 
-	w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusAccepted)
+	})
 }
 ```
 
-`ParseRequest` verifies an `*http.Request` directly, which covers chi, Echo, Gin, and gorilla/mux since they all wrap `net/http`. For fasthttp routers such as Fiber, read the body yourself and call `verifier.Parse(body, headers)` with an `http.Header` carrying `webhook-id`, `webhook-timestamp`, and `webhook-signature`.
+`ParseRequest` verifies an `*http.Request` directly, which covers chi, Echo, Gin, and gorilla/mux since they all wrap `net/http`. It reads the body without imposing a size limit, so apply `http.MaxBytesReader` first. For fasthttp routers such as Fiber, enforce an equivalent limit, read the exact body bytes, and call `verifier.Parse(body, headers)` with an `http.Header` carrying `webhook-id`, `webhook-timestamp`, and `webhook-signature`.
 
 <Warning>
-  `ParseRequest` consumes the request body, so verification fails if middleware has already read it. Pass the webhook secret exactly as the dashboard shows it, `aha-whsec-` prefix included.
+  `ParseRequest` consumes the request body, so verification fails if middleware has already read it without restoring the exact bytes. Reject an empty secret before constructing the verifier, and pass the value exactly as the dashboard shows it, `aha-whsec-` prefix included.
 </Warning>
 
-Events implement `webhooks.WebhookEvent` with `GetType()` and `GetTimestamp()`. All 11 types are covered, from `MessageDeliveredEvent` through `SuppressionCreatedEvent`, `DomainDNSErrorEvent`, and `RouteMessageEvent`. Helpers such as `webhooks.IsMessageEvent()` and `webhooks.GetMessageEventData()` handle the common cases without a full type switch.
+Signature timestamp validation is not replay protection: the same signed request can be delivered again inside the tolerance window. After verification, atomically commit the `webhook-id` and a durable work/outbox record, retaining IDs for at least the webhook delivery and retry horizon. A duplicate should receive `2xx` without running the handler again; a storage failure should receive `5xx`. Process the durable work idempotently outside the request. Apply concurrency and request-rate limits at the reverse proxy so concurrent maximum-size bodies cannot exhaust the application. Never log the raw body, signature, event object, subject, recipient, or whole verification error.
+
+Events implement `webhooks.WebhookEvent` with `GetType()` and `GetTimestamp()`. The SDK covers the message, suppression, domain, and route event types. Helpers such as `webhooks.IsMessageEvent()` and `webhooks.GetMessageEventData()` handle common message events without a full type switch.
 
 ## Framework Guides
 
