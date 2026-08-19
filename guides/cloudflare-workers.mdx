@@ -11,18 +11,22 @@ The SDK runs on workerd natively, with no `nodejs_compat` flag, so a Worker gets
   Edge runtime support landed in `@ahasend/sdk` 0.2.0. On 0.1.0 the constructor refuses to run on Workers, so upgrade before following this guide.
 </Note>
 
+<Warning>
+  The 0.2.0 README and release gates list workerd as maintained, but the published 0.2.0 `SECURITY.md` limits production security support to Node.js 22+ and says edge runtimes are outside that boundary. If that support boundary is a requirement, run the SDK on a supported Node.js backend until the policy is reconciled.
+</Warning>
+
 ## Prerequisites
 
 - A Workers project set up with [Wrangler](https://developers.cloudflare.com/workers/wrangler/)
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) scoped to `messages:send:{your-domain}`, matching the domain in `from.email`, and your account ID
 
 If you're starting from scratch:
 
 <CodeGroup>
 
 ```bash npm
-npm create cloudflare@latest my-worker
+npm create cloudflare@latest -- my-worker
 ```
 
 ```bash pnpm
@@ -44,19 +48,19 @@ bun create cloudflare@latest my-worker
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk
+npm install --save-exact @ahasend/sdk@0.2.0
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk
+pnpm add --save-exact @ahasend/sdk@0.2.0
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk
+yarn add --exact @ahasend/sdk@0.2.0
 ```
 
 ```bash bun
-bun add @ahasend/sdk
+bun add --exact @ahasend/sdk@0.2.0
 ```
 
 </CodeGroup>
@@ -66,24 +70,35 @@ bun add @ahasend/sdk
 Store credentials as Worker secrets, never in the `wrangler.toml` `vars` block, which ends up in source control:
 
 ```bash
-wrangler secret put AHASEND_API_KEY
-wrangler secret put AHASEND_ACCOUNT_ID
-wrangler secret put AHASEND_WEBHOOK_SECRET
+npx wrangler secret put AHASEND_API_KEY
+npx wrangler secret put AHASEND_ACCOUNT_ID
+npx wrangler secret put AHASEND_WEBHOOK_SECRET
+npx wrangler secret put AHASEND_SEND_TOKEN
 ```
 
-For local development, put the same values in a `.dev.vars` file, which is git-ignored by default. Type the bindings in your Worker:
+`AHASEND_SEND_TOKEN` is a high-entropy credential for the server-to-server example below. Do not expose it to browser code.
+
+For local development, put the same values in a `.dev.vars` file. Cloudflare requires you to ignore local secret files explicitly; add these patterns before creating the file:
+
+```text .gitignore
+.dev.vars*
+.env*
+```
+
+Type the bindings in your Worker:
 
 ```ts src/index.ts
 export interface Env {
   AHASEND_API_KEY: string;
   AHASEND_ACCOUNT_ID: string;
   AHASEND_WEBHOOK_SECRET: string;
+  AHASEND_SEND_TOKEN: string;
 }
 ```
 
 ## Send an Email from a Worker
 
-Workers have no `process.env`, so secrets arrive on the `env` argument and the client is built per request rather than at module scope:
+In this `nodejs_compat`-free setup, secrets arrive on the `env` argument and the client is built per request rather than at module scope. This example is a server-to-server endpoint protected by its own bearer token. For browser-facing flows, authenticate the user with your application and load the recipient from a trusted user record; never accept an arbitrary recipient from an unauthenticated request.
 
 ```ts src/index.ts
 import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
@@ -93,7 +108,28 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === "POST" && url.pathname === "/api/welcome") {
-      const { email, name } = await request.json<{ email: string; name?: string }>();
+      if (
+        !env.AHASEND_SEND_TOKEN ||
+        request.headers.get("authorization") !== `Bearer ${env.AHASEND_SEND_TOKEN}`
+      ) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      let body: { email?: unknown; name?: unknown; eventId?: unknown };
+      try {
+        body = await request.json();
+      } catch {
+        return Response.json({ error: "Invalid JSON" }, { status: 400 });
+      }
+
+      if (
+        typeof body.email !== "string" ||
+        (body.name !== undefined && typeof body.name !== "string") ||
+        typeof body.eventId !== "string" ||
+        !/^[A-Za-z0-9._:-]{1,200}$/.test(body.eventId)
+      ) {
+        return Response.json({ error: "Invalid request" }, { status: 400 });
+      }
 
       const ahasend = new AhaSendClient({
         apiKey: env.AHASEND_API_KEY,
@@ -101,18 +137,25 @@ export default {
       });
 
       try {
+        const sandbox = true;
         const result = await ahasend.messages.send({
           from: { email: "hello@yourdomain.com", name: "Your App" },
-          recipients: [{ email, name }],
+          recipients: [{ email: body.email, name: body.name }],
           subject: "Welcome to Your App",
           html_content: "<h1>Welcome aboard</h1><p>We're glad you're here.</p>",
           text_content: "Welcome aboard. We're glad you're here.",
+          sandbox,
+        }, {
+          idempotencyKey: `${sandbox ? "sandbox" : "live"}-welcome-${body.eventId}`,
         });
 
         const rejected = result.data.filter((r) => r.status === "error");
-        if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+        if (rejected.length > 0) {
+          console.warn("AhaSend rejected a recipient", { failedCount: rejected.length });
+          return Response.json({ error: "Recipient rejected" }, { status: 502 });
+        }
 
-        return Response.json({ statuses: result.data.map((r) => r.status) });
+        return Response.json({ accepted: true });
       } catch (err) {
         if (err instanceof AhaSendAPIError) {
           console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
@@ -127,9 +170,9 @@ export default {
 };
 ```
 
-A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first. The stable `eventId` also makes a later retry of the same welcome operation use the same AhaSend idempotency key.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+The example defaults to `sandbox = true`, which validates without delivering. Change it to `false` only after you have tested the route and intend to send real mail. The mode is part of the idempotency key so a recent sandbox result cannot be replayed for the live request; keep each `eventId` bound to the same logical request data.
 
 <Warning>
   Isolates are reused across requests, so never cache the client in a module-scope variable keyed to one request's `env`. Constructing it inside `fetch` is cheap and keeps each request's credentials scoped to that request.
@@ -137,57 +180,52 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-The webhooks subpath verifies signatures with Web Crypto, which workerd provides natively. Read the body with `request.text()`, not `request.json()`, so the verifier sees the exact bytes AhaSend signed:
+The webhooks subpath verifies signatures with Web Crypto, which workerd provides natively. The SDK's `nextRouteHandler` is its web-standard `Request`/`Response` adapter despite the name, so it also works in Workers. It streams the authentic body bytes, stops above the configured limit, and returns an opaque 400 or 413 for verification failures:
 
 ```ts src/index.ts
-import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
+import {
+  WebhookVerifier,
+  isKnownWebhookEvent,
+  nextRouteHandler,
+} from "@ahasend/sdk/webhooks";
 
 // inside the fetch handler:
 if (request.method === "POST" && url.pathname === "/webhooks/ahasend") {
   const verifier = new WebhookVerifier(env.AHASEND_WEBHOOK_SECRET);
 
-  let event;
-  try {
-    event = await verifier.parse(request.headers, await request.text());
-  } catch {
-    return new Response("Invalid signature", { status: 400 });
-  }
-
-  if (isKnownWebhookEvent(event)) {
-    switch (event.type) {
-      case "message.delivered":
-        console.log(`Delivered to ${event.data.recipient}`);
-        break;
-      case "message.bounced":
-        console.log(`Bounced: ${event.data.recipient}`);
-        break;
-      case "message.opened":
-        console.log(`Opened by ${event.data.recipient}`);
-        break;
-    }
-  }
-
-  return new Response(null, { status: 200 });
+  return nextRouteHandler(
+    verifier,
+    async (event, verifiedRequest) => {
+      const webhookId = verifiedRequest.headers.get("webhook-id");
+      if (isKnownWebhookEvent(event) && webhookId) {
+        console.log("Verified AhaSend webhook", { type: event.type, webhookId });
+      }
+      return new Response(null, { status: 200 });
+    },
+    { maxBodyBytes: 1_000_000 },
+  )(request);
 }
 ```
 
-`parse()` is asynchronous as of 0.2.0, so it must be awaited before you treat the payload as trusted.
+The adapter awaits `parse()` before invoking the callback. The callback therefore receives a trusted, parsed event; this verification-only example deliberately performs no business side effects and logs no event or recipient data. Keep `maxBodyBytes` within your isolate's memory and concurrency budget; it may narrow, but never raise, the verifier's fixed 30,000,000-byte ceiling.
+
+Signature timestamp checking is not replay protection. Before adding side effects, atomically commit the verified `webhook-id` together with durable processing work (for example, in a Durable Object or D1 transaction), acknowledge duplicates with 2xx, and process that work idempotently. Do not mark an ID handled in one operation and enqueue its work in another: a crash between them loses the event.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://my-worker.your-subdomain.workers.dev/webhooks/ahasend`, and copy its secret into the `AHASEND_WEBHOOK_SECRET` secret exactly as shown, including the `aha-whsec-` prefix.
 
 ## Deploy
 
 ```bash
-wrangler deploy
+npx wrangler deploy
 ```
 
 ## Going Further
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each one gets a separate, individually-substituted message.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe retries of the same business operation. Reusing a key after the server's 24-hour retention window does not prevent a new send.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-- **Queues**: for bursts, push the send onto a [Cloudflare Queue](https://developers.cloudflare.com/queues/) and send from the consumer, so a slow upstream never holds the request open.
+- **Queues**: for bursts, push the send onto a [Cloudflare Queue](https://developers.cloudflare.com/queues/) and send from the consumer. Derive a stable AhaSend idempotency key from the queue message or business ID, acknowledge each message only after an accepted send, and configure a dead-letter queue; Cloudflare retries failed batches and otherwise discards messages after their retry limit.
 
 See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration in depth, and the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes.
 
@@ -198,10 +236,10 @@ See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration in dept
     You are on `@ahasend/sdk` 0.1.0, which refuses edge runtimes. Upgrade to 0.2.0 or later, where workerd is a supported runtime and no `nodejs_compat` flag is needed.
   </Accordion>
   <Accordion title="Webhook verification always returns 400">
-    Three usual causes: the body was read with `request.json()` and re-serialized, which changes the byte layout, so always verify `await request.text()` first; `parse()` was called without `await`, so the rejection never surfaced; or the secret is missing its `aha-whsec-` prefix.
+    Two usual causes are a body parser consuming or re-serializing the body before `nextRouteHandler` sees it, and a secret missing its `aha-whsec-` prefix. Pass the original `Request` to the adapter without reading its body first.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
-    Workers have no `process.env`. Read the key from the `env` argument, and confirm the secret is set with `wrangler secret put` for production and in `.dev.vars` locally.
+    In the setup shown here, read the key from the `env` argument, and confirm the secret is set with `npx wrangler secret put` for production and in `.dev.vars` locally.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
