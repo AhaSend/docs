@@ -7,14 +7,6 @@ keywords: ["cloudflare workers send email", "cloudflare workers email api", "wor
 
 The SDK runs on workerd natively, with no `nodejs_compat` flag, so a Worker gets the same typed client, retries and webhook verifier as a Node server.
 
-<Note>
-  Edge runtime support landed in `@ahasend/sdk` 0.2.0. On 0.1.0 the constructor refuses to run on Workers, so upgrade before following this guide.
-</Note>
-
-<Warning>
-  The 0.2.0 README and release gates list workerd as maintained, but the published 0.2.0 `SECURITY.md` limits production security support to Node.js 22+ and says edge runtimes are outside that boundary. If that support boundary is a requirement, run the SDK on a supported Node.js backend until the policy is reconciled.
-</Warning>
-
 ## Prerequisites
 
 - A Workers project set up with [Wrangler](https://developers.cloudflare.com/workers/wrangler/)
@@ -48,19 +40,19 @@ bun create cloudflare@latest my-worker
 <CodeGroup>
 
 ```bash npm
-npm install --save-exact @ahasend/sdk@0.2.0
+npm install @ahasend/sdk
 ```
 
 ```bash pnpm
-pnpm add --save-exact @ahasend/sdk@0.2.0
+pnpm add @ahasend/sdk
 ```
 
 ```bash yarn
-yarn add --exact @ahasend/sdk@0.2.0
+yarn add @ahasend/sdk
 ```
 
 ```bash bun
-bun add --exact @ahasend/sdk@0.2.0
+bun add @ahasend/sdk
 ```
 
 </CodeGroup>
@@ -233,7 +225,7 @@ See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration in dept
 
 <AccordionGroup>
   <Accordion title="Constructor throws about an unsupported environment">
-    You are on `@ahasend/sdk` 0.1.0, which refuses edge runtimes. Upgrade to 0.2.0 or later, where workerd is a supported runtime and no `nodejs_compat` flag is needed.
+    Reinstall the current SDK release and redeploy. Workerd is supported without the `nodejs_compat` flag, so also confirm the client runs inside the Worker rather than browser code.
   </Accordion>
   <Accordion title="Webhook verification always returns 400">
     Two usual causes are a body parser consuming or re-serializing the body before `nextRouteHandler` sees it, and a secret missing its `aha-whsec-` prefix. Pass the original `Request` to the adapter without reading its body first.
