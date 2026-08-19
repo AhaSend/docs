@@ -15,7 +15,7 @@ Claude can write and run code, but it can't verify your domain or mint your cred
 1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). Unverified domains cannot send and produce an API error.
 2. **Create an API key.** Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` rather than `messages:send:all`: if it leaks, the blast radius is one domain's mail, not your whole account. Grab your **account ID** too.
 
-Put both in your environment as `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. If you use the `.env` file shown later, create it yourself, ensure `.env` is ignored by git before adding the values, and do not paste the values into Claude or ask it to read or echo the file. Claude Code persists conversations and tool activity locally. You'll also need Node.js 22 or later, the minimum the SDK supports.
+Put both in your environment as `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. If you use the `.env` file shown later, create it yourself, ensure `.env` is ignored by git before adding the values, and do not paste the values into Claude or ask it to read or echo the file. Claude Code persists conversations and tool activity locally. You'll also need Node.js installed.
 
 ## Step 1: Install the SDK
 
@@ -24,24 +24,22 @@ Do this before you prompt. An agent that finds the dependency already present ha
 <CodeGroup>
 
 ```bash npm
-npm install --save-exact @ahasend/sdk
+npm install @ahasend/sdk
 ```
 
 ```bash pnpm
-pnpm add --save-exact @ahasend/sdk
+pnpm add @ahasend/sdk
 ```
 
 ```bash yarn
-yarn add --exact @ahasend/sdk
+yarn add @ahasend/sdk
 ```
 
 ```bash bun
-bun add --exact @ahasend/sdk
+bun add @ahasend/sdk
 ```
 
 </CodeGroup>
-
-The SDK is still pre-1.0. Keep the installed version exact in production, commit the lockfile, and review its changelog before upgrading.
 
 ## Step 2: Write a CLAUDE.md With the Real API Facts
 
@@ -50,10 +48,10 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
 ```markdown CLAUDE.md
 ## Sending email (AhaSend)
 
-- Use the official SDK: `@ahasend/sdk` on npm, Node.js 22 or later.
+- Use the official SDK: `@ahasend/sdk` on npm.
   Do not invent a package name and do not hand-roll fetch calls.
-- Server-side only. Supported runtimes: Node.js 22, 24, 26, Deno latest
-  2.x, Bun latest, Cloudflare workerd (no `nodejs_compat` needed), and
+- Server-side only. Supported runtimes include Node.js, Deno, Bun,
+  Cloudflare workerd (no `nodejs_compat` needed), and
   Vercel Edge. Keep the client module out of browser bundles. The constructor
   refuses browsers and browser service workers by default, but that is only a
   backstop and does not make exposing a bearer key safe.
@@ -187,8 +185,8 @@ Then merge, set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_WEBHOOK_SE
   <Accordion title="Claude wrote code against a package that isn't installed">
     Add `@ahasend/sdk` to `package.json` yourself before prompting. Run `/context` and check **Memory files** to confirm the intended `CLAUDE.md` loaded; use `/memory` to inspect or edit the configured files. Start a new session if you created the file after the current session began.
   </Accordion>
-  <Accordion title="The sandbox script fails with a Node version error">
-    The SDK declares `engines.node >= 22` and uses Node's built-in fetch. Check `node --version` in the terminal Claude is using, not just your shell, since a version manager can leave the agent on an older runtime.
+  <Accordion title="The sandbox script fails with a Node runtime error">
+    Check the Node runtime in the terminal Claude is using, not just your shell, since a version manager can leave the agent on a different runtime than your normal session.
   </Accordion>
   <Accordion title="Bounce webhook never reaches the handler">
     Sandbox sends fire the matching webhook, but only if a webhook is configured in the dashboard and pointed at a URL AhaSend can reach. During local development, expose the endpoint through a tunnel and check the secret is copied exactly, including the `aha-whsec-` prefix.
