@@ -9,40 +9,41 @@ In [NestJS](https://nestjs.com) the send belongs in an injectable service. The w
 
 ## Prerequisites
 
-- Node.js 22 or later
+- Node.js
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:yourdomain.com` scope, and your account ID
 
 ## Install the SDK
 
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk @nestjs/config
+npm install @ahasend/sdk @nestjs/config class-transformer class-validator
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk @nestjs/config
+pnpm add @ahasend/sdk @nestjs/config class-transformer class-validator
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk @nestjs/config
+yarn add @ahasend/sdk @nestjs/config class-transformer class-validator
 ```
 
 ```bash bun
-bun add @ahasend/sdk @nestjs/config
+bun add @ahasend/sdk @nestjs/config class-transformer class-validator
 ```
 
 </CodeGroup>
 
 ## Configure Environment Variables
 
-Add your credentials to `.env`, which `@nestjs/config` loads automatically:
+For local development, add your credentials to an uncommitted `.env` file, which `@nestjs/config` loads. In production, inject the same variables from your platform's secret manager:
 
 ```bash .env
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_API_TOKEN=generate-a-long-random-service-token
 ```
 
 Enable the config module globally in `AppModule`:
@@ -53,23 +54,25 @@ import { ConfigModule } from "@nestjs/config";
 import { AhaSendService } from "./mail/ahasend.service";
 import { MailController } from "./mail/mail.controller";
 import { WebhookController } from "./mail/webhook.controller";
+import { InternalAuthGuard } from "./mail/internal-auth.guard";
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true })],
   controllers: [MailController, WebhookController],
-  providers: [AhaSendService],
+  providers: [AhaSendService, InternalAuthGuard],
 })
 export class AppModule {}
 ```
 
 ## Create the Client
 
-Wrap `AhaSendClient` in an injectable service. Nest providers are singletons by default, so the client is created exactly once per process, which is what the SDK expects, since it maintains its own connection pooling and retry state:
+Wrap `AhaSendClient` in an injectable service. Nest providers are singletons by default, so this reuses one configured client and any optional local rate limiter across requests. The SDK still creates a fresh automatic idempotency key for each logical send call and reuses it only for that call's internal retries:
 
 ```ts mail/ahasend.service.ts
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { AhaSendClient } from "@ahasend/sdk";
+import { createHash } from "node:crypto";
 
 @Injectable()
 export class AhaSendService {
@@ -82,14 +85,15 @@ export class AhaSendService {
     });
   }
 
-  async sendWelcome(email: string, name?: string) {
+  async sendWelcome(signupId: string, email: string, name?: string) {
+    const idempotencyKey = `welcome-${createHash("sha256").update(signupId).digest("hex")}`;
     const result = await this.client.messages.send({
       from: { email: "hello@yourdomain.com", name: "Your App" },
       recipients: [{ email, name }],
       subject: "Welcome to Your App!",
       html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
       text_content: "Welcome aboard! We're glad you're here.",
-    });
+    }, { idempotencyKey });
     const rejected = result.data.filter((r) => r.status === "error");
     return { queued: result.data.length - rejected.length, rejected: rejected.length };
   }
@@ -100,31 +104,113 @@ A 202 is a **multi-status** response: `result.data` holds one entry per recipien
 
 ## Send an Email from a NestJS Controller
 
-```ts mail/mail.controller.ts
-import { BadGatewayException, Body, Controller, Post } from "@nestjs/common";
-import { AhaSendAPIError } from "@ahasend/sdk";
-import { AhaSendService } from "./ahasend.service";
+Do not expose a send-any-email route to unauthenticated clients. This example protects a backend-to-backend HTTPS route with a long random bearer token. If your app already authenticates users, replace this guard with your existing guard and load the recipient address from your trusted user record instead of accepting an arbitrary address from the browser.
 
-@Controller("api")
-export class MailController {
-  constructor(private readonly ahasend: AhaSendService) {}
+```ts mail/internal-auth.guard.ts
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { createHash, timingSafeEqual } from "node:crypto";
+import type { Request } from "express";
 
-  @Post("welcome")
-  async welcome(@Body() body: { email: string; name?: string }) {
-    try {
-      return await this.ahasend.sendWelcome(body.email, body.name);
-    } catch (err) {
-      if (err instanceof AhaSendAPIError) {
-        console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-        throw new BadGatewayException("Failed to send email");
-      }
-      throw err;
+@Injectable()
+export class InternalAuthGuard implements CanActivate {
+  private readonly expected: Buffer;
+
+  constructor(config: ConfigService) {
+    const token = config.getOrThrow<string>("WELCOME_API_TOKEN");
+    if (token.length < 32) {
+      throw new Error("WELCOME_API_TOKEN must contain at least 32 characters");
     }
+    this.expected = createHash("sha256").update(token).digest();
+  }
+
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<Request>();
+    const parts = request.headers.authorization?.split(" ") ?? [];
+    if (parts.length !== 2 || parts[0] !== "Bearer") {
+      throw new UnauthorizedException();
+    }
+
+    const actual = createHash("sha256").update(parts[1]).digest();
+    if (!timingSafeEqual(actual, this.expected)) {
+      throw new UnauthorizedException();
+    }
+    return true;
   }
 }
 ```
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
+Use a concrete DTO so Nest has runtime validation metadata:
+
+```ts mail/welcome.dto.ts
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
+
+export class WelcomeDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  signupId!: string;
+
+  @IsEmail()
+  email!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  name?: string;
+}
+```
+
+```ts mail/mail.controller.ts
+import {
+  BadGatewayException,
+  Body,
+  Controller,
+  Logger,
+  Post,
+  UnprocessableEntityException,
+  UseGuards,
+} from "@nestjs/common";
+import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
+import { AhaSendService } from "./ahasend.service";
+import { InternalAuthGuard } from "./internal-auth.guard";
+import { WelcomeDto } from "./welcome.dto";
+
+@Controller("api")
+@UseGuards(InternalAuthGuard)
+export class MailController {
+  private readonly logger = new Logger(MailController.name);
+
+  constructor(private readonly ahasend: AhaSendService) {}
+
+  @Post("welcome")
+  async welcome(@Body() body: WelcomeDto) {
+    let result: { queued: number; rejected: number };
+    try {
+      result = await this.ahasend.sendWelcome(body.signupId, body.email, body.name);
+    } catch (err) {
+      if (AhaSendAPIError.is(err)) {
+        this.logger.error(`AhaSend API error ${err.status}; request ${err.requestId ?? "unknown"}`);
+      } else if (isAhaSendError(err)) {
+        this.logger.error(`AhaSend SDK error: ${err.code}`);
+      } else {
+        this.logger.error("Unexpected email send failure");
+      }
+      throw new BadGatewayException();
+    }
+
+    if (result.rejected > 0) throw new UnprocessableEntityException();
+    return result;
+  }
+}
+```
+
+The stable, hashed signup ID above lets a retry reuse the same idempotency key without putting a customer identifier in request metadata. Keep the payload stable for a given signup ID; reusing a key with a different payload is rejected.
 
 Add `sandbox: true` to the send request to validate it without delivering anything.
 
@@ -134,66 +220,75 @@ There is no Nest-specific adapter, so use the SDK's generic `WebhookVerifier` di
 
 ```ts main.ts
 import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
-  await app.listen(3000);
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    disableErrorMessages: true,
+  }));
+  app.enableShutdownHooks();
+  await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+bootstrap().catch(() => {
+  console.error("Nest application failed to start");
+  process.exitCode = 1;
+});
 ```
 
-Then verify and dispatch in a controller. `verifier.parse()` is asynchronous as of 0.2.0, so the handler awaits it:
+Then verify and dispatch in a controller. Constructing the verifier through `ConfigService` ensures `.env` has been loaded before the secret is read. `verifier.parse()` verifies the signature and timestamp before it parses the event:
 
 ```ts mail/webhook.controller.ts
 import {
   BadRequestException,
   Controller,
   HttpCode,
+  InternalServerErrorException,
+  Logger,
   Post,
   Req,
   type RawBodyRequest,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import type { Request } from "express";
 import {
   AhaSendWebhookVerificationError,
   WebhookVerifier,
-  isKnownWebhookEvent,
 } from "@ahasend/sdk/webhooks";
-
-const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
 @Controller("webhooks")
 export class WebhookController {
+  private readonly logger = new Logger(WebhookController.name);
+  private readonly verifier: WebhookVerifier;
+
+  constructor(config: ConfigService) {
+    this.verifier = new WebhookVerifier(
+      config.getOrThrow<string>("AHASEND_WEBHOOK_SECRET"),
+    );
+  }
+
   @Post("ahasend")
-  @HttpCode(200)
+  @HttpCode(204)
   async handle(@Req() req: RawBodyRequest<Request>) {
-    let event;
+    if (req.rawBody === undefined) throw new BadRequestException();
+
     try {
-      event = await verifier.parse(req.headers, req.rawBody!);
+      await this.verifier.parse(req.headers, req.rawBody);
     } catch (err) {
       if (err instanceof AhaSendWebhookVerificationError) {
-        throw new BadRequestException("Invalid webhook signature");
+        throw new BadRequestException();
       }
-      throw err;
-    }
-
-    if (!isKnownWebhookEvent(event)) return; // future event type: acknowledge & ignore
-
-    switch (event.type) {
-      case "message.delivered":
-        console.log(`Delivered to ${event.data.recipient}`);
-        break;
-      case "message.bounced":
-        console.log(`Bounced: ${event.data.recipient}`);
-        break;
-      case "message.opened":
-        console.log(`Opened by ${event.data.recipient}`);
-        break;
+      this.logger.error("Unexpected webhook processing failure");
+      throw new InternalServerErrorException();
     }
   }
 }
 ```
+
+This minimal receiver verifies and acknowledges events without side effects. Before adding side effects, atomically record the `webhook-id` header with durable work (for example, an outbox row), acknowledge duplicates with a 2xx response, and process the work idempotently. Timestamp verification alone does not deduplicate a valid replay within the accepted window. Keep a request-body limit at your Nest adapter or reverse proxy and cap concurrent webhook work; do not start untracked background work after responding.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
@@ -201,7 +296,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by one hour.
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
@@ -211,7 +306,7 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 
 <AccordionGroup>
   <Accordion title="req.rawBody is undefined">
-    Nest only captures the raw body when you pass `{ rawBody: true }` to `NestFactory.create`. Without it, `verifier.parse` receives `undefined` and throws. If you use the Fastify platform (`NestFastifyApplication`), `rawBody: true` works there too: the raw bytes land on `req.rawBody` the same way.
+    Nest only captures the raw body when you pass `{ rawBody: true }` to `NestFactory.create`. Without it, this controller rejects the request. If you switch to the Fastify adapter, follow Nest's Fastify raw-body setup and use Fastify's request type instead of Express's `Request` type.
   </Accordion>
   <Accordion title="Webhook endpoint returns 400 for every delivery">
     Beyond a missing raw body, check that `AHASEND_WEBHOOK_SECRET` matches the dashboard value exactly (including the `aha-whsec-` prefix) and that no proxy in front of Nest rewrites the request body (which invalidates the HMAC).
