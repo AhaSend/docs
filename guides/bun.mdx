@@ -9,7 +9,7 @@ keywords: ["bun send email", "bun transactional email", "bun email api", "ahasen
 
 ## Prerequisites
 
-- Bun 1.0 or later
+- The latest stable Bun release
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 
@@ -17,7 +17,9 @@ keywords: ["bun send email", "bun transactional email", "bun email api", "ahasen
 
 ```bash
 bun add @ahasend/sdk
-```The latest Bun is a supported runtime for the package, so no shims or flags are needed.
+```
+
+The latest Bun is a supported runtime for the package, so no shims or flags are needed.
 
 ## Configure Environment Variables
 
@@ -50,12 +52,15 @@ export const ahasend = new AhaSendClient({
 
 `Bun.serve` with a fetch handler is all the HTTP server you need:
 
+This example assumes your application authenticates the caller and validates the request body before reaching this handler. Do not expose a send endpoint that lets arbitrary callers spend your AhaSend quota.
+
 ```ts server.ts
 import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend";
 
 Bun.serve({
   port: 3000,
+  maxRequestBodySize: 30_000_000,
   async fetch(req) {
     const url = new URL(req.url);
 
@@ -77,7 +82,10 @@ Bun.serve({
         return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
       } catch (err) {
         if (err instanceof AhaSendAPIError) {
-          console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+          console.error("AhaSend request failed", {
+            status: err.status,
+            requestId: err.requestId,
+          });
           return Response.json({ error: "Failed to send email" }, { status: 502 });
         }
         throw err;
@@ -91,13 +99,13 @@ Bun.serve({
 
 Run it with `bun run server.ts`. A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
+The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. For a business operation your application may retry later, pass a stable `idempotencyKey`, reuse it only with the exact same request payload, and remember that the server retains non-secret results for 24 hours.
 
 Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks
 
-There's no Bun-specific adapter, and you don't need one: `verifier.parse()` accepts a Fetch `Headers` object and a raw body string directly, which is exactly what a Bun `Request` gives you. `parse()` is asynchronous as of 0.2.0, so await it. Read the body with `req.text()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed.
+There's no Bun-specific adapter, and you don't need one: `verifier.parse()` accepts a Fetch `Headers` object and raw `Uint8Array` body directly. `parse()` is asynchronous as of 0.2.0, so await it. Read the body with `req.arrayBuffer()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed. The server configuration above caps request bodies at the verifier's fixed 30,000,000-byte limit before the handler reads them.
 
 ```ts server.ts
 import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
@@ -108,7 +116,8 @@ const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
   let event;
   try {
-    event = await verifier.parse(req.headers, await req.text());
+    const rawBody = new Uint8Array(await req.arrayBuffer());
+    event = await verifier.parse(req.headers, rawBody);
   } catch {
     return new Response("Invalid signature", { status: 400 });
   }
@@ -116,13 +125,13 @@ if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
   if (isKnownWebhookEvent(event)) {
     switch (event.type) {
       case "message.delivered":
-        console.log(`Delivered to ${event.data.recipient}`);
+        console.log("Message delivered");
         break;
       case "message.bounced":
-        console.log(`Bounced: ${event.data.recipient}`);
+        console.log("Message bounced");
         break;
       case "message.opened":
-        console.log(`Opened by ${event.data.recipient}`);
+        console.log("Message opened");
         break;
     }
   }
@@ -131,15 +140,17 @@ if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
 }
 ```
 
+Webhooks can be delivered more than once. After verification and before performing side effects, atomically commit the `webhook-id` and durable work (such as an outbox job) in the same transaction. Acknowledge an ID that transaction has already committed without enqueueing it again.
+
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
 ## Going Further
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour.
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+- **Attachments**: pass `attachments: [{ data: pdfBase64, content_type: "application/pdf", file_name: "document.pdf", base64: true }]`. When `base64` is `true`, `data` must already be base64-encoded.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Prefer a framework on top of Bun? The [ElysiaJS guide](/guides/elysiajs) uses the same SDK with typed routes.
 
@@ -147,10 +158,10 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 
 <AccordionGroup>
   <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. Bun only auto-loads `.env` from the directory you run `bun` in. If you start the server from a subdirectory, the file won't be picked up. Log `process.env.AHASEND_API_KEY?.slice(0, 8)` to confirm it's loaded.
+    The API key is missing, malformed, or revoked. Bun loads `.env` automatically; if the expected file is not being found, confirm the process working directory or select it explicitly with `bun --env-file=/path/to/.env run server.ts`. Check only whether the variable is present—for example, `console.log(Boolean(process.env.AHASEND_API_KEY))`—and never log any part of the key.
   </Accordion>
   <Accordion title="Webhook verification fails with 400">
-    Make sure you pass `await req.text()` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes key order and whitespace, so the signature no longer matches.
+    Make sure you pass `new Uint8Array(await req.arrayBuffer())` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes key order and whitespace, so the signature no longer matches.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
