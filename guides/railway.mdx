@@ -5,72 +5,91 @@ description: "Deploy a Node.js app that sends transactional email with the AhaSe
 keywords: ["railway deploy nodejs email", "railway transactional email", "railway environment variables", "ahasend railway", "railway webhook url"]
 ---
 
-Railway runs your app as a long-lived Node.js process, so the SDK works with no serverless or edge caveats. This guide deploys the [Express app](/guides/express); any Node.js framework ([Fastify](/guides/fastify), [Koa](/guides/koa), [NestJS](/guides/nestjs)) deploys the same way.
+This guide deploys the [Express app](/guides/express) as a persistent Railway service. The same deployment steps apply to other Node.js frameworks such as [Fastify](/guides/fastify), [Koa](/guides/koa), and [NestJS](/guides/nestjs).
 
 ## Prerequisites
 
 - A [Railway account](https://railway.com) and the [Railway CLI](https://docs.railway.com/guides/cli) installed, or a GitHub repo connected to the service
-- Node.js 22 or later
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:yourdomain.com` scope for your sending domain, and your account ID
 
 ## What You're Deploying
 
-Any app that sends with the SDK, for example:
+Use the SDK client in the completed [Express app](/guides/express):
 
 ```ts server.ts
 import { AhaSendClient } from "@ahasend/sdk";
 
-const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
-});
-
-// ...routes that call ahasend.messages.send({ from: { email: "hello@yourdomain.com" }, ... })
+const ahasend = AhaSendClient.fromEnv();
 ```
 
 A send returns a **multi-status** result, one entry in `result.data` per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds, so check every entry: `const rejected = result.data.filter((r) => r.status === "error")`.
 
-<Note>
-  Railway injects a `PORT` environment variable and routes public traffic to it. Make sure your server listens on it:
+Railway injects a `PORT` environment variable. Add a health endpoint, bind the server to that port on `0.0.0.0`, and stop accepting new requests when Railway sends `SIGTERM`:
 
-```ts
-app.listen(Number(process.env.PORT) || 3000);
+```ts server.ts
+app.get("/health", (_req, res) => res.sendStatus(200));
+
+const port = Number(process.env.PORT ?? "3000");
+if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
+  throw new Error("PORT must be a valid TCP port");
+}
+
+const server = app.listen(port, "0.0.0.0");
+
+process.once("SIGTERM", () => {
+  server.close((error) => {
+    if (error) {
+      console.error("Failed to close the HTTP server", error);
+      process.exitCode = 1;
+    }
+  });
+});
 ```
-</Note>
 
-## Pin the Node Version
+## Configure Deployment Health and Draining
 
-The SDK requires **Node.js 22 or later**, and Railway's builder picks a default version if you don't say otherwise. Pin it explicitly by adding an `engines` field to `package.json`:
+Commit a `railway.json` file so Railway waits for the health endpoint before activating a new deployment and gives the previous process time to close in-flight requests after `SIGTERM`:
 
-```json package.json
+```json railway.json
 {
-  "engines": { "node": ">=22" }
+  "$schema": "https://railway.com/railway.schema.json",
+  "deploy": {
+    "healthcheckPath": "/health",
+    "drainingSeconds": "30"
+  }
 }
 ```
 
-Nixpacks reads that field; you can also set `NIXPACKS_NODE_VERSION=22` as a service variable, or use a `FROM node:22-slim` base image if you deploy with a Dockerfile.
+Railway health checks gate a deployment; they are not continuous monitoring after it goes live. Draining only gives active HTTP requests time to finish, so put work that must survive a restart in a durable queue or outbox.
 
 ## Deploy
 
 <Steps>
-  <Step title="Create or link the project">
+  <Step title="Create or link the service">
+  With the CLI, create a project and empty service, or link the current directory to the intended service in an existing project:
+
 ```bash
 railway init # new project
+railway add --service ahasend-app
 # or, inside an existing project's repo:
 railway link
 ```
+
+    When `railway link` prompts, select the service that should receive the variables and deployment. To deploy from GitHub without the CLI, create a project in the Railway dashboard, choose **Deploy from GitHub repo**, and select the repository; Railway creates the service from it.
 </Step>
 <Step title="Set the variables">
-  In the Railway dashboard, open your service and go to **Variables**, or use the CLI:
+  In the Railway dashboard, open your service and go to **Variables**. Add `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`, plus `AHASEND_WEBHOOK_SECRET` if the app receives webhooks. Seal the API key and webhook secret after setting them so their values cannot be read back through the dashboard or API.
+
+  With the CLI, use the current `variable set` command. Sending secrets over standard input keeps their values out of the command line:
 
 ```bash
-railway variables --set "AHASEND_API_KEY=aha-sk-..." \
-  --set "AHASEND_ACCOUNT_ID=your-account-uuid" \
-  --set "AHASEND_WEBHOOK_SECRET=aha-whsec-..."
+railway variable set AHASEND_ACCOUNT_ID=your-account-uuid --skip-deploys
+railway variable set AHASEND_API_KEY --stdin --skip-deploys
+railway variable set AHASEND_WEBHOOK_SECRET --stdin --skip-deploys
 ```
 
-    Railway can **seal** a variable so its value can never be read back from the dashboard, a good fit for the API key. If several services need the same credentials, define them once as **shared variables** at the project level and reference them from each service.
+    Paste one secret into each `--stdin` command and then send end-of-file. The `--skip-deploys` flags prevent deployments with only part of the configuration; the next step deploys all three values together. Dashboard changes are staged until you review and deploy them. Sealed values cannot be recovered or copied to preview environments, so retain them in your secret manager. If several services in the same environment need the credentials, define shared variables and reference them only from those services.
 </Step>
 <Step title="Deploy">
   Push straight from your machine:
@@ -79,7 +98,7 @@ railway variables --set "AHASEND_API_KEY=aha-sk-..." \
 railway up
 ```
 
-    Or connect the GitHub repo in the service settings, and Railway builds and deploys on every push. Variable changes trigger a redeploy so the new values are picked up.
+    For a GitHub service, review and deploy any staged variable changes in the dashboard, then push the app to the linked branch. Railway deploys subsequent pushes to that branch automatically.
 </Step>
 </Steps>
 
@@ -91,26 +110,26 @@ Your service is private by default. To receive AhaSend webhooks, generate a publ
 https://your-app.up.railway.app/webhooks/ahasend
 ```
 
-Because Railway processes are long-lived, the SDK's Express webhook adapter (see [Handle webhooks](/guides/express#handle-webhooks)) runs exactly as it does locally. On Express 5.x there's no raw-body setup at all: mount `expressWebhookHandler` directly on the route (no `express.raw({ type: "*/*" })`), since the adapter reads and bounds the raw stream itself. Just keep that route out of the reach of any global `express.json()`.
+Mount the SDK's `expressWebhookHandler` directly on the route, with no `express.raw()` and no earlier global JSON parser. The adapter reads and verifies the raw request stream itself. Set a `maxBodyBytes` limit appropriate for your endpoint, enforce the same or a lower limit at any proxy, and cap concurrent requests. Treat the signed timestamp only as a freshness check: atomically claim the webhook ID before side effects, enqueue durable work, return `2xx` only after that durable handoff, and return `2xx` for an already-claimed duplicate. See [Handle webhooks](/guides/express#handle-webhooks) for the full example.
 
 ## Going Further
 
 - **App-side detail**: the [Express guide](/guides/express) covers sends, per-recipient error handling, and the webhook adapter in full.
 - **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for timeouts, retries, and idempotency options.
 - **An alternative host**: [Vercel](/guides/vercel) runs the same SDK on serverless functions if you'd rather not manage a process.
-- **Long-lived processes suit webhooks**: nothing is torn down between deliveries here, so background work after the 2xx keeps running, unlike on serverless.
+- **Durable webhook work**: do not rely on untracked work after returning `2xx`; Railway can redeploy, restart, or scale the process. Hand work to a durable queue or transactional outbox before acknowledging the delivery.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="Deployment is live but the URL returns 502">
-    The app isn't listening on Railway's assigned port. Bind to `process.env.PORT` (and host `0.0.0.0` if your framework asks for one).
+    The app isn't listening on Railway's assigned port and interface. Bind to `process.env.PORT` on host `0.0.0.0`.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError in production">
     The variable is set on a different service or environment than the one that deployed. Check the service's **Variables** tab and confirm the latest deploy happened after you set them.
   </Accordion>
   <Accordion title="Webhook verification fails on Railway but works locally">
-    `AHASEND_WEBHOOK_SECRET` must be copied exactly as shown in the AhaSend dashboard, including the `aha-whsec-` prefix. Watch for shells or quoting stripping characters when using `railway variables --set`.
+    `AHASEND_WEBHOOK_SECRET` must be copied exactly as shown in the AhaSend dashboard, including the `aha-whsec-` prefix. Re-enter it through the dashboard or `railway variable set AHASEND_WEBHOOK_SECRET --stdin` to avoid shell quoting problems.
   </Accordion>
 </AccordionGroup>
