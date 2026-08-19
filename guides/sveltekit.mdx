@@ -1,17 +1,18 @@
 ---
 title: "How to Send Email with SvelteKit"
 sidebarTitle: "SvelteKit"
-description: "Send transactional email from SvelteKit 2 server endpoints with the AhaSend Node.js SDK, keep keys in private env modules, and verify webhooks."
+description: "Send transactional email from SvelteKit server endpoints with the AhaSend TypeScript SDK, keep keys in private env modules, and verify webhooks."
 keywords: ["sveltekit send email", "sveltekit transactional email", "sveltekit server endpoint email", "ahasend sveltekit", "sveltekit webhook verification"]
 ---
 
-Read the key from [SvelteKit](https://svelte.dev/docs/kit)'s `$env/dynamic/private`, never the `PUBLIC_` variants, and a leaked key becomes a build error instead of a production incident.
+Keep your AhaSend credentials in SvelteKit's private environment modules and
+send email only from server endpoints or server form actions.
 
 ## Prerequisites
 
-- Node.js 22 or later and a SvelteKit 2 project
+- A SvelteKit project
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) permitted to send from that domain, and your account ID
 
 ## Install the SDK
 
@@ -37,135 +38,290 @@ bun add @ahasend/sdk
 
 ## Configure Environment Variables
 
-Add your credentials to `.env`, which SvelteKit (via Vite) loads automatically in development:
+Add your credentials to `.env` for local development. The route token protects
+the server-to-server example below; generate a long random value for it.
 
 ```bash .env
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_ROUTE_TOKEN=a-long-random-secret
 ```
 
-Read secrets from a **private** env module. Both work:
+`$env/dynamic/private` exposes the private runtime variables supplied by your
+deployment platform. With `adapter-node`, these are equivalent to
+`process.env`. Configure the same variables in your deployment platform for
+production. Values imported from `$env/static/private` are instead injected at
+build time.
 
-- `$env/dynamic/private`: read at runtime from `process.env`, for deployments that inject variables at start-up.
-- `$env/static/private`: inlined at build time, and the build fails if a variable is missing.
+<Warning>
+  Never prefix these values with `PUBLIC_` or import the client into browser
+  code. Rotate an API key immediately if it is exposed.
+</Warning>
 
 ## Create the Client
 
-Create the client once at module scope and reuse it across requests. SvelteKit refuses to bundle `$lib/server/` modules into client code, so keep it there:
+Create the client once at module scope and reuse it across requests. SvelteKit
+prevents `$lib/server/` modules from being imported into client code, so keep it
+there:
 
 ```ts src/lib/server/ahasend.ts
 import { env } from "$env/dynamic/private";
 import { AhaSendClient } from "@ahasend/sdk";
 
+export function requirePrivateEnv(name: string): string {
+  const value = env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
 export const ahasend = new AhaSendClient({
-  apiKey: env.AHASEND_API_KEY!,
-  accountId: env.AHASEND_ACCOUNT_ID!,
+  apiKey: requirePrivateEnv("AHASEND_API_KEY"),
+  accountId: requirePrivateEnv("AHASEND_ACCOUNT_ID"),
 });
 ```
 
 ## Send an Email from a SvelteKit Endpoint
 
+This example is a server-to-server endpoint. It authenticates the caller before
+reading a bounded request body and requires a stable event ID for safe retries.
+
 ```ts src/routes/api/welcome/+server.ts
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { AhaSendAPIError } from "@ahasend/sdk";
-import { ahasend } from "$lib/server/ahasend";
+import { isAhaSendError } from "@ahasend/sdk";
+import { ahasend, requirePrivateEnv } from "$lib/server/ahasend";
 
-export const POST: RequestHandler = async ({ request }) => {
-  const { email, name } = await request.json();
+const MAX_JSON_BYTES = 16 * 1024;
+
+class BodyTooLargeError extends Error {}
+
+type WelcomeInput = {
+  email: string;
+  name?: string;
+  eventId: string;
+};
+
+function isWelcomeInput(value: unknown): value is WelcomeInput {
+  if (!value || typeof value !== "object") return false;
+  const input = value as Record<string, unknown>;
+  return (
+    typeof input.email === "string" &&
+    input.email.length > 0 &&
+    input.email.length <= 254 &&
+    (input.name === undefined ||
+      (typeof input.name === "string" && input.name.length <= 200)) &&
+    typeof input.eventId === "string" &&
+    /^[A-Za-z0-9._:-]{1,200}$/.test(input.eventId)
+  );
+}
+
+async function readJson(request: Request): Promise<unknown> {
+  if (!request.body) throw new SyntaxError("Missing request body");
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
 
   try {
-    const result = await ahasend.messages.send({
-      from: { email: "hello@yourdomain.com", name: "Your App" },
-      recipients: [{ email, name }],
-      subject: "Welcome to Your App!",
-      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-      text_content: "Welcome aboard! We're glad you're here.",
-    });
-
-    const rejected = result.data.filter((r) => r.status === "error");
-    return json({ queued: result.data.length - rejected.length, rejected });
-  } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-      return json({ error: "Failed to send email" }, { status: 502 });
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > MAX_JSON_BYTES) {
+        await reader.cancel();
+        throw new BodyTooLargeError();
+      }
+      chunks.push(value);
     }
-    throw err;
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+}
+
+async function secretsEqual(left: string, right: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [leftHash, rightHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(left)),
+    crypto.subtle.digest("SHA-256", encoder.encode(right)),
+  ]);
+  const leftBytes = new Uint8Array(leftHash);
+  const rightBytes = new Uint8Array(rightHash);
+  let difference = 0;
+  for (let i = 0; i < leftBytes.length; i += 1) {
+    difference |= leftBytes[i]! ^ rightBytes[i]!;
+  }
+  return difference === 0;
+}
+
+async function isAuthorized(request: Request): Promise<boolean> {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) return false;
+  return secretsEqual(
+    authorization.slice("Bearer ".length),
+    requirePrivateEnv("WELCOME_ROUTE_TOKEN"),
+  );
+}
+
+export const POST: RequestHandler = async ({ request }) => {
+  if (!(await isAuthorized(request))) {
+    return json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!/^application\/json(?:\s*;|$)/i.test(contentType)) {
+    return json({ error: "Content-Type must be application/json" }, { status: 415 });
+  }
+
+  let input: unknown;
+  try {
+    input = await readJson(request);
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return json({ error: "Request body is too large" }, { status: 413 });
+    }
+    return json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!isWelcomeInput(input)) {
+    return json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  try {
+    const result = await ahasend.messages.send(
+      {
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: input.email, name: input.name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      },
+      { idempotencyKey: `welcome:${input.eventId}` },
+    );
+
+    const rejectedCount = result.data.filter((entry) => entry.status === "error").length;
+    if (rejectedCount > 0) {
+      console.error("AhaSend rejected recipients", { rejectedCount });
+      return json({ error: "Email could not be queued" }, { status: 502 });
+    }
+
+    return json({ queued: true }, { status: 202 });
+  } catch (error) {
+    if (isAhaSendError(error)) {
+      const { code, status, requestId } = error.toJSON();
+      console.error("AhaSend request failed", { code, status, requestId });
+    }
+    return json({ error: "Email could not be queued" }, { status: 502 });
   }
 };
 ```
 
-A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+An accepted send is multi-status: `result.data` contains one result per
+recipient, and an entry can have `status: "error"` even though the request
+resolved. Reuse the same `eventId` when retrying the same business operation;
+the stable idempotency key lets AhaSend replay a stored outcome instead of
+creating another send. A server-error outcome can be re-executed, so make the
+surrounding business workflow tolerate an uncertain duplicate. Do not expose or
+log provider errors, recipients, message content, or the idempotency key.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive. Form actions in `+page.server.ts` can call `ahasend.messages.send()` the same way.
-
-Add `sandbox: true` to the send request to validate it without delivering anything.
+For a browser submission, prefer a SvelteKit form action. Authorize it with the
+user's server-side session and derive the recipient on the server instead of
+trusting a browser-supplied address. Add `sandbox: true` to the send request to
+validate it without delivery.
 
 ## Handle Webhooks
 
-Signature verification needs the raw body, so read it with `request.text()` and pass it to `verifier.parse()` together with the request headers; the verifier accepts a Fetch `Headers` object directly. `parse()` is asynchronous as of 0.2.0, so await it:
+The SDK's web-standard request adapter reads a bounded raw body and verifies it
+before invoking your handler:
 
 ```ts src/routes/api/webhooks/ahasend/+server.ts
 import type { RequestHandler } from "./$types";
-import { env } from "$env/dynamic/private";
-import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
+import {
+  WebhookVerifier,
+  isKnownWebhookEvent,
+  nextRouteHandler,
+} from "@ahasend/sdk/webhooks";
+import { requirePrivateEnv } from "$lib/server/ahasend";
 
-let verifier: WebhookVerifier | undefined;
+let route: ReturnType<typeof nextRouteHandler> | undefined;
 
-export const POST: RequestHandler = async ({ request }) => {
-  verifier ??= new WebhookVerifier(env.AHASEND_WEBHOOK_SECRET!);
+export const POST: RequestHandler = ({ request }) => {
+  route ??= nextRouteHandler(
+    new WebhookVerifier(requirePrivateEnv("AHASEND_WEBHOOK_SECRET")),
+    async (event) => {
+      if (isKnownWebhookEvent(event)) {
+        console.log("AhaSend event", event.type);
+      } else {
+        // Acknowledge valid event types not yet recognized by this SDK.
+        console.log("Unknown AhaSend event", event.type);
+      }
+      return new Response(null, { status: 200 });
+    },
+    { maxBodyBytes: 1_000_000 },
+  );
 
-  let event;
-  try {
-    event = await verifier.parse(request.headers, await request.text());
-  } catch {
-    return new Response(null, { status: 400 });
-  }
-
-  if (isKnownWebhookEvent(event)) {
-    switch (event.type) {
-      case "message.delivered":
-        console.log(`Delivered to ${event.data.recipient}`);
-        break;
-      case "message.bounced":
-        console.log(`Bounced: ${event.data.recipient}`);
-        break;
-      case "message.opened":
-        console.log(`Opened by ${event.data.recipient}`);
-        break;
-    }
-  }
-
-  return new Response(null, { status: 200 });
+  return route(request);
 };
 ```
 
-Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+Pass the webhook secret exactly as the dashboard displays it, including the
+`aha-whsec-` prefix. The adapter preserves the exact signed bytes, returns an
+opaque error for an invalid or oversized request, and keeps unknown but valid
+events on the success path.
+
+Before doing business work, atomically claim the verified request's
+`webhook-id` header in durable storage and enqueue the work in the same
+transaction (or use a durable outbox). Acknowledge an already claimed ID and
+make downstream processing idempotent. Timestamp validation alone does not
+prevent replay within the accepted window.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com), point
+it at `https://your-app.com/api/webhooks/ahasend`, and configure its secret as
+`AHASEND_WEBHOOK_SECRET`.
 
 ## Going Further
 
-- **Deployment**: `@sveltejs/adapter-node` and Node serverless targets both work, and so do edge adapters such as `adapter-cloudflare` and Vercel Edge. Edge adapters need `@ahasend/sdk` 0.2.0 or later.
+- **Deployment**: choose a server-capable SvelteKit adapter and configure all private environment variables in its deployment platform. A static build cannot run these endpoints.
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually substituted message.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60_000).toISOString() }` to defer delivery.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`; binary data must be base64 encoded.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. The same server-side pattern works in the other meta-frameworks: see the [Next.js](/guides/nextjs) and [Nuxt](/guides/nuxt) guides.
+See the [API reference](https://ahasend.com/docs/api-reference) for every
+endpoint the SDK exposes. The same server-side pattern works in the other
+meta-frameworks: see the [Next.js](/guides/nextjs) and [Nuxt](/guides/nuxt)
+guides.
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="Cannot import $env/static/private into client-side code">
-    You imported the AhaSend client (or an env module) from a component or `+page.ts` that runs in the browser. Move all SDK usage into `+server.ts`, `+page.server.ts`, or `$lib/server/` modules: SvelteKit enforces this boundary for you.
+    You imported the AhaSend client (or an environment module) from a component
+    or `+page.ts` that runs in the browser. Move all SDK usage into `+server.ts`,
+    `+page.server.ts`, or `$lib/server/` modules. SvelteKit enforces this
+    boundary.
   </Accordion>
   <Accordion title="API key visible in the browser bundle">
-    The variable was prefixed with `PUBLIC_` and imported via a public env module. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and read it only from `$env/dynamic/private` or `$env/static/private`.
+    Rotate the exposed key in the dashboard. Remove any `PUBLIC_` prefix and
+    read the replacement only from `$env/dynamic/private` or
+    `$env/static/private` in server-only code.
   </Accordion>
-  <Accordion title="Error about window or document on deploy">
-    Edge adapters are supported from `@ahasend/sdk` 0.2.0 onwards, so upgrade if you are still on 0.1.0. Keep the key in `$env/dynamic/private` or the platform binding, never in a `PUBLIC_` variable.
+  <Accordion title="Server endpoint is missing after deployment">
+    Confirm that the deployment uses a server-capable adapter rather than a
+    static build and that its runtime has all four private environment
+    variables configured.
   </Accordion>
-  <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. With `$env/static/private` a missing variable fails the build; with `$env/dynamic/private` it fails at request time. Confirm the variable is set in your production environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  <Accordion title="401 from AhaSend">
+    Confirm that the API key and account ID are configured in the production
+    environment and that the key is permitted to send from the domain in
+    `from.email`.
   </Accordion>
 </AccordionGroup>
