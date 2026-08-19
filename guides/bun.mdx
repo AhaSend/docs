@@ -9,7 +9,7 @@ keywords: ["bun send email", "bun transactional email", "bun email api", "ahasen
 
 ## Prerequisites
 
-- The latest stable Bun release
+- Bun installed
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 
@@ -105,7 +105,7 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-There's no Bun-specific adapter, and you don't need one: `verifier.parse()` accepts a Fetch `Headers` object and raw `Uint8Array` body directly. `parse()` is asynchronous as of 0.2.0, so await it. Read the body with `req.arrayBuffer()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed. The server configuration above caps request bodies at the verifier's fixed 30,000,000-byte limit before the handler reads them.
+There's no Bun-specific adapter, and you don't need one: `verifier.parse()` accepts a Fetch `Headers` object and raw `Uint8Array` body directly. `parse()` is asynchronous, so await it. Read the body with `req.arrayBuffer()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed. The server configuration above caps request bodies at the verifier's fixed 30,000,000-byte limit before the handler reads them.
 
 ```ts server.ts
 import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
@@ -167,6 +167,6 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
   <Accordion title="SDK works locally but you plan to deploy to an edge platform">
-    Edge platforms are supported from `@ahasend/sdk` 0.2.0 onwards, Cloudflare workerd included, with no `nodejs_compat` flag. See the [Cloudflare Workers guide](/guides/cloudflare-workers) for the details there.
+    Edge platforms are supported, including Cloudflare workerd with no `nodejs_compat` flag. See the [Cloudflare Workers guide](/guides/cloudflare-workers) for the details there.
   </Accordion>
 </AccordionGroup>
