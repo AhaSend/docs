@@ -9,9 +9,9 @@ Two [Encore.ts](https://encore.dev) specifics shape the code below: credentials 
 
 ## Prerequisites
 
-- Node.js 22 or later and the [Encore CLI](https://encore.dev/docs/ts/install)
+- Node.js and the [Encore CLI](https://encore.dev/docs/ts/install)
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:yourdomain.com` permission, and your account ID
 
 ## Install the SDK
 
@@ -68,26 +68,34 @@ export function ahasend(): AhaSendClient {
 }
 ```
 
-The lazy module-level singleton means the client is constructed once per process, so its retry and idempotency state is reused across requests.
+The lazy module-level singleton means the client is constructed once per process. The SDK still generates a new automatic idempotency key for each logical call and reuses that key only for that call's internal retries.
 
 ## Send an Email from an Encore API Endpoint
 
 ```ts email/welcome.ts
-import { api } from "encore.dev/api";
-import { AhaSendAPIError } from "@ahasend/sdk";
+import { api, APIError } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
+import { createHash } from "node:crypto";
+import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
 import { ahasend } from "./ahasend";
 
 export const sendWelcome = api(
-  { expose: true, method: "POST", path: "/welcome" },
-  async ({ email, name }: { email: string; name: string }) => {
+  { expose: true, auth: true, method: "POST", path: "/welcome" },
+  async () => {
+    const user = getAuthData()!;
+    const welcomeKey = createHash("sha256").update(user.userID).digest("hex");
+
     try {
-      const result = await ahasend().messages.send({
-        from: { email: "hello@yourdomain.com", name: "Your App" },
-        recipients: [{ email, name }],
-        subject: "Welcome to Your App!",
-        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-        text_content: "Welcome aboard! We're glad you're here.",
-      });
+      const result = await ahasend().messages.send(
+        {
+          from: { email: "hello@yourdomain.com", name: "Your App" },
+          recipients: [{ email: user.email }],
+          subject: "Welcome to Your App!",
+          html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+          text_content: "Welcome aboard! We're glad you're here.",
+        },
+        { idempotencyKey: `welcome-${welcomeKey}` },
+      );
 
       const rejected = result.data.filter((r) => r.status === "error");
       if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
@@ -95,80 +103,121 @@ export const sendWelcome = api(
       return { statuses: result.data.map((r) => r.status) }; // ["queued"]
     } catch (err) {
       if (err instanceof AhaSendAPIError) {
-        console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
+        console.error("AhaSend request failed", {
+          status: err.status,
+          requestId: err.requestId,
+          errorCode: err.code,
+        });
+      } else if (isAhaSendError(err)) {
+        console.error("AhaSend request failed", { errorCode: err.code });
+      } else {
+        console.error("Welcome email request failed");
       }
-      throw err;
+      throw APIError.internal("unable to send welcome email");
     }
   },
 );
 ```
 
-A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first. The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
+This assumes your app has an [Encore auth handler](https://encore.dev/docs/ts/develop/auth) whose auth data contains immutable `userID` and verified `email` fields. Taking the recipient from authenticated server data prevents the endpoint from becoming an arbitrary-recipient mail relay. A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+
+The business-stable idempotency key lets a retried signup reuse the same operation. Use the same key only for the exact same payload. AhaSend retains ordinary idempotency results for 24 hours, but server-error outcomes are not stored and a retry can re-execute the send, so this is not an exactly-once guarantee. Persist a completed-welcome marker in your application database when duplicate prevention must last longer, and make the workflow safe to reconcile after an uncertain result.
 
 Run it locally:
 
 ```bash
 encore run
 curl -X POST http://localhost:4000/welcome \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "name": "Jane"}'
+  -H "Authorization: Bearer <your-app-token>"
 ```
 
 Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks with a Raw Endpoint
 
-Signature verification needs the **raw request body**, which Encore's typed endpoints parse away. Use `api.raw` instead: its handler receives a Node `IncomingMessage`, so you collect the body chunks into a Buffer and hand them to the verifier along with the headers. `verifier.parse()` is asynchronous as of 0.2.0, so await it:
+Signature verification needs the **raw request body**, which Encore's typed endpoints parse away. Use `api.raw` instead: its handler receives a Node `IncomingMessage`, so you collect the body chunks into a Buffer and hand them to the verifier along with the headers. `verifier.parse()` is asynchronous, so await it:
 
 ```ts email/webhooks.ts
 import { api } from "encore.dev/api";
 import { secret } from "encore.dev/config";
+import type { IncomingMessage } from "node:http";
 import {
   WebhookVerifier,
-  isKnownWebhookEvent,
   AhaSendWebhookVerificationError,
 } from "@ahasend/sdk/webhooks";
 
 const ahasendWebhookSecret = secret("AhaSendWebhookSecret");
 
 let verifier: WebhookVerifier | undefined;
+const maxWebhookBodyBytes = 1_000_000;
+
+class WebhookBodyTooLargeError extends Error {}
+
+async function readRawBody(req: IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+
+    const cleanup = () => {
+      req.off("data", onData);
+      req.off("end", onEnd);
+      req.off("error", onError);
+    };
+    const onData = (chunk: Buffer | string) => {
+      const bytes = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+      size += bytes.byteLength;
+      if (size > maxWebhookBodyBytes) {
+        cleanup();
+        reject(new WebhookBodyTooLargeError());
+        return;
+      }
+      chunks.push(bytes);
+    };
+    const onEnd = () => {
+      cleanup();
+      resolve(Buffer.concat(chunks, size));
+    };
+    const onError = (err: Error) => {
+      cleanup();
+      reject(err);
+    };
+
+    req.on("data", onData);
+    req.on("end", onEnd);
+    req.on("error", onError);
+  });
+}
 
 export const ahasendWebhook = api.raw(
   { expose: true, path: "/webhooks/ahasend", method: "POST" },
   async (req, resp) => {
-    verifier ??= new WebhookVerifier(ahasendWebhookSecret());
-
-    const chunks: Buffer[] = [];
-    for await (const chunk of req) chunks.push(chunk as Buffer);
-    const rawBody = Buffer.concat(chunks);
-
     try {
-      const event = await verifier.parse(req.headers, rawBody);
-
-      if (isKnownWebhookEvent(event)) {
-        switch (event.type) {
-          case "message.delivered":
-            console.log(`Delivered to ${event.data.recipient}`);
-            break;
-          case "message.bounced":
-            console.log(`Bounced: ${event.data.recipient}`);
-            break;
-        }
-      }
+      verifier ??= new WebhookVerifier(ahasendWebhookSecret());
+      const rawBody = await readRawBody(req);
+      await verifier.parse(req.headers, rawBody);
 
       resp.writeHead(200);
       resp.end();
     } catch (err) {
+      if (err instanceof WebhookBodyTooLargeError) {
+        resp.writeHead(413);
+        resp.end();
+        return;
+      }
       if (err instanceof AhaSendWebhookVerificationError) {
         resp.writeHead(400);
         resp.end();
         return;
       }
-      throw err;
+      console.error("AhaSend webhook processing failed");
+      resp.writeHead(500);
+      resp.end();
     }
   },
 );
 ```
+
+This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process the durable work idempotently. Timestamp verification alone does not prevent a valid delivery from being replayed inside the tolerance window. Keep the proxy's body and concurrency limits at least as strict as the application limit above, and keep failures opaque.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend` (locally, `encore run` serves it at `http://localhost:4000/webhooks/ahasend`), and set the secret via `encore secret set` exactly as shown in the dashboard, including the `aha-whsec-` prefix.
 
