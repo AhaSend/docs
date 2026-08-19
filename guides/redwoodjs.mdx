@@ -1,7 +1,7 @@
 ---
 title: "How to Send Email with RedwoodJS"
 sidebarTitle: "RedwoodJS"
-description: "Send transactional email from RedwoodJS api-side functions and services with the AhaSend Node.js SDK, and verify webhooks in a Redwood function."
+description: "Send transactional email from RedwoodJS api-side functions and services with the AhaSend TypeScript SDK, and verify webhooks in a Redwood function."
 keywords: ["redwoodjs send email", "redwood transactional email", "redwood serverless function email", "ahasend redwoodjs", "redwood webhook handler"]
 ---
 
@@ -9,7 +9,7 @@ In [RedwoodJS](https://redwoodjs.com) the SDK belongs in the `api` workspace onl
 
 ## Prerequisites
 
-- Node.js 22 or later and a RedwoodJS v7/v8 project
+- A RedwoodJS project
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 
@@ -37,20 +37,19 @@ bun add @ahasend/sdk --cwd api
 
 </CodeGroup>
 
-The SDK needs Node.js 22 or later, so make sure your api-side runtime and any `engines.node` field say `">=22"`.
-
 ## Configure Environment Variables
 
-Add your credentials to the project's `.env`. The api side reads `process.env` directly, so no further configuration is needed:
+Add your credentials to the project's `.env` for local development. The api side reads `process.env` directly:
 
 ```bash .env
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_ROUTE_TOKEN=replace-with-a-long-random-value
 ```
 
 <Warning>
-  Redwood's `includeEnvironmentVariables` setting in `redwood.toml` allowlists variables for the **web side**, baking them into the browser bundle. Never add any `AHASEND_*` variable there: the api side needs no allowlist and the key must stay server-only.
+  Redwood's `includeEnvironmentVariables` setting in `redwood.toml` allowlists variables for the **web side**, baking them into the browser bundle. Never add any `AHASEND_*` variable or `WELCOME_ROUTE_TOKEN` there: the api side needs no allowlist and these secrets must stay server-only.
 </Warning>
 
 ## Create the Client
@@ -61,127 +60,229 @@ Create the client once at module scope and reuse it across invocations:
 import { AhaSendClient } from "@ahasend/sdk";
 
 export const ahasend = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: requireEnv("AHASEND_API_KEY"),
+  accountId: requireEnv("AHASEND_ACCOUNT_ID"),
 });
+
+export function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is not configured`);
+  return value;
+}
 ```
+
+Configure the same values as runtime environment variables in your deployment provider. Do not commit `.env`.
 
 ## Send an Email from a Redwood Serverless Function
 
-A Redwood function gives you a plain HTTP endpoint at `/.redwood/functions/sendWelcome` (or `/sendWelcome` on the api server):
+A Redwood function gives you an HTTP endpoint at `/.redwood/functions/sendWelcome` through the default web-side API proxy, or `/sendWelcome` on the api server during development. The deployed path follows the `apiUrl` configured for your target.
 
 ```ts api/src/functions/sendWelcome.ts
-import type { APIGatewayEvent } from "aws-lambda";
-import { AhaSendAPIError } from "@ahasend/sdk";
-import { ahasend } from "src/lib/ahasend";
+import { createHash, timingSafeEqual } from "node:crypto";
+import type { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
+import { isAhaSendError } from "@ahasend/sdk";
+import { ahasend, requireEnv } from "src/lib/ahasend";
 
-export const handler = async (event: APIGatewayEvent) => {
-  const { email, name } = JSON.parse(event.body ?? "{}");
+type WelcomeRequest = { email: string; name?: string; eventId: string };
 
-  try {
-    const result = await ahasend.messages.send({
-      from: { email: "hello@yourdomain.com", name: "Your App" },
-      recipients: [{ email, name }],
-      subject: "Welcome to Your App!",
-      html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-      text_content: "Welcome aboard! We're glad you're here.",
-    });
+function response(statusCode: number, body: object): APIGatewayProxyResult {
+  return {
+    statusCode,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
+}
 
-    const rejected = result.data.filter((r) => r.status === "error");
+function getHeader(event: APIGatewayEvent, name: string): string {
+  const entry = Object.entries(event.headers).find(
+    ([key]) => key.toLowerCase() === name.toLowerCase(),
+  );
+  return entry?.[1] ?? "";
+}
 
+function isAuthorized(event: APIGatewayEvent): boolean {
+  const authorization = getHeader(event, "authorization");
+  const supplied = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(supplied), digest(requireEnv("WELCOME_ROUTE_TOKEN")));
+}
+
+function isWelcomeRequest(value: unknown): value is WelcomeRequest {
+  if (typeof value !== "object" || value === null) return false;
+  const body = value as Record<string, unknown>;
+  return (
+    typeof body.email === "string" &&
+    body.email.length <= 320 &&
+    /^[^\s@]+@[^\s@]+$/.test(body.email) &&
+    (body.name === undefined ||
+      (typeof body.name === "string" && body.name.length > 0 && body.name.length <= 100)) &&
+    typeof body.eventId === "string" &&
+    /^[A-Za-z0-9._:-]{1,200}$/.test(body.eventId)
+  );
+}
+
+export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
+  if (event.httpMethod !== "POST") {
     return {
-      statusCode: 200,
-      body: JSON.stringify({ queued: result.data.length - rejected.length, rejected }),
+      ...response(405, { error: "Method not allowed" }),
+      headers: { "Content-Type": "application/json", Allow: "POST" },
     };
+  }
+  if (!isAuthorized(event)) return response(401, { error: "Unauthorized" });
+  if (!/^application\/json(?:\s*;|$)/i.test(getHeader(event, "content-type"))) {
+    return response(415, { error: "Expected application/json" });
+  }
+
+  const bodyBytes = event.isBase64Encoded
+    ? Buffer.from(event.body ?? "", "base64")
+    : Buffer.from(event.body ?? "", "utf8");
+  if (bodyBytes.byteLength > 16_384) {
+    return response(413, { error: "Request body too large" });
+  }
+
+  let input: unknown;
+  try {
+    input = JSON.parse(bodyBytes.toString("utf8"));
+  } catch {
+    return response(400, { error: "Invalid JSON" });
+  }
+  if (!isWelcomeRequest(input)) return response(400, { error: "Invalid request" });
+
+  let result;
+  try {
+    result = await ahasend.messages.send(
+      {
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: input.email, name: input.name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      },
+      { idempotencyKey: `welcome:${input.eventId}` },
+    );
   } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`, err.body);
-      return { statusCode: 502, body: JSON.stringify({ error: "Failed to send email" }) };
+    if (isAhaSendError(err)) {
+      const { code, status, requestId } = err.toJSON();
+      console.error("AhaSend request failed", { code, status, requestId });
+      return response(502, { error: "Failed to send email" });
     }
     throw err;
   }
+
+  if (result.data.some((entry) => entry.status === "error")) {
+    return response(502, { error: "Failed to queue email" });
+  }
+  return response(202, { queued: true });
 };
 ```
 
-A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+A 202 from AhaSend is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` while the call itself succeeds. Inspect every entry, but do not return recipient-level errors because they can contain addresses and provider diagnostics.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice, so pass your own `idempotencyKey` when a duplicate would be expensive.
+Redwood functions are public endpoints unless you secure them. This example is for calls from another trusted server using a high-entropy bearer token. For calls from your web side, prefer Redwood authentication or an authenticated GraphQL mutation, and derive the recipient from the verified user instead of trusting a submitted address. Apply rate limiting at the deployment layer.
+
+`eventId` must be a stable ID for the welcome-email business event, persisted by the caller and reused for every retry. The SDK reuses the explicit idempotency key during its retries; a 5xx can be re-executed, so reconcile an uncertain result instead of inventing a new event ID.
 
 ### Alternative: Send from a Service
 
 If sending belongs to your GraphQL flow (say, after `createUser`), put the send in a service and call it from a mutation resolver: services are plain server-side functions, so the same client works:
 
 ```ts api/src/services/emails/emails.ts
+import { isAhaSendError } from "@ahasend/sdk";
 import { ahasend } from "src/lib/ahasend";
 
 export const sendWelcomeEmail = async ({
   email,
   name,
+  eventId,
 }: {
   email: string;
   name?: string;
+  eventId: string;
 }) => {
-  const result = await ahasend.messages.send({
-    from: { email: "hello@yourdomain.com", name: "Your App" },
-    recipients: [{ email, name }],
-    subject: "Welcome to Your App!",
-    text_content: "Welcome aboard! We're glad you're here.",
-  });
-  const rejected = result.data.filter((r) => r.status === "error");
-  return { queued: result.data.length - rejected.length, rejected };
+  let result;
+  try {
+    result = await ahasend.messages.send(
+      {
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email, name }],
+        subject: "Welcome to Your App!",
+        text_content: "Welcome aboard! We're glad you're here.",
+      },
+      { idempotencyKey: `welcome:${eventId}` },
+    );
+  } catch (error) {
+    if (isAhaSendError(error)) throw new Error("AhaSend request failed");
+    throw error;
+  }
+  if (result.data.some((entry) => entry.status === "error")) {
+    throw new Error("Failed to queue welcome email");
+  }
+  return { queued: true };
 };
 ```
+
+Protect the mutation with your normal Redwood auth directive, validate its input, derive `email` from the authenticated user where possible, and use a persisted business-event ID for `eventId`.
 
 Add `sandbox: true` to the send request to validate it without delivering anything.
 
 ## Handle Webhooks
 
-Redwood functions use the Lambda-style event, which already carries the raw body as a string, exactly what signature verification needs. `verifier.parse()` is asynchronous as of 0.2.0, so await it. One catch: some providers deliver the body base64-encoded, so check `event.isBase64Encoded` and decode first:
+Redwood functions use the Lambda-style event. Preserve its body as bytes, decoding it first when the adapter marks it as base64-encoded, then await verification before processing anything as trusted:
 
 ```ts api/src/functions/ahasendWebhook.ts
 import type { APIGatewayEvent } from "aws-lambda";
-import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
+import {
+  AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
+import { requireEnv } from "src/lib/ahasend";
 
-const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
+const verifier = new WebhookVerifier(requireEnv("AHASEND_WEBHOOK_SECRET"));
+const MAX_WEBHOOK_BYTES = 1_000_000;
 
 export const handler = async (event: APIGatewayEvent) => {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers: { Allow: "POST" }, body: "" };
+  }
+
   const rawBody = event.isBase64Encoded
-    ? Buffer.from(event.body ?? "", "base64").toString("utf-8")
-    : (event.body ?? "");
+    ? Buffer.from(event.body ?? "", "base64")
+    : Buffer.from(event.body ?? "", "utf8");
+  if (rawBody.byteLength > MAX_WEBHOOK_BYTES) {
+    return { statusCode: 413, body: "" };
+  }
 
   let webhookEvent;
   try {
-    webhookEvent = await verifier.parse(event.headers as Record<string, string>, rawBody);
-  } catch {
-    return { statusCode: 400, body: "" };
+    webhookEvent = await verifier.parse(event.headers, rawBody);
+  } catch (error) {
+    if (error instanceof AhaSendWebhookVerificationError) {
+      return { statusCode: 400, body: "" };
+    }
+    throw error;
   }
 
   if (isKnownWebhookEvent(webhookEvent)) {
-    switch (webhookEvent.type) {
-      case "message.delivered":
-        console.log(`Delivered to ${webhookEvent.data.recipient}`);
-        break;
-      case "message.bounced":
-        console.log(`Bounced: ${webhookEvent.data.recipient}`);
-        break;
-      case "message.opened":
-        console.log(`Opened by ${webhookEvent.data.recipient}`);
-        break;
-    }
+    // Atomically deduplicate webhook-id and enqueue durable work here.
+    // Do not log the event or recipient data.
+    console.log("Verified AhaSend webhook", { type: webhookEvent.type });
   }
 
   return { statusCode: 200, body: "" };
 };
 ```
 
-Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/.redwood/functions/ahasendWebhook`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) using the public `apiUrl` for your deployed function, followed by `/ahasendWebhook`. With Redwood's default proxy path that is `https://your-app.com/.redwood/functions/ahasendWebhook`, but deployment setup can change it. Copy the secret into `AHASEND_WEBHOOK_SECRET` exactly as shown, including the `aha-whsec-` prefix.
+
+Signature timestamp checks do not prevent replay inside the accepted window. Before adding side effects, atomically store the `webhook-id` header with a unique constraint together with a durable work/outbox record. On a uniqueness conflict, return success without enqueuing the work again. Process the durable work idempotently, acknowledge unknown event types, and return quickly so completed work is not retried.
 
 ## Going Further
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: "2026-07-04T09:00:00Z" }` to defer delivery.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60_000).toISOString() }` to defer delivery.
+- **Your own idempotency keys**: pass a stable business-event key, such as `{ idempotencyKey: "order:<order-id>" }`, as the second argument to `send()`.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Redwood functions use the Lambda event shape, so the [AWS Lambda guide](/guides/aws-lambda) applies almost verbatim when you deploy there; for a plain Node server instead, see the [Express guide](/guides/express).
@@ -190,13 +291,13 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 
 <AccordionGroup>
   <Accordion title="Webhook verification always returns 400">
-    Most often the body was base64-encoded by the provider: check `event.isBase64Encoded` and decode with `Buffer.from(event.body, "base64")` before calling `verifier.parse()`, as shown above. Also confirm `AHASEND_WEBHOOK_SECRET` includes the `aha-whsec-` prefix.
+    Confirm that base64-marked bodies are decoded to bytes exactly once, no middleware parsed or rewrote the body, and `AHASEND_WEBHOOK_SECRET` matches this dashboard endpoint including the `aha-whsec-` prefix.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
     The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is in `.env` (restart `yarn rw dev` after editing it) or set in your deploy provider's environment, and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
   </Accordion>
   <Accordion title="Variable undefined on the web side">
-    That's by design. Do not fix it by adding `AHASEND_*` keys to `includeEnvironmentVariables`, which would embed them in the browser bundle. Email must always go through the api side (a function or service).
+    That's by design. Do not add `AHASEND_*` keys or `WELCOME_ROUTE_TOKEN` to `includeEnvironmentVariables`, which would embed them in the browser bundle. Email must always go through the api side (a function or service).
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
