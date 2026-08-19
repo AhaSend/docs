@@ -1,29 +1,27 @@
 ---
 title: "How to Add Email to Your App with GitHub Copilot"
 sidebarTitle: "GitHub Copilot"
-description: "Delegate an AhaSend transactional email integration to GitHub's Copilot coding agent, then review the pull request with two checks a green test won't catch."
+description: "Delegate an AhaSend transactional email integration to GitHub's Copilot cloud agent, then review the pull request for correctness and credential safety."
 keywords: ["github copilot email integration", "github copilot coding agent email", "github copilot ahasend", "copilot agent send email", "github copilot transactional email"]
 icon: "github"
 ---
 
-The Copilot coding agent works out of sight and hands you a finished pull request. It cannot read your repository secrets and it cannot merge, which makes your review the only gate that matters.
-
-If you came here looking for **Copilot Workspace**, the standalone issue-to-PR preview: it was retired in May 2025 and its flow now lives in the coding agent, which is the tool covered here.
+GitHub Copilot cloud agent works asynchronously and can open a pull request for your review. It is limited to its working branch and a human must review and merge its pull request. It cannot access Actions, Codespaces, or Dependabot secrets, but it can access any **Agents** secrets that an administrator explicitly gives it.
 
 ## Prerequisites
 
-The agent can write the integration, but it can't verify your domain or mint your credentials. Do that in the [AhaSend dashboard](https://dash.ahasend.com) first:
+Ensure Copilot cloud agent is enabled for the target repository and that you have write access to it. Without both, Copilot cannot be assigned the issue.
 
-1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). AhaSend validates DNS continuously, so a misconfigured domain fails at send time rather than quietly tanking your deliverability.
-2. **Create an API key.** Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` instead of `messages:send:all`, so a leaked key can only touch one domain's mail. Note your **account ID**.
+The agent can write the integration, but it cannot verify your domain or create your credentials. Do that in the [AhaSend dashboard](https://dash.ahasend.com) first:
 
-Your deployed app reads the key from your hosting platform's secret store. If you want the agent to execute a send while it tests its own work, you also add a sandbox key to its `copilot` environment in Step 4.
+1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains).
+2. **Create an API key.** Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` instead of `messages:send:all`. Note your **account ID**.
 
-The SDK requires Node.js 22 or later, so set the project's `engines` field and CI workflow to 22 before you hand the task over. The agent copies whatever the repo already declares.
+Keep the deployed application's API key in your hosting platform's secret store. You do not need to expose it to Copilot for the agent to implement and test the integration.
 
 ## Step 1: Install the SDK and Commit It
 
-Do this yourself, on `main`, before you open the issue.
+Install the official SDK and commit the manifest and lockfile before assigning the task.
 
 <CodeGroup>
 
@@ -45,122 +43,156 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-An agent that finds `@ahasend/sdk` in `package.json` and a lockfile entry to match has almost no room to invent an alternative.1.0`).
+This gives the agent an unambiguous dependency and lets its normal package install reproduce your dependency graph.
 
 ## Step 2: Write the Issue
 
-Put the real interface in the issue so the agent cannot invent a client library or hand-roll HTTP calls. Open an issue, describe the task in specifics, and assign it to Copilot:
+Give the agent the API contract, security boundaries, and acceptance tests instead of leaving it to infer them. Open an issue, use a prompt like this, and assign it to Copilot:
 
 > **Title:** Add order-confirmation email via AhaSend
 >
-> **Body:** When an order is created, send a confirmation email using the official AhaSend Node.js SDK, `@ahasend/sdk`, which is already a dependency. Do not hand-roll fetch calls and do not add any other email package.
+> **Body:** When an order is created, send a confirmation email using the official AhaSend TypeScript SDK, `@ahasend/sdk`, which is already a dependency. Do not hand-roll HTTP calls or add another email package.
 >
-> - Construct the client once at module scope in `lib/ahasend.ts`: `new AhaSendClient({ apiKey: process.env.AHASEND_API_KEY, accountId: process.env.AHASEND_ACCOUNT_ID })`.
+> - Validate `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and the sender address at startup. Construct one `AhaSendClient` at module scope with `apiKey` and `accountId`.
 > - Send with `client.messages.send({ from, recipients, subject, html_content, text_content })`. Body fields are snake_case.
-> - The response is multi-status: `result.data` has one entry per recipient, and a recipient can come back `status: "error"` while the promise resolves. Check every entry, not just the first.
-> - Catch `AhaSendAPIError` from `@ahasend/sdk` and match on `err.status`, never on message text.
-> - Read `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` from server-side environment variables. Never hardcode them and never expose them to the client.
-> - Send from server-side code only (an API route or controller), never from the browser. Supported runtimes are Node.js 22, 24 and 26, Deno latest 2.x, Bun latest, Cloudflare workerd (no `nodejs_compat` needed), and Vercel Edge. The constructor refuses browsers and browser service workers.
-> - If the task involves webhooks, verify with `WebhookVerifier` from `@ahasend/sdk/webhooks` against the RAW body. `parse()` and `verify()` are async, so `await verifier.parse(headers, rawBody)`. The Express, Fastify and Next.js adapters await internally.
-> - Set `sandbox: true` in the send body so tests don't deliver real mail.
+> - Pass a stable, server-derived business identifier as `options.idempotencyKey` so an application-level retry does not create a second email. Reuse a key only for the same exact payload.
+> - Treat the response as multi-status: inspect every entry in `result.data`. A recipient can have `status: "error"` and a null `id` even though the promise resolved.
+> - Catch `AhaSendAPIError` from `@ahasend/sdk` and branch on structured fields, not message text. Logs may include only aggregate counts, HTTP status, SDK error code, and request ID. Never log addresses, content, bodies, headers, idempotency keys, or whole request, response, event, client, or error objects.
+> - Keep API keys and all AhaSend calls in server-only code. Authenticate and authorize the caller, validate input, and load the order and recipient from server-authoritative storage; do not trust a client-supplied email address or order ID. Escape any untrusted value before inserting it into HTML.
+> - Unit tests must mock the API boundary. Any explicitly approved live integration test must set `sandbox: true` and assert every recipient result.
+> - If the task involves webhooks, import `WebhookVerifier` from `@ahasend/sdk/webhooks`, verify the exact raw body, and `await verifier.parse(headers, rawBody)`. Enforce a request-size limit and durably deduplicate the verified `webhook-id` before side effects; timestamp verification alone does not prevent replays.
 
-That issue rules out a hallucinated package, pins the constructor and the method, names the response shape, and states the security rule. The agent plans against those constraints and opens a PR that reflects them.
-
-<Tip>
-  To apply these rules to *every* task the agent picks up, put them in a `.github/copilot-instructions.md` file. The coding agent reads it as standing context, the same way it reads your tests, so "use the SDK, key stays server-side, check every recipient" becomes a default it carries into every email-related PR rather than something you retype each time.
-</Tip>
+Copilot cloud agent also supports repository-wide instructions in `.github/copilot-instructions.md`. Put durable rules such as server-only credentials, stable idempotency keys, multi-status checks, and safe logging there so later email tasks inherit them.
 
 ## Step 3: Review the Pull Request
 
-When the agent finishes, it requests your review. The agent can only push to branches named `copilot/*` and never merges to your default branch, so this review is the gate every change passes through. Read the diff with three questions in mind.
+When the agent finishes, it requests your review. For a new task, GitHub limits it to a newly created `copilot/` branch, and Copilot cannot approve or merge the pull request. Review the diff and the agent's session log before allowing workflows or merging.
 
-**Did the key stay server-side?** The integration should read `AHASEND_API_KEY` from the environment, in server-side code. Scan the diff for the opposite: a literal `aha-sk-...` string committed anywhere, or, if the agent touched a frontend, a key dropped into a client-exposed variable (anything like `NEXT_PUBLIC_`, `VITE_`, or a value referenced inside a browser component). If you see any of those, don't merge. Comment `@copilot move the AhaSend call to a server-side route and read the key from an environment variable, never expose it to the client`, and it'll push a correction to the same PR.
+### Did the key stay server-side?
 
-**Is it using the SDK, correctly?** A representative server-side route looks about like this:
+Scan the entire diff for hardcoded keys and for client-exposed variables such as `NEXT_PUBLIC_` or `VITE_`. Verify that the call is reachable only after your application's normal authentication and authorization checks and that the recipient comes from trusted server-side data. If any of those checks fail, request a correction with an `@copilot` comment on the pull request.
 
-```ts app/api/send-confirmation/route.ts
-import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
+### Is it using the SDK safely?
+
+A representative server-side service looks like this:
+
+```ts lib/send-order-confirmation.ts
+import { AhaSendAPIError, AhaSendClient } from "@ahasend/sdk";
+
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function deliveryMode(): "sandbox" | "live" {
+  const value = requiredEnv("AHASEND_DELIVERY_MODE");
+  if (value !== "sandbox" && value !== "live") {
+    throw new Error("AHASEND_DELIVERY_MODE must be sandbox or live");
+  }
+  return value;
+}
 
 const client = new AhaSendClient({
-  apiKey: process.env.AHASEND_API_KEY!,
-  accountId: process.env.AHASEND_ACCOUNT_ID!,
+  apiKey: requiredEnv("AHASEND_API_KEY"),
+  accountId: requiredEnv("AHASEND_ACCOUNT_ID"),
 });
 
-export async function POST(req: Request) {
-  const { email, name, orderId } = await req.json();
+const mode = deliveryMode();
+const sender = requiredEnv("AHASEND_FROM_ADDRESS");
 
+type ConfirmedOrder = Readonly<{
+  id: string;
+  customerEmail: string;
+}>;
+
+export async function sendOrderConfirmation(order: ConfirmedOrder): Promise<void> {
   try {
-    const result = await client.messages.send({
-      from: { email: "orders@yourdomain.com", name: "Your Store" },
-      recipients: [{ email, name }],
-      subject: `Order ${orderId} confirmed`,
-      text_content: `Thanks ${name}, order ${orderId} is confirmed.`,
-      html_content: `<p>Thanks ${name}, order ${orderId} is confirmed.</p>`,
-      sandbox: process.env.NODE_ENV !== "production",
-    });
+    const result = await client.messages.send(
+      {
+        from: { email: sender, name: "Your Store" },
+        recipients: [{ email: order.customerEmail }],
+        subject: "Your order is confirmed",
+        text_content: "Thanks—your order is confirmed.",
+        html_content: "<p>Thanks—your order is confirmed.</p>",
+        sandbox: mode === "sandbox",
+      },
+      { idempotencyKey: `order-confirmation-${order.id}` },
+    );
 
-    const rejected = result.data.filter((r) => r.status === "error");
+    const rejected = result.data.filter((entry) => entry.status === "error");
     if (rejected.length > 0) {
-      console.warn(`${rejected.length} recipient(s) rejected`);
+      console.warn("AhaSend rejected recipients", { count: rejected.length });
+      throw new Error("Order confirmation was not accepted");
     }
-
-    return Response.json({ statuses: result.data.map((r) => r.status) });
-  } catch (err) {
-    if (err instanceof AhaSendAPIError) {
-      console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
-      return new Response("Failed to send email", { status: 502 });
+  } catch (error) {
+    if (error instanceof AhaSendAPIError) {
+      console.error("AhaSend request failed", {
+        status: error.status,
+        code: error.code,
+        requestId: error.requestId,
+      });
+      throw new Error("Email provider request failed");
     }
-    throw err;
+    throw error;
   }
 }
 ```
 
-Note the client at module scope, not inside the handler. A client constructed per request throws away connection reuse and retry state.
+The route or controller calling this function still has to authenticate the request, authorize access to the order, and load the order from your database. Keeping the client at module scope also preserves its shared configuration and any enabled local rate pacing across calls.
 
-**Does it treat the response as multi-status?** A resolved promise means AhaSend accepted and queued the request, not that every address was accepted. `result.data` carries one entry per recipient, and a suppressed address comes back `status: "error"` with a null `id` while the call itself succeeds. If the PR reads `result.data[0]` and reports success, leave a comment and let the agent fix it before you merge. This bug survives a passing test, so check it by eye.
+### Does it handle retries and multi-status results?
 
-## Step 4: Give the Agent a Sandbox Key
+The SDK generates an idempotency key for its own retry loop, but a stable caller-provided key is needed when your application may invoke the business operation again. Confirm the PR derives that key from a trusted immutable ID and never logs it.
 
-The agent runs in a GitHub Actions environment and can execute code, including a real call to AhaSend, but only if you give it a key. It has no access to your repository or organization Actions secrets: the only secrets it sees are the ones you add to a GitHub Actions environment named `copilot`. Create (or open) that environment and add a **sandbox-mode AhaSend key** as `AHASEND_API_KEY`, plus `AHASEND_ACCOUNT_ID`.
+A resolved send returns one entry per recipient. Do not accept code that checks only `result.data[0]`, treats resolution as unconditional success, or exposes recipient details in a response or log.
 
-Use a dedicated sandbox credential, not your production key. AhaSend lets you create a credential that is always in sandbox mode, so any send made with it is simulated regardless of the request body. With that key in the `copilot` environment, the agent can run an integration test that sends through the SDK, gets a real queued result back, and confirms the wiring end to end. Nothing is delivered and nothing is billed. Sandbox keys and the `sandbox_result` outcomes (`deliver`, `bounce`, `defer`, `fail`, `suppress`) are covered in the [sandbox mode guide](/send-api/sandbox).
+## Step 4: Test Without Giving the Agent a Production Credential
+
+Prefer mocked tests: Copilot can validate request construction, error handling, multi-status behavior, and idempotency without any AhaSend credential.
+
+If you deliberately want the agent to call the real AhaSend API in sandbox mode, create a dedicated, domain-scoped API key that you can revoke immediately afterward. In the repository, go to **Settings → Secrets and variables → Agents**, store it as `AHASEND_API_KEY`, store the account ID as an Agents secret or variable, and add Agents variables for `AHASEND_FROM_ADDRESS` and `AHASEND_DELIVERY_MODE`. The sender must use the verified domain, and the delivery mode must be `sandbox`. A sandbox send validates the request without delivering email; use `sandbox_result` values such as `deliver`, `bounce`, `defer`, `fail`, and `suppress` to exercise different outcomes.
+
+This is an ordinary API key, not a sandbox-restricted credential. Agents secrets are exposed as environment variables to scripts and tools Copilot runs, and `sandbox: true` is only a request field. Only provide the key if you accept that risk. Keep the agent firewall enabled and explicitly allow `api.ahasend.com` if the request is blocked; do not disable the firewall just to make the test pass.
 
 <Warning>
-  Never put your production API key in the `copilot` environment. The agent's logs and its pull request description are both places a key can end up in plain text.
+  Never give the agent a production credential. GitHub masks Agents secret values in session logs, but masking is not an authorization boundary and does not prevent a process from using the credential.
 </Warning>
 
-Skip this step and the agent still writes correct code from the issue's constraints; you verify the first live send yourself after merging.
+Remove the temporary Agents credential after the test. Your deployed application should use a separate key from its hosting platform's secret store.
 
 ## Step 5: Merge and Send a Real Email
 
-Once the diff passes the review checks and, if you set it up, the sandbox test is green, merge the `copilot/*` branch through your normal process. Then, in your real environment:
+By default, GitHub Actions workflows do not run automatically when Copilot pushes. First inspect the diff, especially changes under `.github/workflows/`, then use **Approve and run workflows** and confirm the required checks actually completed. Your own approval does not count toward required approvals on a Copilot pull request, so obtain another approval if the repository requires one.
 
-- Confirm `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` are set in your **hosting platform's** secret store, not committed, and not in the `copilot` environment, which only ever held the sandbox key.
-- Flip `sandbox` to `false`, ideally driven by an environment variable so you can toggle without another PR.
-- Send one real confirmation to an address you control and confirm it arrives.
+After review and CI pass, merge through your normal protected-branch process. In the deployed environment:
+
+- Set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_FROM_ADDRESS` in the hosting platform's secret store.
+- Set `AHASEND_DELIVERY_MODE` explicitly to `live`; fail closed when it is absent or invalid.
+- Send one confirmation to an address you control and verify the result and delivery.
 
 ## Going Further
 
-- **Make the sandbox part of CI**: a test that pins `sandbox_result` to `bounce` and `suppressed` turns "the agent says it handles failures" into something the pull request has to prove.
-- **Templating and webhooks**: per-recipient `substitutions` handle personalised batches, and `@ahasend/sdk/webhooks` verifies delivery-event signatures. Put both in `.github/copilot-instructions.md` so the next issue starts from them.
-- Same grounding trick, different file: [Cursor](/guides/cursor) reads `.cursor/rules/`, [Claude](/guides/claude) reads `CLAUDE.md`, and [Windsurf](/guides/windsurf) reads `.windsurf/rules/`.
-- For the finished shape of the integration the agent is writing, see [Next.js](/guides/nextjs), [Express](/guides/express), or [Remix](/guides/remix).
+- **Exercise sandbox outcomes:** integration tests can set `sandbox_result` to `bounce` or `suppress` to exercise the corresponding delivery and webhook paths. Assert multi-status send results separately.
+- **Templating and webhooks:** per-recipient `substitutions` support personalized batches, and `@ahasend/sdk/webhooks` verifies delivery-event signatures. Preserve the raw body and durably deduplicate `webhook-id` before side effects.
+- Same grounding technique, different instruction file: [Cursor](/guides/cursor), [Claude](/guides/claude), and [Windsurf](/guides/windsurf).
+- For complete framework integrations, see [Next.js](/guides/nextjs), [Express](/guides/express), or [Remix](/guides/remix).
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="The agent's test run fails with a Node version error">
-    The SDK declares `engines.node >= 22`. The agent's environment follows the repo, so set `engines.node` in `package.json` and pin Node 22 in your CI workflow's `actions/setup-node` step, then re-run the agent.
+  <Accordion title="The PR hand-rolls HTTP calls instead of using the SDK">
+    Confirm the dependency and lockfile were committed before the task started. Comment `@copilot replace the raw HTTP calls with the @ahasend/sdk client`, then add the constraint to `.github/copilot-instructions.md`.
   </Accordion>
-  <Accordion title="The PR hand-rolls fetch calls instead of using the SDK">
-    Either the dependency wasn't committed to `main` before you opened the issue, or the issue didn't name the package. Comment `@copilot replace the raw fetch calls with the @ahasend/sdk client` and push the constraint into `.github/copilot-instructions.md` so the next task inherits it.
+  <Accordion title="The integration test gets an authentication error">
+    Confirm that any deliberately provided credential is stored under **Secrets and variables → Agents**, not under Actions, Codespaces, or Dependabot. Check its scope and revocation state without printing it. Prefer a mocked test if external access is unnecessary.
   </Accordion>
-  <Accordion title="401 AhaSendAuthenticationError in the agent's run">
-    The `copilot` Actions environment either doesn't have `AHASEND_API_KEY` or has a revoked one. Repository and organization secrets are deliberately invisible to the agent, so the key must live in that environment specifically.
+  <Accordion title="The sandbox request is blocked">
+    Copilot cloud agent's firewall may block the AhaSend API host. Keep the firewall enabled and add `api.ahasend.com` to its allowlist only if you have accepted the credential risk. Otherwise, use a mocked test.
   </Accordion>
-  <Accordion title="The generated code throws on startup in an edge route">
-    Edge runtimes are supported from 0.2.0, so upgrade the dependency and re-run the agent. If the error names a browser environment instead, the client ended up in frontend code: move the send to a server-side route. See [Cloudflare Workers](/guides/cloudflare-workers) for the Workers setup.
+  <Accordion title="The generated code throws in a browser">
+    The API client belongs in server-only code. Move the AhaSend client and send call behind an authenticated server route or controller, and ensure no client component imports that module.
   </Accordion>
 </AccordionGroup>
 
-Every endpoint the SDK exposes is in the [API reference](/api-reference).
+Every SDK endpoint is documented in the [API reference](/api-reference).
