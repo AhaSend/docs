@@ -32,25 +32,15 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
-TypeScript declarations ship with the package, so there is no `@types` to add. Your `tsconfig.json` needs `moduleResolution` set to `Bundler`, `Node16`, or `NodeNext`, and either `"lib": ["DOM"]` or `@types/node` for the `fetch`, `Request`, `Response`, and `AbortSignal` globals.
-
-### Supported Runtimes
-
-| Runtime | Versions |
-| --- | --- |
-| Node.js | 22, 24, 26 |
-| Deno | latest 2.x |
-| Bun | latest |
-| Cloudflare workerd | supported, and `nodejs_compat` is not required |
-| Vercel Edge | supported |
-
-Edge runtime support landed in 0.2.0. On 0.1.0 the constructor refuses anything that is not Node.
+TypeScript declarations ship with the package, so there is no SDK-specific `@types` package to add. Use your runtime's normal types and a module-resolution mode that understands package `exports`.
 
 <Warning>
   Browsers and browser Service Workers are refused, because the API key grants full send access and anything the browser can read, a visitor can read. `dangerouslyAllowBrowser: true` exists only for browser-shaped server test environments.
 </Warning>
 
 ## Send Your First Email
+
+Create a [least-privilege API key](/send-api/credentials) with `messages:send:{your-domain}`, and keep the key and account ID in an uncommitted `.env` file or your deployment secret store.
 
 ```js send.mjs
 import { AhaSendClient } from "@ahasend/sdk";
@@ -69,15 +59,23 @@ const result = await ahasend.messages.send({
   sandbox: true, // validates and queues without delivering
 });
 
-const rejected = result.data.filter((r) => r.status === "error");
-console.log(`${result.data.length - rejected.length} queued, ${rejected.length} rejected`);
+const accepted = result.data.filter((entry) =>
+  entry.status === "queued" || entry.status === "scheduled"
+);
+const rejected = result.data.length - accepted.length;
+if (rejected > 0 || accepted.length === 0) {
+  console.error("AhaSend rejected recipients", { count: rejected });
+  process.exitCode = 1;
+} else {
+  console.log("Sandbox messages accepted", { count: accepted.length });
+}
 ```
 
-Run it with `node --env-file=.env send.mjs`. Drop `sandbox` when you want mail to actually leave.
+Run it with `node --env-file=.env send.mjs`. Change `sandbox` to `false` only after you have intentionally reviewed the sender, recipients, and production credentials.
 
 Note what the last two lines are doing. `recipients` takes up to 100 addresses and each one becomes its own message, so `result.data` holds one entry per recipient. A single recipient can come back `status: "error"` with a null `id`, a suppressed address for instance, while the call itself succeeds. Reading `data[0]` would miss that.
 
-Body fields are snake_case, matching the API. Beyond the ones above: `reply_to`, `attachments`, `headers`, `substitutions`, `tags`, `tracking`, `retention`, and `schedule`. For one message with visible To, Cc, and Bcc recipients, use `messages.sendConversation()` instead.
+Body fields are snake_case, matching the API. Beyond the ones above: `reply_to`, `attachments`, `headers`, `substitutions`, `tags`, `tracking`, `retention`, and `schedule`. For one conversation message with visible To and Cc recipients and hidden Bcc recipients, use `messages.sendConversation()` instead.
 
 <Tip>
   `sandbox_result` rehearses a specific outcome: `deliver`, `bounce`, `defer`, `fail`, or `suppress`. Each one fires the matching webhook, so you can test your bounce handling without a real bounce. See [Sandbox Mode](/send-api/sandbox).
@@ -85,7 +83,7 @@ Body fields are snake_case, matching the API. Beyond the ones above: `reply_to`,
 
 ## Configure the Client
 
-Build the client once at module scope and share it. It holds connection pooling, retry, and idempotency state, so one per request throws that away.
+Build the client once at module scope and share it. Client-level retry, telemetry, idempotency, and local rate-pacing configuration then stays consistent, and any enabled pacing queue is shared by your handlers in that process.
 
 ```ts lib/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
@@ -109,7 +107,7 @@ export const ahasend = new AhaSendClient({
 | `idempotency` | auto-generate | Idempotency key behaviour on create operations |
 | `fetch` | `globalThis.fetch` | Inject your own fetch implementation |
 | `hooks` | none | `onRequest`, `onResponse`, `onRetry`, `onError` telemetry |
-| `debug` | `false` | Console diagnostics |
+| `debug` | `false` | Console diagnostics; leave disabled where logs must follow the safe allowlist below |
 
 Every method also takes a trailing options object:
 
@@ -143,16 +141,16 @@ try {
 }
 ```
 
-`AhaSendError` is the root. `AhaSendAPIError` carries `.status`, `.code`, `.requestId`, and `.body`, and branches into `AhaSendBadRequestError`, `AhaSendAuthenticationError`, `AhaSendPermissionError`, `AhaSendNotFoundError`, `AhaSendConflictError`, `AhaSendUnprocessableEntityError`, `AhaSendRateLimitError`, and `AhaSendServerError`. Alongside it sit `AhaSendConnectionError` with its `AhaSendTimeoutError` subclass, plus `AhaSendAbortError`, `AhaSendConfigurationError`, and `AhaSendResponseParseError`.
+`AhaSendError` is the root. `AhaSendAPIError` carries `.status`, `.code`, `.requestId`, and `.body`, and branches into `AhaSendBadRequestError`, `AhaSendAuthenticationError`, `AhaSendPermissionError`, `AhaSendNotFoundError`, `AhaSendConflictError`, `AhaSendIdempotencyConflictError`, `AhaSendUnprocessableEntityError`, `AhaSendIdempotencyMismatchError`, `AhaSendRateLimitError`, and `AhaSendServerError`. Alongside it sit `AhaSendConnectionError` with its `AhaSendTimeoutError` subclass, plus `AhaSendAbortError`, `AhaSendConfigurationError`, `AhaSendRateLimitQueueFullError`, `AhaSendResponseTooLargeError`, and `AhaSendResponseParseError`.
 
-Match on `error.code` or `error.status`, never on message text: `error.message` is derived and capped at 200 characters.
+Match on `error.code` or `error.status`, never on message text. Logs, metrics, traces, and exception tags should allowlist only aggregate counts, appropriate opaque IDs, HTTP status, SDK error code, and request ID. Do not serialize whole requests, responses, events, or errors, and do not log `.body`, `.message`, credentials, addresses, content, or idempotency keys.
 
 ## Retries and Idempotency
 
-The SDK retries `408`, `429`, `5xx`, network failures, and timeouts with exponential backoff, and never retries other `4xx` responses. It attaches a UUID `Idempotency-Key` to every create operation and reuses that key across its own retries.
+The SDK retries only when the generated operation profile marks the call safe, idempotent, or protected by an idempotency key. For an eligible call it retries `408`, `429`, `5xx`, network failures, timeouts, and an idempotency-in-progress `409` carrying the required replay and retry headers. Caller cancellation and other `4xx` responses are terminal. Create operations declared idempotent receive an automatically generated UUID `Idempotency-Key`, which is reused across the logical call's internal retries.
 
 <Note>
-  Stored outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, so a retry after a 5xx can still result in a second send. Pass your own `idempotencyKey` derived from a stable business identifier when a duplicate would be expensive.
+  Stored non-secret outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, so the same key can execute again after a `5xx`. Pass your own `idempotencyKey` derived from a stable business identifier when your application may retry later, reuse it only with the exact same payload, and reconcile an uncertain result before another send when duplicates are unacceptable.
 </Note>
 
 Local rate pacing is separate and off by default. Turn it on with `rateLimit: { enabled: true }`.
@@ -170,7 +168,7 @@ Local rate pacing is separate and off by default. Turn it on with `rateLimit: { 
 | `client.routes` | `list`, `iterate`, `create`, `get`, `update`, `delete` |
 | `client.accounts` | `get`, `update`, `listMembers`, `addMember`, `removeMember` |
 | `client.smtpCredentials` | `list`, `iterate`, `create`, `get`, `delete` |
-| `client.subAccounts` | `list`, `iterate`, `create`, `usage`, `get`, `update`, `delete`, `suspend`, `unsuspend`, nested `apiKeys` |
+| `client.subAccounts` | `list`, `iterate`, `create`, `usage`, `get`, `update`, `delete`, `suspend`, `unsuspend`; nested `apiKeys` has `list`, `iterate`, `create`, `get`, `update`, `delete` |
 | `client.ping()` | Health check |
 
 List endpoints paginate. Take a page at a time with `list()`, or let `iterate()` walk everything lazily:
@@ -202,12 +200,12 @@ if (isKnownWebhookEvent(event)) {
 ```
 
 <Warning>
-  `parse()` and `verify()` are asynchronous as of 0.2.0, since signing moved to Web Crypto. Await them before treating the body as trusted. The Express, Fastify and Next.js adapters await internally, so they need no change.
+  `parse()` and `verify()` are asynchronous. Await them before treating the body as trusted. The Express, Fastify, and Next.js adapters await verification internally.
 </Warning>
 
 Verification needs the **raw request body**, the exact bytes AhaSend sent. If a JSON body parser runs first the signature can no longer be checked, and the adapters treat that as a setup error. Pass the webhook secret exactly as the dashboard shows it, `aha-whsec-` prefix included.
 
-Timestamp checking rejects stale deliveries, but it does not deduplicate a valid one replayed inside the window. Commit each `webhook-id` durably and make your side effects idempotent.
+Timestamp checking rejects stale deliveries, but it does not deduplicate a valid one replayed inside the window. After verification, atomically commit each `webhook-id` together with durable work or an outbox record. A unique ID insert by itself can lose an event if the process stops before performing the side effect. Acknowledge duplicates without enqueuing again, retry storage failures with a non-`2xx` response, and process the durable work idempotently outside the request. Direct verification and every adapter enforce a 30,000,000-byte body ceiling; configure request-size and concurrency limits at the reverse proxy as well.
 
 ## Framework Guides
 
