@@ -37,7 +37,9 @@ Create the client and verifier once at startup and share them across handlers. F
 package main
 
 import (
+	"crypto/subtle"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/AhaSend/ahasend-go/api"
@@ -53,6 +55,37 @@ var (
 	verifier      *webhooks.WebhookVerifier
 	sendToken     string
 )
+
+// sendRateLimiter caps how fast this process can turn requests into email. The
+// identifier is constant so the cap is process-wide rather than per client IP:
+// the AhaSend rate limit is per account, and these callers may all arrive
+// through one proxy address. Keep the sum across processes below your account
+// limit.
+func sendRateLimiter() echo.MiddlewareFunc {
+	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
+		Store: middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{Rate: 20, Burst: 40},
+		),
+		IdentifierExtractor: func(c *echo.Context) (string, error) { return "send", nil },
+	})
+}
+
+// requireSendToken rejects unauthenticated callers before they reach the rate
+// limiter, so a flood of anonymous requests cannot exhaust the send budget and
+// 429 legitimate traffic. KeyAuth's default lookup reads the Authorization
+// header and trims the "Bearer " prefix.
+func requireSendToken() echo.MiddlewareFunc {
+	return middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
+		Validator: func(c *echo.Context, key string, _ middleware.ExtractorSource) (bool, error) {
+			return sendToken != "" && subtle.ConstantTimeCompare([]byte(key), []byte(sendToken)) == 1, nil
+		},
+		// A missing token would otherwise answer 400; a caller cannot tell
+		// missing from wrong either way, so report both as 401.
+		ErrorHandler: func(c *echo.Context, err error) error {
+			return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
+		},
+	})
+}
 
 func main() {
 	apiKey := os.Getenv("AHASEND_API_KEY")
@@ -83,7 +116,11 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
-	e.POST("/api/welcome", sendWelcome)
+	e.POST("/api/welcome", sendWelcome,
+		requireSendToken(),
+		middleware.BodyLimit(16*1024),
+		sendRateLimiter(),
+	)
 	e.POST("/webhooks/ahasend", handleAhaSendWebhook, middleware.BodyLimit(1_000_000))
 	if err := e.Start(":8080"); err != nil {
 		log.Fatalf("Echo stopped: %v", err)
@@ -93,19 +130,22 @@ func main() {
 
 `RequestLogger` does not capture request bodies. Do not add `BodyDump` to the webhook route: it captures the complete signed event for its callback, which can expose recipient or message data in diagnostics.
 
+Both routes carry a `BodyLimit` so no handler reads an unbounded body. On the send route the middleware order matters: authentication runs first, so unauthenticated traffic is rejected before it can consume the rate limiter's budget and 429 legitimate callers.
+
 ## Send an Email from an Echo Handler
 
-Echo handlers take an `echo.Context` and return an `error`. Bind the JSON body into a struct with `c.Bind`:
+Echo handlers take a `*echo.Context` and return an `error`. Bind the JSON body into a struct with `c.Bind`:
 
 ```go send.go
 package main
 
 import (
-	"crypto/subtle"
 	"errors"
 	"log"
 	"net/http"
+	"net/mail"
 	"regexp"
+	"strings"
 
 	"github.com/AhaSend/ahasend-go"
 	"github.com/AhaSend/ahasend-go/api"
@@ -122,19 +162,24 @@ type welcomeInput struct {
 
 var eventIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,200}$`)
 
+// sendWelcome runs only for callers that cleared requireSendToken.
 func sendWelcome(c *echo.Context) error {
-	expected := []byte("Bearer " + sendToken)
-	provided := []byte(c.Request().Header.Get("Authorization"))
-	if sendToken == "" || subtle.ConstantTimeCompare(provided, expected) != 1 {
-		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
-	}
-
 	var in welcomeInput
 	if err := c.Bind(&in); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid JSON body")
 	}
-	if in.Email == "" || !eventIDPattern.MatchString(in.EventID) {
-		return echo.NewHTTPError(http.StatusBadRequest, "email and valid event_id are required")
+	if !eventIDPattern.MatchString(in.EventID) {
+		return echo.NewHTTPError(http.StatusBadRequest, "a valid event_id is required")
+	}
+	// Require a bare address: ParseAddress also accepts `Name <a@b.com>`, so
+	// compare against the parsed address to reject anything that smuggles extra
+	// addressing into this field.
+	addr, err := mail.ParseAddress(in.Email)
+	if err != nil || addr.Address != in.Email || len(in.Email) > 254 {
+		return echo.NewHTTPError(http.StatusBadRequest, "a valid email address is required")
+	}
+	if len(in.Name) > 100 || strings.ContainsAny(in.Name, "\r\n") {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid name")
 	}
 
 	sandbox := true
@@ -161,14 +206,32 @@ func sendWelcome(c *echo.Context) error {
 		var apiErr *api.APIError
 		if errors.As(err, &apiErr) {
 			log.Printf("AhaSend API error status=%d code=%s request_id=%s", apiErr.StatusCode, apiErr.Code, apiErr.RequestID)
-			return echo.NewHTTPError(http.StatusBadGateway, "failed to send email")
+			switch apiErr.Type {
+			case api.ErrorTypeValidation, api.ErrorTypeIdempotency:
+				// The caller's payload is the problem; retrying it unchanged
+				// will fail the same way.
+				return echo.NewHTTPError(http.StatusBadRequest, "email request rejected")
+			default:
+				return echo.NewHTTPError(http.StatusBadGateway, "failed to send email")
+			}
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, "unexpected error")
 	}
 
-	if len(response.Data) != 1 || response.Data[0].Status == "error" {
-		log.Printf("AhaSend rejected a recipient count=%d", len(response.Data))
-		return echo.NewHTTPError(http.StatusBadGateway, "recipient rejected")
+	// A 2xx only means the request was accepted: each recipient carries its own
+	// status, so check it rather than trusting the HTTP code.
+	if len(response.Data) != 1 {
+		log.Printf("AhaSend returned an unexpected result count=%d", len(response.Data))
+		return echo.NewHTTPError(http.StatusBadGateway, "unexpected send result")
+	}
+	if response.Data[0].Status == "error" {
+		reason := ""
+		if response.Data[0].Error != nil {
+			reason = *response.Data[0].Error
+		}
+		// Suppressed or undeliverable address: permanent, so do not invite a retry.
+		log.Printf("AhaSend rejected the recipient reason=%q", reason)
+		return echo.NewHTTPError(http.StatusBadRequest, "recipient rejected")
 	}
 
 	messageID := ""
@@ -184,7 +247,7 @@ func sendWelcome(c *echo.Context) error {
 
 This is a server-to-server route. Never expose `AHASEND_SEND_TOKEN` to a browser; for browser-facing flows, use your application's authentication and load the recipient from its trusted user record instead of accepting an arbitrary address.
 
-The example defaults to sandbox mode, which validates without delivery. Change `sandbox` to `false` only when you intend to send real mail. Its stable business-event key protects later calls for the same logical request, while the mode prefix prevents a recent sandbox outcome from being replayed for a live payload. Keep an `event_id` bound to the same request data.
+The example defaults to sandbox mode, which validates without delivery. Change `sandbox` to `false` only when you intend to send real mail. The stable business-event key protects later calls for the same logical request, so keep an `event_id` bound to the same request data: AhaSend hashes the method, path, and body behind the key, so reusing one key for a changed payload returns `422 Unprocessable Entity` rather than sending. The mode prefix keeps the sandbox and live attempts on separate keys, so flipping `sandbox` for the same `event_id` sends instead of hitting that `422`.
 
 The SDK also generates a key when none is supplied and reuses a request's key across its automatic exponential-backoff retries. Stored outcomes replay for 24 hours, but a 5xx is not stored, so even a same-key retry after a server error can still send twice.
 
@@ -242,7 +305,7 @@ Timestamp tolerance is not replay deduplication: the same valid delivery can be 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
 - **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
 - **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
-- **Rate limits**: sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
+- **Rate limits**: the client already throttles sends to AhaSend's published limit of 100 requests per second with a 200-request burst, and the limit is per account rather than per key. Running several processes against one account? Use `ahasendClient.SetSendMessageRateLimit(requestsPerSecond, burst)` to give each a share that adds up to no more than the account limit.
 - **Other frameworks**: the same SDK patterns work in [Gin](/guides/gin), [Fiber](/guides/fiber), and [chi](/guides/chi).
 - **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
 
@@ -257,8 +320,8 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every servic
   <Accordion title="Webhook verification always fails">
     Ensure nothing called `c.Bind` or otherwise consumed the body before `ParseRequest`. `BodyLimit` is compatible and should stay on the route; `BodyDump` restores the body but should be skipped because its callback receives the sensitive event payload. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
   </Accordion>
-  <Accordion title="c.Bind leaves my struct empty">
-    Echo binds by `Content-Type`. Make sure the client sends `Content-Type: application/json`; without it, `c.Bind` won't decode the JSON body and your struct fields stay zero-valued.
+  <Accordion title="c.Bind rejects my request or leaves my struct empty">
+    Echo binds by `Content-Type`. With a body but no recognized `Content-Type`, `c.Bind` returns a `415 Unsupported Media Type` error, which the handler above reports as a 400 — send `Content-Type: application/json`. A request with no body at all binds successfully and leaves every field zero-valued, which is why `event_id` and `email` are validated explicitly.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
