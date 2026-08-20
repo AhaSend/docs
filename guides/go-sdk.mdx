@@ -70,7 +70,7 @@ func main() {
 	if err != nil {
 		var apiErr *api.APIError
 		if errors.As(err, &apiErr) {
-			log.Printf("AhaSend request failed: status=%d code=%s request_id=%s", apiErr.StatusCode, apiErr.Code, apiErr.RequestID)
+			log.Printf("AhaSend request failed: status=%d type=%s request_id=%s", apiErr.StatusCode, apiErr.Type, apiErr.RequestID)
 		} else {
 			log.Print("AhaSend request failed")
 		}
@@ -93,7 +93,7 @@ func main() {
 }
 ```
 
-Run it with `go run main.go`. The example sets `Sandbox` to true, so nothing is delivered even though the message still runs through validation and fires the corresponding webhooks. Replace the example's idempotency key with a stable, server-derived identifier for the actual business operation. See [Sandbox Mode](/send-api/sandbox).
+Run it with `go run main.go`. The example sets `Sandbox` to true, so nothing is delivered even though the message still runs through validation and fires the corresponding webhooks. Replace the example's idempotency key with a stable, server-derived identifier for the actual business operation, and do not carry a key from a sandbox send over to the live one: flipping `Sandbox` changes the request body, and the API rejects a reused key whose payload differs with `422` instead of sending. See [Sandbox Mode](/send-api/sandbox).
 
 Note the loop. `Recipients` takes up to 100 addresses and each one becomes its own message, so `response.Data` holds one entry per recipient. Reading `Data[0]` and calling it done would hide the rest.
 
@@ -103,7 +103,7 @@ Optional fields are pointers, so the SDK exports helpers such as `ahasend.String
 
 Build the client once at startup and share it. It holds rate-limit, retry, and idempotency state.
 
-`api.NewAPIClientFromEnv()` builds the same client from the `AHASEND_*` environment variables. To override the key for one call, pass `api.WithRequestAPIKey(key)` as that method's final request option. Keep `context.Context` for cancellation, deadlines, and request-scoped values rather than using it for optional parameters.
+`api.NewAPIClientFromEnv()` builds the same client from the `AHASEND_*` environment variables. It does not fail when `AHASEND_API_KEY` is unset — construction succeeds and every request fails instead, so check the variable yourself at startup. To override the key for one call, pass `api.WithRequestAPIKey(key)` as that method's final request option. Keep `context.Context` for cancellation, deadlines, and request-scoped values rather than using it for optional parameters.
 
 | Option | Purpose |
 | --- | --- |
@@ -127,11 +127,11 @@ client := api.NewAPIClient(
 	api.WithRetryConfig(retryConfig),
 )
 
-client.SetSendMessageRateLimit(100, 200) // requests per second, burst
-client.SetStatisticsRateLimit(1, 1)
+// Only if your account's send limit differs from the 100/s default.
+client.SetSendMessageRateLimit(500, 1000) // requests per second, burst
 ```
 
-These token buckets are local to one client instance. Configure them at or below the limits assigned to your account; they do not coordinate across application replicas and do not eliminate API `429` responses.
+Pacing is already on when you build the client, preset to the standard account limits: 100 requests per second with a 200 burst for sends and other general endpoints, 1 per second with no burst for statistics. These setters move a bucket to whatever limit your account actually has; they do not switch pacing on. That matters in both directions — an account provisioned above 100 sends per second stays capped at the default until you raise the bucket. The token buckets are local to one client instance, so they do not coordinate across application replicas and do not eliminate API `429` responses.
 
 ## Errors
 
@@ -149,25 +149,31 @@ if errors.As(err, &apiErr) {
 	case http.StatusBadRequest:
 		// validation problem with the request
 	case http.StatusUnauthorized:
-		// API key missing, malformed, or revoked
+		// key malformed or revoked
 	case http.StatusForbidden:
 		// key lacks the required scope
+	case http.StatusUnprocessableEntity:
+		// idempotency key reused with a different request payload
 	case http.StatusTooManyRequests:
 		// configured retries are exhausted, or retries are disabled
 	}
 }
 ```
 
-`apiErr` also carries `Type`, `Code`, `RequestID`, `Message`, and the raw response body in `Raw`. Treat `Message`, `Raw`, and `err.Error()` as sensitive: an API response can repeat addresses, content, headers, or other request data. Log only allowlisted fields such as status, error type/code, request ID, and aggregate counts.
+`apiErr` also carries `Type`, `RequestID`, `Message`, `RetryAfter` on `429` and idempotency conflicts, and the raw response body in `Raw`. `Type` is the field to branch and log on; the struct has a `Code` field, but the SDK never fills it.
+
+Do not rely on `StatusCode` alone. Failures raised before the request leaves the process — no API key configured, or a request body that fails client-side validation — are also `*api.APIError`, but they carry `StatusCode` 0 and only `Type` (`api.ErrorTypeAuthentication`, `api.ErrorTypeValidation`) identifies them. A switch on status code alone drops them silently, so branch on `Type` and keep a default arm.
+
+Treat `Message`, `Raw`, and `err.Error()` as sensitive: an API response can repeat addresses, content, headers, or other request data. Log only allowlisted fields such as status, error type, request ID, and aggregate counts.
 
 When retries are enabled, a surfaced `429` or server error has exhausted the configured retry attempts. Disabling retries or setting the retry count to zero makes the first response surface immediately.
 
 ## Retries and Idempotency
 
-The SDK retries network failures, `429`, and `5xx` responses with the configured backoff. Its optional local pacing reduces bursts from one client instance. It attaches an idempotency key to POST operations and reuses that key across its own retry attempts.
+Retries are on by default: the SDK retries network failures, `429`, and `5xx` responses with the configured backoff, and leaves every other `4xx` alone unless you opt in with `RetryConfig.RetryClientErrors`. It attaches an idempotency key to POST operations and reuses that key across its own retry attempts.
 
 <Note>
-  Stored outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, so a retry after a 5xx can still result in a second send. Pass your own key derived from a stable business identifier when a duplicate would be expensive.
+  Stored outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, so a retry after a 5xx can still result in a second send. Pass your own key derived from a stable business identifier when a duplicate would be expensive. API key creation is the exception: because its response carries a one-time secret, that outcome replays for only 5 minutes, after which the same key creates a second credential.
 </Note>
 
 ```go
