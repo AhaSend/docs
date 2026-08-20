@@ -368,7 +368,7 @@ For local testing, build for your own OS and run `func start`: the host reads `l
 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
 - **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
 - **Batch idempotency**: one key covers one whole `CreateMessage` call, recipient list included. Adding a recipient changes the body, so the same key then returns `422` rather than sending to the newcomer.
 - **Other platforms**: deploying on Google Cloud instead? See the [Cloud Run functions guide](/guides/google-cloud-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
 - **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
