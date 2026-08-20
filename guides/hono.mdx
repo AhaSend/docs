@@ -9,7 +9,7 @@ This guide builds a Hono server on Node.js and adds a protected email endpoint p
 
 ## Prerequisites
 
-- Node.js
+- Node.js 22 or newer (the SDK's minimum)
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 
@@ -162,37 +162,42 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 serve({ fetch: app.fetch, port });
 ```
 
-Call the route from a trusted backend with `Authorization: Bearer <WELCOME_ROUTE_TOKEN>`, and use a stable `eventId` for the business event that should send exactly one welcome email. Do not expose this route token to browser code.
+Call the route from a trusted backend with `Authorization: Bearer <WELCOME_ROUTE_TOKEN>`, and use a stable `eventId` for the business event that should send exactly one welcome email. Do not expose this route token to browser code, and put rate limiting in front of the route at your proxy or gateway: the token is the only thing between a caller and your sending quota, and the route will mail any address it is handed. Replace the token check with your application's normal authentication and authorization if the endpoint is user-facing.
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
 The SDK retries transient failures automatically. The stable key in the example is reused when your application retries the same business event; reuse it only with the exact same message payload. A key can expire, so it does not replace application-level state that records whether the welcome email was sent.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+Add `sandbox: true` to the send request to validate it without delivering anything. `sandbox` is part of the request body, and the server matches an idempotency key against a hash of that body, so a key already used for a sandbox send is rejected with a 422 when the same key is replayed for the live send — give the two runs different keys.
 
 ## Handle Webhooks
 
 Pass Hono's raw Web `Request` to the SDK's web-standard adapter. The adapter reads the original bytes, enforces the configured size limit, verifies the signature and timestamp, parses the typed event, and returns opaque `400` or `413` responses for invalid or oversized deliveries:
 
 ```ts server.ts
+// Add to the imports already at the top of server.ts; `requireEnv` is
+// imported there.
 import {
   WebhookVerifier,
   isKnownWebhookEvent,
   nextRouteHandler,
 } from "@ahasend/sdk/webhooks";
-import { requireEnv } from "./lib/ahasend.js";
 
 const verifier = new WebhookVerifier(requireEnv("AHASEND_WEBHOOK_SECRET"));
 
 const ahasendWebhook = nextRouteHandler(
   verifier,
-  async (event) => {
+  async (event, request) => {
+    // Verification already required a non-empty webhook-id. Commit this ID and
+    // your durable work in one transaction before acting on the event.
+    const webhookId = request.headers.get("webhook-id");
+
     if (isKnownWebhookEvent(event)) {
       switch (event.type) {
         case "message.delivered":
         case "message.bounced":
         case "message.opened":
-          console.log("Received AhaSend webhook", { type: event.type });
+          console.log("Received AhaSend webhook", { webhookId, type: event.type });
           break;
       }
     }
@@ -205,7 +210,9 @@ const ahasendWebhook = nextRouteHandler(
 app.post("/webhooks/ahasend", (c) => ahasendWebhook(c.req.raw));
 ```
 
-Add this route before the `serve()` call. Signature timestamp checking does not prevent a valid delivery from being replayed within the accepted window. Before performing a side effect, atomically store the verified `webhook-id` together with durable work, ignore an ID that was already committed, and make the work itself idempotent.
+Add this route before the `serve()` call. Signature timestamp checking does not prevent a valid delivery from being replayed within the accepted window. Before performing a side effect, atomically store the verified `webhook-id` — read from the handler's second `Request` argument, as above — together with durable work in one transaction, acknowledge an ID that transaction already holds without re-enqueueing it, and make the work itself idempotent.
+
+Let a failed commit reject: the adapter rethrows a handler error, Hono answers 500, and AhaSend retries. Never catch it into a 200. The opaque 400 the adapter returns for a bad signature is a permanent failure by contrast, and AhaSend disables a webhook after 100 consecutive failures.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
