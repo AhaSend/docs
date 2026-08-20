@@ -55,12 +55,12 @@ Give the agent the API contract, security boundaries, and acceptance tests inste
 >
 > - Validate `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and the sender address at startup. Construct one `AhaSendClient` at module scope with `apiKey` and `accountId`.
 > - Send with `client.messages.send({ from, recipients, subject, html_content, text_content })`. Body fields are snake_case.
-> - Pass a stable, server-derived business identifier as `options.idempotencyKey` so an application-level retry does not create a second email. Reuse a key only for the same exact payload.
+> - Pass a stable, server-derived business identifier as `options.idempotencyKey` so an application-level retry does not create a second email. Reuse a key only for the same exact payload, and include the delivery mode in the key: keys live in one account-wide namespace shared by sandbox and live traffic, and the API matches them against a hash of the request body.
 > - Treat the response as multi-status: inspect every entry in `result.data`. A recipient can have `status: "error"` and a null `id` even though the promise resolved.
 > - Catch `AhaSendAPIError` from `@ahasend/sdk` and branch on structured fields, not message text. Logs may include only aggregate counts, HTTP status, SDK error code, and request ID. Never log addresses, content, bodies, headers, idempotency keys, or whole request, response, event, client, or error objects.
-> - Keep API keys and all AhaSend calls in server-only code. Authenticate and authorize the caller, validate input, and load the order and recipient from server-authoritative storage; do not trust a client-supplied email address or order ID. Escape any untrusted value before inserting it into HTML.
+> - Keep API keys and all AhaSend calls in server-only code. Authenticate and authorize the caller, validate input, and load the order and recipient from server-authoritative storage; do not trust a client-supplied email address or order ID. Bound the request body and rate-limit the triggering route per authenticated caller so a looping or hostile client cannot mail-bomb a customer. Escape any untrusted value before inserting it into HTML.
 > - Unit tests must mock the API boundary. Any explicitly approved live integration test must set `sandbox: true` and assert every recipient result.
-> - If the task involves webhooks, import `WebhookVerifier` from `@ahasend/sdk/webhooks`, verify the exact raw body, and `await verifier.parse(headers, rawBody)`. Enforce a request-size limit and durably deduplicate the verified `webhook-id` before side effects; timestamp verification alone does not prevent replays.
+> - If the task involves webhooks, import `WebhookVerifier` from `@ahasend/sdk/webhooks`, verify the exact raw body, and `await verifier.parse(headers, rawBody)`. Enforce a request-size limit, and commit the verified `webhook-id` and the durable work it guards in one transaction before any side effect, then run that work from a worker outside the request. A bare unique-ID insert loses the event if the process dies after the insert but before processing, and timestamp verification alone does not prevent replays.
 
 Copilot cloud agent also supports repository-wide instructions in `.github/copilot-instructions.md`. Put durable rules such as server-only credentials, stable idempotency keys, multi-status checks, and safe logging there so later email tasks inherit them.
 
@@ -70,7 +70,7 @@ When the agent finishes, it requests your review. For a new task, GitHub limits 
 
 ### Did the key stay server-side?
 
-Scan the entire diff for hardcoded keys and for client-exposed variables such as `NEXT_PUBLIC_` or `VITE_`. Verify that the call is reachable only after your application's normal authentication and authorization checks and that the recipient comes from trusted server-side data. If any of those checks fail, request a correction with an `@copilot` comment on the pull request.
+Scan the entire diff for hardcoded keys and for client-exposed variables such as `NEXT_PUBLIC_` or `VITE_`. Verify that the call is reachable only after your application's normal authentication and authorization checks, that the recipient comes from trusted server-side data, and that the route bounds its request body and rate-limits each authenticated caller. A send path that any caller can reach, or reach without a ceiling, is a mail relay regardless of how correct the SDK usage is. If any of those checks fail, request a correction with an `@copilot` comment on the pull request.
 
 ### Is it using the SDK safely?
 
@@ -117,7 +117,7 @@ export async function sendOrderConfirmation(order: ConfirmedOrder): Promise<void
         html_content: "<p>Thanks—your order is confirmed.</p>",
         sandbox: mode === "sandbox",
       },
-      { idempotencyKey: `order-confirmation-${order.id}` },
+      { idempotencyKey: `order-confirmation-${mode}-${order.id}` },
     );
 
     const rejected = result.data.filter((entry) => entry.status === "error");
@@ -144,6 +144,8 @@ The route or controller calling this function still has to authenticate the requ
 ### Does it handle retries and multi-status results?
 
 The SDK generates an idempotency key for its own retry loop, but a stable caller-provided key is needed when your application may invoke the business operation again. Confirm the PR derives that key from a trusted immutable ID and never logs it.
+
+Keys are scoped to the account, not to a delivery mode, and the API matches a reused key against a hash of the request body. A key built from the order ID alone therefore collides between the sandbox run of Step 4 and the first live send for the same order: the bodies differ only in the `sandbox` field, so the live request is rejected as an idempotency mismatch instead of being sent. Including the mode in the key, as above, keeps the two namespaces apart.
 
 A resolved send returns one entry per recipient. Do not accept code that checks only `result.data[0]`, treats resolution as unconditional success, or exposes recipient details in a response or log.
 
@@ -174,7 +176,7 @@ After review and CI pass, merge through your normal protected-branch process. In
 ## Going Further
 
 - **Exercise sandbox outcomes:** integration tests can set `sandbox_result` to `bounce` or `suppress` to exercise the corresponding delivery and webhook paths. Assert multi-status send results separately.
-- **Templating and webhooks:** per-recipient `substitutions` support personalized batches, and `@ahasend/sdk/webhooks` verifies delivery-event signatures. Preserve the raw body and durably deduplicate `webhook-id` before side effects.
+- **Templating and webhooks:** per-recipient `substitutions` support personalized batches, and `@ahasend/sdk/webhooks` verifies delivery-event signatures. Preserve the raw body, and commit `webhook-id` together with the durable work in one transaction before any side effect.
 - Same grounding technique, different instruction file: [Cursor](/guides/cursor), [Claude](/guides/claude), and [Windsurf](/guides/windsurf).
 - For complete framework integrations, see [Next.js](/guides/nextjs), [Express](/guides/express), or [Remix](/guides/remix).
 
