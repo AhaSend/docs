@@ -5,13 +5,13 @@ description: "Send transactional email from Next.js App Router route handlers an
 keywords: ["nextjs send email", "next.js transactional email", "nextjs email api route", "ahasend nextjs", "nextjs webhook email"]
 ---
 
-Never prefix the key with `NEXT_PUBLIC_`: [Next.js](https://nextjs.org) inlines those variables into the browser bundle at build time, handing full send access to anyone who opens DevTools.
+Route Handlers and Server Actions in the [Next.js](https://nextjs.org) App Router both run on the server, so the AhaSend SDK and your API key stay out of the browser bundle. This guide sends a welcome email from each of them, and receives verified AhaSend webhooks through the SDK's App Router adapter.
 
 ## Prerequisites
 
 - A Next.js project using the App Router
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:yourdomain.com` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{yourdomain.com}` scope matching the domain in `from.email` (or `messages:send:all` to cover every domain), and your account ID
 
 ## Install the SDK
 
@@ -52,14 +52,19 @@ WELCOME_API_TOKEN=generate-a-long-random-service-token
 
 ## Create the Client
 
-Create the client once at module scope and reuse it across requests. The `server-only` marker makes an accidental Client Component import fail at build time, and `fromEnv()` validates the required AhaSend configuration:
+Build the client on first use and reuse it across requests. The `server-only` marker makes an accidental Client Component import fail at build time, and `fromEnv()` validates the required AhaSend configuration:
 
 ```ts lib/ahasend.ts
 import "server-only";
 import { AhaSendClient } from "@ahasend/sdk";
 import { createHash } from "node:crypto";
 
-const ahasend = AhaSendClient.fromEnv();
+let client: AhaSendClient | undefined;
+
+function ahasend(): AhaSendClient {
+  client ??= AhaSendClient.fromEnv();
+  return client;
+}
 
 export interface WelcomeInput {
   signupId: string;
@@ -72,7 +77,7 @@ export async function sendWelcomeEmail(input: WelcomeInput) {
     .update(input.signupId)
     .digest("hex")}`;
 
-  const result = await ahasend.messages.send({
+  const result = await ahasend().messages.send({
     from: { email: "hello@yourdomain.com", name: "Your App" },
     recipients: [{ email: input.email, name: input.name }],
     subject: "Welcome to Your App!",
@@ -85,6 +90,10 @@ export async function sendWelcomeEmail(input: WelcomeInput) {
 }
 ```
 
+<Warning>
+  Read credentials inside a function, not at module scope. `next build` imports every route module to collect its configuration, so a client constructed — or an environment variable asserted — while the module is evaluating turns a build without production secrets into a hard build failure (`Failed to collect page data`). That is the normal case for Docker image builds and for CI that keeps secrets out of the build step.
+</Warning>
+
 ## Send an Email from a Next.js Route Handler
 
 Route Handlers are public endpoints. This backend-to-backend example requires a long random bearer token over HTTPS; use your application's existing authentication and authorization instead when the caller is a user. Also configure request-size and rate limits at your hosting layer.
@@ -93,17 +102,23 @@ Route Handlers are public endpoints. This backend-to-backend example requires a 
 import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 
-const token = process.env.WELCOME_API_TOKEN;
-if (!token || token.length < 32) {
-  throw new Error("WELCOME_API_TOKEN must contain at least 32 characters");
+let expected: Buffer | undefined;
+
+function expectedDigest(): Buffer {
+  if (expected) return expected;
+  const token = process.env.WELCOME_API_TOKEN;
+  if (!token || token.length < 32) {
+    throw new Error("WELCOME_API_TOKEN must contain at least 32 characters");
+  }
+  expected = createHash("sha256").update(token).digest();
+  return expected;
 }
-const expected = createHash("sha256").update(token).digest();
 
 export function isInternalRequest(request: Request): boolean {
   const parts = request.headers.get("authorization")?.split(" ") ?? [];
   if (parts.length !== 2 || parts[0] !== "Bearer") return false;
   const actual = createHash("sha256").update(parts[1]).digest();
-  return timingSafeEqual(actual, expected);
+  return timingSafeEqual(actual, expectedDigest());
 }
 ```
 
@@ -240,11 +255,11 @@ export async function sendWelcome() {
 }
 ```
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+Add `sandbox: true` to the send request to validate it without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so a sandbox send is not a separate namespace: reusing `welcome-<hash>` with `sandbox` flipped is the same key with a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Prefix sandbox keys distinctly (`sandbox-welcome-…`).
 
 ## Handle Webhooks
 
-The SDK ships an App Router adapter, `nextRouteHandler`, that reads a bounded raw body, verifies the HMAC signature and timestamp, and hands you a typed event. Export it directly as `POST`:
+The SDK ships an App Router adapter, `nextRouteHandler`, that reads a bounded raw body, verifies the HMAC signature and timestamp over those exact bytes, and hands you a typed event. Build it on first request and call it from `POST`:
 
 ```ts app/api/webhooks/ahasend/route.ts
 import {
@@ -252,23 +267,31 @@ import {
   nextRouteHandler,
 } from "@ahasend/sdk/webhooks";
 
-const secret = process.env.AHASEND_WEBHOOK_SECRET;
-if (!secret) throw new Error("AHASEND_WEBHOOK_SECRET is required");
-const verifier = new WebhookVerifier(secret);
+let receiver: ((request: Request) => Promise<Response>) | undefined;
 
-export const POST = nextRouteHandler(
-  verifier,
-  async () => new Response(null, { status: 204 }),
-  {
-    maxBodyBytes: 1_000_000,
-    onError(_error, context) {
-      console.error(`AhaSend webhook ${context.stage} failure`);
+function webhookReceiver() {
+  if (receiver) return receiver;
+  const secret = process.env.AHASEND_WEBHOOK_SECRET;
+  if (!secret) throw new Error("AHASEND_WEBHOOK_SECRET is required");
+  receiver = nextRouteHandler(
+    new WebhookVerifier(secret),
+    async () => new Response(null, { status: 204 }),
+    {
+      maxBodyBytes: 1_000_000,
+      onError(_error, context) {
+        console.error(`AhaSend webhook ${context.stage} failure`);
+      },
     },
-  },
-);
+  );
+  return receiver;
+}
+
+export async function POST(request: Request) {
+  return webhookReceiver()(request);
+}
 ```
 
-This minimal receiver verifies and acknowledges events without side effects. Timestamp verification is not replay deduplication: before adding side effects, atomically record the `webhook-id` header with durable work, acknowledge already-recorded deliveries with a 2xx response, and process the work idempotently. Do not launch untracked work after returning a response. Match the one-megabyte application limit at your host or reverse proxy, configure opaque rejections, and cap concurrent webhook work.
+This minimal receiver verifies and acknowledges events without side effects. Timestamp verification is not replay deduplication: before adding side effects, atomically record the `webhook-id` header with durable work, acknowledge already-recorded deliveries with a 2xx response, and process the work idempotently. Do not launch untracked work after returning a response: a bare floating promise is killed when the serverless invocation ends, so hand deferred work to `after()` from `next/server`, which keeps the invocation alive until it settles. Match the one-megabyte application limit at your host or reverse proxy, configure opaque rejections, and cap concurrent webhook work.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix). Invalid signatures are rejected with a 400 before your handler runs.
 
