@@ -9,6 +9,7 @@ The webhook route is where [Express](https://expressjs.com) apps usually go wron
 
 ## Prerequisites
 
+- Node.js 22 or newer, and Express 5. The code below relies on Express 5 forwarding a rejected promise from an `async` handler to your error middleware; on Express 4 the same `throw` becomes an unhandled rejection and the request never completes.
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{domain}` scope for your sending domain (or `messages:send:all` if it must cover multiple domains), and your account ID
 
@@ -66,17 +67,27 @@ export const ahasend = new AhaSendClient({
 
 ```ts server.ts
 import express, { type ErrorRequestHandler } from "express";
+import { timingSafeEqual } from "node:crypto";
 import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend.js";
 
 const app = express();
 const welcomeEndpointToken = process.env.WELCOME_ENDPOINT_TOKEN;
 if (!welcomeEndpointToken) throw new Error("WELCOME_ENDPOINT_TOKEN is required");
+const expectedAuthorization = Buffer.from(`Bearer ${welcomeEndpointToken}`);
+
+function isAuthorized(header: string | undefined): boolean {
+  const supplied = Buffer.from(header ?? "");
+  return (
+    supplied.length === expectedAuthorization.length &&
+    timingSafeEqual(supplied, expectedAuthorization)
+  );
+}
 
 app.post(
   "/api/welcome",
   (req, res, next) => {
-    if (req.get("authorization") !== `Bearer ${welcomeEndpointToken}`) {
+    if (!isAuthorized(req.get("authorization"))) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
@@ -84,29 +95,39 @@ app.post(
   },
   express.json({ limit: "16kb" }),
   async (req, res) => {
-    const { email, name } = req.body ?? {};
+    const { email, name, eventId } = req.body ?? {};
     if (
       typeof email !== "string" ||
-      email.length === 0 ||
-      (name !== undefined && typeof name !== "string")
+      email.length < 3 ||
+      email.length > 320 ||
+      (name !== undefined && (typeof name !== "string" || name.length > 100)) ||
+      typeof eventId !== "string" ||
+      !/^[A-Za-z0-9._:-]{1,200}$/.test(eventId)
     ) {
       res.status(400).json({ error: "Invalid request body" });
       return;
     }
 
     try {
-      const result = await ahasend.messages.send({
-        from: { email: "hello@yourdomain.com", name: "Your App" },
-        recipients: [{ email, name }],
-        subject: "Welcome to Your App!",
-        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
-        text_content: "Welcome aboard! We're glad you're here.",
-      });
+      const result = await ahasend.messages.send(
+        {
+          from: { email: "hello@yourdomain.com", name: "Your App" },
+          recipients: [{ email, name }],
+          subject: "Welcome to Your App!",
+          html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+          text_content: "Welcome aboard! We're glad you're here.",
+        },
+        { idempotencyKey: `welcome-${eventId}` },
+      );
 
       const rejected = result.data.filter((r) => r.status === "error");
-      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+      if (rejected.length > 0) {
+        console.warn(`${rejected.length} recipient(s) rejected`);
+        res.status(502).json({ error: "Recipient was not accepted" });
+        return;
+      }
 
-      res.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+      res.status(202).json({ accepted: true });
     } catch (err) {
       if (err instanceof AhaSendAPIError) {
         console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
@@ -136,11 +157,13 @@ const opaqueErrorHandler: ErrorRequestHandler = (err, _req, res, next) => {
 
 Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`. Serve it only over HTTPS. For a user-facing endpoint, replace the token with your application's authentication and authorization, validate addresses according to your product's rules, and rate-limit sends. The route-specific JSON parser authenticates before reading the body and leaves the webhook stream untouched.
 
-A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+`eventId` must be a stable identifier for the same welcome-email action — the caller sends the same one when it retries, and a new one for a genuinely new send.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. When a duplicate would be expensive, pass a stable key from your business operation as the second argument: `ahasend.messages.send(message, { idempotencyKey: "welcome-user-123" })`.
+AhaSend's 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry rather than treating a resolved promise as full success.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+The SDK generates an `Idempotency-Key` for every `send()` and reuses it across its own internal retries, so a transient 5xx does not become two emails. It cannot cover a retry your *caller* makes — and a timeout never proves the send did not land — which is what the stable `idempotencyKey` above is for: a stored result is replayed for 24 hours, while a server error releases the key for re-execution. Reuse a key only with an identical request body — the same key with different content is rejected as `AhaSendIdempotencyMismatchError` (HTTP 422).
+
+Add `sandbox: true` to the send request to validate it without delivering anything. It changes the request body, so give a sandbox send a different `idempotencyKey` from the live send it stands in for.
 
 ## Handle Webhooks
 
@@ -185,7 +208,7 @@ The adapter sends an empty `200` after the handler completes, an empty `400` for
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
 <Warning>
-  Timestamp verification is not replay deduplication. Before adding side effects, atomically persist the verified `webhook-id` header together with durable queue/outbox work. Acknowledge an already-recorded ID without processing it again, and make the worker idempotent.
+  Timestamp verification is not replay deduplication. Before adding side effects, atomically persist the verified `webhook-id` header together with durable queue/outbox work. Acknowledge an already-recorded ID without processing it again, and make the worker idempotent. As you replace the `console.log` calls with real handling, keep `event.data` out of your logs: it carries the recipient address, sender, and subject, plus the opener's IP and user agent on open and click events.
 </Warning>
 
 ## Going Further
@@ -193,7 +216,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour. The first attempt must be in the future and within seven days of the request.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers, reusing each key only with the same payload.
 - **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself, use the encoded string as `data`, and set `base64: true`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. On a different Node framework? The same SDK powers the [Fastify](/guides/fastify) and [NestJS](/guides/nestjs) guides.
