@@ -15,7 +15,7 @@ Claude can write and run code, but it can't verify your domain or mint your cred
 1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). Unverified domains cannot send and produce an API error.
 2. **Create an API key.** Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` rather than `messages:send:all`: if it leaks, the blast radius is one domain's mail, not your whole account. Grab your **account ID** too.
 
-Put both in your environment as `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. If you use the `.env` file shown later, create it yourself, ensure `.env` is ignored by git before adding the values, and do not paste the values into Claude or ask it to read or echo the file. Claude Code persists conversations and tool activity locally. You'll also need Node.js installed.
+Put both in your environment as `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. If you use the `.env` file shown later, create it yourself, ensure `.env` is ignored by git before adding the values, and do not paste the values into Claude or ask it to read or echo the file. Claude Code persists conversations and tool activity locally. You'll also need Node.js 22 or newer, the SDK's supported floor.
 
 ## Step 1: Install the SDK
 
@@ -59,19 +59,39 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
   `new AhaSendClient({ apiKey, accountId })`.
 - Send with `client.messages.send({ from, recipients, subject,
   html_content, text_content })`. Body fields are snake_case. `from` is
-  `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
-  1 to 100 entries, each getting its own message.
+  `{ email, name? }`; `recipients` is an array of
+  `{ email, name?, substitutions? }`, 1 to 100 entries, each getting its
+  own message.
 - The response is multi-status (HTTP 202): `result.data` has one entry per
   recipient, and a recipient can come back `status: "error"` with a null
   `id` while the promise resolves. Inspect every entry.
 - Per-recipient templating: pass `substitutions` and use `{{ variable }}`
   in the subject or body.
+- Never let an unauthenticated caller choose the recipient. A send is
+  triggered by a server-side event, and the address comes from our own
+  records, never straight off a request body. Authenticate, validate, and
+  rate-limit anything that can cause a send, and bound the request body
+  size. An endpoint that mails whatever address it is handed is a mail
+  relay on our verified domain.
+- Never detach a send promise from a request handler. Commit a durable,
+  uniquely keyed job in the same transaction as the record that triggers
+  it and send from a worker: work started after the response goes out can
+  be killed with the process.
+- For anything the app can retry, pass a stable caller-owned key in the
+  second argument: `client.messages.send(body, { idempotencyKey })`,
+  derived from the job or business event. Reuse a key only with a
+  byte-identical payload; a changed payload comes back as a mismatch.
+  Stored results expire after 24 hours, so reconcile instead of assuming
+  a later retry is deduplicated. `sandbox` is part of the fingerprinted
+  body, so never reuse one key across sandbox and live.
 - Errors are typed. Catch `AhaSendAPIError` / `AhaSendRateLimitError` from
   `@ahasend/sdk` and match on `err.status` or `err.code`, never on text.
 - Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
-  Signature checks need the RAW request body. `parse()` and `verify()`
-  are async: `await verifier.parse(headers, rawBody)`. The Express,
-  Fastify and Next.js adapters await internally.
+  Signature checks need the RAW request body, not re-serialized JSON.
+  `parse()` and `verify()` are async:
+  `await verifier.parse(headers, rawBody)`. Prefer the Express, Fastify
+  and Next.js adapters from the same module: they read the raw body under
+  a size cap and await verification for you.
 - Webhooks can be delivered more than once. After verification, atomically
   commit the `webhook-id` and durable work in the same transaction before
   acknowledging it. Acknowledge an already-committed ID without processing
@@ -79,10 +99,13 @@ Ask Claude cold and you'll get a client from a package nobody has published. Giv
 - Read `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and
   `AHASEND_WEBHOOK_SECRET` from the environment. Pass the webhook secret
   exactly as the dashboard returns it, including the `aha-whsec-` prefix.
-  Never hardcode or commit these values.
+  Never hardcode or commit these values, and never put them in a
+  client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`,
+  `NUXT_PUBLIC_`) — those ship to the browser.
 - Log only aggregate counts, appropriate opaque IDs, HTTP status, SDK error
   code, and request ID. Never log addresses, message content, secrets,
-  request/response/event/error objects, `err.message`, or `err.body`.
+  idempotency keys, request/response/event/error objects, `err.message`,
+  or `err.body`.
 - For testing, set `sandbox: true` so nothing is delivered, and use
   `sandbox_result` to simulate an outcome: "deliver", "bounce", "defer",
   "fail", or "suppress".
@@ -96,7 +119,7 @@ Claude Code now loads these project instructions each session, but instructions 
 
 Don't ask for a send, ask for the flow, and name the steps:
 
-> "Build a signup-confirmation email workflow. When a new user is created, send them a welcome email with the AhaSend SDK, using `substitutions` for their first name. Add a webhook endpoint that verifies AhaSend events with `@ahasend/sdk/webhooks`, deduplicates each verified `webhook-id` atomically with durable work, and marks bounced addresses as undeliverable. Read credentials from the environment per CLAUDE.md. Build it in sandbox mode and run it to confirm it works before telling me it's done."
+> "Build a signup-confirmation email workflow. When a new user is created, commit the user and a uniquely keyed welcome-email job in one transaction, then send that job from a worker with the AhaSend SDK, using `substitutions` for their first name and a stable idempotency key derived from the job. Take the recipient address from the stored user record, never from a request body, and never fire the send as a detached promise inside the request handler. Add a webhook endpoint that verifies AhaSend events with `@ahasend/sdk/webhooks`, deduplicates each verified `webhook-id` atomically with durable work, and marks bounced addresses as undeliverable. Read credentials from the environment per CLAUDE.md. Build it in sandbox mode and run it to confirm it works before telling me it's done."
 
 For a multi-file change like this, switch Claude Code into **Plan mode** first. It researches and proposes an approach before writing anything, so you can sign off on the shape before a line of code exists: a plan that separates the send, the template, and the bounce handler instead of one tangled function.
 
@@ -110,15 +133,25 @@ export const ahasend = new AhaSendClient({
   accountId: process.env.AHASEND_ACCOUNT_ID!,
 });
 
-export async function sendWelcome(user: { email: string; firstName: string }) {
-  const result = await ahasend.messages.send({
-    from: { email: "hello@yourdomain.com", name: "Your App" },
-    recipients: [{ email: user.email, substitutions: { first_name: user.firstName } }],
-    subject: "Welcome {{ first_name }}",
-    text_content: "Thanks for signing up, {{ first_name }}.",
-    html_content: "<p>Thanks for signing up, {{ first_name }}.</p>",
-    sandbox: process.env.NODE_ENV !== "production",
-  });
+// Called from the worker that drains welcome-email jobs, with the user
+// loaded from your own records — never from an inbound request body.
+export async function sendWelcome(job: {
+  id: string;
+  user: { email: string; firstName: string };
+}) {
+  const result = await ahasend.messages.send(
+    {
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [
+        { email: job.user.email, substitutions: { first_name: job.user.firstName } },
+      ],
+      subject: "Welcome {{ first_name }}",
+      text_content: "Thanks for signing up, {{ first_name }}.",
+      html_content: "<p>Thanks for signing up, {{ first_name }}.</p>",
+      sandbox: process.env.NODE_ENV !== "production",
+    },
+    { idempotencyKey: `welcome-${job.id}` },
+  );
 
   const rejected = result.data.filter((r) => r.status === "error");
   if (rejected.length > 0) {
@@ -160,11 +193,12 @@ Add this rule to `CLAUDE.md`: default `sandbox` to `true` everywhere except prod
 
 ## Step 5: Review the Diff
 
-Confirm three things before you merge, even though Claude ran its own tests:
+Confirm four things before you merge, even though Claude ran its own tests:
 
+- **The trigger isn't a mail relay.** Find every path that can cause a send and check it is authenticated, validated, and rate-limited, with the recipient address read from your stored user record rather than the request body. A route that mails whatever address a caller posts lets strangers send from your verified domain. Check too that the send is handed to a durable job instead of being detached from the request, where the runtime can kill it after the response.
 - **The real package.** The TypeScript import must be `@ahasend/sdk`. Go uses `github.com/AhaSend/ahasend-go`; there is no Python SDK yet, so do not invent one—use the REST API from Python.
 - **Every recipient checked.** A promise that resolves means the request was accepted, not that every address was. Code reading `result.data[0]` and moving on will silently miss a suppressed recipient.
-- **The key lives in the environment.** Agents that touch many files can drift a secret into the wrong one. Confirm the key is read from `process.env` and never written to anything git tracks.
+- **The key lives in the environment.** Agents that touch many files can drift a secret into the wrong one. Confirm the key is read from `process.env`, never written to anything git tracks, and never assigned to a client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`), which ships it to the browser.
 
 Then merge, set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_WEBHOOK_SECRET` in your hosting platform's secret store, turn `sandbox` off in production, and send one message to an address you control.
 
