@@ -11,7 +11,7 @@ keywords: ["chi send email", "golang transactional email chi", "chi router email
 
 - Go installed
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
 
 ## Install the SDK
 
@@ -86,6 +86,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 	r.Post("/api/welcome", sendWelcome)
 	r.Post("/webhooks/ahasend", handleAhaSendWebhook)
 	server := &http.Server{
@@ -100,7 +101,7 @@ func main() {
 
 In production, put this HTTP listener behind a TLS-terminating reverse proxy or load balancer. Do not send the bearer endpoint token over plaintext internet traffic.
 
-`middleware.Logger` is safe on every route: it only logs request metadata. Just don't add middleware that reads the request body ahead of the webhook route (more on that below).
+`middleware.Logger` and `middleware.Recoverer` are safe on every route: neither touches the request body, and `Logger` records only request metadata. Just don't add middleware that reads the request body ahead of the webhook route (more on that below).
 
 ## Send an Email from a chi Handler
 
@@ -110,10 +111,12 @@ chi handlers are ordinary `net/http` handlers, so decode the JSON body with `enc
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/AhaSend/ahasend-go"
 	"github.com/AhaSend/ahasend-go/api"
@@ -121,21 +124,34 @@ import (
 	"github.com/AhaSend/ahasend-go/models/requests"
 )
 
+// sandbox runs the send through validation without delivering anything.
+// Set it to false only when you intend to send real mail.
+const sandbox = true
+
 type welcomeInput struct {
-	Email string `json:"email"`
-	Name  string `json:"name"`
+	Email   string `json:"email"`
+	Name    string `json:"name"`
+	EventID string `json:"event_id"`
 }
 
+var eventIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,200}$`)
+
 func sendWelcome(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Authorization") != "Bearer "+welcomeToken {
+	provided := []byte(r.Header.Get("Authorization"))
+	expected := []byte("Bearer " + welcomeToken)
+	if subtle.ConstantTimeCompare(provided, expected) != 1 {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 	var in welcomeInput
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Email == "" {
-		http.Error(w, "a JSON body with an email field is required", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		http.Error(w, "a JSON body is required", http.StatusBadRequest)
+		return
+	}
+	if in.Email == "" || !eventIDPattern.MatchString(in.EventID) {
+		http.Error(w, "email and a valid event_id are required", http.StatusBadRequest)
 		return
 	}
 
@@ -145,37 +161,55 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 		Subject:     "Welcome to Your App!",
 		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
 		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
+		Sandbox:     ahasend.Bool(sandbox),
 	}
 
-	response, _, err := ahasendClient.MessagesAPI.CreateMessage(r.Context(), accountID, message)
+	idempotencyKey := "live-welcome-" + in.EventID
+	if sandbox {
+		idempotencyKey = "sandbox-welcome-" + in.EventID
+	}
+
+	response, _, err := ahasendClient.MessagesAPI.CreateMessage(
+		r.Context(),
+		accountID,
+		message,
+		api.WithIdempotencyKey(idempotencyKey),
+	)
 	if err != nil {
 		var apiErr *api.APIError
 		if errors.As(err, &apiErr) {
-			log.Printf("AhaSend error %d (request %s)", apiErr.StatusCode, apiErr.RequestID)
+			log.Printf("AhaSend API error status=%d request_id=%s", apiErr.StatusCode, apiErr.RequestID)
 			http.Error(w, "failed to send email", http.StatusBadGateway)
 			return
 		}
+		log.Print("AhaSend send failed before a response was received")
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
 
-	statuses := make([]string, 0, len(response.Data))
-	for _, result := range response.Data {
-		statuses = append(statuses, result.Status)
-		if result.Status == "error" {
-			log.Print("AhaSend rejected a recipient")
-		}
+	if len(response.Data) != 1 || response.Data[0].Status == "error" {
+		log.Printf("AhaSend rejected the recipient results=%d", len(response.Data))
+		http.Error(w, "recipient rejected", http.StatusBadGateway)
+		return
+	}
+
+	messageID := ""
+	if response.Data[0].ID != nil {
+		messageID = *response.Data[0].ID
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string][]string{"statuses": statuses})
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(map[string]interface{}{"accepted": true, "message_id": messageID})
 }
 ```
 
-Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`. Replace this check with your application's normal authentication and authorization if the endpoint is user-facing, and add rate limiting appropriate to your traffic. Never expose a recipient-controlled send endpoint without access control.
+Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`; never ship that token to a browser. The comparison uses `subtle.ConstantTimeCompare` because Go's `==` on strings returns as soon as two bytes differ, which leaks the token prefix to an attacker who can time repeated requests. If the endpoint is user-facing, replace the check with your application's authentication and authorization and load the recipient address from your own user record instead of the request body — an endpoint that mails an arbitrary address with arbitrary content is an open relay. Add per-caller rate limiting too; [`go-chi/httprate`](https://github.com/go-chi/httprate) plugs in as chi middleware.
 
-The send API is multi-status: a 202 response has one `Data` entry per recipient, and an entry can have `Status == "error"` and a nil `ID` even though the SDK call returned no error. Inspect every entry rather than treating the HTTP-level success as proof that every message was queued.
+The example defaults to sandbox mode, which validates the request and fires the matching webhooks without delivering anything. See [Sandbox Mode](/send-api/sandbox).
 
-The SDK automatically retries rate-limited requests with exponential backoff and attaches an idempotency key to every send. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice. When a duplicate would be expensive, pass a stable business key as the final argument: `CreateMessage(r.Context(), accountID, message, api.WithIdempotencyKey("stable-business-key"))`.
+The send API is multi-status: a 202 response has one `Data` entry per recipient, and an entry can carry `Status == "error"` with a nil `ID` even though the SDK call returned no error. Inspect every entry, as the handler does above, rather than treating HTTP-level success as proof that every message was queued.
+
+The SDK retries network failures, `429`, and `5xx` responses with exponential backoff, reusing one idempotency key across those attempts. When you supply no key it generates a fresh random one per call, so it protects only that call's internal retries — a second HTTP request to this route would get a new key and send a second email. That is why the example derives a stable key from the caller's `event_id` and passes it with `api.WithIdempotencyKey`. Keep each `event_id` bound to the same message data: the API matches a key against the method, path, and a hash of the body, and answers a mismatch with `422`. The mode prefix keeps a sandbox result from being replayed for a live send, since `Sandbox` is part of that body. Stored outcomes replay for 24 hours, and a `5xx` is never stored, so even a same-key retry after a server error can still send twice.
 
 ## Handle Webhooks
 
@@ -242,6 +276,8 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 Return 2xx promptly after durable work has been accepted. Do slow processing in a durable queue, not an untracked goroutine: if enqueueing fails, return 5xx so AhaSend can retry.
 
+`maxWebhookBodyBytes` caps one request, not the process. `ParseRequest` buffers the whole body and copies it again to build the signed string, so cap concurrency and request rate at the reverse proxy as well, or enough simultaneous maximum-size deliveries will exhaust memory. As you replace the `log.Print` calls with real handling, keep the raw body, the signature header, and the event object itself out of your logs: those carry recipient addresses and message content.
+
 ## Going Further
 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
@@ -249,7 +285,7 @@ Return 2xx promptly after durable work has been accepted. Do slow processing in 
 - **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
 - **Rate limits**: sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
 - **Other frameworks**: the same SDK patterns work in [Gin](/guides/gin), [Echo](/guides/echo), and [gorilla/mux](/guides/gorilla-mux).
-- **Attachments**: for binary files such as PDFs, encode the bytes with `base64.StdEncoding.EncodeToString(data)`, use that string as `Data`, and set `Base64: true`. The flag tells AhaSend how to decode `Data`; it does not perform the encoding.
+- **Attachments**: every entry needs `Data`, `ContentType`, and `FileName`. For binary files such as PDFs, encode the bytes with `base64.StdEncoding.EncodeToString(data)`, use that string as `Data`, and set `Base64: true`. The flag tells AhaSend how to decode `Data`; it does not perform the encoding.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
 
@@ -262,8 +298,8 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every servic
   <Accordion title="Webhook verification always fails">
     Something consumed the request body before `ParseRequest` ran. Check `r.Use(...)` chains and any middleware mounted on a parent router for body readers. `middleware.Logger` and `middleware.Recoverer` are fine; anything that buffers or dumps the body is not. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
   </Accordion>
-  <Accordion title="405 Method Not Allowed on my routes">
-    chi matches methods exactly: `r.Post("/api/welcome", ...)` only accepts POST. Make sure your test request uses POST, and remember chi treats `/webhooks/ahasend` and `/webhooks/ahasend/` as different paths.
+  <Accordion title="405 or 404 on my routes">
+    chi matches methods exactly, so any method other than POST on `/api/welcome` returns 405. A trailing slash is a different failure: chi treats `/webhooks/ahasend/` as a distinct path from `/webhooks/ahasend` and returns 404 for it, which AhaSend counts as a failed delivery and retries. Register the webhook URL without the trailing slash, or add `middleware.StripSlashes`.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
