@@ -9,6 +9,7 @@ keywords: ["koa send email", "koa transactional email", "koa email api", "ahasen
 
 ## Prerequisites
 
+- Node.js 22 or newer, which both the AhaSend SDK and `raw-body` require
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](/send-api/credentials) with the domain-specific `messages:send:{your-domain}` scope, and your account ID
 
@@ -17,24 +18,28 @@ keywords: ["koa send email", "koa transactional email", "koa email api", "ahasen
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk koa @koa/router @koa/bodyparser raw-body @types/koa
+npm install @ahasend/sdk koa @koa/router @koa/bodyparser raw-body
+npm install --save-dev typescript @types/koa @types/node
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body @types/koa
+pnpm add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body
+pnpm add --save-dev typescript @types/koa @types/node
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body @types/koa
+yarn add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body
+yarn add --dev typescript @types/koa @types/node
 ```
 
 ```bash bun
-bun add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body @types/koa
+bun add @ahasend/sdk koa @koa/router @koa/bodyparser raw-body
+bun add --dev typescript @types/koa @types/node
 ```
 
 </CodeGroup>
 
-`raw-body` is only needed for webhooks, where signature verification requires the exact, unparsed request bytes.
+`raw-body` is only needed for webhooks, where signature verification requires the exact, unparsed request bytes. Koa itself ships no type declarations, hence `@types/koa`; `@koa/router` and `@koa/bodyparser` bundle their own, so don't add `@types/koa__router`.
 
 ## Configure Environment Variables
 
@@ -57,13 +62,13 @@ Create the client once at module scope and reuse it across requests:
 ```ts lib/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
 
-function requireEnv(name: string): string {
+export function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required`);
   return value;
 }
 
-const deliveryMode = requireEnv("AHASEND_DELIVERY_MODE");
+export const deliveryMode = requireEnv("AHASEND_DELIVERY_MODE");
 if (deliveryMode !== "sandbox" && deliveryMode !== "live") {
   throw new Error("AHASEND_DELIVERY_MODE must be sandbox or live");
 }
@@ -85,7 +90,7 @@ import type { Middleware } from "koa";
 import Router from "@koa/router";
 import { bodyParser } from "@koa/bodyparser";
 import { AhaSendAPIError } from "@ahasend/sdk";
-import { ahasend, sandboxMode, welcomeToken } from "./lib/ahasend.js";
+import { ahasend, deliveryMode, sandboxMode, welcomeToken } from "./lib/ahasend.js";
 
 const app = new Koa();
 const router = new Router();
@@ -130,7 +135,7 @@ router.post("/api/welcome", requireWelcomeToken, async (ctx) => {
       html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
       text_content: "Welcome aboard! We're glad you're here.",
       sandbox: sandboxMode,
-    }, { idempotencyKey: `welcome-${eventID}` });
+    }, { idempotencyKey: `welcome-${deliveryMode}-${eventID}` });
 
     const accepted = result.data.filter((entry) =>
       entry.status === "queued" || entry.status === "scheduled"
@@ -180,15 +185,16 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
 
-This is a server-to-server route protected by a dedicated bearer token. For a browser-facing route, use your application's session authentication and authorization and load the recipient from server-authoritative storage. Never expose the token in client-side code or logs.
+This is a server-to-server route protected by a dedicated bearer token. For a browser-facing route, use your application's session authentication and authorization, load the recipient from server-authoritative storage, and rate-limit sends per authenticated principal so one caller cannot drain your quota. Never expose the token in client-side code or logs.
 
-The stable business-event key protects retries outside the SDK's internal retry loop. Reuse an idempotency key only for the exact same request payload and never log it. Stored non-server-error outcomes can be replayed for 24 hours, but a `5xx` releases the key for re-execution; reconcile an uncertain outcome before another send when duplicates are unacceptable.
+The stable business-event key protects retries outside the SDK's internal retry loop. Reuse an idempotency key only for the exact same request payload and never log it: AhaSend matches a key against a hash of the request body, so the same key with different content is rejected as `AhaSendIdempotencyMismatchError` (HTTP 422). `sandbox` is part of that body, which is why the key is namespaced by `deliveryMode` — without that, replaying an event ID after switching modes fails permanently instead of sending. Stored non-server-error outcomes can be replayed for 24 hours, but a `5xx` releases the key for re-execution; reconcile an uncertain outcome before another send when duplicates are unacceptable.
 
 ## Handle Webhooks
 
 There is no Koa-specific adapter, so use the asynchronous generic `WebhookVerifier`. It needs the **raw request body**. Put the webhook route in its own router before `bodyParser()`, then read the exact bytes from the Node request (`ctx.req`) with the [`raw-body`](https://github.com/stream-utils/raw-body) package. Timestamp validation rejects stale signatures but does not deduplicate a valid delivery replayed inside the tolerance window.
 
 ```ts server.ts
+import { requireEnv } from "./lib/ahasend.js";
 import getRawBody from "raw-body";
 import {
   AhaSendWebhookVerificationError,
@@ -203,6 +209,8 @@ interface WebhookStore {
   enqueueOnce(webhookId: string, event: AnyWebhookEvent): Promise<boolean>;
 }
 
+const WEBHOOK_BODY_LIMIT_BYTES = 1_000_000;
+
 export function createAhaSendWebhookRouter(secret: string, store: WebhookStore): Router {
   const verifier = new WebhookVerifier(secret);
   const webhookRouter = new Router();
@@ -210,8 +218,11 @@ export function createAhaSendWebhookRouter(secret: string, store: WebhookStore):
   webhookRouter.post("/webhooks/ahasend", async (ctx) => {
     let raw: Buffer;
     try {
-      raw = await getRawBody(ctx.req, { limit: 30_000_000 });
+      raw = await getRawBody(ctx.req, { limit: WEBHOOK_BODY_LIMIT_BYTES });
     } catch (error) {
+      // An aborted read leaves the rest of the body on the socket, which
+      // would corrupt the next request on a keep-alive connection.
+      ctx.set("connection", "close");
       ctx.status =
         typeof error === "object" && error !== null && "status" in error && error.status === 413
           ? 413
@@ -240,11 +251,23 @@ export function createAhaSendWebhookRouter(secret: string, store: WebhookStore):
 
   return webhookRouter;
 }
+
+// Replaces the two mounting lines in the first block. Koa composes its
+// middleware when app.listen() runs, so every app.use() must precede it.
+const webhookRouter = createAhaSendWebhookRouter(
+  requireEnv("AHASEND_WEBHOOK_SECRET"),
+  webhookStore, // your durable WebhookStore implementation
+);
+app.use(webhookRouter.routes()).use(webhookRouter.allowedMethods());
+app.use(bodyParser({ enableTypes: ["json"], jsonLimit: "64kb" }));
+app.use(router.routes()).use(router.allowedMethods());
 ```
 
-Create this router at startup with `AHASEND_WEBHOOK_SECRET` and your durable store. Mount `webhookRouter.routes()` and `webhookRouter.allowedMethods()` before `bodyParser()`. The matched handler does not call `next()`, so the parser never consumes its stream. Do not start the server if the secret or store initialization fails.
+The webhook router is mounted before `bodyParser()`, and its matched handler never calls `next()`, so the parser never gets the chance to consume that stream. Order is the whole game here: an `app.use()` written after `app.listen()` is silently dropped, and a webhook route mounted behind the parser fails verification on every delivery. Do not start the server if the secret or store initialization fails.
 
-`enqueueOnce` must atomically store the verified `webhook-id` and a durable work/outbox record, retaining the ID for at least the delivery and retry horizon. Process that work idempotently outside the request. A duplicate receives `2xx` without enqueuing again; a storage error propagates as `5xx` so AhaSend can retry. Do not launch untracked background promises from the request. Apply body-size and concurrency limits at the reverse proxy, and never log raw bodies, signatures, whole events/errors, subjects, addresses, or message content.
+`raw-body` aborts the read past `WEBHOOK_BODY_LIMIT_BYTES`, which bounds how much an unauthenticated caller can make you buffer. One megabyte covers every outbound `message.*` event; raise it — up to the verifier's own 30,000,000-byte ceiling, above which `parse()` throws `body_too_large` — only if you receive inbound `message.routing` events carrying attachments, and keep your reverse proxy's limit in step. Closing the connection on an aborted read matters: the unread remainder stays queued on the socket, and without `Connection: close` the next delivery reusing that connection dies with a reset.
+
+`enqueueOnce` must atomically store the verified `webhook-id` and a durable work/outbox record, retaining the ID for at least the delivery and retry horizon. Process that work idempotently outside the request. A duplicate receives `2xx` without enqueuing again; a storage error propagates as `5xx` so AhaSend can retry. Do not launch untracked background promises from the request. Apply concurrency limits at the reverse proxy, and never log raw bodies, signatures, whole events/errors, subjects, addresses, or message content.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
@@ -252,17 +275,20 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule.first_attempt` to a future RFC 3339 timestamp to defer delivery.
+- **Scheduling**: set `schedule.first_attempt` to an RFC 3339 timestamp to defer delivery. It must be in the future and within seven days of the request.
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. For binary files such as PDFs, base64-encode the bytes yourself and pass the encoded string as `data`; `base64: true` tells AhaSend how to decode `data`, it does not perform the encoding.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Using [Express](/guides/express) or [Fastify](/guides/fastify) elsewhere? Those guides use the SDK's built-in webhook adapters instead of the manual verifier shown here.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Webhook handler hangs or verification always fails">
-    The body parser ran before your webhook route and drained the request stream, so `getRawBody(ctx.req)` has nothing left to read. Register the webhook router before `bodyParser()` (as above), or configure the parser to skip the webhook path. Also note the raw body must come from `ctx.req` (the Node request), not `ctx.request` (Koa's wrapper).
+  <Accordion title="Every webhook delivery returns 400">
+    The body parser ran before your webhook route and drained the request stream, so `getRawBody(ctx.req)` has nothing left to read and fails immediately with `stream.not.readable`. Register the webhook router before `bodyParser()` (as above), or configure the parser to skip the webhook path. Also note the raw body must come from `ctx.req` (the Node request), not `ctx.request` (Koa's wrapper). Fix this promptly: AhaSend disables a webhook after 100 consecutive failures.
+  </Accordion>
+  <Accordion title="The webhook route returns 404">
+    The `app.use()` calls that mount it ran after `app.listen()`. Koa composes its middleware stack when the server starts, so anything added afterwards is silently ignored. Move every `app.use()` above `app.listen()`.
   </Accordion>
   <Accordion title="ctx.request.body is undefined in the send route">
     `bodyParser()` must be registered before the router that reads parsed bodies. Check middleware order and that the client sends `Content-Type: application/json`.
