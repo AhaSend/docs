@@ -26,7 +26,8 @@ When you send an email using sandbox mode, AhaSend processes it exactly like a p
     ✅ Email is validated and processed<br />
     ✅ Webhooks are triggered<br />
     ✅ Messages appear in your dashboard logs<br />
-    ✅ No delivery attempts are made<br />
+    ✅ No real SMTP delivery attempts are made<br />
+    ✅ Relevant webhooks include representative attempt details<br />
     ✅ Completely free - no credit usage
   </Card>
   <Card title="Perfect For" icon="bullseye">
@@ -241,7 +242,12 @@ Sandbox mode is perfect for testing webhook integrations:
     - All webhook events are triggered normally in sandbox mode
     - Test delivery confirmations, bounces, opens, and clicks
     - Verify your webhook endpoint receives correct payloads
-    - No difference in webhook behavior between sandbox and production
+    - Delivery, deferral, and bounce webhooks include a representative `delivery_attempt` object
+
+    The event flow and payload shape mirror production, but delivery-attempt
+    diagnostics are synthetic because no destination mail server was contacted.
+    A sandbox classification may override the representative sample and therefore
+    may not agree with its SMTP code or response text.
   </Accordion>
 
   <Accordion title="Test Different Scenarios" icon="list-check">

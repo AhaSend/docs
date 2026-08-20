@@ -67,8 +67,8 @@ AhaSend supports webhooks for various event types. You can choose which events t
     - **Message Reception** - Email received and queued for delivery
     - **Message Delivered** - Email successfully delivered to recipient's server
     - **Message Deferred** - Temporary delivery delay (will retry)
-    - **Message Failed** - Permanent delivery failure after retries
-    - **Message Bounced** - Bounce notification received from recipient's server
+    - **Message Failed** - Message exhausted its delivery retries
+    - **Message Bounced** - Permanent SMTP rejection or later bounce notification
     - **Message Suppressed** - Email blocked due to suppression list
     - **Message Opened** - Recipient opened the email (requires tracking enabled)
     - **Message Clicked** - Recipient clicked a tracked link (requires tracking enabled)
@@ -132,7 +132,7 @@ Reception → Delivered → [Opened] → [Clicked]
     Reception → Deferred → Deferred → ... → Failed → Suppression Created
     ```
 
-    After maximum retry attempts (7 times in 24 hours), the message fails permanently and the address is suppressed.
+    After the retry window is exhausted, the message fails permanently and the address may be suppressed. Because retry exhaustion is not one SMTP exchange, its terminal event has no `delivery_attempt` object.
   </Accordion>
 
   <Accordion title="Suppressed Email" icon="ban">
@@ -202,7 +202,10 @@ Verify your webhook integration works correctly before going live:
     3. **Select** which event types to test
     4. **Click** "Send Test Events"
 
-    Test events arrive within seconds and contain realistic sample data.
+    Test events arrive within seconds and contain realistic sample data. Test
+    `message.delivered`, `message.transient_error`, and `message.bounced` events
+    include representative `delivery_attempt` diagnostics; these values are
+    synthetic and were not observed from a destination mail server.
   </Step>
 
   <Step title="Development Tools" icon="wrench">
@@ -383,6 +386,7 @@ All AhaSend webhooks follow the Standard Webhooks payload format:
 ```json
 {
   "type": "event.type",
+  "webhook_id": "abe11757-2886-4b55-96f1-0e0afc95795a",
   "timestamp": "2024-05-06T09:49:16.687031577Z",
   "data": {
     // Event-specific data
@@ -395,6 +399,7 @@ All AhaSend webhooks follow the Standard Webhooks payload format:
 ```json
 {
   "type": "message.delivered",
+  "webhook_id": "abe11757-2886-4b55-96f1-0e0afc95795a",
   "timestamp": "2024-05-06T09:50:16.687031577Z",
   "data": {
     "account_id": "4cdd7bdd-294e-4762-892f-83d40abf5a87",
@@ -403,16 +408,51 @@ All AhaSend webhooks follow the Standard Webhooks payload format:
     "recipient": "customer@example.com",
     "subject": "Welcome to our service",
     "message_id_header": "message-id-12345",
-    "id": "ahasend-message-67890"
+    "id": "ahasend-message-67890",
+    "delivery_attempt": {
+      "smtp_code": 250,
+      "enhanced_status_code": "2.0.0",
+      "response": "OK: queued",
+      "command": "DATA"
+    }
   }
 }
 ```
+
+### Delivery Attempt Diagnostics
+
+`message.delivered`, `message.transient_error`, and `message.bounced` can include
+an optional `data.delivery_attempt` object describing the SMTP exchange behind
+the event:
+
+- `smtp_code` is always present when the object is present. A value of `0`
+  means AhaSend recorded diagnostic text without an SMTP code.
+- `enhanced_status_code` is the enhanced status code, such as `5.1.1`, when
+  one was recorded.
+- `response` contains human-readable diagnostic text. Do not parse identifiers
+  from it.
+- `description` can contain a clearer translation of a complex response. Its
+  wording may change, so use it only for display.
+- `classification` is the machine-readable failure category. Treat it as an
+  open set and keep a fallback for values your integration does not recognize.
+- `command` is the normalized SMTP command name, such as `RCPT TO` or `DATA`.
+
+Do not require this object. A missing or `null` value is normal for retry
+exhaustion, out-of-band bounces, non-SMTP routing, and attempts with no recorded
+response. In particular, retry exhaustion is reported as `message.failed`,
+which has no specific attempt to report.
+
+Test webhooks and sandbox sends use representative diagnostics rather than an
+observed SMTP exchange. A sandbox classification may not agree with its sample
+SMTP code and response, so test classification-based behavior with production
+events or fixtures you control.
 
 ### Suppression Event Example
 
 ```json
 {
   "type": "suppression.created",
+  "webhook_id": "abe11757-2886-4b55-96f1-0e0afc95795a",
   "timestamp": "2024-05-06T12:57:06.451529527Z",
   "data": {
     "account_id": "4cdd7bdd-294e-4762-892f-83d40abf5a87",
