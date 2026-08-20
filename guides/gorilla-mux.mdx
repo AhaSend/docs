@@ -363,7 +363,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
 - **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
 - **Rate limits**: local pacing is per client instance. If you tune `SetSendMessageRateLimit`, keep it at or below the send limit assigned to your account and coordinate aggregate traffic across replicas.
 - **Other frameworks**: the same SDK patterns work in [chi](/guides/chi), [Gin](/guides/gin), and [Echo](/guides/echo).
 - **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
