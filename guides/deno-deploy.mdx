@@ -38,7 +38,7 @@ AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
-For local development, create `.env` yourself and ensure it is ignored by git before adding values. Run with only the permissions this example needs:
+For local development, create `.env` yourself and ensure it is ignored by git before adding values — a local source deployment walks the same `.gitignore`, so that one step is also what keeps the file out of the uploaded bundle. Run with only the permissions this example needs:
 
 ```bash
 deno run --env-file=.env --allow-net=0.0.0.0:8000,api.ahasend.com --allow-env=AHASEND_API_KEY,AHASEND_ACCOUNT_ID,AHASEND_WEBHOOK_SECRET main.ts
@@ -115,11 +115,13 @@ A 202 is **multi-status**: `result.data` carries one entry per recipient, and an
 
 The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. Reuse a stable `idempotencyKey` only for the exact same request payload. Stored message results expire after 24 hours, so reconcile an uncertain operation rather than assuming a later retry is deduplicated.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+Add `sandbox: true` to the send request to validate it without delivering anything. Sandbox and live sends share one idempotency namespace per account, and `sandbox` is part of the request body, so flipping it while reusing a key raises `AhaSendIdempotencyMismatchError` instead of sending.
 
 ## Handle Webhooks
 
 The webhooks module lives on its own subpath, so importing it doesn't pull in the API client. `verifier.parse()` accepts Fetch `Headers` and raw bytes and must be awaited. Bound the request while reading its stream, then pass those exact bytes rather than parsing and re-serializing JSON.
+
+Size that bound to the events you subscribe to. Delivery-status events are a few kilobytes, but an inbound `message.routing` event embeds base64 attachment data and is routinely much larger. Rejecting an oversized delivery with a 413 counts as a failed delivery, and [100 consecutive failures disable the webhook](/api-reference/webhooks/retry-policy), so raise `MAX_WEBHOOK_BODY_BYTES` toward the SDK's 30,000,000-byte verification ceiling if you route inbound mail.
 
 ```ts main.ts
 import { AhaSendWebhookVerificationError, WebhookVerifier } from "@ahasend/sdk/webhooks";
@@ -187,7 +189,9 @@ if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
 }
 ```
 
-`webhookDeliveries.enqueueOnce` is application-owned: in one database transaction it must insert the unique verified `webhook-id` and durable work, returning `false` for an already-committed ID. Process that work separately with idempotent side effects. Do not merely insert the ID before doing work, and do not log recipient addresses, event/error objects, signatures, bodies, secrets, or idempotency keys.
+`webhookDeliveries.enqueueOnce` is application-owned: in one database transaction it must insert the unique verified `webhook-id` and durable work, returning `false` for an already-committed ID. Do not merely insert the ID before doing work, and do not log recipient addresses, event/error objects, signatures, bodies, secrets, or idempotency keys.
+
+Drain that work with idempotent side effects from a separate consumer — a `Deno.cron` job declared at module top level, or a worker outside Deno Deploy. Do not leave it running as a floating promise after you return the response: Deno Deploy keeps an application alive only while requests and responses are still flowing and shuts the isolate down after an idle period, so post-response work is not guaranteed to finish.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.your-org.deno.net/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown, including the `aha-whsec-` prefix. Replace the example host with the production domain shown for your Deno Deploy application.
 
