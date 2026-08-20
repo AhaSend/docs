@@ -304,7 +304,7 @@ Timestamp tolerance is not replay deduplication: the same valid delivery can be 
 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
 - **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
 - **Rate limits**: the client already throttles sends to AhaSend's published limit of 100 requests per second with a 200-request burst, and the limit is per account rather than per key. Running several processes against one account? Use `ahasendClient.SetSendMessageRateLimit(requestsPerSecond, burst)` to give each a share that adds up to no more than the account limit.
 - **Other frameworks**: the same SDK patterns work in [Gin](/guides/gin), [Fiber](/guides/fiber), and [chi](/guides/chi).
 - **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
