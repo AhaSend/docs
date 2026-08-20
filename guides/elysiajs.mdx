@@ -71,17 +71,30 @@ import { ahasend } from "./lib/ahasend";
 const welcomeEndpointToken = process.env.WELCOME_ENDPOINT_TOKEN;
 if (!welcomeEndpointToken) throw new Error("WELCOME_ENDPOINT_TOKEN is required");
 
+const WELCOME_PATH = "/api/welcome";
+
 const app = new Elysia({
   serve: { maxRequestBodySize: 30_000_000 },
 })
+  .onRequest(({ request, set }) => {
+    if (new URL(request.url).pathname !== WELCOME_PATH) return;
+    if (request.headers.get("authorization") !== `Bearer ${welcomeEndpointToken}`) {
+      set.status = 401;
+      return { error: "Unauthorized" };
+    }
+  })
+  .onError(({ code, error, set }) => {
+    if (code === "VALIDATION" || code === "PARSE" || code === "NOT_FOUND") return;
+    console.error("Unhandled server error", {
+      code,
+      name: error instanceof Error ? error.name : "unknown",
+    });
+    set.status = 500;
+    return { error: "Internal Server Error" };
+  })
   .post(
-    "/api/welcome",
-    async ({ body, request, set }) => {
-      if (request.headers.get("authorization") !== `Bearer ${welcomeEndpointToken}`) {
-        set.status = 401;
-        return { error: "Unauthorized" };
-      }
-
+    WELCOME_PATH,
+    async ({ body, set }) => {
       try {
         const result = await ahasend.messages.send({
           from: { email: "hello@yourdomain.com", name: "Your App" },
@@ -113,13 +126,17 @@ const app = new Elysia({
   );
 ```
 
-Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`. Serve both endpoints only over HTTPS, terminating TLS at Elysia or a trusted reverse proxy. Replace the token check with your application's normal authentication and authorization if the endpoint is user-facing, and add rate limiting and a smaller per-route body limit at your reverse proxy. Never expose a recipient-controlled send endpoint without access control.
+The token check sits in `onRequest` rather than in the handler because Elysia parses the body and runs the `t.Object` schema *before* the handler executes: a check inside the handler would let an unauthenticated caller push a full 30 MB body through the JSON parser and read back a validation error describing your schema. `onRequest` runs before route matching, so it is the only hook that rejects the request ahead of parsing. It matches on the path rather than on the route, which is why the path is a single constant shared with `.post()` — a guard that names the path separately silently stops protecting the endpoint the day the route is renamed or the instance gains a `prefix`.
+
+Keep the `onError` handler too. Elysia's default error response returns the thrown error's `message` to the caller and logs nothing, so an unexpected failure would hand internal detail to whoever made the request — including on the webhook route, which anyone who finds the URL can reach. Returning nothing for `VALIDATION`, `PARSE`, and `NOT_FOUND` leaves Elysia's own 422, 400, and 404 responses in place, so a caller's malformed JSON is not reported as a server fault or logged as one.
+
+Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`. Serve both endpoints only over HTTPS, terminating TLS at Elysia or a trusted reverse proxy. Replace the token check with your application's normal authentication and authorization if the endpoint is user-facing, and add rate limiting and a smaller per-route body limit at your reverse proxy — `maxRequestBodySize` is a server-wide setting, so on its own it lets a 30 MB body reach either path. Never expose a recipient-controlled send endpoint without access control.
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. When a duplicate would be expensive, pass a stable key as the second argument: `ahasend.messages.send(message, { idempotencyKey: "stable-business-key" })`.
+The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. When a duplicate would be expensive, pass a stable key as the second argument: `ahasend.messages.send(message, { idempotencyKey: "stable-business-key" })`. Reuse that key only with the exact same request payload — the API matches on a hash of the body as well as the key, and answers a mismatched replay with a 422. Stored non-server-error results are replayed for 24 hours; a server error releases the key so the retry re-executes.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+Add `sandbox: true` to the send request to validate it without delivering anything. Sandbox is a body field, so a key already spent on a sandbox send is rejected when the same key is replayed for the live send — give the two runs different keys.
 
 ## Handle Webhooks
 
@@ -204,6 +221,8 @@ app
 ```
 
 `verifier.parse()` accepts the Fetch `Headers` object from `request.headers` directly, and it is asynchronous, so await it. Keep `parse: "none"`, and keep the webhook route free of plugins or hooks that consume `request.body` before the handler.
+
+Narrow the catch to `AhaSendWebhookVerificationError` and rethrow anything else. A rejected signature answers 400, while a bug of your own reaches `onError` and becomes a logged 500 that AhaSend retries. Failed deliveries are retried 6 times over 16+ minutes, and a webhook is disabled automatically after 100 consecutive failures, so reporting your own bugs as bad signatures quietly spends that budget.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
