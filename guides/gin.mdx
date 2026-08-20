@@ -9,16 +9,19 @@ A [Gin](https://gin-gonic.com) handler wraps a standard `*http.Request` inside `
 
 ## Prerequisites
 
-- Go installed
+- Go 1.25 or newer, which Gin 1.12 requires
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:yourdomain.com` permission, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{yourdomain.com}` permission, and your account ID
 
 ## Install the SDK
 
 ```bash
 go get github.com/AhaSend/ahasend-go
 go get github.com/gin-gonic/gin
+go get github.com/google/uuid
 ```
+
+`google/uuid` is a transitive dependency of the SDK, but the account ID is a `uuid.UUID`, so your own code imports it directly and it needs its own `go get`.
 
 ## Configure Environment Variables
 
@@ -30,7 +33,7 @@ export WELCOME_API_USER=your-internal-service
 export WELCOME_API_PASSWORD=a-long-random-secret
 ```
 
-Use your deployment platform's secret manager rather than committing these values. The example protects the send route with HTTP Basic authentication for a concrete service-to-service boundary; serve it only over HTTPS. A user-facing application should use its existing session or token middleware and load the recipient from the authenticated user's server-side record.
+Use your deployment platform's secret manager rather than committing these values. The example protects the send route with HTTP Basic authentication for a concrete service-to-service boundary; serve it only over HTTPS. A user-facing application should use its existing session or token middleware and load the recipient from the authenticated user's server-side record. Authentication bounds *who* can send, not *how much*: add per-caller rate limiting to the group as well — a [`golang.org/x/time/rate`](https://pkg.go.dev/golang.org/x/time/rate) limiter keyed by caller is enough — so one leaked credential or one looping client cannot drain the account.
 
 ## Create the Client
 
@@ -79,6 +82,7 @@ func main() {
 		log.Fatal("failed to create webhook verifier")
 	}
 
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	if err := r.SetTrustedProxies(nil); err != nil {
@@ -135,7 +139,7 @@ func mustEnv(name string) string {
 }
 ```
 
-The SDK's outbound timeout, retry count, and the handler's end-to-end context deadline fit within the server's write and shutdown budgets. Keep those budgets aligned if you change any of them. `SetTrustedProxies(nil)` ignores client-supplied forwarding headers. If a load balancer or reverse proxy terminates HTTPS, replace `nil` with only that proxy's IP addresses or CIDRs.
+The SDK's outbound timeout, retry count, and the handler's end-to-end context deadline fit within the server's write and shutdown budgets. Keep those budgets aligned if you change any of them. `SetTrustedProxies(nil)` ignores client-supplied forwarding headers. If a load balancer or reverse proxy terminates HTTPS, replace `nil` with only that proxy's IP addresses or CIDRs. `SetMode(gin.ReleaseMode)` matters for more than log volume: Gin defaults to debug mode, and in debug mode a recovered panic writes the request's entire header block to the error log — cookies, `webhook-signature`, and everything else except `Authorization`.
 
 ## Send an Email from a Gin Handler
 
@@ -149,6 +153,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/AhaSend/ahasend-go"
@@ -210,6 +215,35 @@ func sendWelcome(c *gin.Context) {
 				apiErr.Type,
 				apiErr.RequestID,
 			)
+			switch apiErr.Type {
+			case api.ErrorTypeIdempotency:
+				// This key was already used with a different payload. Retrying
+				// can never succeed, so do not answer with a 5xx.
+				c.JSON(http.StatusConflict, gin.H{"error": "idempotency key reused with a different payload"})
+				return
+			case api.ErrorTypeIdempotencyConflict:
+				// An earlier send with this key is still running upstream.
+				c.Header("Retry-After", strconv.Itoa(apiErr.RetryAfter))
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "send already in progress"})
+				return
+			case api.ErrorTypeValidation,
+				api.ErrorTypeAuthentication,
+				api.ErrorTypePermission,
+				api.ErrorTypeNotFound:
+				// A rejected message, a revoked key, or a missing scope is a
+				// deployment fault: every retry fails identically. Alert on
+				// this rather than inviting callers to hammer it.
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "email service is misconfigured"})
+				return
+			case api.ErrorTypeRateLimit:
+				// The SDK already backed off and retried. Hand the remaining
+				// wait to the caller instead of hiding it behind a bare 502.
+				if apiErr.RetryAfter > 0 {
+					c.Header("Retry-After", strconv.Itoa(apiErr.RetryAfter))
+				}
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "send rate limited"})
+				return
+			}
 		} else {
 			log.Print("AhaSend request failed")
 		}
@@ -233,7 +267,9 @@ func sendWelcome(c *gin.Context) {
 }
 ```
 
-The SDK automatically retries transient failures and attaches an automatic idempotency key to each send. This handler overrides it with a stable key derived from the immutable signup ID so a later retry of the same business operation can reuse the key. Reuse a key only with the exact same payload. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice; persist workflow state and make uncertain results safe to reconcile.
+The send API is multi-status: a `202` carries one `Data` entry per recipient, and an entry can report `Status == "error"` with a nil `ID` even though the SDK call itself returned no error. This handler sends to one recipient and checks the single entry it expects; loop over every entry once you extend `Recipients`. Split the failures the same way the handler does: a rejected payload, a revoked key, or a missing scope fails identically on every attempt, so surface it as a `500` and page someone, while a rate limit or an upstream `5xx` is worth retrying — the rate-limit branch passes AhaSend's own `Retry-After` back to the caller.
+
+The SDK automatically retries transient failures and attaches an automatic idempotency key to each send. This handler overrides it with a stable key derived from the immutable signup ID so a later retry of the same business operation can reuse the key. Reuse a key only with the exact same payload: the API rejects the same key carrying a changed body with `422`, which the SDK reports as `ErrorTypeIdempotency` and the handler turns into a `409` rather than a retryable `502`. A `409` from the API is the separate in-progress case — an earlier request with that key has not finished — which the SDK reports as `ErrorTypeIdempotencyConflict` with the remaining seconds in `RetryAfter`. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice; persist workflow state and make uncertain results safe to reconcile.
 
 ## Handle Webhooks
 
@@ -278,13 +314,13 @@ func handleAhaSendWebhook(c *gin.Context) {
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process durable work idempotently. Do not launch a bare goroutine: it can be lost when the process exits. Keep reverse-proxy request-size and concurrency limits at least as strict as the application limit above, return promptly, and keep failures opaque.
+This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process durable work idempotently. Do not launch a bare goroutine: it can be lost when the process exits, and `*gin.Context` is recycled once the handler returns, so anything that outlives the request must carry `c.Copy()` instead of `c`. Keep reverse-proxy request-size and concurrency limits at least as strict as the application limit above, return promptly, and keep failures opaque.
 
 ## Going Further
 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
 - **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
 - **Rate limits**: when sending at volume, tune `SetSendMessageRateLimit(requestsPerSecond, burstCapacity)` to stay within your account's limits.
 - **Other frameworks**: the same SDK patterns work in [chi](/guides/chi), [Echo](/guides/echo), and [Fiber](/guides/fiber).
 - **Attachments**: add `Attachments` with `Data`, `ContentType`, `ContentDisposition: "attachment"`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
