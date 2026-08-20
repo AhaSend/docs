@@ -9,7 +9,7 @@ In [NestJS](https://nestjs.com) the send belongs in an injectable service. The w
 
 ## Prerequisites
 
-- Node.js
+- Node.js 22 or newer
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:yourdomain.com` scope, and your account ID
 
@@ -18,19 +18,19 @@ In [NestJS](https://nestjs.com) the send belongs in an injectable service. The w
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk @nestjs/config class-transformer class-validator
+npm install @ahasend/sdk @nestjs/config @nestjs/throttler class-transformer class-validator
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk @nestjs/config class-transformer class-validator
+pnpm add @ahasend/sdk @nestjs/config @nestjs/throttler class-transformer class-validator
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk @nestjs/config class-transformer class-validator
+yarn add @ahasend/sdk @nestjs/config @nestjs/throttler class-transformer class-validator
 ```
 
 ```bash bun
-bun add @ahasend/sdk @nestjs/config class-transformer class-validator
+bun add @ahasend/sdk @nestjs/config @nestjs/throttler class-transformer class-validator
 ```
 
 </CodeGroup>
@@ -46,18 +46,23 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 WELCOME_API_TOKEN=generate-a-long-random-service-token
 ```
 
-Enable the config module globally in `AppModule`:
+Enable the config module globally in `AppModule`, and register the throttler the send route uses below:
 
 ```ts app.module.ts
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { AhaSendService } from "./mail/ahasend.service";
 import { MailController } from "./mail/mail.controller";
 import { WebhookController } from "./mail/webhook.controller";
 import { InternalAuthGuard } from "./mail/internal-auth.guard";
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true })],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    // ttl is in milliseconds: at most 20 send requests per minute per client.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
+  ],
   controllers: [MailController, WebhookController],
   providers: [AhaSendService, InternalAuthGuard],
 })
@@ -104,7 +109,7 @@ A 202 is a **multi-status** response: `result.data` holds one entry per recipien
 
 ## Send an Email from a NestJS Controller
 
-Do not expose a send-any-email route to unauthenticated clients. This example protects a backend-to-backend HTTPS route with a long random bearer token. If your app already authenticates users, replace this guard with your existing guard and load the recipient address from your trusted user record instead of accepting an arbitrary address from the browser.
+Do not expose a send-any-email route to unauthenticated clients. This example protects a backend-to-backend HTTPS route with a long random bearer token, and puts a rate limit in front of the token check so a stolen or brute-forced token cannot turn the route into an open mail relay. If your app already authenticates users, replace this guard with your existing guard and load the recipient address from your trusted user record instead of accepting an arbitrary address from the browser.
 
 ```ts mail/internal-auth.guard.ts
 import {
@@ -176,13 +181,14 @@ import {
   UnprocessableEntityException,
   UseGuards,
 } from "@nestjs/common";
+import { ThrottlerGuard } from "@nestjs/throttler";
 import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
 import { AhaSendService } from "./ahasend.service";
 import { InternalAuthGuard } from "./internal-auth.guard";
 import { WelcomeDto } from "./welcome.dto";
 
 @Controller("api")
-@UseGuards(InternalAuthGuard)
+@UseGuards(ThrottlerGuard, InternalAuthGuard)
 export class MailController {
   private readonly logger = new Logger(MailController.name);
 
@@ -210,9 +216,11 @@ export class MailController {
 }
 ```
 
+`ThrottlerGuard` is bound to this controller rather than registered as an `APP_GUARD`: a global throttler would also answer AhaSend's webhook deliveries with `429`, and 100 consecutive failed deliveries disable the webhook. Behind a reverse proxy, enable Express's `trust proxy` setting as well, or every request looks like it comes from the proxy and shares one bucket.
+
 The stable, hashed signup ID above lets a retry reuse the same idempotency key without putting a customer identifier in request metadata. Keep the payload stable for a given signup ID; reusing a key with a different payload is rejected.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+Add `sandbox: true` to the send request to validate it without delivering anything. It changes the request body, so give a sandbox send a different `idempotencyKey` from the live send it stands in for.
 
 ## Handle Webhooks
 
@@ -254,10 +262,8 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request } from "express";
-import {
-  AhaSendWebhookVerificationError,
-  WebhookVerifier,
-} from "@ahasend/sdk/webhooks";
+import { isAhaSendError } from "@ahasend/sdk";
+import { WebhookVerifier } from "@ahasend/sdk/webhooks";
 
 @Controller("webhooks")
 export class WebhookController {
@@ -278,7 +284,7 @@ export class WebhookController {
     try {
       await this.verifier.parse(req.headers, req.rawBody);
     } catch (err) {
-      if (err instanceof AhaSendWebhookVerificationError) {
+      if (isAhaSendError(err) && err.code === "webhook_verification_error") {
         throw new BadRequestException();
       }
       this.logger.error("Unexpected webhook processing failure");
@@ -288,7 +294,11 @@ export class WebhookController {
 }
 ```
 
-This minimal receiver verifies and acknowledges events without side effects. Before adding side effects, atomically record the `webhook-id` header with durable work (for example, an outbox row), acknowledge duplicates with a 2xx response, and process the work idempotently. Timestamp verification alone does not deduplicate a valid replay within the accepted window. Keep a request-body limit at your Nest adapter or reverse proxy and cap concurrent webhook work; do not start untracked background work after responding.
+`isAhaSendError` identifies the failure by brand rather than `instanceof`, so a forged signature still becomes an opaque 400 — not a 500 that tells the sender which check failed — even when two copies of the SDK end up in the dependency tree.
+
+This minimal receiver verifies and acknowledges events without side effects. Before adding side effects, atomically record the `webhook-id` header with durable work (for example, an outbox row), acknowledge duplicates with a 2xx response, and process the work idempotently. Timestamp verification alone does not deduplicate a valid replay within the accepted window. Keep `event.data` out of your logs as you add that handling: it carries the recipient address, sender, and subject, plus the opener's IP and user agent on open and click events.
+
+Express's JSON parser already caps the body at 100 kB and answers anything larger with a `413` before your handler runs; if you raise that limit with `app.useBodyParser("json", { limit })` — which needs `NestFactory.create<NestExpressApplication>` — the new ceiling applies to this route too, so keep it tight. Cap concurrent webhook work, and do not start untracked background work after responding.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
@@ -298,7 +308,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
 - **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by one hour.
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. For binary files such as PDFs, base64-encode the bytes yourself and pass the encoded string as `data` — `base64: true` tells AhaSend how to decode `data`, it does not encode for you.
 
 See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Nest runs on Express or Fastify under the hood, so the standalone [Express](/guides/express) and [Fastify](/guides/fastify) guides show the SDK's built-in webhook adapters for those platforms.
 
@@ -306,7 +316,7 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 
 <AccordionGroup>
   <Accordion title="req.rawBody is undefined">
-    Nest only captures the raw body when you pass `{ rawBody: true }` to `NestFactory.create`. Without it, this controller rejects the request. If you switch to the Fastify adapter, follow Nest's Fastify raw-body setup and use Fastify's request type instead of Express's `Request` type.
+    Nest only captures the raw body when you pass `{ rawBody: true }` to `NestFactory.create`, and the capture rides on Nest's built-in body parser — passing `bodyParser: false` disables it just as surely. Without the raw bytes, this controller rejects the request. If you switch to the Fastify adapter, follow Nest's Fastify raw-body setup and use Fastify's request type instead of Express's `Request` type.
   </Accordion>
   <Accordion title="Webhook endpoint returns 400 for every delivery">
     Beyond a missing raw body, check that `AHASEND_WEBHOOK_SECRET` matches the dashboard value exactly (including the `aha-whsec-` prefix) and that no proxy in front of Nest rewrites the request body (which invalidates the HMAC).
