@@ -282,7 +282,7 @@ Return 2xx promptly after durable work has been accepted. Do slow processing in 
 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
 - **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
 - **Rate limits**: sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
 - **Other frameworks**: the same SDK patterns work in [Gin](/guides/gin), [Echo](/guides/echo), and [gorilla/mux](/guides/gorilla-mux).
 - **Attachments**: every entry needs `Data`, `ContentType`, and `FileName`. For binary files such as PDFs, encode the bytes with `base64.StdEncoding.EncodeToString(data)`, use that string as `Data`, and set `Base64: true`. The flag tells AhaSend how to decode `Data`; it does not perform the encoding.
