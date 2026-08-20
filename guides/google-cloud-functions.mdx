@@ -11,7 +11,7 @@ keywords: ["cloud run functions go email", "google cloud functions go send email
 
 - Go
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
 - A Google Cloud project with the `gcloud` CLI configured
 
 ## Install the Dependencies
@@ -20,6 +20,7 @@ keywords: ["cloud run functions go email", "google cloud functions go send email
 go mod init example.com/emailfns
 go get github.com/AhaSend/ahasend-go
 go get github.com/GoogleCloudPlatform/functions-framework-go
+go get github.com/google/uuid
 ```
 
 ## Write the Cloud Run Functions Code
@@ -37,6 +38,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/AhaSend/ahasend-go"
@@ -159,11 +161,18 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 		var apiErr *api.APIError
 		if errors.As(err, &apiErr) {
 			log.Printf(
-				"AhaSend request failed: status=%d code=%s request_id=%s",
+				"AhaSend request failed: status=%d type=%s request_id=%s",
 				apiErr.StatusCode,
-				apiErr.Code,
+				apiErr.Type,
 				apiErr.RequestID,
 			)
+			if apiErr.Type == api.ErrorTypeIdempotencyConflict {
+				// An earlier send with this key is still in flight; the outcome
+				// is undecided. Tell the caller to retry with the same event_id.
+				w.Header().Set("Retry-After", strconv.Itoa(apiErr.RetryAfter))
+				http.Error(w, "send already in progress", http.StatusConflict)
+				return
+			}
 			http.Error(w, "failed to send email", http.StatusBadGateway)
 			return
 		}
@@ -213,7 +222,9 @@ func ahaSendWebhook(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-The SDK automatically retries transient failures with backoff and attaches an idempotency key to every send. The stable key above also covers a later invocation for the same `event_id`, but stored outcomes expire after 24 hours and a 5xx is not stored. Reconcile an uncertain result before retrying, and persist `event_id` in your application if the welcome email must never be sent twice.
+Run `go mod tidy` once the source is in place. `go get` records the modules you named but not the Functions Framework's own dependencies, and both `go build` and the deploy's buildpack fail on the missing `go.sum` entries until you tidy.
+
+The SDK automatically retries transient failures with backoff and attaches an idempotency key to every send. The stable key above also covers a later invocation for the same `event_id`, but stored outcomes expire after 24 hours and a 5xx is not stored. A retry must repeat the *exact* payload: reusing `welcome-<event_id>` with a different recipient or body returns `422`, so derive `event_id` from the signup event rather than per attempt. Reconcile an uncertain result before retrying, and persist `event_id` in your application if the welcome email must never be sent twice.
 
 <Note>
   Both entry points live in the same source package, but each dependency helper initializes only when its handler runs. Give the send function only the API key and account ID, and give the webhook function only the webhook secret.
@@ -221,11 +232,14 @@ The SDK automatically retries transient failures with backoff and attaches an id
 
 ## Store the API Key in Secret Manager
 
-Environment variables set with `--set-env-vars` are visible to anyone who can describe the function. Keep the API key (and webhook secret) in Secret Manager instead:
+Environment variables set with `--set-env-vars` are visible to anyone who can describe the function, so keep the API key (and webhook secret) in Secret Manager instead. Read each value from a prompt rather than typing it into the command: a secret written literally on a `gcloud` line stays in your shell history. `read -s` does not echo it, and `printf %s` sends it without the trailing newline that would break verification:
 
 ```bash
-printf 'aha-sk-...' | gcloud secrets create ahasend-api-key --data-file=-
-printf 'aha-whsec-...' | gcloud secrets create ahasend-webhook-secret --data-file=-
+read -rsp 'AhaSend API key: ' AHASEND_API_KEY
+printf %s "$AHASEND_API_KEY" | gcloud secrets create ahasend-api-key --data-file=-
+
+read -rsp 'AhaSend webhook secret: ' AHASEND_WEBHOOK_SECRET
+printf %s "$AHASEND_WEBHOOK_SECRET" | gcloud secrets create ahasend-webhook-secret --data-file=-
 ```
 
 Create separate runtime service accounts and grant each one **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`) only on the secret its function needs. Replace `PROJECT_ID` below with your project ID:
@@ -243,13 +257,15 @@ gcloud secrets add-iam-policy-binding ahasend-webhook-secret \
   --role=roles/secretmanager.secretAccessor
 ```
 
+Deploying a function that runs as one of these accounts also requires **Service Account User** (`roles/iam.serviceAccountUser`) on that account for whoever runs `gcloud functions deploy`. Project owners have it already; anyone else needs it granted before the deploy below will succeed.
+
 ## Deploy
 
 Deploy each entry point as its own function from the same source directory:
 
 ```bash
 gcloud functions deploy send-welcome \
-  --gen2 --runtime=go126 --trigger-http --source=. \
+  --gen2 --runtime=go126 --region=us-central1 --trigger-http --source=. \
   --entry-point=SendWelcome \
   --no-allow-unauthenticated \
   --service-account=ahasend-sender@PROJECT_ID.iam.gserviceaccount.com \
@@ -257,13 +273,37 @@ gcloud functions deploy send-welcome \
   --set-secrets AHASEND_API_KEY=ahasend-api-key:latest
 
 gcloud functions deploy ahasend-webhook \
-  --gen2 --runtime=go126 --trigger-http --source=. \
+  --gen2 --runtime=go126 --region=us-central1 --trigger-http --source=. \
   --entry-point=AhaSendWebhook --allow-unauthenticated \
   --service-account=ahasend-webhook@PROJECT_ID.iam.gserviceaccount.com \
   --set-secrets AHASEND_WEBHOOK_SECRET=ahasend-webhook-secret:latest
 ```
 
-Keep the send function authenticated with IAM and grant its intended caller `roles/run.invoker`. The webhook function must be `--allow-unauthenticated` because AhaSend can't attach Google IAM credentials; authentication happens via the HMAC signature the verifier checks. Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at the URL `gcloud` prints for `ahasend-webhook`, and copy its secret into the `ahasend-webhook-secret` secret exactly as shown (including the `aha-whsec-` prefix).
+Pass `--region` on every command (substitute your own): without it, `gcloud` falls back to the `functions/region` property and prompts when that is unset.
+
+Pick a `--runtime` at least as new as the `go` directive `go mod init` wrote into `go.mod` — `go126` builds a module declaring `go 1.26` or older, and a newer local toolchain will write a directive the runtime's builder rejects. `gcloud functions runtimes list --region=us-central1` shows what your project can deploy today.
+
+`--no-allow-unauthenticated` is what keeps `send-welcome` from becoming an open mail relay — it accepts any recipient address its caller supplies, so anyone who can invoke it can send mail from your domain. A `--gen2` function is backed by a Cloud Run service of the same name, so grant only its intended caller:
+
+```bash
+gcloud run services add-iam-policy-binding send-welcome \
+  --region=us-central1 \
+  --member=serviceAccount:your-caller@PROJECT_ID.iam.gserviceaccount.com \
+  --role=roles/run.invoker
+```
+
+The binding alone is not enough: every caller must also present a Google-signed OIDC ID token in an `Authorization: Bearer` header, or the request is rejected with `403` before your code runs. A calling service mints that token for its own service account with the function URL as the audience. To try the endpoint by hand, substituting the URL `gcloud` printed for `send-welcome`:
+
+```bash
+curl -X POST FUNCTION_URL \
+  -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"new-user@example.com","name":"Jane","event_id":"3f1c0b6e-8f0a-4a2e-9f7d-2b6c1f4a9e01"}'
+```
+
+Use that token for manual testing only: a `gcloud`-printed identity token carries no audience claim, so it is replayable against any service that accepts it.
+
+The webhook function must be `--allow-unauthenticated` because AhaSend can't attach Google IAM credentials; authentication happens via the HMAC signature the verifier checks. Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at the URL `gcloud` prints for `ahasend-webhook`, and copy its secret into the `ahasend-webhook-secret` secret exactly as shown (including the `aha-whsec-` prefix).
 
 Timestamp validation is not replay deduplication. Before adding side effects, atomically store the `webhook-id` header together with durable work; acknowledge a duplicate with `200` without enqueueing it again. Publish to Cloud Tasks or Pub/Sub before returning success, then perform slow work in the consumer. Cloud Run functions does not guarantee work started after the HTTP response will continue.
 
@@ -288,8 +328,11 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	if err := funcframework.Start(port); err != nil {
-		log.Fatalf("funcframework.Start: %v", err)
+	// Loopback only. SendWelcome carries no authentication of its own — in
+	// production Google IAM is the gate — so binding 0.0.0.0 here would hand
+	// everyone on your network a mail relay for your domain.
+	if err := funcframework.StartHostPort("127.0.0.1", port); err != nil {
+		log.Fatalf("funcframework.StartHostPort: %v", err)
 	}
 }
 ```
@@ -297,19 +340,21 @@ func main() {
 Then pick which registered function to serve with `FUNCTION_TARGET`:
 
 ```bash
-FUNCTION_TARGET=SendWelcome AHASEND_API_KEY=aha-sk-... \
-  AHASEND_ACCOUNT_ID=your-account-uuid \
-  go run ./cmd
+read -rsp 'AhaSend API key: ' AHASEND_API_KEY && export AHASEND_API_KEY
+export AHASEND_ACCOUNT_ID=your-account-uuid
+FUNCTION_TARGET=SendWelcome go run ./cmd
 
-FUNCTION_TARGET=AhaSendWebhook AHASEND_WEBHOOK_SECRET=aha-whsec-... \
-  go run ./cmd
+read -rsp 'AhaSend webhook secret: ' AHASEND_WEBHOOK_SECRET && export AHASEND_WEBHOOK_SECRET
+FUNCTION_TARGET=AhaSendWebhook go run ./cmd
 ```
+
+Prompt for the credentials rather than writing them inline here too: a key on the command line lands in your shell history and is readable from `ps` while the server runs.
 
 ## Going Further
 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in lists, statistics, and webhooks.
+- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message and its own entry in `response.Data`. The call can return `2xx` while individual entries carry `Status: "error"` and a nil `ID`, so check every entry rather than only the HTTP status.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
 - **Cold starts**: the client and verifier are cached per instance and reused across warm invocations. Setting `--min-instances=1` can reduce cold starts for latency-sensitive sends, but scaling and instance replacement can still start new instances.
 - **Other platforms**: deploying on Azure instead? See the [Azure Functions guide](/guides/azure-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
 - **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
