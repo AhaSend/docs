@@ -29,6 +29,7 @@ Add your credentials to `.env`:
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
 ```
 
 <Note>
@@ -50,22 +51,42 @@ export const ahasend = new AhaSendClient({
 
 ## Send an Email from a Bun.serve Route
 
-`Bun.serve` with a fetch handler is all the HTTP server you need:
-
-This example assumes your application authenticates the caller and validates the request body before reaching this handler. Do not expose a send endpoint that lets arbitrary callers spend your AhaSend quota.
+`Bun.serve` with a fetch handler is all the HTTP server you need. A send route reaches into your AhaSend quota and puts caller-supplied text into mail you sign, so it authenticates the caller and validates the body before it calls the SDK:
 
 ```ts server.ts
 import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend";
 
+const welcomeEndpointToken = process.env.WELCOME_ENDPOINT_TOKEN;
+if (!welcomeEndpointToken) throw new Error("WELCOME_ENDPOINT_TOKEN is required");
+
 Bun.serve({
   port: 3000,
   maxRequestBodySize: 30_000_000,
+  development: false,
+  error(err) {
+    console.error("Unhandled server error", { name: err.name });
+    return new Response("Internal Server Error", { status: 500 });
+  },
   async fetch(req) {
     const url = new URL(req.url);
 
     if (req.method === "POST" && url.pathname === "/api/welcome") {
-      const { email, name } = await req.json();
+      if (req.headers.get("authorization") !== `Bearer ${welcomeEndpointToken}`) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const body = (await req.json().catch(() => null)) as {
+        email?: unknown;
+        name?: unknown;
+      } | null;
+      const { email, name } = body ?? {};
+      if (typeof email !== "string" || !email.includes("@")) {
+        return Response.json({ error: "A valid `email` is required" }, { status: 400 });
+      }
+      if (name !== undefined && typeof name !== "string") {
+        return Response.json({ error: "`name` must be a string" }, { status: 400 });
+      }
 
       try {
         const result = await ahasend.messages.send({
@@ -97,29 +118,40 @@ Bun.serve({
 });
 ```
 
-Run it with `bun run server.ts`. A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+Run it with `bun run server.ts`. Keep `development: false` and the `error` handler: with `NODE_ENV` unset, `Bun.serve` defaults to development mode, and its built-in 500 page hands the thrown error's message and the surrounding source back to whoever made the request — including on the webhook route, which anyone who finds the URL can reach.
+
+Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`, and replace the token check with your application's normal authentication and authorization if the endpoint is user-facing. Serve both routes only over HTTPS, terminating TLS at Bun or a trusted reverse proxy, and add rate limiting plus a body limit sized for JSON in front of the send route — `maxRequestBodySize` is a server-wide setting, so on its own it lets a 30 MB body reach either path. Never expose a recipient-controlled send endpoint without access control.
+
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
 The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. For a business operation your application may retry later, pass a stable `idempotencyKey`, reuse it only with the exact same request payload, and remember that the server retains non-secret results for 24 hours.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+Add `sandbox: true` to the send request to validate it without delivering anything. Sandbox is a body field, so a key already used for a sandbox send is rejected when the same key is replayed for the live send — give the two runs different keys.
 
 ## Handle Webhooks
 
 There's no Bun-specific adapter, and you don't need one: `verifier.parse()` accepts a Fetch `Headers` object and raw `Uint8Array` body directly. `parse()` is asynchronous, so await it. Read the body with `req.arrayBuffer()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed. The server configuration above caps request bodies at the verifier's fixed 30,000,000-byte limit before the handler reads them.
 
 ```ts server.ts
-import { WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
+import {
+  AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
 
 const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
 
-// inside the fetch handler:
+// inside the fetch handler, above the 404 fallback:
 if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
   let event;
   try {
     const rawBody = new Uint8Array(await req.arrayBuffer());
     event = await verifier.parse(req.headers, rawBody);
-  } catch {
-    return new Response("Invalid signature", { status: 400 });
+  } catch (err) {
+    if (err instanceof AhaSendWebhookVerificationError) {
+      return new Response("Invalid signature", { status: 400 });
+    }
+    throw err;
   }
 
   if (isKnownWebhookEvent(event)) {
@@ -139,6 +171,8 @@ if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
   return new Response(null, { status: 200 });
 }
 ```
+
+Narrow the catch to `AhaSendWebhookVerificationError` and rethrow anything else. A 400 is a permanent delivery failure, and AhaSend disables a webhook after 100 consecutive failures, so a bug of your own should surface as a 5xx that gets retried rather than as a rejection that looks like a bad signature.
 
 Webhooks can be delivered more than once. After verification and before performing side effects, atomically commit the `webhook-id` and durable work (such as an outbox job) in the same transaction. Acknowledge an ID that transaction has already committed without enqueueing it again.
 
