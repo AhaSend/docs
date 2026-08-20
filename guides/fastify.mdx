@@ -9,7 +9,7 @@ keywords: ["fastify send email", "fastify transactional email", "nodejs email ap
 
 ## Prerequisites
 
-- Node.js
+- Node.js 22 or newer, and Fastify 5. Set `"type": "module"` in `package.json` — the code below uses top-level `await` and ESM import specifiers.
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 
@@ -18,19 +18,19 @@ keywords: ["fastify send email", "fastify transactional email", "nodejs email ap
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk fastify-raw-body
+npm install @ahasend/sdk fastify @fastify/rate-limit fastify-raw-body
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk fastify-raw-body
+pnpm add @ahasend/sdk fastify @fastify/rate-limit fastify-raw-body
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk fastify-raw-body
+yarn add @ahasend/sdk fastify @fastify/rate-limit fastify-raw-body
 ```
 
 ```bash bun
-bun add @ahasend/sdk fastify-raw-body
+bun add @ahasend/sdk fastify @fastify/rate-limit fastify-raw-body
 ```
 
 </CodeGroup>
@@ -71,15 +71,20 @@ export const welcomeRouteToken = requireEnv("WELCOME_ROUTE_TOKEN");
 
 ## Send an Email from a Fastify Route
 
-Fastify parses JSON bodies out of the box, so the send route needs no extra plugins:
+Fastify parses JSON bodies out of the box, so no body-parsing plugin is needed here. A send route spends your AhaSend quota and puts caller-supplied text into mail you sign, so it authenticates the caller, validates the body against a schema, caps the body size, and rate-limits before it reaches the SDK:
 
 ```ts server.ts
 import Fastify from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import { timingSafeEqual } from "node:crypto";
-import { AhaSendAPIError } from "@ahasend/sdk";
+import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
 import { ahasend, welcomeRouteToken } from "./lib/ahasend.js";
 
 const app = Fastify({ logger: true });
+
+// `global: false` keeps the limiter off the webhook route, where a 429 would
+// only make AhaSend retry.
+await app.register(rateLimit, { global: false });
 
 type WelcomeBody = { email: string; name?: string; eventId: string };
 
@@ -88,7 +93,7 @@ const welcomeBodySchema = {
   additionalProperties: false,
   required: ["email", "eventId"],
   properties: {
-    email: { type: "string", minLength: 3, maxLength: 320 },
+    email: { type: "string", format: "email", maxLength: 320 },
     name: { type: "string", maxLength: 100 },
     eventId: { type: "string", minLength: 1, maxLength: 200, pattern: "^[A-Za-z0-9._:-]+$" },
   },
@@ -105,6 +110,7 @@ app.post<{ Body: WelcomeBody }>(
   {
     bodyLimit: 16_384,
     schema: { body: welcomeBodySchema },
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
   },
   async (request, reply) => {
     if (!isAuthorized(request.headers.authorization)) {
@@ -128,35 +134,40 @@ app.post<{ Body: WelcomeBody }>(
 
       return reply.code(202).send({ accepted: true });
     } catch (err) {
-      if (err instanceof AhaSendAPIError) {
-        request.log.error(
-          { status: err.status, requestId: err.requestId },
-          "AhaSend error",
-        );
-        return reply.code(502).send({ error: "Failed to send email" });
-      }
-      throw err;
+      // Timeouts and connection failures are not `AhaSendAPIError`s. Catching
+      // only that class lets them reach Fastify's default handler, which
+      // echoes `err.message` — which can carry your account ID and the
+      // upstream URL — straight back to the caller in a 500 body.
+      if (!isAhaSendError(err)) throw err;
+      request.log.error(
+        {
+          errorCode: err.code,
+          status: err instanceof AhaSendAPIError ? err.status : undefined,
+          requestId: err instanceof AhaSendAPIError ? err.requestId : undefined,
+        },
+        "AhaSend send failed",
+      );
+      return reply.code(502).send({ error: "Failed to send email" });
     }
   },
 );
-
-await app.listen({
-  port: Number(process.env.PORT ?? 3000),
-  host: "0.0.0.0",
-});
 ```
 
-Keep `WELCOME_ROUTE_TOKEN` server-side and require your application authentication before accepting a recipient address. `eventId` must be a stable identifier for the same welcome-email action; reuse it only with the same payload.
+Start the server with `app.listen()` at the very **end** of the file, after the webhook route below is declared. Fastify refuses new plugins and routes once `listen()` has resolved, so anything registered after it throws `AVV_ERR_ROOT_PLG_BOOTED` or `FST_ERR_INSTANCE_ALREADY_LISTENING`.
+
+Keep `WELCOME_ROUTE_TOKEN` server-side and require your application authentication before accepting a recipient address. Serve the route only over HTTPS, terminating TLS at Fastify or a trusted reverse proxy. `@fastify/rate-limit` keys on `request.ip` and counts in memory per process, so behind a load balancer set Fastify's `trustProxy` and give it a shared store; otherwise every client shares one bucket and each instance counts separately. `eventId` must be a stable identifier for the same welcome-email action; reuse it only with the same payload.
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
 The SDK retries transient failures automatically, but a 5xx or timeout does not prove that no email was sent. The stable `idempotencyKey` lets stored results be replayed for 24 hours, but server errors release the key for re-execution. Reconcile an uncertain result before retrying, and persist `eventId` in your application if the welcome email must never be sent twice.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+Add `sandbox: true` to the send request to validate it without delivering anything. The idempotency key is bound to a hash of the request body, so flipping `sandbox` on or off while reusing the same `eventId` returns `422` `AhaSendIdempotencyMismatchError` — use a distinct key prefix for sandbox traffic.
 
 ## Handle Webhooks
 
-The SDK ships a dedicated Fastify adapter that verifies the HMAC signature and hands you a typed event. The verifier needs the **raw request body**, which Fastify normally discards after JSON parsing. Register the [`fastify-raw-body`](https://github.com/Eomm/fastify-raw-body) plugin and enable it only on the webhook route:
+The SDK ships a dedicated Fastify adapter that verifies the HMAC signature and hands you a typed event. The verifier needs the **raw request body**, which Fastify normally discards after JSON parsing. Register the [`fastify-raw-body`](https://github.com/Eomm/fastify-raw-body) plugin and enable it only on the webhook route.
+
+This continues the same `server.ts`, appended after the send route. `await` the `register` call: it installs an `onRoute` hook that only applies to routes declared after the plugin has finished loading, so an unawaited registration leaves `request.rawBody` undefined and the route answers `400` forever.
 
 ```ts server.ts
 import rawBody from "fastify-raw-body";
@@ -187,20 +198,28 @@ app.post(
 
     switch (event.type) {
       case "message.delivered":
-        console.log({ webhookType: event.type });
+        app.log.info({ webhookType: event.type });
         break;
       case "message.bounced":
-        console.log({ webhookType: event.type });
+        app.log.info({ webhookType: event.type });
         break;
       case "message.opened":
-        console.log({ webhookType: event.type });
+        app.log.info({ webhookType: event.type });
         break;
     }
   }, { maxBodyBytes: 1_000_000 }),
 );
+
+// Last statement in the file: no plugin or route can be added after this.
+await app.listen({
+  port: Number(process.env.PORT ?? 3000),
+  host: "0.0.0.0",
+});
 ```
 
-With `global: false`, raw-body capture only runs on routes that opt in via `config: { rawBody: true }`, so your other routes keep Fastify's normal (faster) parsing. The adapter replies `200` automatically when your handler completes, and `400` if verification fails.
+With `global: false`, the raw-body capture hook only runs on routes that opt in via `config: { rawBody: true }`. Note that `encoding: false` also swaps the JSON body parser app-wide — your other routes still get JSON in `request.body`, they just get it from the plugin's parser. The route `bodyLimit` bounds the raw capture as well as the parse, and `maxBodyBytes` bounds what the verifier will hash, so an oversized body is rejected before either reads it all.
+
+The adapter replies `200` automatically when your handler completes, `400` if verification fails or the raw body is missing, and `413` if the body exceeds `maxBodyBytes`. If your handler throws, the adapter rethrows so Fastify answers `500` and AhaSend retries the delivery.
 
 Timestamp validation does not stop a valid delivery from being replayed inside the accepted window. Before adding side effects, atomically store the `webhook-id` header with durable work and return `200` for an ID you have already accepted. Do not log recipients, message content, request bodies, signatures, or secrets.
 
@@ -220,7 +239,10 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 
 <AccordionGroup>
   <Accordion title="Webhook route always returns 400">
-    The adapter couldn't find a raw body. Confirm `fastify-raw-body` is registered **before** the webhook route is declared, that the route options include `config: { rawBody: true }`, and that the plugin was registered with `field: "rawBody"` (the adapter reads `request.rawBody`).
+    The adapter couldn't find a raw body. Confirm `fastify-raw-body` is registered — and `await`ed — **before** the webhook route is declared, that the route options include `config: { rawBody: true }`, and that the plugin was registered with `field: "rawBody"` (the adapter reads `request.rawBody`).
+  </Accordion>
+  <Accordion title="AVV_ERR_ROOT_PLG_BOOTED or FST_ERR_INSTANCE_ALREADY_LISTENING">
+    A plugin or route was added after `app.listen()` resolved. Fastify seals the instance once it starts, so `app.listen()` must be the last statement in `server.ts`, after both routes are declared.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
     The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded without logging any part of it, and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
