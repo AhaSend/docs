@@ -5,7 +5,9 @@ description: "Send transactional email from React Router framework actions and r
 keywords: ["remix send email", "remix transactional email", "remix resource route email", "ahasend remix", "remix webhook action"]
 ---
 
-This guide uses [React Router Framework Mode](https://reactrouter.com/start/framework/installation) with server rendering. Email sends belong in server `action` functions, while inbound AhaSend webhooks use a resource route. Keep the SDK client and credentials in server-only modules.
+Remix has merged into React Router, so this guide uses [React Router Framework Mode](https://reactrouter.com/start/framework/installation) — the direct continuation of the Remix server, loaders, and actions. If your project is still on Remix v2, work through the [upgrade guide](https://reactrouter.com/upgrading/remix) first: the `app/routes.ts` and `./+types/*` APIs below do not exist there.
+
+Email sends belong in server `action` functions, while inbound AhaSend webhooks use a resource route. Keep the SDK client and credentials in server-only modules.
 
 ## Prerequisites
 
@@ -70,7 +72,7 @@ export default [
 
 ## Send an Email from an Action
 
-Server `action` functions can import the client directly. A public form that sends email must validate its fields and enforce server-side abuse controls. The example calls an application-specific `emailSendRateLimit.take()` backed by a durable, distributed store; implement it before deploying the route. Do not replace it with browser validation or an in-memory counter.
+Server `action` functions can import the client directly. A public form that sends email must bound its request body, validate its fields, and enforce server-side abuse controls. The example calls an application-specific `emailSendRateLimit.take()` backed by a durable, distributed store; implement it before deploying the route. Do not replace it with browser validation or an in-memory counter.
 
 ```tsx app/routes/signup.tsx
 import type { Route } from "./+types/signup";
@@ -79,7 +81,30 @@ import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "~/lib/ahasend.server";
 import { emailSendRateLimit } from "~/lib/email-send-rate-limit.server";
 
+const MAX_FORM_BYTES = 4_096;
+
 export async function action({ request }: Route.ActionArgs) {
+  const mediaType = request.headers
+    .get("content-type")
+    ?.split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (mediaType !== "application/x-www-form-urlencoded") {
+    return data({ error: "Unsupported content type" }, { status: 415 });
+  }
+
+  // `null` becomes NaN, so a chunked request that declares no length is
+  // refused rather than read unbounded by `formData()`.
+  const declaredHeader = request.headers.get("content-length");
+  const declaredLength = declaredHeader === null ? NaN : Number(declaredHeader);
+  if (
+    !Number.isSafeInteger(declaredLength) ||
+    declaredLength < 0 ||
+    declaredLength > MAX_FORM_BYTES
+  ) {
+    return data({ error: "Request body too large" }, { status: 413 });
+  }
+
   const form = await request.formData();
   const emailValue = form.get("email");
   const nameValue = form.get("name");
@@ -90,12 +115,11 @@ export async function action({ request }: Route.ActionArgs) {
 
   const email = emailValue.trim();
   const name = nameValue.trim();
-  if (
-    email.length > 254 ||
-    name.length > 200 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return data({ error: "Enter a valid email address" }, { status: 400 });
+  }
+  if (name.length > 200 || /[\r\n]/.test(name)) {
+    return data({ error: "Enter a valid name" }, { status: 400 });
   }
 
   const allowed = await emailSendRateLimit.take({ request, recipient: email });
@@ -112,11 +136,14 @@ export async function action({ request }: Route.ActionArgs) {
       text_content: "Welcome aboard! We're glad you're here.",
     });
 
-    const rejected = result.data.filter((r) => r.status === "error");
-    return {
-      queued: result.data.length - rejected.length,
-      rejected: rejected.length,
-    };
+    const queued = result.data.filter((r) => r.status !== "error").length;
+    if (queued === 0) {
+      console.warn("AhaSend queued no recipients", {
+        rejected: result.data.length,
+      });
+      return data({ error: "We could not email that address" }, { status: 422 });
+    }
+    return { queued };
   } catch (err) {
     if (err instanceof AhaSendAPIError) {
       console.error("AhaSend send failed", {
@@ -147,6 +174,8 @@ export default function Signup({ actionData }: Route.ComponentProps) {
       </Form>
       {actionData && "error" in actionData ? (
         <p role="alert">{actionData.error}</p>
+      ) : actionData ? (
+        <p>Welcome email queued.</p>
       ) : null}
     </main>
   );
@@ -155,7 +184,9 @@ export default function Signup({ actionData }: Route.ComponentProps) {
 
 The limiter should combine the signals appropriate to your application, such as IP, authenticated account, and normalized recipient, and expire counters in shared storage. Deny the send when the limiter is unavailable if allowing an unbounded mail relay would be worse than temporarily rejecting signups.
 
-A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+`MAX_FORM_BYTES` plus the required `Content-Length` header is the whole bound: a chunked request that declares no length is refused, and Node stops reading a declared body at its declared size. Rejecting anything that is not `application/x-www-form-urlencoded` keeps a large multipart upload from reaching this route at all. Set a matching or lower limit at your reverse proxy as well.
+
+A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first — a resolved promise with nothing queued is a failed send, so the action above reports it as one instead of rendering a silent success.
 
 The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. When a duplicate would be expensive, pass a stable key from the committed business operation as the second argument: `ahasend.messages.send(message, { idempotencyKey: "welcome-" + signup.id })`. Do not derive it from an arbitrary retry attempt.
 
@@ -163,22 +194,26 @@ Add `sandbox: true` to the send request to validate it without delivering anythi
 
 ## Handle Webhooks
 
-Handle webhooks in a resource route. Signature verification needs the exact raw bytes, and the body must be bounded while it is read so concurrent requests cannot allocate unbounded memory. This example uses a 1 MB application limit; configure the same or a lower limit at your reverse proxy and cap concurrent requests.
+Read the secret and build the verifier in a `.server.ts` module, not in the route file. Route modules are referenced by **both** the client and the server module graph — React Router strips their `loader` and `action` exports from the browser build, but top-level statements with side effects survive, so a secret check written at the top of a route module is emitted into a client chunk that throws in the browser:
 
-```ts app/routes/webhooks-ahasend.ts
-import type { Route } from "./+types/webhooks-ahasend";
-import {
-  AhaSendWebhookVerificationError,
-  WebhookVerifier,
-} from "@ahasend/sdk/webhooks";
-import { webhookDeliveries } from "~/lib/webhook-deliveries.server";
-
-const MAX_BODY_BYTES = 1_000_000;
+```ts app/lib/ahasend-webhooks.server.ts
+import { WebhookVerifier } from "@ahasend/sdk/webhooks";
 
 const webhookSecret = process.env.AHASEND_WEBHOOK_SECRET;
 if (!webhookSecret) throw new Error("AHASEND_WEBHOOK_SECRET is required");
 
-const verifier = new WebhookVerifier(webhookSecret);
+export const verifier = new WebhookVerifier(webhookSecret);
+```
+
+Then handle webhooks in a resource route. Signature verification needs the exact raw bytes, and the body must be bounded while it is read so concurrent requests cannot allocate unbounded memory. This example uses a 1 MB application limit; configure the same or a lower limit at your reverse proxy and cap concurrent requests.
+
+```ts app/routes/webhooks-ahasend.ts
+import type { Route } from "./+types/webhooks-ahasend";
+import { AhaSendWebhookVerificationError } from "@ahasend/sdk/webhooks";
+import { verifier } from "~/lib/ahasend-webhooks.server";
+import { webhookDeliveries } from "~/lib/webhook-deliveries.server";
+
+const MAX_BODY_BYTES = 1_000_000;
 
 class BodyTooLargeError extends Error {}
 
