@@ -22,7 +22,7 @@ Verify the domain and create the key in the [dashboard](https://dash.ahasend.com
   If v0 already put your key in a `NEXT_PUBLIC_` variable or referenced it from a client component, treat it as leaked. Delete the variable, rotate the key in the dashboard, and only then continue.
 </Warning>
 
-In your Vercel project, open **Settings → Environment Variables** and add:
+A v0 project inherits its environment variables from the Vercel project it publishes to. Open the project menu in v0, then **Settings → Environment Variables**, or edit the same values from the Vercel project's **Settings → Environment Variables**. Add:
 
 ```bash
 AHASEND_API_KEY=aha-sk-...
@@ -30,9 +30,13 @@ AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_DELIVERY_MODE=sandbox
 ```
 
-Do not use a `NEXT_PUBLIC_` prefix. Add the variables to the environments where the application runs, mark `AHASEND_API_KEY` as **Sensitive** for Preview and Production, and redeploy. Vercel makes environment variables available during builds and function execution, and changes apply only to new deployments.
+Do not use a `NEXT_PUBLIC_` prefix. Add all three to every environment the application runs in, and mark `AHASEND_API_KEY` as **Sensitive** in Preview and Production — Vercel offers that option only for those two environments.
 
-Next.js only includes variables prefixed with `NEXT_PUBLIC_` in the browser bundle. Project members with sufficient Vercel access can still view ordinary Vercel environment variables, which is why the API key should use the Sensitive option.
+Give the **Development** environment its own copy of all three variables, holding a separate key. The v0 preview window reads only Development values, and it cannot read Sensitive variables at all, so the Preview and Production key is unavailable there by design. Use a [sandbox credential](/send-api/sandbox) for Development: that copy is readable rather than sensitive, and it cannot deliver real mail if it leaks. The client below throws on a missing variable while the server module initializes, so a Development gap shows up as a failing preview instead of a silent misconfiguration.
+
+Vercel makes environment variables available during builds and function execution, and changes apply only to new deployments — publish again after editing them.
+
+Next.js only includes variables prefixed with `NEXT_PUBLIC_` in the browser bundle. Project members with sufficient Vercel access can still read ordinary Vercel environment variables, which is why the Preview and Production key uses the Sensitive option.
 
 ## Install the SDK
 
@@ -58,7 +62,7 @@ bun add @ahasend/sdk
 
 ## Create the Client
 
-Create the client once at module scope. This keeps retry, telemetry, idempotency, and local pacing configuration consistent across routes, and lets sends in one process share the SDK's process-local pacing queue.
+Create the client once at module scope. This keeps retry, telemetry, and idempotency configuration consistent across every route, and avoids rebuilding the client on each request.
 
 ```ts lib/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
@@ -86,7 +90,7 @@ export const sandboxMode = deliveryMode === "sandbox";
 
 Be explicit about the trust boundary. A public route that accepts any recipient address becomes an email relay, even though the API key itself stays hidden. Use a prompt like this:
 
-> "Add a Next.js Route Handler at `app/api/send-confirmation/route.ts` that uses `@ahasend/sdk`. Import the shared client and sandbox setting from `lib/ahasend.ts`. Require the app's existing authenticated session and authorization checks. Load the pending confirmation record, recipient address, confirmation URL, and stable record ID from server-side storage; never accept these values or the idempotency key from the browser. Use a mode-prefixed stable idempotency key so sandbox and live sends cannot collide. Send from `hello@yourdomain.com`. Return only accepted and rejected counts, never recipient data or provider error text. The client component should POST an empty request to the route, handle non-success responses, and disable duplicate submission. Preserve the app's normal CSRF and abuse-prevention controls."
+> "Add a Next.js Route Handler at `app/api/send-confirmation/route.ts` that uses `@ahasend/sdk`. Import the shared client and sandbox setting from `lib/ahasend.ts`. Require the app's existing authenticated session and authorization checks. Load the pending confirmation record, recipient address, confirmation URL, and stable record ID from server-side storage; never accept these values or the idempotency key from the browser. Use a mode-prefixed stable idempotency key so sandbox and live sends cannot collide. Send from `hello@yourdomain.com`. Await the send and respond only after it resolves; do not move it into background work that runs after the response, because the function can be frozen once it returns. Return only accepted and rejected counts, never recipient data or provider error text. The client component should POST an empty request to the route, handle non-success responses, and disable duplicate submission. Preserve the app's normal CSRF and abuse-prevention controls."
 
 Adapt the two application-specific imports below to your authentication and data layer. The key property is that the browser cannot choose the recipient or idempotency key:
 
@@ -170,7 +174,7 @@ Disable the submit control while this request is pending. Keep the application's
 
 Keep `AHASEND_DELIVERY_MODE=sandbox` while you build. Sandbox mode accepts a normal request without delivering email, returns a normal-shaped response, and can trigger the applicable configured webhook events.
 
-Use `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`, and `"suppress"` for other outcomes, and confirm your event handling. The full set is in the [sandbox mode guide](/send-api/sandbox). When ready, deliberately change `AHASEND_DELIVERY_MODE` to `live`, redeploy, and send one test to an address you control. Do not derive this switch from `NODE_ENV`, because preview deployments commonly use production optimizations too.
+Use `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`, and `"suppress"` for other outcomes, and confirm your event handling. The full set is in the [sandbox mode guide](/send-api/sandbox). When ready, deliberately change `AHASEND_DELIVERY_MODE` to `live` in the **Production** environment only, publish again, and send one test to an address you control. Leave Development on `sandbox`: a dedicated sandbox credential simulates every send regardless of this setting, so a live value there is misleading rather than useful. Do not derive this switch from `NODE_ENV`, because preview deployments commonly use production optimizations too.
 
 ## Audit Before You Ship
 
@@ -206,7 +210,7 @@ See the [API reference](/api-reference) for every field and endpoint the SDK exp
     The SDK is being imported by a client component. Move the import and send into the Route Handler, and make the component call that route with `fetch`.
   </Accordion>
   <Accordion title="An environment variable is undefined">
-    The variable may be missing from the deployment's selected environment or may have been added after its last deployment. Correct the environment assignment and redeploy.
+    In the v0 preview window this is almost always a missing **Development** value: previews read only that environment, and never read Sensitive variables. In a deployment, the variable may be missing from the environment that deployment targets, or may have been added after the last publish. Correct the environment assignment, then publish again.
   </Accordion>
   <Accordion title="API key visible in the browser bundle">
     Remove the `NEXT_PUBLIC_` prefix, rotate the leaked key in the dashboard, and read the replacement only from server code.
