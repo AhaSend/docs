@@ -40,8 +40,9 @@ bun add @ahasend/sdk
 ## Choose a Runtime
 
 Use Vercel's default server runtime; no runtime setting is required for the SDK.
-Vercel recommends its Node.js runtime for new functions. If an existing route
-uses the Edge runtime, the SDK also works there using the runtime's Web APIs.
+Vercel recommends migrating from the Edge runtime to Node.js, and Next.js 16.3
+and later no longer accept `runtime = 'edge'` at all. If an older route still
+uses the Edge runtime, the SDK works there too using the runtime's Web APIs.
 
 <Warning>
   The runtime choice does not change the security boundary. Import the SDK only
@@ -111,28 +112,44 @@ export async function sendWelcomeEmail(input: WelcomeInput) {
 }
 ```
 
-Call this helper only after authenticating and authorizing the request. For a
-browser flow, derive `signupId`, `email`, and `name` from your server-side user
-record. For a backend-to-backend route, require a service credential, validate
-and bound the request body, and apply rate limits. The [Next.js
+Call this helper only after authenticating and authorizing the request. Every
+Vercel deployment, Preview included, is served from a public generated URL, so
+a route that reaches this helper without an authorization check is an open mail
+relay for anyone who finds the URL. For a browser flow, derive `signupId`,
+`email`, and `name` from your server-side user record. For a backend-to-backend
+route, require a service credential, validate the request body and bound its
+size, and apply rate limits. Vercel itself rejects a request body over 4.5 MB
+with a 413 (`FUNCTION_PAYLOAD_TOO_LARGE`) before your function runs, which is a
+platform ceiling and not a substitute for your own limit. The [Next.js
 guide](/guides/nextjs) provides a complete route-handler example.
 
 An accepted send is multi-status: `result.data` holds one result per recipient,
 and an entry can have `status: "error"` even when the request resolves. Reuse
-the same stable signup ID for retries of the same payload. A stored outcome can
-be replayed for the resulting idempotency key, but a server-error outcome may
-be re-executed and a stored result is not retained forever. The surrounding
-workflow must tolerate an uncertain duplicate. Live and sandbox sends use
-separate key namespaces so Preview cannot conflict with Production when both
-environments share an AhaSend account.
+the same stable signup ID for retries of the same payload. A stored
+non-server-error outcome is replayed for 24 hours; a server error releases the
+key for re-execution, so the surrounding workflow must tolerate an uncertain
+duplicate.
+
+AhaSend scopes an idempotency key to your account and matches it against the
+exact request body — not against the `sandbox` flag. That is why `welcomeKey`
+puts `sandbox` or `live` in the key itself: without it, a Preview sandbox send
+and a Production live send sharing one signup ID would reuse a single key with
+two different bodies, which the API rejects as a 422 mismatch.
 
 ## Set Environment Variables
 
 <Steps>
   <Step title="Add production variables">
     In **Project → Settings → Environment Variables**, add
-    `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` for Production. Add
-    `AHASEND_WEBHOOK_SECRET` there if you use webhooks.
+    `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` for Production, plus
+    `AHASEND_WEBHOOK_SECRET` if you use webhooks.
+  </Step>
+  <Step title="Turn on Sensitive before saving each credential">
+    With **Sensitive** enabled, Vercel stores the value unreadably: it cannot
+    be retrieved from the dashboard or `vercel env ls` afterwards, only
+    replaced. Do this while adding the variable — converting an existing one
+    means deleting and re-adding it. Sensitive is available for Production and
+    Preview, not Development.
   </Step>
   <Step title="Configure safe previews">
     For Preview, use a separate least-privilege API key and set
@@ -145,19 +162,30 @@ environments share an AhaSend account.
   </Step>
 </Steps>
 
-You can also add values interactively with the CLI:
+You can also add values interactively with the CLI. Name the target
+environment on every command: `vercel env add AHASEND_API_KEY` with no
+environment offers every environment at once, which is how a Production key
+ends up in Preview.
 
 ```bash
-vercel env add AHASEND_API_KEY
-vercel env add AHASEND_ACCOUNT_ID
-vercel env add AHASEND_WEBHOOK_SECRET
-vercel env add AHASEND_SANDBOX
+# Production: the key allowed to send real mail
+vercel env add AHASEND_API_KEY production
+vercel env add AHASEND_ACCOUNT_ID production
+vercel env add AHASEND_WEBHOOK_SECRET production
+
+# Preview: a separate restricted key, plus the sandbox switch
+vercel env add AHASEND_API_KEY preview
+vercel env add AHASEND_ACCOUNT_ID preview
+vercel env add AHASEND_SANDBOX preview
 ```
 
+`vercel env add` stores Production and Preview values as sensitive by default;
+pass `--no-sensitive` only if you have a reason to keep a value readable.
+
 <Warning>
-  Never prefix these variables with `NEXT_PUBLIC_`. That prefix exposes values
-  to browser code in a Next.js project. Rotate an API key immediately if it is
-  exposed.
+  Never give these variables a framework's public prefix — `NEXT_PUBLIC_` in
+  Next.js, `VITE_` in Vite, `NUXT_PUBLIC_` in Nuxt. Any of them inlines the
+  value into the browser bundle. Rotate an API key immediately if it is exposed.
 </Warning>
 
 ## Local Development
@@ -184,7 +212,22 @@ https://your-app.com/api/webhooks/ahasend
 In Next.js, use `nextRouteHandler` from `@ahasend/sdk/webhooks`. It reads and
 caps the exact raw request body, verifies the signature and timestamp, and only
 then invokes the application handler. The [Next.js guide](/guides/nextjs)
-contains the complete handler.
+contains the complete handler. Its `maxBodyBytes` option can only narrow the
+verifier's 30 MB ceiling — set it to the size your events actually reach, since
+Vercel already returns a 413 above 4.5 MB and the default ceiling is far above
+anything a webhook delivery needs.
+
+Keep the webhook route on a domain that Deployment Protection leaves reachable.
+Standard Protection covers preview and generated deployment URLs but not
+production domains, which is what a webhook endpoint needs. If you switch the
+project to **All Deployments** protection, the production domain requires Vercel
+Authentication and AhaSend's deliveries get a 401. A webhook configuration
+carries no custom headers, so the bypass has to travel in the URL: create a
+Protection Bypass for Automation secret and append
+`?x-vercel-protection-bypass=<secret>` to the webhook URL. Treat that secret as
+a credential — it bypasses protection on every deployment in the project until
+you rotate it, and signature verification, not the bypass, is what authenticates
+the route.
 
 Timestamp validation is not replay deduplication. Before returning a 2xx,
 atomically claim the verified `webhook-id` and enqueue durable work (or commit
@@ -193,8 +236,11 @@ and make consumers idempotent. Vercel Queues uses at-least-once delivery, so a
 queue consumer must also tolerate redelivery.
 
 Do not use an untracked promise for required webhook work. Vercel's
-post-response helpers remain bounded by the function timeout; use them for
-non-critical work, not as a replacement for durable persistence.
+post-response helpers — `after()` from `next/server` on Next.js 15.1 and later,
+`waitUntil()` from `@vercel/functions` otherwise — do keep the work inside the
+invocation, but they share the function's timeout and their promises are
+cancelled if it expires. Use them for non-critical work, not as a replacement
+for durable persistence.
 
 ## Going Further
 
