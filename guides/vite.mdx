@@ -13,6 +13,8 @@ for example [Astro](/guides/astro).
 ## Prerequisites
 
 - A Vite project
+- Node.js 22 or newer for the backend, which the SDK requires
+- Express 5 for the backend. Express 5 forwards a rejected promise from an `async` route handler to the error middleware below; on Express 4 the same rejection becomes an unhandled rejection and the request never completes. `npm install express` installs 5.
 - An application authentication system that can identify the current user on the backend
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) permitted to send from that domain, and your account ID
@@ -61,9 +63,10 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 
 Add `server/.env` to `.gitignore`. The backend below expects your authentication
 integration to export `authorizeWelcome`. That middleware must validate the
-user's server-side session, authorize this mutation, apply your CSRF defense,
-load the user from trusted storage, and set `res.locals.user`. Do not populate
-the user from request-body fields.
+user's server-side session, authorize this mutation, reject the request when the
+CSRF token header sent in step 3 is missing or does not match the session, load
+the user from trusted storage, and set `res.locals.user`. Do not populate the
+user from request-body fields.
 
 ```js server/index.mjs
 import { createHash } from "node:crypto";
@@ -120,31 +123,49 @@ app.post("/api/welcome", authorizeWelcome, async (_req, res) => {
 
     res.status(202).json({ queued: true });
   } catch (error) {
-    if (isAhaSendError(error)) {
-      const { code, status, requestId } = error.toJSON();
-      console.error("AhaSend request failed", { code, status, requestId });
-    }
+    if (!isAhaSendError(error)) throw error;
+    const { code, status, requestId } = error.toJSON();
+    console.error("AhaSend request failed", { code, status, requestId });
     res.status(502).json({ error: "Email could not be queued" });
   }
 });
 
-app.use((_error, _req, res, _next) => {
+// Register this after every route, including the webhook route below.
+app.use((error, _req, res, next) => {
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
   console.error("Request failed");
   res.status(500).json({ error: "Internal server error" });
 });
 
-app.listen(3000);
+app.listen(3000, "127.0.0.1");
 ```
 
-Apply a rate limit to the mutation in addition to authentication. The accepted
-send response is multi-status, so inspect every entry in `result.data`; a
-resolved request can still contain an entry with `status: "error"`.
+Bind the backend to loopback. Vite's proxy connects over loopback, so nothing is
+lost, and a send endpoint holding a live API key stays off the local network —
+including when you run the frontend with `vite --host`.
+
+Rate-limit the mutation in addition to authenticating it: cap sends per session
+and per user, and reject over the cap before calling `messages.send`.
+Authentication alone bounds who can trigger a send, not how often.
+
+The accepted send response is multi-status, so inspect every entry in
+`result.data`; a resolved request can still contain an entry with
+`status: "error"`. Anything that is not an AhaSend error is a local fault, so it
+is rethrown to the error middleware rather than reported to the browser as an
+upstream failure.
 
 Reuse the same `signupId` only for retries of the same welcome-email payload.
 The stable, hashed key lets AhaSend replay a stored outcome without putting the
-raw identifier in request metadata. A server-error outcome may be re-executed,
-and stored results are not retained forever, so the surrounding workflow must
-tolerate an uncertain duplicate.
+raw identifier in request metadata. AhaSend matches a key against the exact
+request body, so editing the subject or the HTML and then retrying for a user
+who already received one is rejected with `AhaSendIdempotencyMismatchError`
+(HTTP 422) rather than replayed; change the key prefix alongside the content. A
+stored result is replayed for 24 hours and a server-error outcome releases the
+key for re-execution, so the surrounding workflow must tolerate an uncertain
+duplicate.
 
 ## 2. Proxy `/api` During Development
 
@@ -181,16 +202,26 @@ The browser sends no recipient or AhaSend credential. The backend derives the
 recipient from the authenticated session:
 
 ```ts src/lib/sendWelcome.ts
-export async function sendWelcome(): Promise<void> {
-  const response = await fetch("/api/welcome", { method: "POST" });
+export async function sendWelcome(csrfToken: string): Promise<void> {
+  const response = await fetch("/api/welcome", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "x-csrf-token": csrfToken },
+  });
   if (!response.ok) throw new Error("Failed to send welcome email");
 }
 ```
 
+Use the header name and token your authentication integration issues. The custom
+header is what makes the CSRF check in `authorizeWelcome` enforceable: a request
+carrying one is no longer a simple cross-origin request, so another site cannot
+forge it without CORS permission your backend never grants. A bodiless `POST`
+with no custom header, by contrast, gives the server nothing to validate.
+
 Call `sendWelcome()` from your React, Vue, or Svelte UI only as part of the
-authorized application flow. Keep the endpoint on the same origin in
-production as well as development, and configure the session cookie and CSRF
-protection in your authentication integration.
+authorized application flow. Keep the endpoint on the same origin in production
+as well as development, and configure the session cookie in your authentication
+integration.
 
 ## Webhooks
 
@@ -200,10 +231,17 @@ Webhooks also belong on the backend. Mount the SDK's
 caps the exact raw stream before it verifies the signature and timestamp. The
 [Express webhook guide](/guides/express#handle-webhooks) contains the handler.
 
+Add the route above the error middleware in `server/index.mjs`. Express only
+routes an error to a handler registered after the failing route, so an adapter
+setup error — a body parser that ran first, for instance — bypasses a handler
+mounted earlier in the file.
+
 Timestamp verification is not replay deduplication. Before returning a 2xx,
 atomically persist the verified `webhook-id` with durable queue or outbox work.
 Acknowledge an already claimed ID without processing it again, and make the
-worker idempotent.
+worker idempotent. Keep `event.data` out of your logs: it carries the recipient
+address, sender, and subject, plus the opener's IP and user agent on open and
+click events.
 
 ## Going Further
 
@@ -216,16 +254,22 @@ worker idempotent.
 
 <AccordionGroup>
   <Accordion title="The SDK appears in the browser bundle">
-    A module in the browser import graph imports the SDK. Move that module into
-    the backend package or directory and communicate with it through the
-    authenticated HTTP endpoint. Having the dependency in a shared
+    A module in the browser import graph imports the SDK. Constructing the
+    client there throws `AhaSendConfigurationError`: the SDK detects browser
+    globals and refuses, so the key cannot reach a page even by accident. Move
+    that module into the backend package or directory and communicate with it
+    through the authenticated HTTP endpoint. Having the dependency in a shared
     `package.json` does not bundle it by itself.
   </Accordion>
   <Accordion title="fetch('/api/welcome') returns index.html or a 404">
     During development, confirm the `server.proxy` entry is in
     `vite.config.ts`, restart Vite after changing the config, and confirm the
-    backend listens on port 3000. In production, configure the hosting platform
-    or reverse proxy separately; Vite's development proxy is not deployed.
+    backend listens on port 3000. If Vite and the backend run in separate
+    containers or virtual machines, the loopback bind is why the proxy cannot
+    connect: point `server.proxy` at the backend's reachable address and keep
+    the port off the public network another way. In production, configure the
+    hosting platform or reverse proxy separately; Vite's development proxy is
+    not deployed.
   </Accordion>
   <Accordion title="import.meta.env.VITE_AHASEND_API_KEY is visible">
     Remove the variable and rotate the exposed key in the
