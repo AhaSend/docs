@@ -12,7 +12,7 @@ The one hard requirement is the runtime: the function must be on `nodejs22.x` or
 - An AWS account and a deployment tool of your choice (console, SAM, CDK, Terraform)
 - A Lambda function using the current Node.js runtime
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with either `messages:send:all` or a least-privilege domain scope such as `messages:send:yourdomain.com` matching the domain in `from.email`, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with either `messages:send:all` or a least-privilege domain scope such as `messages:send:{yourdomain.com}` matching the domain in `from.email` (the curly braces are part of the [scope](/api-reference/scopes) string), and your account ID
 
 ## Install the SDK
 
@@ -296,7 +296,7 @@ This is a smoke test, not a pattern to build on. It has no retries, no idempoten
 
 - **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
 - **Batch sends**: `recipients` accepts up to 100 entries, and each one gets a separate, individually-substituted message.
-- **Dry runs**: set `sandbox: true` to have the API validate and accept a message without delivering it, and `sandbox_result` (`deliver`, `bounce`, `defer`, `fail`, or `suppress`) to exercise your webhook handling. The `from` domain still has to be verified.
+- **Dry runs**: set `sandbox: true` to have the API validate and accept a message without delivering it, and `sandbox_result` (`deliver`, `bounce`, `defer`, `fail`, or `suppress`) to exercise your webhook handling. The `from` domain still has to be verified. `sandbox` is a body field, so a key already spent on a sandbox send comes back `422` when the same key is replayed for the live one — give the two runs different `event_id`s.
 - **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by one hour (`first_attempt` must be in the future and within 7 days).
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
