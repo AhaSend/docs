@@ -130,11 +130,11 @@ non-server-error outcome is replayed for 24 hours; a server error releases the
 key for re-execution, so the surrounding workflow must tolerate an uncertain
 duplicate.
 
-AhaSend scopes an idempotency key to your account and matches it against the
-exact request body — not against the `sandbox` flag. That is why `welcomeKey`
-puts `sandbox` or `live` in the key itself: without it, a Preview sandbox send
-and a Production live send sharing one signup ID would reuse a single key with
-two different bodies, which the API rejects as a 422 mismatch.
+AhaSend scopes an idempotency key to your account and matches it on the request
+method, path, and exact body — never on which API key sent it. That is why
+`welcomeKey` puts `sandbox` or `live` in the key itself: without it, a Preview
+sandbox send and a Production live send sharing one signup ID would reuse a
+single key with two different bodies, which the API rejects as a 422 mismatch.
 
 ## Set Environment Variables
 
