@@ -9,7 +9,7 @@ keywords: ["echo send email", "golang transactional email echo", "echo email api
 
 ## Prerequisites
 
-- Go installed
+- Go 1.25 or newer, which Echo v5 requires
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) scoped to `messages:send:{your-domain}`, matching the domain in `From.Email`, and your account ID
 
@@ -79,8 +79,9 @@ func requireSendToken() echo.MiddlewareFunc {
 		Validator: func(c *echo.Context, key string, _ middleware.ExtractorSource) (bool, error) {
 			return sendToken != "" && subtle.ConstantTimeCompare([]byte(key), []byte(sendToken)) == 1, nil
 		},
-		// A missing token would otherwise answer 400; a caller cannot tell
-		// missing from wrong either way, so report both as 401.
+		// Both failures already answer 401, but with different bodies: a
+		// missing token reports "missing key" and a wrong one "Unauthorized".
+		// Collapse them so a caller cannot tell missing from wrong.
 		ErrorHandler: func(c *echo.Context, err error) error {
 			return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
 		},
