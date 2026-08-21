@@ -11,7 +11,7 @@ This guide runs Go as an Azure Functions **custom handler**: a small HTTP server
 
 - Go installed
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
 - A Linux/x64 Azure Function App configured for a custom handler (select .NET as the runtime stack when creating it), the [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) (`func`), and the Azure CLI (`az`)
 
 ## Project Layout
@@ -34,8 +34,12 @@ A custom handler app pairs one Go binary with the standard Functions metadata fi
 ## Install the SDK
 
 ```bash
-go mod init example.com/yourapp && go get github.com/AhaSend/ahasend-go
+go mod init example.com/yourapp
+go get github.com/AhaSend/ahasend-go
+go get github.com/google/uuid
 ```
+
+`google/uuid` arrives with the SDK as a transitive dependency, but the account ID is a `uuid.UUID` that your own code parses, so it needs its own `go get` or the build fails on a missing `go.sum` entry.
 
 ## Configure the Functions Host
 
@@ -320,6 +324,11 @@ func handleAhaSendWebhook(w http.ResponseWriter, r *http.Request) {
 			errors.Is(err, webhooks.ErrInvalidSignature),
 			errors.Is(err, webhooks.ErrExpiredTimestamp):
 			w.WriteHeader(http.StatusUnauthorized)
+		case errors.Is(err, webhooks.ErrUnknownEventType):
+			// The signature was verified before the type was classified, so this
+			// is a genuine event this SDK version doesn't know yet. Acknowledge
+			// it: AhaSend disables a webhook after 100 consecutive failures.
+			w.WriteHeader(http.StatusOK)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 		}
