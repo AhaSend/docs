@@ -5,11 +5,16 @@ description: "Send transactional email from RedwoodJS api-side functions and ser
 keywords: ["redwoodjs send email", "redwood transactional email", "redwood serverless function email", "ahasend redwoodjs", "redwood webhook handler"]
 ---
 
-In [RedwoodJS](https://redwoodjs.com) the SDK belongs in the `api` workspace only, so the key never reaches anything the browser downloads. The send goes in a service, the webhook is just another api-side function.
+In [Redwood GraphQL](https://docs.redwoodjs.com) the SDK belongs in the `api` workspace only, so the key never reaches anything the browser downloads. The send goes in a service, the webhook is just another api-side function.
+
+<Info>
+  This guide targets **Redwood GraphQL** — the `@redwoodjs/*` v8 framework with `api` and `web` workspaces and a `redwood.toml`. It is not [RedwoodSDK](https://rwsdk.com), the separate Cloudflare-based framework that `redwoodjs.com` now redirects to; none of the paths below exist there. Redwood GraphQL's [v8.9.0 release notes](https://github.com/redwoodjs/graphql/releases/tag/v8.9.0) state that its development is winding down and point to the [CedarJS](https://cedarjs.com) fork for continued security updates. The api-side code here carries over to Cedar, which keeps `api/src/functions`, but its config file is `cedar.toml` and its functions proxy path differs.
+</Info>
 
 ## Prerequisites
 
-- A RedwoodJS project
+- A Redwood GraphQL project
+- Node 22 or newer for the api side: the SDK requires it, while Redwood 8 scaffolds `engines: { "node": "=20.x" }`. Raise that field and set the same version on your deployment provider
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
 
@@ -17,25 +22,11 @@ In [RedwoodJS](https://redwoodjs.com) the SDK belongs in the `api` workspace onl
 
 The SDK belongs on the **api side** only, so install it into the `api` workspace:
 
-<CodeGroup>
-
-```bash yarn (Redwood default)
+```bash
 yarn workspace api add @ahasend/sdk
 ```
 
-```bash npm
-npm install @ahasend/sdk --workspace api
-```
-
-```bash pnpm
-pnpm add @ahasend/sdk --filter api
-```
-
-```bash bun
-bun add @ahasend/sdk --cwd api
-```
-
-</CodeGroup>
+Use Yarn here even if you prefer another package manager elsewhere. Redwood requires it: a scaffolded project ships a `yarn.lock` and a `.yarnrc.yml`, pins `packageManager` to Yarn 4, declares its workspaces in `package.json` (which pnpm does not read), and drives every command through `yarn rw`.
 
 ## Configure Environment Variables
 
@@ -49,27 +40,36 @@ WELCOME_ROUTE_TOKEN=replace-with-a-long-random-value
 ```
 
 <Warning>
-  Redwood's `includeEnvironmentVariables` setting in `redwood.toml` allowlists variables for the **web side**, baking them into the browser bundle. Never add any `AHASEND_*` variable or `WELCOME_ROUTE_TOKEN` there: the api side needs no allowlist and these secrets must stay server-only.
+  Redwood has two ways to hand a variable to the **web side**, and both bake it into the browser bundle: listing it in `includeEnvironmentVariables` in `redwood.toml`, and naming it with a `REDWOOD_ENV_` prefix. Never do either to an `AHASEND_*` variable or to `WELCOME_ROUTE_TOKEN` — the api side needs neither, and these secrets must stay server-only.
 </Warning>
 
 ## Create the Client
 
-Create the client once at module scope and reuse it across invocations:
+Redwood imports every api-side function when the server starts, and it does not guard those imports. A throw at module scope — a missing variable, or an `AHASEND_ACCOUNT_ID` that isn't a UUID, which the constructor rejects — therefore takes down the whole api server including `/graphql`, not just the function that sends email. Build the client on first use and memoize it instead:
 
 ```ts api/src/lib/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
-
-export const ahasend = new AhaSendClient({
-  apiKey: requireEnv("AHASEND_API_KEY"),
-  accountId: requireEnv("AHASEND_ACCOUNT_ID"),
-});
 
 export function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is not configured`);
   return value;
 }
+
+let client: AhaSendClient | undefined;
+
+export function ahasend(): AhaSendClient {
+  client ??= new AhaSendClient({
+    apiKey: requireEnv("AHASEND_API_KEY"),
+    accountId: requireEnv("AHASEND_ACCOUNT_ID"),
+    timeoutMs: 5_000,
+    retry: { maxRetries: 1 },
+  });
+  return client;
+}
 ```
+
+One client is built per server process and reused across invocations. The two limits are there because the SDK retries on its own, and its defaults — a 30-second timeout per attempt and up to three retries with backoff — can outlast the wall clock a serverless target allows one function, which kills the invocation mid-retry. Raise them when you deploy the api side to a long-running Node server instead.
 
 Configure the same values as runtime environment variables in your deployment provider. Do not commit `.env`.
 
@@ -150,7 +150,7 @@ export const handler = async (event: APIGatewayEvent): Promise<APIGatewayProxyRe
 
   let result;
   try {
-    result = await ahasend.messages.send(
+    result = await ahasend().messages.send(
       {
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email: input.email, name: input.name }],
@@ -201,7 +201,7 @@ export const sendWelcomeEmail = async ({
 }) => {
   let result;
   try {
-    result = await ahasend.messages.send(
+    result = await ahasend().messages.send(
       {
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email, name }],
@@ -211,7 +211,11 @@ export const sendWelcomeEmail = async ({
       { idempotencyKey: `welcome:${eventId}` },
     );
   } catch (error) {
-    if (isAhaSendError(error)) throw new Error("AhaSend request failed");
+    if (isAhaSendError(error)) {
+      const { code, status, requestId } = error.toJSON();
+      console.error("AhaSend request failed", { code, status, requestId });
+      throw new Error("AhaSend request failed");
+    }
     throw error;
   }
   if (result.data.some((entry) => entry.status === "error")) {
@@ -223,7 +227,7 @@ export const sendWelcomeEmail = async ({
 
 Protect the mutation with your normal Redwood auth directive, validate its input, derive `email` from the authenticated user where possible, and use a persisted business-event ID for `eventId`.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+Add `sandbox: true` to the send request to validate it without delivering anything. Idempotency keys are scoped to your whole account, not split into sandbox and live namespaces, and a stored key is matched against a hash of the request body — so give a sandbox send its own key. Reusing a live send's key with `sandbox: true` added returns `422`.
 
 ## Handle Webhooks
 
@@ -238,8 +242,14 @@ import {
 } from "@ahasend/sdk/webhooks";
 import { requireEnv } from "src/lib/ahasend";
 
-const verifier = new WebhookVerifier(requireEnv("AHASEND_WEBHOOK_SECRET"));
 const MAX_WEBHOOK_BYTES = 1_000_000;
+
+let verifier: WebhookVerifier | undefined;
+
+function getVerifier(): WebhookVerifier {
+  verifier ??= new WebhookVerifier(requireEnv("AHASEND_WEBHOOK_SECRET"));
+  return verifier;
+}
 
 export const handler = async (event: APIGatewayEvent) => {
   if (event.httpMethod !== "POST") {
@@ -255,7 +265,7 @@ export const handler = async (event: APIGatewayEvent) => {
 
   let webhookEvent;
   try {
-    webhookEvent = await verifier.parse(event.headers, rawBody);
+    webhookEvent = await getVerifier().parse(event.headers, rawBody);
   } catch (error) {
     if (error instanceof AhaSendWebhookVerificationError) {
       return { statusCode: 400, body: "" };
@@ -297,7 +307,7 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
     The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is in `.env` (restart `yarn rw dev` after editing it) or set in your deploy provider's environment, and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
   </Accordion>
   <Accordion title="Variable undefined on the web side">
-    That's by design. Do not add `AHASEND_*` keys or `WELCOME_ROUTE_TOKEN` to `includeEnvironmentVariables`, which would embed them in the browser bundle. Email must always go through the api side (a function or service).
+    That's by design. Do not add `AHASEND_*` keys or `WELCOME_ROUTE_TOKEN` to `includeEnvironmentVariables`, and do not rename them with a `REDWOOD_ENV_` prefix: either one embeds them in the browser bundle. Email must always go through the api side (a function or service).
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
