@@ -19,7 +19,10 @@ gorilla/mux is stable but no longer actively developed: v1.8.1 (October 2023) is
 ```bash
 go get github.com/AhaSend/ahasend-go
 go get github.com/gorilla/mux
+go get github.com/google/uuid
 ```
+
+`google/uuid` is a transitive dependency of the SDK, but the account ID is a `uuid.UUID`, so your own code imports it directly and it needs its own `go get`.
 
 ## Configure Environment Variables
 
@@ -373,8 +376,8 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="401 from the API">
-    The API key is missing, malformed, revoked, or lacks the sending domain's scope. Verify `AHASEND_API_KEY` is set in the process environment and review the [API credentials guide](/send-api/credentials) without printing the key.
+  <Accordion title="401 or 403 from the API">
+    A `401` means the API key is missing, malformed, or revoked; a `403` means the key is valid but does not carry the sending domain's `messages:send` scope. Both reach the same handler branch. Verify `AHASEND_API_KEY` is set in the process environment and review the [API credentials guide](/send-api/credentials) without printing the key.
   </Accordion>
   <Accordion title="Webhook verification always fails">
     Something consumed the request body before `ParseRequest` ran. Check `r.Use(...)` middleware for body readers. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
