@@ -12,7 +12,7 @@ send email only from server endpoints or server form actions.
 
 - A SvelteKit project
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) permitted to send from that domain, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{yourdomain.com}` scope for that domain (or `messages:send:all`), and your account ID
 
 ## Install the SDK
 
@@ -39,13 +39,15 @@ bun add @ahasend/sdk
 ## Configure Environment Variables
 
 Add your credentials to `.env` for local development. The route token protects
-the server-to-server example below; generate a long random value for it.
+the server-to-server example below; generate at least 32 random characters for
+it, because that token is the only thing standing between the send endpoint and
+an open mail relay.
 
 ```bash .env
 AHASEND_API_KEY=aha-sk-...
 AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
-WELCOME_ROUTE_TOKEN=a-long-random-secret
+WELCOME_ROUTE_TOKEN=at-least-32-random-characters
 ```
 
 `$env/dynamic/private` exposes the private runtime variables supplied by your
@@ -61,30 +63,48 @@ build time.
 
 ## Create the Client
 
-Create the client once at module scope and reuse it across requests. SvelteKit
-prevents `$lib/server/` modules from being imported into client code, so keep it
-there:
+Build the client on first use and reuse it across requests. SvelteKit prevents
+`$lib/server/` modules from being imported into client code, so keep it there:
 
 ```ts src/lib/server/ahasend.ts
 import { env } from "$env/dynamic/private";
 import { AhaSendClient } from "@ahasend/sdk";
 
-export function requirePrivateEnv(name: string): string {
+export function requirePrivateEnv(name: string, minLength = 1): string {
   const value = env[name];
-  if (!value) throw new Error(`${name} is required`);
+  if (!value || value.length < minLength) {
+    throw new Error(`${name} is missing or shorter than ${minLength} characters`);
+  }
   return value;
 }
 
-export const ahasend = new AhaSendClient({
-  apiKey: requirePrivateEnv("AHASEND_API_KEY"),
-  accountId: requirePrivateEnv("AHASEND_ACCOUNT_ID"),
-});
+let client: AhaSendClient | undefined;
+
+export function ahasend(): AhaSendClient {
+  client ??= new AhaSendClient({
+    apiKey: requirePrivateEnv("AHASEND_API_KEY"),
+    accountId: requirePrivateEnv("AHASEND_ACCOUNT_ID"),
+  });
+  return client;
+}
 ```
+
+<Warning>
+  Read the variables inside the function rather than while the module is
+  evaluating. `$env/dynamic/private` is resolved by the platform at runtime, so
+  what it holds during a module's first evaluation depends on the adapter — a
+  module-scope assertion turns a missing value into a failure of the whole route
+  module instead of a failure of one request.
+</Warning>
 
 ## Send an Email from a SvelteKit Endpoint
 
 This example is a server-to-server endpoint. It authenticates the caller before
 reading a bounded request body and requires a stable event ID for safe retries.
+AhaSend rate-limits message operations per account (100 requests per second,
+with a 200-request burst), so also put a request-rate limit in front of this
+route: an authenticated caller must not be able to spend the whole account
+budget.
 
 ```ts src/routes/api/welcome/+server.ts
 import { json } from "@sveltejs/kit";
@@ -167,7 +187,7 @@ async function isAuthorized(request: Request): Promise<boolean> {
   if (!authorization?.startsWith("Bearer ")) return false;
   return secretsEqual(
     authorization.slice("Bearer ".length),
-    requirePrivateEnv("WELCOME_ROUTE_TOKEN"),
+    requirePrivateEnv("WELCOME_ROUTE_TOKEN", 32),
   );
 }
 
@@ -196,7 +216,7 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 
   try {
-    const result = await ahasend.messages.send(
+    const result = await ahasend().messages.send(
       {
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email: input.email, name: input.name }],
@@ -210,14 +230,25 @@ export const POST: RequestHandler = async ({ request }) => {
     const rejectedCount = result.data.filter((entry) => entry.status === "error").length;
     if (rejectedCount > 0) {
       console.error("AhaSend rejected recipients", { rejectedCount });
-      return json({ error: "Email could not be queued" }, { status: 502 });
+      // Deterministic: retrying replays the same rejection, so do not
+      // answer with a status that invites one.
+      return json({ error: "Email was not accepted for delivery" }, { status: 422 });
     }
 
     return json({ queued: true }, { status: 202 });
   } catch (error) {
     if (isAhaSendError(error)) {
-      const { code, status, requestId } = error.toJSON();
+      const { code, status, requestId, retryAfterSeconds } = error.toJSON();
       console.error("AhaSend request failed", { code, status, requestId });
+      if (code === "rate_limit_error") {
+        return json(
+          { error: "Rate limited" },
+          {
+            status: 429,
+            headers: retryAfterSeconds ? { "retry-after": String(retryAfterSeconds) } : {},
+          },
+        );
+      }
     }
     return json({ error: "Email could not be queued" }, { status: 502 });
   }
@@ -232,15 +263,27 @@ creating another send. A server-error outcome can be re-executed, so make the
 surrounding business workflow tolerate an uncertain duplicate. Do not expose or
 log provider errors, recipients, message content, or the idempotency key.
 
+A rate-limit error surfaces only after the SDK has already retried it while
+honouring `Retry-After`, so pass that budget on to the caller instead of
+flattening it into a generic failure.
+
 For a browser submission, prefer a SvelteKit form action. Authorize it with the
 user's server-side session and derive the recipient on the server instead of
-trusting a browser-supplied address. Add `sandbox: true` to the send request to
-validate it without delivery.
+trusting a browser-supplied address.
+
+Add `sandbox: true` to validate a send without delivering it. Idempotency keys
+are scoped to the account and matched against a hash of the request body, so a
+sandbox send is not a separate namespace: flipping `sandbox` while reusing
+`welcome:<eventId>` is the same key with a different payload, which the API
+rejects with a 422 for the 24 hours the original record lives. Give sandbox
+sends their own key prefix.
 
 ## Handle Webhooks
 
-The SDK's web-standard request adapter reads a bounded raw body and verifies it
-before invoking your handler:
+`nextRouteHandler` is the SDK's adapter for web-standard `Request`/`Response`
+handlers, so it works unchanged in a SvelteKit `+server.ts`. It reads a bounded
+raw body and verifies the signature over those exact bytes before invoking your
+handler:
 
 ```ts src/routes/api/webhooks/ahasend/+server.ts
 import type { RequestHandler } from "./$types";
@@ -277,11 +320,31 @@ Pass the webhook secret exactly as the dashboard displays it, including the
 opaque error for an invalid or oversized request, and keeps unknown but valid
 events on the success path.
 
+`maxBodyBytes` can only narrow the SDK's own ceiling; it cannot raise your
+platform's. `adapter-node` rejects a body over `BODY_SIZE_LIMIT` — 512kb by
+default — before your handler runs, so raise that variable to match the bound
+you choose here, or lower `maxBodyBytes` to match it. Otherwise the platform
+produces the rejection and the SDK's bound never applies.
+
 Before doing business work, atomically claim the verified request's
 `webhook-id` header in durable storage and enqueue the work in the same
 transaction (or use a durable outbox). Acknowledge an already claimed ID and
 make downstream processing idempotent. Timestamp validation alone does not
 prevent replay within the accepted window.
+
+Commit that claim and enqueue before returning the response. A promise left
+running after the handler resolves has no guarantee of completing — serverless
+adapters may freeze or discard the invocation as soon as the response is sent,
+which acknowledges a delivery whose work never ran and which AhaSend will
+therefore never retry.
+
+SvelteKit's CSRF origin check applies only to `POST`, `PUT`, `PATCH`, and
+`DELETE` requests whose content type is `application/x-www-form-urlencoded`,
+`multipart/form-data`, or `text/plain`, so a JSON webhook delivery reaches this
+route untouched. The check is enforced in production but not in local
+development, so any cross-origin caller that does use one of those three content
+types belongs in `kit.csrf.trustedOrigins` rather than being handled by turning
+`checkOrigin` off.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com), point
 it at `https://your-app.com/api/webhooks/ahasend`, and configure its secret as
@@ -320,8 +383,14 @@ guides.
     variables configured.
   </Accordion>
   <Accordion title="401 from AhaSend">
-    Confirm that the API key and account ID are configured in the production
-    environment and that the key is permitted to send from the domain in
-    `from.email`.
+    The API key is missing, malformed, or revoked. Confirm that
+    `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` are configured in the production
+    environment and that the key still exists in the dashboard.
+  </Accordion>
+  <Accordion title="403 from AhaSend">
+    The key authenticated but lacks the scope for this operation — for a send,
+    that is usually `sender domain not found in api key scopes`. Grant the key
+    `messages:send:{yourdomain.com}` for the domain in `from.email`, or
+    `messages:send:all`.
   </Accordion>
 </AccordionGroup>
