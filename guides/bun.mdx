@@ -23,7 +23,7 @@ The latest Bun is a supported runtime for the package, so no shims or flags are 
 
 ## Configure Environment Variables
 
-Add your credentials to `.env`:
+Create `.env` yourself and ensure it is ignored by git before adding values:
 
 ```bash .env
 AHASEND_API_KEY=aha-sk-...
@@ -54,11 +54,19 @@ export const ahasend = new AhaSendClient({
 `Bun.serve` with a fetch handler is all the HTTP server you need. A send route reaches into your AhaSend quota and puts caller-supplied text into mail you sign, so it authenticates the caller and validates the body before it calls the SDK:
 
 ```ts server.ts
+import { createHash, timingSafeEqual } from "node:crypto";
 import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend";
 
 const welcomeEndpointToken = process.env.WELCOME_ENDPOINT_TOKEN;
 if (!welcomeEndpointToken) throw new Error("WELCOME_ENDPOINT_TOKEN is required");
+const expectedTokenHash = createHash("sha256").update(welcomeEndpointToken).digest();
+
+function isAuthorized(header: string | null): boolean {
+  const provided = header?.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!provided) return false;
+  return timingSafeEqual(createHash("sha256").update(provided).digest(), expectedTokenHash);
+}
 
 Bun.serve({
   port: 3000,
@@ -72,7 +80,7 @@ Bun.serve({
     const url = new URL(req.url);
 
     if (req.method === "POST" && url.pathname === "/api/welcome") {
-      if (req.headers.get("authorization") !== `Bearer ${welcomeEndpointToken}`) {
+      if (!isAuthorized(req.headers.get("authorization"))) {
         return Response.json({ error: "Unauthorized" }, { status: 401 });
       }
 
@@ -120,7 +128,7 @@ Bun.serve({
 
 Run it with `bun run server.ts`. Keep `development: false` and the `error` handler: with `NODE_ENV` unset, `Bun.serve` defaults to development mode, and its built-in 500 page hands the thrown error's message and the surrounding source back to whoever made the request — including on the webhook route, which anyone who finds the URL can reach.
 
-Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`, and replace the token check with your application's normal authentication and authorization if the endpoint is user-facing. Serve both routes only over HTTPS, terminating TLS at Bun or a trusted reverse proxy, and add rate limiting plus a body limit sized for JSON in front of the send route — `maxRequestBodySize` is a server-wide setting, so on its own it lets a 30 MB body reach either path. Never expose a recipient-controlled send endpoint without access control.
+Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`, and replace the token check with your application's normal authentication and authorization if the endpoint is user-facing. The check compares SHA-256 digests through `timingSafeEqual` rather than `!==`, because JavaScript's string comparison returns as soon as two characters differ and leaks the token prefix to an attacker who can time repeated requests; hashing first also keeps the comparison from revealing the token's length. Serve both routes only over HTTPS, terminating TLS at Bun or a trusted reverse proxy, and add rate limiting plus a body limit sized for JSON in front of the send route — `maxRequestBodySize` is a server-wide setting, so on its own it lets a 30 MB body reach either path. Never expose a recipient-controlled send endpoint without access control.
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
@@ -172,7 +180,7 @@ if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
 }
 ```
 
-Narrow the catch to `AhaSendWebhookVerificationError` and rethrow anything else. A 400 is a permanent delivery failure, and AhaSend disables a webhook after 100 consecutive failures, so a bug of your own should surface as a 5xx that gets retried rather than as a rejection that looks like a bad signature.
+Narrow the catch to `AhaSendWebhookVerificationError` and rethrow anything else. Every non-2xx answer counts as a failed delivery: [retried 6 times over 16+ minutes, with a webhook disabled after 100 consecutive failures](/api-reference/webhooks/retry-policy). A bug of your own should therefore surface as a 5xx rather than as a rejection that looks like a bad signature, which quietly spends that budget.
 
 Webhooks can be delivered more than once. After verification and before performing side effects, atomically commit the `webhook-id` and durable work (such as an outbox job) in the same transaction. Acknowledge an ID that transaction has already committed without enqueueing it again.
 
