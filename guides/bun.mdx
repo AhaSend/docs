@@ -186,7 +186,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
 - **Attachments**: pass `attachments: [{ data: pdfBase64, content_type: "application/pdf", file_name: "document.pdf", base64: true }]`. When `base64` is `true`, `data` must already be base64-encoded.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Prefer a framework on top of Bun? The [ElysiaJS guide](/guides/elysiajs) uses the same SDK with typed routes.
+See the [API reference](/api-reference) for every endpoint the SDK exposes. Prefer a framework on top of Bun? The [ElysiaJS guide](/guides/elysiajs) uses the same SDK with typed routes.
 
 ## Troubleshooting
 

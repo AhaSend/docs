@@ -224,7 +224,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` and reuse it only for the same operation and exact request payload.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. For deployment, follow Hono's [Node.js build and deployment guidance](https://hono.dev/docs/getting-started/nodejs#building-deployment), serve the app over HTTPS, and configure your platform's `PORT`, secrets, and public webhook URL. Running Hono on Bun instead? The [Bun guide](/guides/bun) covers env loading and the Bun entry point.
+See the [API reference](/api-reference) for every endpoint the SDK exposes. For deployment, follow Hono's [Node.js build and deployment guidance](https://hono.dev/docs/getting-started/nodejs#building-deployment), serve the app over HTTPS, and configure your platform's `PORT`, secrets, and public webhook URL. Running Hono on Bun instead? The [Bun guide](/guides/bun) covers env loading and the Bun entry point.
 
 ## Troubleshooting
 

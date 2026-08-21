@@ -212,7 +212,7 @@ deno deploy --org your-org --app your-app --prod
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()`, reuse it only for the exact same payload, and account for the 24-hour result-retention window.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Running on another modern runtime? Review both the runtime compatibility inventory and the SDK security policy before production; the [Bun](/guides/bun) and [Cloudflare Workers](/guides/cloudflare-workers) guides cover their platform-specific setup.
+See the [API reference](/api-reference) for every endpoint the SDK exposes. Running on another modern runtime? Review both the runtime compatibility inventory and the SDK security policy before production; the [Bun](/guides/bun) and [Cloudflare Workers](/guides/cloudflare-workers) guides cover their platform-specific setup.
 
 ## Troubleshooting
 

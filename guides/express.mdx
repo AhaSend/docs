@@ -219,7 +219,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers, reusing each key only with the same payload.
 - **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself, use the encoded string as `data`, and set `base64: true`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. On a different Node framework? The same SDK powers the [Fastify](/guides/fastify) and [NestJS](/guides/nestjs) guides.
+See the [API reference](/api-reference) for every endpoint the SDK exposes. On a different Node framework? The same SDK powers the [Fastify](/guides/fastify) and [NestJS](/guides/nestjs) guides.
 
 ## Troubleshooting
 

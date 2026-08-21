@@ -310,7 +310,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. For binary files such as PDFs, base64-encode the bytes yourself and pass the encoded string as `data` — `base64: true` tells AhaSend how to decode `data`, it does not encode for you.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Nest runs on Express or Fastify under the hood, so the standalone [Express](/guides/express) and [Fastify](/guides/fastify) guides show the SDK's built-in webhook adapters for those platforms.
+See the [API reference](/api-reference) for every endpoint the SDK exposes. Nest runs on Express or Fastify under the hood, so the standalone [Express](/guides/express) and [Fastify](/guides/fastify) guides show the SDK's built-in webhook adapters for those platforms.
 
 ## Troubleshooting
 

@@ -315,7 +315,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour. The first attempt must be in the future and within seven days of the request.
 - **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself and pass the encoded string as `data` in `attachments: [{ data, content_type, file_name, base64: true }]`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Using a different meta-framework? The same SDK powers the [Next.js](/guides/nextjs) and [SvelteKit](/guides/sveltekit) guides.
+See the [API reference](/api-reference) for every endpoint the SDK exposes. Using a different meta-framework? The same SDK powers the [Next.js](/guides/nextjs) and [SvelteKit](/guides/sveltekit) guides.
 
 ## Troubleshooting
 

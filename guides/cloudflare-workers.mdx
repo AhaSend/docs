@@ -229,7 +229,7 @@ npx wrangler deploy
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
 - **Queues**: for bursts, push the send onto a [Cloudflare Queue](https://developers.cloudflare.com/queues/) and send from the consumer. Derive a stable AhaSend idempotency key from the queue message or business ID, acknowledge each message only after an accepted send, and configure a dead-letter queue; Cloudflare retries failed batches and otherwise discards messages after their retry limit.
 
-See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration in depth, and the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes.
+See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration in depth, and the [API reference](/api-reference) for every endpoint the SDK exposes.
 
 ## Troubleshooting
 

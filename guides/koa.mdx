@@ -279,7 +279,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 - **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
 - **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. For binary files such as PDFs, base64-encode the bytes yourself and pass the encoded string as `data`; `base64: true` tells AhaSend how to decode `data`, it does not perform the encoding.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every endpoint the SDK exposes. Using [Express](/guides/express) or [Fastify](/guides/fastify) elsewhere? Those guides use the SDK's built-in webhook adapters instead of the manual verifier shown here.
+See the [API reference](/api-reference) for every endpoint the SDK exposes. Using [Express](/guides/express) or [Fastify](/guides/fastify) elsewhere? Those guides use the SDK's built-in webhook adapters instead of the manual verifier shown here.
 
 ## Troubleshooting
 

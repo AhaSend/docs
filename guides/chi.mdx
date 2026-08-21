@@ -287,7 +287,7 @@ Return 2xx promptly after durable work has been accepted. Do slow processing in 
 - **Other frameworks**: the same SDK patterns work in [Gin](/guides/gin), [Echo](/guides/echo), and [gorilla/mux](/guides/gorilla-mux).
 - **Attachments**: every entry needs `Data`, `ContentType`, and `FileName`. For binary files such as PDFs, encode the bytes with `base64.StdEncoding.EncodeToString(data)`, use that string as `Data`, and set `Base64: true`. The flag tells AhaSend how to decode `Data`; it does not perform the encoding.
 
-See the [API reference](https://ahasend.com/docs/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
 
 ## Troubleshooting
 
