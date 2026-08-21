@@ -212,7 +212,7 @@ app.post("/webhooks/ahasend", (c) => ahasendWebhook(c.req.raw));
 
 Add this route before the `serve()` call. Signature timestamp checking does not prevent a valid delivery from being replayed within the accepted window. Before performing a side effect, atomically store the verified `webhook-id` — read from the handler's second `Request` argument, as above — together with durable work in one transaction, acknowledge an ID that transaction already holds without re-enqueueing it, and make the work itself idempotent.
 
-Let a failed commit reject: the adapter rethrows a handler error, Hono answers 500, and AhaSend retries. Never catch it into a 200. The opaque 400 the adapter returns for a bad signature is a permanent failure by contrast, and AhaSend disables a webhook after 100 consecutive failures.
+Let a failed commit reject: the adapter rethrows a handler error, Hono answers 500, and AhaSend retries. Never catch it into a 200. Every non-2xx answer counts as a failed delivery — [retried 6 times over 16+ minutes, with the webhook disabled after 100 consecutive failures](/api-reference/webhooks/retry-policy) — so the opaque 400 the adapter returns for a bad signature quietly spends that budget on every delivery until the secret is fixed.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
