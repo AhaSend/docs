@@ -199,47 +199,77 @@ A 202 from AhaSend is a **multi-status** response: `result.data` holds one entry
 
 Require your application's authenticated server to call this route. If a browser calls it directly, replace the bearer-token check with your normal server-side session validation and derive the recipient from that verified identity. `eventId` must be a stable ID for the welcome-email business event, persisted by the caller and reused for every retry. The SDK reuses this explicit idempotency key during its retries; a 5xx can be re-executed, so your application must still reconcile an uncertain result instead of blindly creating a new event ID.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+The `content-length` check rejects an oversized declared body, but Nitro does not cap request bodies on its own. Set a matching body-size limit at your reverse proxy or platform ingress in front of both routes.
+
+Message sends draw on your account's [rate limit](/api-reference/rate-limits) of 100 requests per second with a 200-request burst, shared by every API key on the account. The SDK already retries 429 and 5xx responses with backoff and honors `Retry-After`, so bound the concurrency of whatever calls this route rather than adding a second retry loop on top of it.
+
+Add `sandbox: true` to the send request to validate it without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so sandbox is not a separate namespace: reusing `welcome:<eventId>` with `sandbox` flipped is the same key carrying a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Give sandbox sends their own key prefix.
 
 ## Handle Webhooks
 
-Signature verification needs the **exact request bytes**. The SDK's web-standard adapter reads and bounds the unconsumed request stream, verifies the signature and timestamp, parses the event, and returns opaque client errors for invalid deliveries:
+Signature verification needs the **exact request bytes**. `readRawBody(event, false)` returns the undecoded buffer Nitro received, which is what the HMAC covers; `readBody()` parses the JSON, and its re-serialized output can never be verified. Answer every failed check with an empty body so nothing about the failure reaches the sender:
 
 ```ts server/api/webhooks/ahasend.post.ts
 import {
+  AhaSendWebhookVerificationError,
   WebhookVerifier,
   isKnownWebhookEvent,
-  nextRouteHandler,
 } from "@ahasend/sdk/webhooks";
-import { fromWebHandler } from "h3";
+import type { H3Event } from "h3";
 
-let route: ReturnType<typeof fromWebHandler> | undefined;
+const MAX_WEBHOOK_BYTES = 1_000_000;
 
-export default defineEventHandler(async (event) => {
-  if (!route) {
+let verifier: WebhookVerifier | undefined;
+
+function useWebhookVerifier(event: H3Event): WebhookVerifier {
+  if (!verifier) {
     const secret = useRuntimeConfig(event).ahasendWebhookSecret;
     if (typeof secret !== "string" || secret.length === 0) {
       throw new Error("NUXT_AHASEND_WEBHOOK_SECRET is not configured");
     }
+    verifier = new WebhookVerifier(secret);
+  }
+  return verifier;
+}
 
-    route = fromWebHandler(
-      nextRouteHandler(
-        new WebhookVerifier(secret),
-        async (webhookEvent) => {
-          if (isKnownWebhookEvent(webhookEvent)) {
-            // Enqueue trusted work here; do not log the event or recipient data.
-            console.log("Verified AhaSend webhook", { type: webhookEvent.type });
-          }
-          return new Response(null, { status: 200 });
-        },
-        { maxBodyBytes: 1_000_000 },
-      ),
-    );
+export default defineEventHandler(async (event) => {
+  // Built before the verification try/catch so a missing secret surfaces as a
+  // server error instead of being answered as a signature failure.
+  const webhookVerifier = useWebhookVerifier(event);
+
+  const declaredLength = Number(getRequestHeader(event, "content-length"));
+  if (Number.isSafeInteger(declaredLength) && declaredLength > MAX_WEBHOOK_BYTES) {
+    setResponseStatus(event, 413);
+    return null;
   }
 
-  return route(event);
+  const rawBody = await readRawBody(event, false);
+  if (!rawBody || rawBody.byteLength > MAX_WEBHOOK_BYTES) {
+    setResponseStatus(event, rawBody ? 413 : 400);
+    return null;
+  }
+
+  let webhookEvent;
+  try {
+    webhookEvent = await webhookVerifier.parse(getRequestHeaders(event), rawBody);
+  } catch (err) {
+    const tooLarge =
+      err instanceof AhaSendWebhookVerificationError && err.reason === "body_too_large";
+    setResponseStatus(event, tooLarge ? 413 : 400);
+    return null;
+  }
+
+  if (isKnownWebhookEvent(webhookEvent)) {
+    // Enqueue trusted work here; do not log the event or recipient data.
+    console.log("Verified AhaSend webhook", { type: webhookEvent.type });
+  }
+
+  setResponseStatus(event, 204);
+  return null;
 });
 ```
+
+Do not convert the event into a web `Request` (with `toWebRequest` or `fromWebHandler`) so you can reuse a fetch-style webhook adapter: Nitro's Node request stream is wrapped in a stream that throws an uncaught error if the consumer stops reading before the upload finishes, which an oversized delivery does.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `NUXT_AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
@@ -259,7 +289,7 @@ See the [API reference](https://ahasend.com/docs/api-reference) for every endpoi
 
 <AccordionGroup>
   <Accordion title="Webhook verification always returns 400">
-    Something consumed the request body before `nextRouteHandler` could read the exact bytes the HMAC was computed over, or the configured webhook secret does not match this dashboard endpoint. Keep body parsing middleware off this route so `fromWebHandler` can pass the unconsumed request stream to the SDK adapter.
+    Something consumed or rewrote the request body before `readRawBody` could return the exact bytes the HMAC was computed over, or the configured webhook secret does not match this dashboard endpoint. Keep body-parsing server middleware off this route, and check that no proxy in front of Nitro re-encodes the payload.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
     The API key never reached the client. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
