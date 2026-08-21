@@ -49,6 +49,8 @@ encore secret set --type prod AhaSendApiKey
 # ...repeat for the others
 ```
 
+Because the values are per-environment, give the `local` (and any preview) environment a dedicated [sandbox-mode](/send-api/sandbox) API key and its own webhook secret. A sandbox credential simulates the whole pipeline without delivering, so `encore run` on a developer's machine cannot mail a real customer even when the code forgets to ask for it.
+
 In code, declare secrets with `secret()` from `encore.dev/config`. Each declaration returns a **function** you call to read the value:
 
 ```ts email/ahasend.ts
@@ -158,7 +160,17 @@ import {
 const ahasendWebhookSecret = secret("AhaSendWebhookSecret");
 
 let verifier: WebhookVerifier | undefined;
+let verifierSecret: string | undefined;
 const maxWebhookBodyBytes = 1_000_000;
+
+function webhookVerifier(): WebhookVerifier {
+  const secretValue = ahasendWebhookSecret();
+  if (verifier === undefined || verifierSecret !== secretValue) {
+    verifier = new WebhookVerifier(secretValue);
+    verifierSecret = secretValue;
+  }
+  return verifier;
+}
 
 class WebhookBodyTooLargeError extends Error {}
 
@@ -206,9 +218,9 @@ export const ahasendWebhook = api.raw(
   },
   async (req, resp) => {
     try {
-      verifier ??= new WebhookVerifier(ahasendWebhookSecret());
+      const verify = webhookVerifier();
       const rawBody = await readRawBody(req);
-      await verifier.parse(req.headers, rawBody);
+      await verify.parse(req.headers, rawBody);
 
       resp.writeHead(200);
       resp.end();
@@ -231,7 +243,7 @@ export const ahasendWebhook = api.raw(
 );
 ```
 
-This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process the durable work idempotently. Timestamp verification alone does not prevent a valid delivery from being replayed inside the tolerance window. `bodyLimit` is Encore's own cap for this endpoint — it defaults to 2 MiB when left unset — and the streaming counter bounds what the handler buffers even if that cap is later raised; an oversized body is refused either way. Keep any proxy in front at least as strict, and keep failures opaque.
+This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process the durable work idempotently. Timestamp verification alone does not prevent a valid delivery from being replayed inside the tolerance window. `bodyLimit` is Encore's own cap for this endpoint — it defaults to 2 MiB when left unset — and the streaming counter bounds what the handler buffers even if that cap is later raised; an oversized body is refused either way. Keep any proxy in front at least as strict, and keep failures opaque. The verifier is rebuilt when the secret value changes, for the same reason the API client is: a webhook secret rotated in the dashboard would otherwise leave a stale verifier rejecting every delivery as `400` until the next deploy, and AhaSend [gives up on an event after 6 retries and disables the endpoint after 100 consecutive failures](/api-reference/webhooks/retry-policy).
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend` (locally, `encore run` serves it at `http://localhost:4000/webhooks/ahasend`), and set the secret via `encore secret set` exactly as shown in the dashboard, including the `aha-whsec-` prefix.
 
