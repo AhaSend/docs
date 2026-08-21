@@ -6,7 +6,7 @@ keywords: ["cursor ai send email integration", "cursor ai email", "add email to 
 icon: "i-cursor"
 ---
 
-Cursor Project Rules are MDC files under `.cursor/rules/`. Mark an AhaSend rule as always applied and Cursor includes it as context for Agent and Inline Edit requests, reducing the chance that the model reaches for a package that has never been published.
+Cursor Project Rules are MDC files under `.cursor/rules/`. Mark an AhaSend rule as always applied and Cursor includes it as context for every Agent (Chat) request, reducing the chance that the model reaches for a package that has never been published.
 
 ## Prerequisites
 
@@ -95,9 +95,11 @@ When this project sends email, use the official AhaSend Node.js SDK.
 - For work that can be retried outside one SDK call, persist the exact send
   payload with the job and pass a stable `idempotencyKey` derived from that
   job. Reuse a key only with the exact same payload: keys are scoped per
-  account and matched against the request body, so a key reused with a
-  different body is rejected with 422, not replayed. Namespace keys by
-  environment, since flipping `sandbox` changes the body. Stored message outcomes
+  account and matched against the request method, path, and body, so a key
+  reused with a different body is rejected with 422, not replayed. Matching
+  never covers which credential authenticated, so a dedicated sandbox
+  credential leaves the body unchanged — namespace keys by environment, or a
+  stored sandbox result can be replayed for a live send. Stored message outcomes
   expire after 24 hours, so reconcile rather than assuming a later retry is
   deduplicated. Do not detach an email promise from a request; enqueue durable
   work and send from a worker.
@@ -112,7 +114,7 @@ When this project sends email, use the official AhaSend Node.js SDK.
   Python SDK yet, so Python code calls the REST API directly.
 ```
 
-The rule is now included in model context for every Agent and Inline Edit request. Rules guide model behavior rather than enforcing it, so confirm that **ahasend-email** is listed under Customize → Rules and review the resulting code against it.
+The rule is now included in model context for every Agent request. It does not reach Tab completion or Inline Edit (Cmd/Ctrl+K), so write the sending code through Agent rather than an inline edit, where none of this grounding applies. Rules guide model behavior rather than enforcing it, so confirm that **ahasend-email** is listed under Customize → Rules and review the resulting code against it.
 
 <Tip>
   For a one-off, you can paste a documentation URL into the chat instead. AhaSend publishes a machine-readable index at `https://ahasend.com/docs/llms.txt` that lists every doc page. The rule file is better because it persists; the URL is fine when you just want one correct call.
