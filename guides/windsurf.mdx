@@ -10,14 +10,14 @@ Brief Cascade well and it will wire up email correctly, then you brief it again 
 
 ## Prerequisites
 
-Cascade writes and runs code, but it can't verify your domain or create your credentials. Do these two things in the [AhaSend dashboard](https://dash.ahasend.com) first.
+Cascade writes and runs code, but it can't verify your domain or create your credentials. Do these in the [AhaSend dashboard](https://dash.ahasend.com) first.
 
 <Steps>
   <Step title="Verify a Sending Domain">
     Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains), then confirm the domain is verified before sending.
   </Step>
   <Step title="Create an API Key">
-    Follow the [API credentials guide](/send-api/credentials) and use a domain scope such as `messages:send:example.com` instead of `messages:send:all`: if it leaks, the damage is limited to one domain's outbound mail. Grab your **account ID** too.
+    Follow the [API credentials guide](/send-api/credentials) and use a domain scope such as `messages:send:{example.com}` instead of `messages:send:all`: if it leaks, the damage is limited to one domain's outbound mail. Domain-specific [scopes](/api-reference/scopes) are written with the curly braces around the domain. Grab your **account ID** too.
   </Step>
   <Step title="Put Both in Your Environment">
     For local agent-run tests, create a dedicated, domain-scoped credential in **Sandbox** mode. Set its `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_DELIVERY_MODE=sandbox` in `.env`, and keep that file out of git. Configure live credentials in your deployment's secret manager rather than giving them to an agent-run test.
@@ -52,7 +52,7 @@ bun add @ahasend/sdk
 
 Give Cascade an authoritative project Rule instead of relying on generated code to reconstruct the integration from general context. Cascade can also search documentation, but a Rule keeps the critical constraints available inside the repository.
 
-Workspace Rules are Markdown files with an activation mode. Create a model-decision rule so Cascade loads the full instructions when its description matches an email task:
+Workspace Rules are Markdown files with an activation mode, discovered under `.devin/rules/` in your workspace — the preferred location in current Windsurf builds, with the older `.windsurf/rules/` still read as a fallback. Create a model-decision rule so Cascade loads the full instructions when its description matches an email task:
 
 ```markdown .devin/rules/ahasend-email.md
 ---
@@ -69,6 +69,12 @@ When this project sends email, use the official AhaSend Node.js SDK.
 - Server-side only. Never import the SDK or expose credentials in browser
   code. The constructor's browser check is defense in depth; it cannot
   undo a credential that a bundler has already exposed.
+- Never build a route whose caller picks the recipients, subject, or body.
+  Derive the recipient from the authenticated session or a server-side
+  record, require authentication and authorization on anything that
+  triggers mail, validate the input, bound the request body size, and
+  rate-limit per account. An unauthenticated send endpoint is an open
+  mail relay on your verified domain.
 - Construct the client ONCE at module scope, never per request:
   `new AhaSendClient({ apiKey, accountId })`.
 - Send with `client.messages.send({ from, recipients, subject,
@@ -84,8 +90,9 @@ When this project sends email, use the official AhaSend Node.js SDK.
 - Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
   Signature checks need the RAW request body. `parse()` and `verify()`
   are async: `await verifier.parse(headers, rawBody)`. Use a framework
-  adapter when available. Atomically deduplicate `webhook-id` with the
-  durable work or outbox record before returning success.
+  adapter when available and cap the raw body read with the adapter's
+  `maxBodyBytes`. Atomically deduplicate `webhook-id` with the durable
+  work or outbox record before returning success.
 - Read `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and the fail-closed
   `AHASEND_DELIVERY_MODE` (`sandbox` or `live`) from the environment.
   Never hardcode, print, or commit credentials.
@@ -234,9 +241,10 @@ With explicit approval, ask Cascade to send once with the dedicated Sandbox-mode
 
 ## Step 6: Read the Diff
 
-Confirm three things before you commit:
+Confirm these before you commit:
 
 - **The real package.** The import must be `@ahasend/sdk`. If you see another package name, or raw `fetch` calls in a plain Node service, a guess slipped past the rule.
+- **No open relay.** If Cascade added an HTTP route that sends, check that the recipient comes from the authenticated session or a server-side record rather than the request body, that the route is authenticated and rate-limited, and that the body size is bounded. A handler taking `to`, `subject`, and `html` from an unauthenticated caller is a spam relay on your verified domain.
 - **Every recipient checked.** A promise that resolves means the request was accepted, not that every address was. Code reading `result.data[0]` and moving on will silently miss a suppressed recipient in a batch.
 - **The key comes from the environment.** An agent editing several files can drift a secret into the wrong one. Confirm the key is read from `process.env` and never written to anything git tracks.
 
