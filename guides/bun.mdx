@@ -1,0 +1,214 @@
+---
+title: "How to Send Email with Bun"
+sidebarTitle: "Bun"
+description: "Send transactional email with Bun in minutes using the AhaSend SDK: a Bun.serve send route plus signed webhook verification, no shims required."
+keywords: ["bun send email", "bun transactional email", "bun email api", "ahasend bun", "bun.serve webhook email"]
+---
+
+[Bun](https://bun.sh) is one of the runtimes the SDK officially supports, alongside Node.js and Deno. The package runs unchanged on the latest Bun, webhook signature verification included.
+
+## Prerequisites
+
+- Bun installed
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK
+
+```bash
+bun add @ahasend/sdk
+```
+
+The latest Bun is a supported runtime for the package, so no shims or flags are needed.
+
+## Configure Environment Variables
+
+Create `.env` yourself and ensure it is ignored by git before adding values:
+
+```bash .env
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
+```
+
+<Note>
+  Bun loads `.env` automatically, no `dotenv` package or `--env-file` flag needed. The variables are available on `process.env` (and `Bun.env`) as soon as your script starts.
+</Note>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+```
+
+## Send an Email from a Bun.serve Route
+
+`Bun.serve` with a fetch handler is all the HTTP server you need. A send route reaches into your AhaSend quota and puts caller-supplied text into mail you sign, so it authenticates the caller and validates the body before it calls the SDK:
+
+```ts server.ts
+import { createHash, timingSafeEqual } from "node:crypto";
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend } from "./lib/ahasend";
+
+const welcomeEndpointToken = process.env.WELCOME_ENDPOINT_TOKEN;
+if (!welcomeEndpointToken) throw new Error("WELCOME_ENDPOINT_TOKEN is required");
+const expectedTokenHash = createHash("sha256").update(welcomeEndpointToken).digest();
+
+function isAuthorized(header: string | null): boolean {
+  const provided = header?.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!provided) return false;
+  return timingSafeEqual(createHash("sha256").update(provided).digest(), expectedTokenHash);
+}
+
+Bun.serve({
+  port: 3000,
+  maxRequestBodySize: 30_000_000,
+  development: false,
+  error(err) {
+    console.error("Unhandled server error", { name: err.name });
+    return new Response("Internal Server Error", { status: 500 });
+  },
+  async fetch(req) {
+    const url = new URL(req.url);
+
+    if (req.method === "POST" && url.pathname === "/api/welcome") {
+      if (!isAuthorized(req.headers.get("authorization"))) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const body = (await req.json().catch(() => null)) as {
+        email?: unknown;
+        name?: unknown;
+      } | null;
+      const { email, name } = body ?? {};
+      if (typeof email !== "string" || !email.includes("@")) {
+        return Response.json({ error: "A valid `email` is required" }, { status: 400 });
+      }
+      if (name !== undefined && typeof name !== "string") {
+        return Response.json({ error: "`name` must be a string" }, { status: 400 });
+      }
+
+      try {
+        const result = await ahasend.messages.send({
+          from: { email: "hello@yourdomain.com", name: "Your App" },
+          recipients: [{ email, name }],
+          subject: "Welcome to Your App!",
+          html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+          text_content: "Welcome aboard! We're glad you're here.",
+        });
+
+        const rejected = result.data.filter((r) => r.status === "error");
+        if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+
+        return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+      } catch (err) {
+        if (err instanceof AhaSendAPIError) {
+          console.error("AhaSend request failed", {
+            status: err.status,
+            requestId: err.requestId,
+          });
+          return Response.json({ error: "Failed to send email" }, { status: 502 });
+        }
+        throw err;
+      }
+    }
+
+    return new Response("Not found", { status: 404 });
+  },
+});
+```
+
+Run it with `bun run server.ts`. Keep `development: false` and the `error` handler: with `NODE_ENV` unset, `Bun.serve` defaults to development mode, and its built-in 500 page hands the thrown error's message and the surrounding source back to whoever made the request — including on the webhook route, which anyone who finds the URL can reach.
+
+Call this route only from trusted server-side code with `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`, and replace the token check with your application's normal authentication and authorization if the endpoint is user-facing. The check compares SHA-256 digests through `timingSafeEqual` rather than `!==`, because JavaScript's string comparison returns as soon as two characters differ and leaks the token prefix to an attacker who can time repeated requests; hashing first also keeps the comparison from revealing the token's length. Serve both routes only over HTTPS, terminating TLS at Bun or a trusted reverse proxy, and add rate limiting plus a body limit sized for JSON in front of the send route — `maxRequestBodySize` is a server-wide setting, so on its own it lets a 30 MB body reach either path. Never expose a recipient-controlled send endpoint without access control.
+
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+
+The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. For a business operation your application may retry later, pass a stable `idempotencyKey`, reuse it only with the exact same request payload, and remember that the server retains non-secret results for 24 hours.
+
+Add `sandbox: true` to the send request to validate it without delivering anything. Sandbox is a body field, so a key already used for a sandbox send is rejected when the same key is replayed for the live send — give the two runs different keys.
+
+## Handle Webhooks
+
+There's no Bun-specific adapter, and you don't need one: `verifier.parse()` accepts a Fetch `Headers` object and raw `Uint8Array` body directly. `parse()` is asynchronous, so await it. Read the body with `req.arrayBuffer()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed. The server configuration above caps request bodies at the verifier's fixed 30,000,000-byte limit before the handler reads them.
+
+```ts server.ts
+import {
+  AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
+
+const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET!);
+
+// inside the fetch handler, above the 404 fallback:
+if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
+  let event;
+  try {
+    const rawBody = new Uint8Array(await req.arrayBuffer());
+    event = await verifier.parse(req.headers, rawBody);
+  } catch (err) {
+    if (err instanceof AhaSendWebhookVerificationError) {
+      return new Response("Invalid signature", { status: 400 });
+    }
+    throw err;
+  }
+
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log("Message delivered");
+        break;
+      case "message.bounced":
+        console.log("Message bounced");
+        break;
+      case "message.opened":
+        console.log("Message opened");
+        break;
+    }
+  }
+
+  return new Response(null, { status: 200 });
+}
+```
+
+Narrow the catch to `AhaSendWebhookVerificationError` and rethrow anything else. Every non-2xx answer counts as a failed delivery: [retried 6 times over 16+ minutes, with a webhook disabled after 100 consecutive failures](/api-reference/webhooks/retry-policy). A bug of your own should therefore surface as a 5xx rather than as a rejection that looks like a bad signature, which quietly spends that budget.
+
+Webhooks can be delivered more than once. After verification and before performing side effects, atomically commit the `webhook-id` and durable work (such as an outbox job) in the same transaction. Acknowledge an ID that transaction has already committed without enqueueing it again.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+- **Attachments**: pass `attachments: [{ data: pdfBase64, content_type: "application/pdf", file_name: "document.pdf", base64: true }]`. When `base64` is `true`, `data` must already be base64-encoded.
+
+See the [API reference](/api-reference) for every endpoint the SDK exposes. Prefer a framework on top of Bun? The [ElysiaJS guide](/guides/elysiajs) uses the same SDK with typed routes.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Bun loads `.env` automatically; if the expected file is not being found, confirm the process working directory or select it explicitly with `bun --env-file=/path/to/.env run server.ts`. Check only whether the variable is present—for example, `console.log(Boolean(process.env.AHASEND_API_KEY))`—and never log any part of the key.
+  </Accordion>
+  <Accordion title="Webhook verification fails with 400">
+    Make sure you pass `new Uint8Array(await req.arrayBuffer())` to `verifier.parse()`, not a re-serialized `JSON.stringify(await req.json())`: re-serialization changes key order and whitespace, so the signature no longer matches.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+  <Accordion title="SDK works locally but you plan to deploy to an edge platform">
+    Edge platforms are supported, including Cloudflare workerd with no `nodejs_compat` flag. See the [Cloudflare Workers guide](/guides/cloudflare-workers) for the details there.
+  </Accordion>
+</AccordionGroup>

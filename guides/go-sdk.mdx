@@ -1,0 +1,296 @@
+---
+title: "AhaSend Go SDK"
+sidebarTitle: "Go SDK"
+description: "The official Go SDK for AhaSend: typed models for every endpoint, built-in retries and idempotency, and a Standard Webhooks verifier for any net/http router."
+keywords: ["ahasend go sdk", "golang transactional email", "go email api client", "ahasend-go", "golang send email api"]
+icon: "golang"
+---
+
+[`ahasend-go`](https://github.com/AhaSend/ahasend-go) is the official Go SDK for AhaSend. Typed models for every endpoint, retries and idempotency keys handled for you, and a Standard Webhooks verifier that drops into any `net/http` router.
+
+This page is the SDK reference. To wire it into a specific framework, pick a guide from the sidebar.
+
+Before sending, [verify a sending domain](/domains) and create an [API key](/send-api/credentials) plus an account ID. Give the key the domain-specific `messages:send:{your-domain}` scope when it only sends from one domain, and keep it in a server-side secret store.
+
+## Install
+
+```bash
+go get github.com/AhaSend/ahasend-go
+```
+
+## Send Your First Email
+
+```go main.go
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/AhaSend/ahasend-go"
+	"github.com/AhaSend/ahasend-go/api"
+	"github.com/AhaSend/ahasend-go/models/common"
+	"github.com/AhaSend/ahasend-go/models/requests"
+	"github.com/google/uuid"
+)
+
+func main() {
+	apiKey := os.Getenv("AHASEND_API_KEY")
+	if apiKey == "" {
+		log.Fatal("AHASEND_API_KEY is required")
+	}
+	welcomeEventID := os.Getenv("WELCOME_EVENT_ID")
+	if welcomeEventID == "" {
+		log.Fatal("WELCOME_EVENT_ID is required")
+	}
+
+	accountID, err := uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
+	if err != nil {
+		log.Fatal("AHASEND_ACCOUNT_ID must be a UUID")
+	}
+
+	client := api.NewAPIClient(api.WithAPIKey(apiKey))
+
+	response, _, err := client.MessagesAPI.CreateMessage(
+		context.Background(),
+		accountID,
+		requests.CreateMessageRequest{
+			From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+			Recipients:  []common.Recipient{{Email: "user@example.com", Name: ahasend.String("Jane")}},
+			Subject:     "Welcome to Your App",
+			HtmlContent: ahasend.String("<h1>Welcome aboard</h1>"),
+			TextContent: ahasend.String("Welcome aboard"),
+			Sandbox:     ahasend.Bool(true),
+		},
+		api.WithIdempotencyKey(fmt.Sprintf("welcome-%s", welcomeEventID)),
+	)
+	if err != nil {
+		var apiErr *api.APIError
+		if errors.As(err, &apiErr) {
+			log.Printf("AhaSend request failed: status=%d type=%s request_id=%s", apiErr.StatusCode, apiErr.Type, apiErr.RequestID)
+		} else {
+			log.Print("AhaSend request failed")
+		}
+		os.Exit(1)
+	}
+
+	queued, rejected := 0, 0
+	for _, r := range response.Data {
+		switch r.Status {
+		case "queued", "scheduled":
+			queued++
+		default:
+			rejected++
+		}
+	}
+	log.Printf("AhaSend result: queued=%d rejected=%d", queued, rejected)
+	if rejected > 0 {
+		os.Exit(1)
+	}
+}
+```
+
+Run it with `go run main.go`. The example sets `Sandbox` to true, so nothing is delivered even though the message still runs through validation and fires the corresponding webhooks. Replace the example's idempotency key with a stable, server-derived identifier for the actual business operation, and do not carry a key from a sandbox send over to the live one: flipping `Sandbox` changes the request body, and the API rejects a reused key whose payload differs with `422` instead of sending. See [Sandbox Mode](/send-api/sandbox).
+
+Note the loop. `Recipients` takes up to 100 addresses and each one becomes its own message, so `response.Data` holds one entry per recipient. Reading `Data[0]` and calling it done would hide the rest.
+
+Optional fields are pointers, so the SDK exports helpers such as `ahasend.String()` to build them inline. Beyond the fields above: `Tags []string`, `Substitutions map[string]interface{}` for `{{ variable }}` templating, plus attachments, scheduling, tracking, and retention.
+
+## Configure the Client
+
+Build the client once at startup and share it. It holds rate-limit, retry, and idempotency state.
+
+`api.NewAPIClientFromEnv()` builds the same client from the `AHASEND_*` environment variables. It does not fail when `AHASEND_API_KEY` is unset — construction succeeds and every request fails instead, so check the variable yourself at startup. To override the key for one call, pass `api.WithRequestAPIKey(key)` as that method's final request option. Keep `context.Context` for cancellation, deadlines, and request-scoped values rather than using it for optional parameters.
+
+| Option | Purpose |
+| --- | --- |
+| `api.WithAPIKey(key)` | Your API key, required |
+| `api.WithRetryConfig(cfg)` | Retry policy: attempts, backoff strategy, delays |
+| `client.SetSendMessageRateLimit(rps, burst)` | Pace outbound sends |
+| `client.SetStatisticsRateLimit(rps, burst)` | Pace statistics calls, which are limited harder |
+| `api.WithRequestAPIKey(key)` | Override the key for one request |
+
+```go
+retryConfig := api.RetryConfig{
+	Enabled:         true,
+	MaxRetries:      3,
+	BackoffStrategy: api.BackoffExponential,
+	BaseDelay:       time.Second,
+	MaxDelay:        30 * time.Second,
+}
+
+client := api.NewAPIClient(
+	api.WithAPIKey(apiKey),
+	api.WithRetryConfig(retryConfig),
+)
+
+// Only if your account's send limit differs from the 100/s default.
+client.SetSendMessageRateLimit(500, 1000) // requests per second, burst
+```
+
+Pacing is already on when you build the client, preset to the standard account limits: 100 requests per second with a 200 burst for sends and other general endpoints, 1 per second with no burst for statistics. These setters move a bucket to whatever limit your account actually has; they do not switch pacing on. That matters in both directions — an account provisioned above 100 sends per second stays capped at the default until you raise the bucket. The token buckets are local to one client instance, so they do not coordinate across application replicas and do not eliminate API `429` responses.
+
+## Errors
+
+```go
+import (
+	"errors"
+	"net/http"
+
+	"github.com/AhaSend/ahasend-go/api"
+)
+
+var apiErr *api.APIError
+if errors.As(err, &apiErr) {
+	switch apiErr.StatusCode {
+	case http.StatusBadRequest:
+		// validation problem with the request
+	case http.StatusUnauthorized:
+		// key malformed or revoked
+	case http.StatusForbidden:
+		// key lacks the required scope
+	case http.StatusUnprocessableEntity:
+		// idempotency key reused with a different request payload
+	case http.StatusTooManyRequests:
+		// configured retries are exhausted, or retries are disabled
+	}
+}
+```
+
+`apiErr` also carries `Type`, `RequestID`, `Message`, `RetryAfter` on `429` and idempotency conflicts, and the raw response body in `Raw`. `Type` is the field to branch and log on; the struct has a `Code` field, but the SDK never fills it.
+
+Do not rely on `StatusCode` alone. Failures raised before the request leaves the process — no API key configured, or a request body that fails client-side validation — are also `*api.APIError`, but they carry `StatusCode` 0 and only `Type` (`api.ErrorTypeAuthentication`, `api.ErrorTypeValidation`) identifies them. A switch on status code alone drops them silently, so branch on `Type` and keep a default arm.
+
+Treat `Message`, `Raw`, and `err.Error()` as sensitive: an API response can repeat addresses, content, headers, or other request data. Log only allowlisted fields such as status, error type, request ID, and aggregate counts.
+
+When retries are enabled, a surfaced `429` or server error has exhausted the configured retry attempts. Disabling retries or setting the retry count to zero makes the first response surface immediately.
+
+## Retries and Idempotency
+
+Retries are on by default: the SDK retries network failures, `429`, and `5xx` responses with the configured backoff, and leaves every other `4xx` alone unless you opt in with `RetryConfig.RetryClientErrors`. It attaches an idempotency key to POST operations and reuses that key across its own retry attempts.
+
+<Note>
+  Stored outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, so a retry after a 5xx can still result in a second send. Pass your own key derived from a stable business identifier when a duplicate would be expensive. API key creation is the exception: because its response carries a one-time secret, that outcome replays for only 5 minutes, after which the same key creates a second credential.
+</Note>
+
+```go
+response, _, err := client.MessagesAPI.CreateMessage(
+	ctx, accountID, message,
+	api.WithIdempotencyKey(fmt.Sprintf("order-confirmation-%s", orderID)),
+)
+```
+
+Reuse a caller-provided key only for the same exact request payload, and never log it. If the original keyed request is still running, the API can return `409`; the SDK surfaces this as `api.ErrorTypeIdempotencyConflict` with `RetryAfter` and does not retry it automatically. For email sends, reconcile the business operation or explicitly decide whether a possible duplicate is preferable to a possible missed send before retrying with the same key.
+
+## Services
+
+| Service | Description |
+| --- | --- |
+| `MessagesAPI` | Send messages, retrieve status and history, cancel |
+| `DomainsAPI` | Add, verify, and configure sending domains |
+| `WebhooksAPI` | Manage webhook endpoints |
+| `StatisticsAPI` | Deliverability, bounce, and delivery-time reports |
+| `SuppressionsAPI` | Manage suppression lists |
+| `RoutesAPI` | Inbound email routing |
+| `AccountsAPI` | Account and member management |
+| `APIKeysAPI` | API key management |
+| `SubAccountsAPI` | Sub accounts, usage, and child API keys |
+| `SMTPCredentialsAPI` | SMTP credential management |
+| `UtilityAPI` | API health check |
+
+## Webhooks
+
+```go
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+
+	"github.com/AhaSend/ahasend-go/webhooks"
+)
+
+const maxWebhookBodyBytes int64 = 30_000_000
+
+type webhookStore interface {
+	// EnqueueOnce atomically records webhookID and durable work for event.
+	// It returns false when that ID was already committed.
+	EnqueueOnce(ctx context.Context, webhookID string, event webhooks.WebhookEvent) (bool, error)
+}
+
+func newWebhookHandler(store webhookStore) http.Handler {
+	secret := os.Getenv("AHASEND_WEBHOOK_SECRET")
+	if secret == "" {
+		panic("AHASEND_WEBHOOK_SECRET is required")
+	}
+	verifier, err := webhooks.NewWebhookVerifier(secret)
+	if err != nil {
+		panic("invalid AHASEND_WEBHOOK_SECRET")
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxWebhookBodyBytes)
+		event, err := verifier.ParseRequest(r)
+		if err != nil {
+			var maxBytesErr *http.MaxBytesError
+			switch {
+			case errors.As(err, &maxBytesErr):
+				w.WriteHeader(http.StatusRequestEntityTooLarge)
+			case errors.Is(err, webhooks.ErrMissingHeaders),
+				errors.Is(err, webhooks.ErrInvalidSignature),
+				errors.Is(err, webhooks.ErrExpiredTimestamp):
+				w.WriteHeader(http.StatusUnauthorized)
+			case errors.Is(err, webhooks.ErrUnknownEventType):
+				// Acknowledge a validly signed event this application does not use.
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				w.WriteHeader(http.StatusBadRequest)
+			}
+			return
+		}
+
+		webhookID := r.Header.Get(webhooks.HeaderWebhookID)
+		accepted, err := store.EnqueueOnce(r.Context(), webhookID, event)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !accepted {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+	})
+}
+```
+
+`ParseRequest` verifies an `*http.Request` directly, which covers chi, Echo, Gin, and gorilla/mux since they all wrap `net/http`. It reads the body without imposing a size limit, so apply `http.MaxBytesReader` first. For fasthttp routers such as Fiber, enforce an equivalent limit, read the exact body bytes, and call `verifier.Parse(body, headers)` with an `http.Header` carrying `webhook-id`, `webhook-timestamp`, and `webhook-signature`.
+
+<Warning>
+  `ParseRequest` consumes the request body, so verification fails if middleware has already read it without restoring the exact bytes. Reject an empty secret before constructing the verifier, and pass the value exactly as the dashboard shows it, `aha-whsec-` prefix included.
+</Warning>
+
+Signature timestamp validation is not replay protection: the same signed request can be delivered again inside the tolerance window. After verification, atomically commit the `webhook-id` and a durable work/outbox record, retaining IDs for at least the webhook delivery and retry horizon. A duplicate should receive `2xx` without running the handler again; a storage failure should receive `5xx`. Process the durable work idempotently outside the request. Apply concurrency and request-rate limits at the reverse proxy so concurrent maximum-size bodies cannot exhaust the application. Never log the raw body, signature, event object, subject, recipient, or whole verification error.
+
+Events implement `webhooks.WebhookEvent` with `GetType()` and `GetTimestamp()`. The SDK covers the message, suppression, domain, and route event types. Helpers such as `webhooks.IsMessageEvent()` and `webhooks.GetMessageEventData()` handle common message events without a full type switch.
+
+## Framework Guides
+
+<CardGroup cols={3}>
+  <Card title="Gin" icon="golang" href="/guides/gin" />
+  <Card title="Echo" icon="golang" href="/guides/echo" />
+  <Card title="Fiber" icon="golang" href="/guides/fiber" />
+  <Card title="chi" icon="golang" href="/guides/chi" />
+  <Card title="gorilla/mux" icon="golang" href="/guides/gorilla-mux" />
+  <Card title="Cloud Run Functions" icon="google" href="/guides/google-cloud-functions" />
+</CardGroup>
+
+Azure Functions is in the sidebar too. Building in Node.js instead? See the [Node.js SDK](/guides/nodejs-sdk).
+
+## Source and Support
+
+MIT licensed, developed at [github.com/AhaSend/ahasend-go](https://github.com/AhaSend/ahasend-go), with reference docs on [pkg.go.dev](https://pkg.go.dev/github.com/AhaSend/ahasend-go). The [AhaSend CLI](https://github.com/AhaSend/ahasend-cli) is built on this SDK.

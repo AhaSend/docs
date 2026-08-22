@@ -1,0 +1,321 @@
+---
+title: "How to Send Email with Next.js"
+sidebarTitle: "Next.js"
+description: "Send transactional email from Next.js App Router route handlers and Server Actions with the AhaSend SDK, plus verified webhooks via nextRouteHandler."
+keywords: ["nextjs send email", "next.js transactional email", "nextjs email api route", "ahasend nextjs", "nextjs webhook email"]
+---
+
+Route Handlers and Server Actions in the [Next.js](https://nextjs.org) App Router both run on the server, so the AhaSend SDK and your API key stay out of the browser bundle. This guide sends a welcome email from each of them, and receives verified AhaSend webhooks through the SDK's App Router adapter.
+
+## Prerequisites
+
+- A Next.js project using the App Router
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{yourdomain.com}` scope matching the domain in `from.email` (or `messages:send:all` to cover every domain), and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk zod
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk zod
+```
+
+```bash yarn
+yarn add @ahasend/sdk zod
+```
+
+```bash bun
+bun add @ahasend/sdk zod
+```
+
+</CodeGroup>
+
+## Configure Environment Variables
+
+For local development, add your credentials to an uncommitted `.env.local`, which Next.js loads automatically. In production, inject the same values through your hosting platform's secret settings:
+
+```bash .env.local
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_API_TOKEN=generate-a-long-random-service-token
+```
+
+<Warning>
+  Never prefix these variables with `NEXT_PUBLIC_`. Next.js inlines every `NEXT_PUBLIC_*` variable into the browser bundle at build time. A `NEXT_PUBLIC_AHASEND_API_KEY` would hand full send access to anyone who opens DevTools. Unprefixed variables stay server-side.
+</Warning>
+
+## Create the Client
+
+Build the client on first use and reuse it across requests. The `server-only` marker makes an accidental Client Component import fail at build time, and `fromEnv()` validates the required AhaSend configuration:
+
+```ts lib/ahasend.ts
+import "server-only";
+import { AhaSendClient } from "@ahasend/sdk";
+import { createHash } from "node:crypto";
+
+let client: AhaSendClient | undefined;
+
+function ahasend(): AhaSendClient {
+  client ??= AhaSendClient.fromEnv();
+  return client;
+}
+
+export interface WelcomeInput {
+  signupId: string;
+  email: string;
+  name?: string | undefined;
+}
+
+export async function sendWelcomeEmail(input: WelcomeInput) {
+  const idempotencyKey = `welcome-${createHash("sha256")
+    .update(input.signupId)
+    .digest("hex")}`;
+
+  const result = await ahasend().messages.send({
+    from: { email: "hello@yourdomain.com", name: "Your App" },
+    recipients: [{ email: input.email, name: input.name }],
+    subject: "Welcome to Your App!",
+    html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+    text_content: "Welcome aboard! We're glad you're here.",
+  }, { idempotencyKey });
+
+  const rejected = result.data.filter((entry) => entry.status === "error");
+  return { queued: result.data.length - rejected.length, rejected: rejected.length };
+}
+```
+
+<Warning>
+  Read credentials inside a function, not at module scope. `next build` imports every route module to collect its configuration, so a client constructed — or an environment variable asserted — while the module is evaluating turns a build without production secrets into a hard build failure (`Failed to collect page data`). That is the normal case for Docker image builds and for CI that keeps secrets out of the build step.
+</Warning>
+
+## Send an Email from a Next.js Route Handler
+
+Route Handlers are public endpoints. This backend-to-backend example requires a long random bearer token over HTTPS; use your application's existing authentication and authorization instead when the caller is a user. Also configure request-size and rate limits at your hosting layer.
+
+```ts lib/internal-auth.ts
+import "server-only";
+import { createHash, timingSafeEqual } from "node:crypto";
+
+let expected: Buffer | undefined;
+
+function expectedDigest(): Buffer {
+  if (expected) return expected;
+  const token = process.env.WELCOME_API_TOKEN;
+  if (!token || token.length < 32) {
+    throw new Error("WELCOME_API_TOKEN must contain at least 32 characters");
+  }
+  expected = createHash("sha256").update(token).digest();
+  return expected;
+}
+
+export function isInternalRequest(request: Request): boolean {
+  const parts = request.headers.get("authorization")?.split(" ") ?? [];
+  if (parts.length !== 2 || parts[0] !== "Bearer") return false;
+  const actual = createHash("sha256").update(parts[1]).digest();
+  return timingSafeEqual(actual, expectedDigest());
+}
+```
+
+```ts app/api/welcome/route.ts
+import { NextResponse } from "next/server";
+import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
+import { z } from "zod";
+import { sendWelcomeEmail } from "@/lib/ahasend";
+import { isInternalRequest } from "@/lib/internal-auth";
+
+const MAX_BODY_BYTES = 16_384;
+const WelcomeInput = z.strictObject({
+  signupId: z.string().min(1).max(128),
+  email: z.string().email().max(320),
+  name: z.string().max(200).optional(),
+});
+
+class RequestBodyError extends Error {
+  constructor(readonly status: 400 | 413 | 415) {
+    super();
+  }
+}
+
+async function readJsonBody(request: Request): Promise<unknown> {
+  const mediaType = request.headers.get("content-type")?.split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (mediaType !== "application/json") throw new RequestBodyError(415);
+
+  const declared = request.headers.get("content-length");
+  if (declared !== null) {
+    const length = Number(declared);
+    if (!Number.isSafeInteger(length) || length < 0) throw new RequestBodyError(400);
+    if (length > MAX_BODY_BYTES) throw new RequestBodyError(413);
+  }
+
+  const reader = request.body?.getReader();
+  if (!reader) throw new RequestBodyError(400);
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_BODY_BYTES) {
+        await reader.cancel();
+        throw new RequestBodyError(413);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    throw new RequestBodyError(400);
+  }
+}
+
+export async function POST(request: Request) {
+  if (!isInternalRequest(request)) {
+    return new Response(null, { status: 401 });
+  }
+
+  let input: z.infer<typeof WelcomeInput>;
+  try {
+    input = WelcomeInput.parse(await readJsonBody(request));
+  } catch (err) {
+    const status = err instanceof RequestBodyError ? err.status : 400;
+    return new Response(null, { status });
+  }
+
+  try {
+    const result = await sendWelcomeEmail(input);
+    return NextResponse.json(result, { status: result.rejected > 0 ? 422 : 200 });
+  } catch (err) {
+    if (AhaSendAPIError.is(err)) {
+      console.error(`AhaSend API error ${err.status}; request ${err.requestId ?? "unknown"}`);
+    } else if (isAhaSendError(err)) {
+      console.error(`AhaSend SDK error: ${err.code}`);
+    } else {
+      console.error("Unexpected email send failure");
+    }
+    return new Response(null, { status: 502 });
+  }
+}
+```
+
+A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
+
+The stable, hashed signup ID lets retries across requests reuse the same idempotency key without placing the raw customer identifier in request metadata. Keep the payload stable for a given signup ID; reusing a key with a different payload is rejected.
+
+### Alternative: Send from a Server Action
+
+Server Actions are also public mutation endpoints. Authenticate inside the action, then load the recipient from your server-side user record rather than accepting an email address from the browser. Adapt `requireCurrentUser()` to your authentication and data-access layer:
+
+```ts app/actions.ts
+"use server";
+
+import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
+import { sendWelcomeEmail } from "@/lib/ahasend";
+import { requireCurrentUser } from "@/lib/auth";
+
+export async function sendWelcome() {
+  const user = await requireCurrentUser();
+
+  try {
+    return await sendWelcomeEmail({
+      signupId: user.signupId,
+      email: user.email,
+      name: user.name,
+    });
+  } catch (err) {
+    if (AhaSendAPIError.is(err)) {
+      console.error(`AhaSend API error ${err.status}; request ${err.requestId ?? "unknown"}`);
+    } else if (isAhaSendError(err)) {
+      console.error(`AhaSend SDK error: ${err.code}`);
+    } else {
+      console.error("Unexpected email send failure");
+    }
+    throw new Error("Unable to queue welcome email");
+  }
+}
+```
+
+Add `sandbox: true` to the send request to validate it without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so a sandbox send is not a separate namespace: reusing `welcome-<hash>` with `sandbox` flipped is the same key with a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Prefix sandbox keys distinctly (`sandbox-welcome-…`).
+
+## Handle Webhooks
+
+The SDK ships an App Router adapter, `nextRouteHandler`, that reads a bounded raw body, verifies the HMAC signature and timestamp over those exact bytes, and hands you a typed event. Build it on first request and call it from `POST`:
+
+```ts app/api/webhooks/ahasend/route.ts
+import {
+  WebhookVerifier,
+  nextRouteHandler,
+} from "@ahasend/sdk/webhooks";
+
+let receiver: ((request: Request) => Promise<Response>) | undefined;
+
+function webhookReceiver() {
+  if (receiver) return receiver;
+  const secret = process.env.AHASEND_WEBHOOK_SECRET;
+  if (!secret) throw new Error("AHASEND_WEBHOOK_SECRET is required");
+  receiver = nextRouteHandler(
+    new WebhookVerifier(secret),
+    async () => new Response(null, { status: 204 }),
+    {
+      maxBodyBytes: 1_000_000,
+      onError(_error, context) {
+        console.error(`AhaSend webhook ${context.stage} failure`);
+      },
+    },
+  );
+  return receiver;
+}
+
+export async function POST(request: Request) {
+  return webhookReceiver()(request);
+}
+```
+
+This minimal receiver verifies and acknowledges events without side effects. Timestamp verification is not replay deduplication: before adding side effects, atomically record the `webhook-id` header with durable work, acknowledge already-recorded deliveries with a 2xx response, and process the work idempotently. Do not launch untracked work after returning a response: a bare floating promise is killed when the serverless invocation ends, so hand deferred work to `after()` from `next/server`, which keeps the invocation alive until it settles. Match the one-megabyte application limit at your host or reverse proxy, configure opaque rejections, and cap concurrent webhook work.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix). Invalid signatures are rejected with a 400 before your handler runs.
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by one hour.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
+- **Deploying to Vercel?** The [Vercel guide](/guides/vercel) covers environment variable scoping, runtime choice, and webhook endpoints on Vercel Functions.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+
+See the [API reference](/api-reference) for every endpoint the SDK exposes. Building a standalone API server instead? Start from the [Express guide](/guides/express).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in `.env.local` (restart `next dev` after editing it) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). In production, set the variable in your hosting provider's environment settings.
+  </Accordion>
+  <Accordion title="API key visible in the browser bundle">
+    You prefixed the variable with `NEXT_PUBLIC_`. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and only read it from server code (Route Handlers, Server Actions, Server Components).
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

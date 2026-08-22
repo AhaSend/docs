@@ -1,0 +1,274 @@
+---
+title: "How to Send Email with Encore.ts"
+sidebarTitle: "Encore.ts"
+description: "Send transactional email from an Encore.ts backend in minutes with the AhaSend SDK: typed endpoints, built-in secrets, and signed webhook handling."
+keywords: ["encore.ts send email", "encore transactional email", "encore email api", "ahasend encore", "encore webhook email"]
+---
+
+Two [Encore.ts](https://encore.dev) specifics shape the code below: credentials come from `secret()` rather than `process.env`, and the webhook endpoint must be declared `raw`, since signature verification needs the unparsed body.
+
+## Prerequisites
+
+- Node.js 22 or newer (the SDK's supported floor) and the [Encore CLI](https://encore.dev/docs/ts/install)
+- An Encore app with a [service](https://encore.dev/docs/ts/primitives/services): the files below live in a service directory (`email/`, alongside its `encore.service.ts`)
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{yourdomain.com}` permission, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+## Store Credentials as Encore Secrets
+
+Encore has first-class secrets instead of `.env` files. Set each secret for local development (and again with `--type prod` for production):
+
+```bash
+encore secret set --type local AhaSendApiKey
+encore secret set --type local AhaSendAccountId
+encore secret set --type local AhaSendWebhookSecret
+
+encore secret set --type prod AhaSendApiKey
+# ...repeat for the others
+```
+
+Because the values are per-environment, give the `local` (and any preview) environment a dedicated [sandbox-mode](/send-api/sandbox) API key and its own webhook secret. A sandbox credential simulates the whole pipeline without delivering, so `encore run` on a developer's machine cannot mail a real customer even when the code forgets to ask for it.
+
+In code, declare secrets with `secret()` from `encore.dev/config`. Each declaration returns a **function** you call to read the value:
+
+```ts email/ahasend.ts
+import { secret } from "encore.dev/config";
+import { AhaSendClient } from "@ahasend/sdk";
+
+const ahasendApiKey = secret("AhaSendApiKey");
+const ahasendAccountId = secret("AhaSendAccountId");
+
+let client: AhaSendClient | undefined;
+let clientApiKey: string | undefined;
+
+export function ahasend(): AhaSendClient {
+  const apiKey = ahasendApiKey();
+  if (client === undefined || clientApiKey !== apiKey) {
+    client = new AhaSendClient({ apiKey, accountId: ahasendAccountId() });
+    clientApiKey = apiKey;
+  }
+  return client;
+}
+```
+
+Read the secret on every call rather than closing over it once. Encore refreshes secret values in a running process, so a client cached forever would keep presenting a rotated-away API key until the next deploy; comparing the value rebuilds the client only when the key actually changes. The SDK still generates a new automatic idempotency key for each logical call and reuses that key only for that call's internal retries.
+
+## Send an Email from an Encore API Endpoint
+
+```ts email/welcome.ts
+import { api, APIError } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
+import { createHash } from "node:crypto";
+import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
+import { ahasend } from "./ahasend";
+
+interface SendWelcomeResponse {
+  statuses: string[];
+}
+
+export const sendWelcome = api(
+  { expose: true, auth: true, method: "POST", path: "/welcome" },
+  async (): Promise<SendWelcomeResponse> => {
+    const user = getAuthData()!;
+    const welcomeKey = createHash("sha256").update(user.userID).digest("hex");
+
+    try {
+      const result = await ahasend().messages.send(
+        {
+          from: { email: "hello@yourdomain.com", name: "Your App" },
+          recipients: [{ email: user.email }],
+          subject: "Welcome to Your App!",
+          html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+          text_content: "Welcome aboard! We're glad you're here.",
+        },
+        { idempotencyKey: `welcome-${welcomeKey}` },
+      );
+
+      const rejected = result.data.filter((r) => r.status === "error");
+      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+
+      return { statuses: result.data.map((r) => r.status) }; // ["queued"]
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        console.error("AhaSend request failed", {
+          status: err.status,
+          requestId: err.requestId,
+          errorCode: err.code,
+        });
+      } else if (isAhaSendError(err)) {
+        console.error("AhaSend request failed", { errorCode: err.code });
+      } else {
+        console.error("Welcome email request failed");
+      }
+      throw APIError.internal("unable to send welcome email");
+    }
+  },
+);
+```
+
+The explicit `Promise<SendWelcomeResponse>` annotation is load-bearing: Encore derives the endpoint's response schema from the handler's *declared* return type, not from what it actually returns, so an unannotated handler compiles into an endpoint that answers with an empty body.
+
+This assumes your app has an [Encore auth handler](https://encore.dev/docs/ts/develop/auth) whose auth data contains immutable `userID` and verified `email` fields. Taking the recipient from authenticated server data prevents the endpoint from becoming an arbitrary-recipient mail relay. A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+
+The business-stable idempotency key lets a retried signup reuse the same operation. Use the same key only for the exact same payload. AhaSend retains ordinary idempotency results for 24 hours, but server-error outcomes are not stored and a retry can re-execute the send, so this is not an exactly-once guarantee. Persist a completed-welcome marker in your application database when duplicate prevention must last longer, and make the workflow safe to reconcile after an uncertain result.
+
+Run it locally:
+
+```bash
+encore run
+curl -X POST http://localhost:4000/welcome \
+  -H "Authorization: Bearer <your-app-token>"
+```
+
+Add `sandbox: true` to the send request to validate it without delivering anything. Give that trial its own idempotency key: AhaSend matches a key against a hash of the request body, so a sandbox call under the `welcome-` key makes the first real send for that user fail with `422` instead of delivering.
+
+## Handle Webhooks with a Raw Endpoint
+
+Signature verification needs the **raw request body**, which Encore's typed endpoints parse away. Use `api.raw` instead: its handler receives a Node `IncomingMessage`, so you collect the body chunks into a Buffer and hand them to the verifier along with the headers. `verifier.parse()` is asynchronous, so await it:
+
+```ts email/webhooks.ts
+import { api } from "encore.dev/api";
+import { secret } from "encore.dev/config";
+import type { IncomingMessage } from "node:http";
+import {
+  WebhookVerifier,
+  AhaSendWebhookVerificationError,
+} from "@ahasend/sdk/webhooks";
+
+const ahasendWebhookSecret = secret("AhaSendWebhookSecret");
+
+let verifier: WebhookVerifier | undefined;
+let verifierSecret: string | undefined;
+const maxWebhookBodyBytes = 1_000_000;
+
+function webhookVerifier(): WebhookVerifier {
+  const secretValue = ahasendWebhookSecret();
+  if (verifier === undefined || verifierSecret !== secretValue) {
+    verifier = new WebhookVerifier(secretValue);
+    verifierSecret = secretValue;
+  }
+  return verifier;
+}
+
+class WebhookBodyTooLargeError extends Error {}
+
+async function readRawBody(req: IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+
+    const cleanup = () => {
+      req.off("data", onData);
+      req.off("end", onEnd);
+      req.off("error", onError);
+    };
+    const onData = (chunk: Buffer | string) => {
+      const bytes = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+      size += bytes.byteLength;
+      if (size > maxWebhookBodyBytes) {
+        cleanup();
+        reject(new WebhookBodyTooLargeError());
+        return;
+      }
+      chunks.push(bytes);
+    };
+    const onEnd = () => {
+      cleanup();
+      resolve(Buffer.concat(chunks, size));
+    };
+    const onError = (err: Error) => {
+      cleanup();
+      reject(err);
+    };
+
+    req.on("data", onData);
+    req.on("end", onEnd);
+    req.on("error", onError);
+  });
+}
+
+export const ahasendWebhook = api.raw(
+  {
+    expose: true,
+    path: "/webhooks/ahasend",
+    method: "POST",
+    bodyLimit: maxWebhookBodyBytes,
+  },
+  async (req, resp) => {
+    try {
+      const verify = webhookVerifier();
+      const rawBody = await readRawBody(req);
+      await verify.parse(req.headers, rawBody);
+
+      resp.writeHead(200);
+      resp.end();
+    } catch (err) {
+      if (err instanceof WebhookBodyTooLargeError) {
+        resp.writeHead(413);
+        resp.end();
+        return;
+      }
+      if (err instanceof AhaSendWebhookVerificationError) {
+        resp.writeHead(400);
+        resp.end();
+        return;
+      }
+      console.error("AhaSend webhook processing failed");
+      resp.writeHead(500);
+      resp.end();
+    }
+  },
+);
+```
+
+This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process the durable work idempotently. Timestamp verification alone does not prevent a valid delivery from being replayed inside the tolerance window. `bodyLimit` is Encore's own cap for this endpoint — it defaults to 2 MiB when left unset — and the streaming counter bounds what the handler buffers even if that cap is later raised; an oversized body is refused either way. Keep any proxy in front at least as strict, and keep failures opaque. The verifier is rebuilt when the secret value changes, for the same reason the API client is: a webhook secret rotated in the dashboard would otherwise leave a stale verifier rejecting every delivery as `400` until the next deploy, and AhaSend [gives up on an event after 6 retries and disables the endpoint after 100 consecutive failures](/api-reference/webhooks/retry-policy).
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend` (locally, `encore run` serves it at `http://localhost:4000/webhooks/ahasend`), and set the secret via `encore secret set` exactly as shown in the dashboard, including the `aha-whsec-` prefix.
+
+Not on Encore everywhere? The same SDK, including dedicated webhook adapters, powers the [Express](/guides/express) and [Fastify](/guides/fastify) guides.
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Tags**: pass `tags` on the send to group messages for filtering and statistics later.
+- **Secrets for everything**: the webhook secret belongs in `encore secret set` alongside the API key, so neither value lives in your repo or in a `.env` file.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+
+See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration options, and the [API reference](/api-reference) for every endpoint the SDK exposes.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Secret not found when calling the endpoint">
+    Secrets are per-environment. If it works locally but fails when deployed, you set `--type local` but not `--type prod` (or the environment type you deployed to).
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The `AhaSendApiKey` secret holds a missing, malformed, or revoked key. Re-set it and verify the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="Webhook verification always returns 400">
+    Either the endpoint isn't `api.raw` (typed endpoints consume the raw body), or `AhaSendWebhookSecret` doesn't match the dashboard value exactly.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,391 @@
+---
+title: "How to Send Email with gorilla/mux (Go)"
+sidebarTitle: "Gorilla Mux"
+description: "Send transactional email from a gorilla/mux (Go) app with the AhaSend email API: SDK setup, send handlers, and HMAC-verified delivery webhooks."
+keywords: ["gorilla mux send email", "golang transactional email gorilla mux", "gorilla mux email api", "ahasend go sdk", "gorilla mux webhook email"]
+---
+
+[gorilla/mux](https://github.com/gorilla/mux) routes plain `net/http` handlers, so AhaSend's webhook verifier accepts the `*http.Request` your handler receives. Middleware registered with `Router.Use` runs in registration order and must leave the signed webhook body untouched.
+
+gorilla/mux is stable but no longer actively developed: v1.8.1 (October 2023) is still the current release. Nothing below depends on new router features, and the same handlers port to `net/http.ServeMux` or another router unchanged.
+
+## Prerequisites
+
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](/send-api/credentials) with the domain-specific `messages:send:{your-domain}` scope, and your account ID
+
+## Install the SDK
+
+```bash
+go get github.com/AhaSend/ahasend-go
+go get github.com/gorilla/mux
+go get github.com/google/uuid
+```
+
+`google/uuid` is a transitive dependency of the SDK, but the account ID is a `uuid.UUID`, so your own code imports it directly and it needs its own `go get`.
+
+## Configure Environment Variables
+
+```bash
+export AHASEND_API_KEY=aha-sk-...
+export AHASEND_ACCOUNT_ID=your-account-uuid
+export AHASEND_WEBHOOK_SECRET=aha-whsec-...
+export AHASEND_DELIVERY_MODE=sandbox
+export WELCOME_ENDPOINT_TOKEN=a-long-random-server-to-server-token
+```
+
+Keep the API key, webhook secret, and endpoint token in your deployment platform's secret store. The example requires an explicit `sandbox` or `live` delivery mode and refuses to start for any other value.
+
+## Create the Client
+
+Create the client once at startup and share it across handlers: it maintains its own rate-limit, retry, and idempotency state. Use an `http.Server` with explicit limits and timeouts to serve the router:
+
+```go main.go
+package main
+
+import (
+	"context"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/AhaSend/ahasend-go/api"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+)
+
+var (
+	ahasendClient *api.APIClient
+	accountID     uuid.UUID
+	sandboxMode   bool
+	welcomeToken  string
+)
+
+func main() {
+	apiKey := os.Getenv("AHASEND_API_KEY")
+	if apiKey == "" {
+		log.Fatal("AHASEND_API_KEY is required")
+	}
+	welcomeToken = os.Getenv("WELCOME_ENDPOINT_TOKEN")
+	if welcomeToken == "" {
+		log.Fatal("WELCOME_ENDPOINT_TOKEN is required")
+	}
+
+	var err error
+	accountID, err = uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
+	if err != nil {
+		log.Fatal("AHASEND_ACCOUNT_ID must be a UUID")
+	}
+
+	switch os.Getenv("AHASEND_DELIVERY_MODE") {
+	case "sandbox":
+		sandboxMode = true
+	case "live":
+		sandboxMode = false
+	default:
+		log.Fatal("AHASEND_DELIVERY_MODE must be sandbox or live")
+	}
+
+	ahasendClient = api.NewAPIClient(api.WithAPIKey(apiKey))
+
+	r := mux.NewRouter()
+	r.Handle("/api/welcome", requireWelcomeToken(http.HandlerFunc(sendWelcome))).Methods(http.MethodPost)
+
+	server := &http.Server{
+		Addr:              ":8080",
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
+
+	shutdownSignal, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		<-shutdownSignal.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			log.Print("HTTP server graceful shutdown failed")
+		}
+	}()
+
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal("HTTP server stopped unexpectedly")
+	}
+}
+```
+
+## Send an Email from a gorilla/mux Handler
+
+gorilla/mux handlers are ordinary `net/http` handlers, so decode the JSON body with `encoding/json`:
+
+```go send.go
+package main
+
+import (
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/json"
+	"errors"
+	"io"
+	"log"
+	"net/http"
+	"net/mail"
+	"strings"
+
+	"github.com/AhaSend/ahasend-go"
+	"github.com/AhaSend/ahasend-go/api"
+	"github.com/AhaSend/ahasend-go/models/common"
+	"github.com/AhaSend/ahasend-go/models/requests"
+	"github.com/google/uuid"
+)
+
+type welcomeInput struct {
+	EventID string `json:"event_id"`
+	Email   string `json:"email"`
+	Name    string `json:"name"`
+}
+
+func requireWelcomeToken(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		provided := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		providedHash := sha256.Sum256([]byte(provided))
+		expectedHash := sha256.Sum256([]byte(welcomeToken))
+		if provided == "" || subtle.ConstantTimeCompare(providedHash[:], expectedHash[:]) != 1 {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func sendWelcome(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	var in welcomeInput
+	if err := decoder.Decode(&in); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+		} else {
+			http.Error(w, "invalid JSON body", http.StatusBadRequest)
+		}
+		return
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		http.Error(w, "body must contain one JSON object", http.StatusBadRequest)
+		return
+	}
+
+	address, err := mail.ParseAddress(in.Email)
+	if err != nil || address.Address != in.Email {
+		http.Error(w, "a plain email address is required", http.StatusBadRequest)
+		return
+	}
+	eventID, err := uuid.Parse(in.EventID)
+	if err != nil {
+		http.Error(w, "event_id must be a UUID", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(in.Name)
+	if len(name) > 128 || strings.ContainsAny(name, "\r\n") {
+		http.Error(w, "name must be a single line of at most 128 bytes", http.StatusBadRequest)
+		return
+	}
+
+	message := requests.CreateMessageRequest{
+		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(name)}},
+		Subject:     "Welcome to Your App!",
+		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
+		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
+		Sandbox:     ahasend.Bool(sandboxMode),
+	}
+
+	// The delivery mode is part of the request body, and a key replayed with a
+	// different body is rejected, so keep sandbox and live keys apart.
+	mode := "live"
+	if sandboxMode {
+		mode = "sandbox"
+	}
+
+	response, _, err := ahasendClient.MessagesAPI.CreateMessage(
+		r.Context(),
+		accountID,
+		message,
+		api.WithIdempotencyKey("welcome-"+mode+"-"+eventID.String()),
+	)
+	if err != nil {
+		var apiErr *api.APIError
+		if errors.As(err, &apiErr) {
+			log.Printf("AhaSend request failed: status=%d code=%s request_id=%s", apiErr.StatusCode, apiErr.Code, apiErr.RequestID)
+			switch {
+			case apiErr.IsRetryable():
+				http.Error(w, "failed to send email", http.StatusBadGateway)
+			case apiErr.StatusCode == http.StatusUnauthorized || apiErr.StatusCode == http.StatusForbidden:
+				// The API key, not the caller's payload.
+				http.Error(w, "email service misconfigured", http.StatusInternalServerError)
+			default:
+				http.Error(w, "email was rejected", http.StatusUnprocessableEntity)
+			}
+			return
+		}
+		http.Error(w, "unexpected error", http.StatusInternalServerError)
+		return
+	}
+
+	queued, rejected := 0, 0
+	for _, result := range response.Data {
+		switch result.Status {
+		case "queued", "scheduled":
+			queued++
+		default:
+			rejected++
+		}
+	}
+	if rejected > 0 || queued == 0 {
+		log.Printf("AhaSend rejected recipients: count=%d", rejected)
+		http.Error(w, "email was not accepted", http.StatusUnprocessableEntity)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]int{"queued": queued})
+}
+```
+
+A `2xx` from the API is not a per-recipient guarantee: every entry in `response.Data` carries its own `queued`, `scheduled`, or `error` status, so inspect them all before reporting success. On the error path, `apiErr.IsRetryable()` separates the transient failures — `429`, `5xx`, network, and the `409` returned while an earlier request with the same key is still in flight — from terminal ones such as a validation error, a missing scope, or a key reused with a different body, which is why only the former is reported to the caller as a gateway error.
+
+This example uses a dedicated bearer token for a server-to-server endpoint. For a user-facing route, use your application's session authentication and authorization and load the recipient from server-authoritative storage instead of accepting an email address from the browser. Never expose either bearer token to client-side code or logs. Serve the route only over HTTPS, and apply per-caller request-rate and concurrency limits at your reverse proxy: an endpoint that sends to a caller-supplied address is a mail relay for anyone holding the token.
+
+The explicit idempotency key protects a retry of the same business event outside the SDK's internal retry loop. Reuse it only for the exact same payload and never log it — the API matches a key against the request body, so the same key with a changed body is rejected with `422` rather than replayed, which is why the key carries the delivery mode. Stored outcomes replay for 24 hours, but a `5xx` is not stored and the key is released, so a retry after a server error can still send twice; reconcile an uncertain result before issuing another send when duplicates are unacceptable.
+
+## Handle Webhooks
+
+gorilla/mux hands your handler the `*http.Request`, so the SDK's `ParseRequest` can verify the HMAC signature over the exact raw body and return a typed event. Timestamp validation rejects stale signatures but does not deduplicate a valid delivery replayed inside the tolerance window.
+
+<Warning>
+  `ParseRequest` consumes the request body and must see it untouched. Don't attach body-reading middleware (request dumpers, body-buffering loggers) to the router ahead of the webhook route.
+</Warning>
+
+```go webhook.go
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+
+	"github.com/AhaSend/ahasend-go/webhooks"
+	"github.com/gorilla/mux"
+)
+
+const maxWebhookBodyBytes int64 = 30_000_000
+
+type webhookStore interface {
+	// EnqueueOnce atomically commits webhookID and durable work for event.
+	// It returns false if that ID was already committed.
+	EnqueueOnce(ctx context.Context, webhookID string, event webhooks.WebhookEvent) (bool, error)
+}
+
+func newAhaSendWebhookHandler(secret string, store webhookStore) (http.Handler, error) {
+	if secret == "" {
+		return nil, errors.New("AHASEND_WEBHOOK_SECRET is required")
+	}
+	verifier, err := webhooks.NewWebhookVerifier(secret)
+	if err != nil {
+		return nil, errors.New("invalid AHASEND_WEBHOOK_SECRET")
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxWebhookBodyBytes)
+		event, err := verifier.ParseRequest(r)
+		if err != nil {
+			var maxBytesErr *http.MaxBytesError
+			switch {
+			case errors.As(err, &maxBytesErr):
+				w.WriteHeader(http.StatusRequestEntityTooLarge)
+			case errors.Is(err, webhooks.ErrMissingHeaders),
+				errors.Is(err, webhooks.ErrInvalidSignature),
+				errors.Is(err, webhooks.ErrExpiredTimestamp):
+				w.WriteHeader(http.StatusUnauthorized)
+			case errors.Is(err, webhooks.ErrUnknownEventType):
+				// The signature is valid; acknowledge an event this app does not use.
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				w.WriteHeader(http.StatusBadRequest)
+			}
+			return
+		}
+
+		webhookID := r.Header.Get(webhooks.HeaderWebhookID)
+		accepted, err := store.EnqueueOnce(r.Context(), webhookID, event)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !accepted {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+	}), nil
+}
+
+func registerAhaSendWebhook(r *mux.Router, store webhookStore) error {
+	handler, err := newAhaSendWebhookHandler(os.Getenv("AHASEND_WEBHOOK_SECRET"), store)
+	if err != nil {
+		return err
+	}
+	r.Handle("/webhooks/ahasend", handler).Methods(http.MethodPost)
+	return nil
+}
+```
+
+Call `registerAhaSendWebhook` during startup with your durable store. Do not start the server if registration returns an error.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+`maxWebhookBodyBytes` bounds one request, not the process, and it is sized for inbound `route.message` deliveries, which embed the received email's attachments. Lower it if this endpoint only receives message, suppression, and domain events — the body is buffered and copied again to build the signed string before the signature is checked, so the cap sets how much memory an unauthenticated caller can make each in-flight request hold.
+
+`EnqueueOnce` must atomically store the verified `webhook-id` and durable work/outbox record, retaining the ID for at least the delivery and retry horizon. A duplicate receives `2xx` without running the work again, while a storage failure receives `5xx` so it can be retried. Process queued work idempotently outside the request; an untracked goroutine can be lost when the process exits. Apply request-rate and concurrency limits at the reverse proxy, and never log the raw body, signature, whole event/error, subjects, addresses, or message content.
+
+## Going Further
+
+- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
+- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
+- **Rate limits**: local pacing is per client instance. If you tune `SetSendMessageRateLimit`, keep it at or below the send limit assigned to your account and coordinate aggregate traffic across replicas.
+- **Other frameworks**: the same SDK patterns work in [chi](/guides/chi), [Gin](/guides/gin), and [Echo](/guides/echo).
+- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
+
+See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="401 or 403 from the API">
+    A `401` means the API key is missing, malformed, or revoked; a `403` means the key is valid but does not carry the sending domain's `messages:send` scope. Both reach the same handler branch. Verify `AHASEND_API_KEY` is set in the process environment and review the [API credentials guide](/send-api/credentials) without printing the key.
+  </Accordion>
+  <Accordion title="Webhook verification always fails">
+    Something consumed the request body before `ParseRequest` ran. Check `r.Use(...)` middleware for body readers. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="405 Method Not Allowed on my routes">
+    `.Methods(http.MethodPost)` restricts the route to POST only. A request that matches the path with any other method is answered by gorilla/mux's built-in 405 handler, which runs without your `Router.Use` middleware. Make sure your test request uses POST.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

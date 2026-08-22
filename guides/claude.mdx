@@ -1,0 +1,233 @@
+---
+title: "How to Build a Transactional Email Workflow with Claude"
+sidebarTitle: "Claude"
+description: "Use Claude to plan, write, and run a complete transactional email workflow on AhaSend with the Node.js SDK, verified in sandbox before any real mail goes out."
+keywords: ["claude ai email integration", "claude code email workflow", "claude ahasend", "build email workflow with claude", "claude transactional email"]
+icon: "robot"
+---
+
+Claude Code can run the code it writes after you approve the command and permit the required network access, so it can send a test message and read the response back. That turns plausible code into observed-working code, as long as you hand it the real API first.
+
+## Prerequisites
+
+Claude can write and run code, but it can't verify your domain or mint your credentials. Do these two things in the [AhaSend dashboard](https://dash.ahasend.com) first:
+
+1. **Verify a sending domain.** Add the SPF, DKIM, and DMARC records from the [domain setup guide](/domains). Unverified domains cannot send and produce an API error.
+2. **Create an API key.** Follow the [API credentials guide](/send-api/credentials) and scope it to `messages:send:{your-domain}` rather than `messages:send:all`: if it leaks, the blast radius is one domain's mail, not your whole account. Grab your **account ID** too.
+
+Put both in your environment as `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID`. If you use the `.env` file shown later, create it yourself, ensure `.env` is ignored by git before adding the values, and do not paste the values into Claude or ask it to read or echo the file. Claude Code persists conversations and tool activity locally. You'll also need Node.js 22 or newer, the SDK's supported floor.
+
+## Step 1: Install the SDK
+
+Do this before you prompt. An agent that finds the dependency already present has far less room to improvise.
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+## Step 2: Write a CLAUDE.md With the Real API Facts
+
+Ask Claude cold and you'll get a client from a package nobody has published. Give it the ground truth as standing context instead. In Claude Code, that context lives in a `CLAUDE.md` file at the root of your project, which Claude reads at the start of every session:
+
+```markdown CLAUDE.md
+## Sending email (AhaSend)
+
+- Use the official SDK: `@ahasend/sdk` on npm.
+  Do not invent a package name and do not hand-roll fetch calls.
+- Server-side only. Supported runtimes include Node.js, Deno, Bun,
+  Cloudflare workerd (no `nodejs_compat` needed), and
+  Vercel Edge. Keep the client module out of browser bundles. The constructor
+  refuses browsers and browser service workers by default, but that is only a
+  backstop and does not make exposing a bearer key safe.
+- Construct the client ONCE at module scope, never per request:
+  `new AhaSendClient({ apiKey, accountId })`.
+- Send with `client.messages.send({ from, recipients, subject,
+  html_content, text_content })`. Body fields are snake_case. `from` is
+  `{ email, name? }`; `recipients` is an array of
+  `{ email, name?, substitutions? }`, 1 to 100 entries, each getting its
+  own message.
+- The response is multi-status (HTTP 202): `result.data` has one entry per
+  recipient, and a recipient can come back `status: "error"` with a null
+  `id` while the promise resolves. Inspect every entry.
+- Per-recipient templating: pass `substitutions` and use `{{ variable }}`
+  in the subject or body.
+- Never let an unauthenticated caller choose the recipient. A send is
+  triggered by a server-side event, and the address comes from our own
+  records, never straight off a request body. Authenticate, validate, and
+  rate-limit anything that can cause a send, and bound the request body
+  size. An endpoint that mails whatever address it is handed is a mail
+  relay on our verified domain.
+- Never detach a send promise from a request handler. Commit a durable,
+  uniquely keyed job in the same transaction as the record that triggers
+  it and send from a worker: work started after the response goes out can
+  be killed with the process.
+- For anything the app can retry, pass a stable caller-owned key in the
+  second argument: `client.messages.send(body, { idempotencyKey })`,
+  derived from the job or business event. Reuse a key only with a
+  byte-identical payload; a changed payload comes back as a mismatch.
+  Stored results expire after 24 hours, so reconcile instead of assuming
+  a later retry is deduplicated. `sandbox` is part of the fingerprinted
+  body, so never reuse one key across sandbox and live.
+- Errors are typed. Catch `AhaSendAPIError` / `AhaSendRateLimitError` from
+  `@ahasend/sdk` and match on `err.status` or `err.code`, never on text.
+- Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
+  Signature checks need the RAW request body, not re-serialized JSON.
+  `parse()` and `verify()` are async:
+  `await verifier.parse(headers, rawBody)`. Prefer the Express, Fastify
+  and Next.js adapters from the same module: they read the raw body under
+  a size cap and await verification for you.
+- Webhooks can be delivered more than once. After verification, atomically
+  commit the `webhook-id` and durable work in the same transaction before
+  acknowledging it. Acknowledge an already-committed ID without processing
+  it again.
+- Read `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and
+  `AHASEND_WEBHOOK_SECRET` from the environment. Pass the webhook secret
+  exactly as the dashboard returns it, including the `aha-whsec-` prefix.
+  Never hardcode or commit these values, and never put them in a
+  client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`,
+  `NUXT_PUBLIC_`) — those ship to the browser.
+- Log only aggregate counts, appropriate opaque IDs, HTTP status, SDK error
+  code, and request ID. Never log addresses, message content, secrets,
+  idempotency keys, request/response/event/error objects, `err.message`,
+  or `err.body`.
+- For testing, set `sandbox: true` so nothing is delivered, and use
+  `sandbox_result` to simulate an outcome: "deliver", "bounce", "defer",
+  "fail", or "suppress".
+- Other languages: Go uses github.com/AhaSend/ahasend-go. There is no
+  Python SDK yet, so Python calls the REST API directly.
+```
+
+Claude Code now loads these project instructions each session, but instructions are context rather than a guarantee, so review the generated code against them. In the Claude app, paste the same facts into your message, or, when web search and web fetch are enabled, point Claude at AhaSend's machine-readable doc index at `https://ahasend.com/docs/llms.txt`. The equivalent for an AI editor is a rules file, as in the [Cursor guide](/guides/cursor).
+
+## Step 3: Ask for the Whole Workflow
+
+Don't ask for a send, ask for the flow, and name the steps:
+
+> "Build a signup-confirmation email workflow. When a new user is created, commit the user and a uniquely keyed welcome-email job in one transaction, then send that job from a worker with the AhaSend SDK, using `substitutions` for their first name and a stable idempotency key derived from the job. Take the recipient address from the stored user record, never from a request body, and never fire the send as a detached promise inside the request handler. Add a webhook endpoint that verifies AhaSend events with `@ahasend/sdk/webhooks`, deduplicates each verified `webhook-id` atomically with durable work, and marks bounced addresses as undeliverable. Read credentials from the environment per CLAUDE.md. Build it in sandbox mode and run it to confirm it works before telling me it's done."
+
+For a multi-file change like this, switch Claude Code into **Plan mode** first. It researches and proposes an approach before writing anything, so you can sign off on the shape before a line of code exists: a plan that separates the send, the template, and the bounce handler instead of one tangled function.
+
+Here is the send the plan should produce:
+
+```ts lib/send-welcome.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export const ahasend = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY!,
+  accountId: process.env.AHASEND_ACCOUNT_ID!,
+});
+
+// Called from the worker that drains welcome-email jobs, with the user
+// loaded from your own records — never from an inbound request body.
+export async function sendWelcome(job: {
+  id: string;
+  user: { email: string; firstName: string };
+}) {
+  const result = await ahasend.messages.send(
+    {
+      from: { email: "hello@yourdomain.com", name: "Your App" },
+      recipients: [
+        { email: job.user.email, substitutions: { first_name: job.user.firstName } },
+      ],
+      subject: "Welcome {{ first_name }}",
+      text_content: "Thanks for signing up, {{ first_name }}.",
+      html_content: "<p>Thanks for signing up, {{ first_name }}.</p>",
+      sandbox: process.env.NODE_ENV !== "production",
+    },
+    { idempotencyKey: `welcome-${job.id}` },
+  );
+
+  const rejected = result.data.filter((r) => r.status === "error");
+  if (rejected.length > 0) {
+    console.warn(`${rejected.length} recipient(s) rejected`);
+  }
+  return result;
+}
+```
+
+The `substitutions` object feeds AhaSend's Jinja-style templating, so `{{ first_name }}` resolves per recipient, which turns a one-off send into a reusable workflow step.
+
+## Step 4: Run It in Sandbox Mode
+
+Claude can execute the script it just wrote after you approve the command and allow outbound HTTPS to `api.ahasend.com`. Ask it to add a small runner and then run it.
+
+```js scripts/send-sandbox.mjs
+import { AhaSendClient } from "@ahasend/sdk";
+
+const client = new AhaSendClient({
+  apiKey: process.env.AHASEND_API_KEY,
+  accountId: process.env.AHASEND_ACCOUNT_ID,
+});
+
+const result = await client.messages.send({
+  from: { email: "hello@yourdomain.com", name: "Your App" },
+  recipients: [{ email: "test@example.com", name: "Ada" }],
+  subject: "Welcome aboard",
+  text_content: "Testing the workflow.",
+  sandbox: true,
+  sandbox_result: "bounce", // rehearse the failure path
+});
+
+console.log(result.data.map((r) => r.status));
+```
+
+Run it with `node --env-file=.env scripts/send-sandbox.mjs`. The message goes through validation and processing, triggers relevant configured webhooks, costs nothing, and is never delivered. Claude runs the command, reads the output, and confirms the send was accepted. To verify the handler too, first configure an AhaSend webhook that subscribes to bounce events and points to a URL AhaSend can reach; for local development, expose the handler through a tunnel. Copy the webhook secret into your environment as `AHASEND_WEBHOOK_SECRET` exactly as shown, including its `aha-whsec-` prefix, without pasting it into Claude. Then `sandbox_result: "bounce"` triggers the bounce webhook, and Claude can check the durable result after it arrives. Every outcome is listed in the [sandbox mode guide](/send-api/sandbox), and each one triggers the matching webhook, so the whole reachable pipeline gets tested, not just the happy path.
+
+Add this rule to `CLAUDE.md`: default `sandbox` to `true` everywhere except production, and drive it from an environment variable so going live is a config change, not a code edit.
+
+## Step 5: Review the Diff
+
+Confirm four things before you merge, even though Claude ran its own tests:
+
+- **The trigger isn't a mail relay.** Find every path that can cause a send and check it is authenticated, validated, and rate-limited, with the recipient address read from your stored user record rather than the request body. A route that mails whatever address a caller posts lets strangers send from your verified domain. Check too that the send is handed to a durable job instead of being detached from the request, where the runtime can kill it after the response.
+- **The real package.** The TypeScript import must be `@ahasend/sdk`. Go uses `github.com/AhaSend/ahasend-go`; there is no Python SDK yet, so do not invent one—use the REST API from Python.
+- **Every recipient checked.** A promise that resolves means the request was accepted, not that every address was. Code reading `result.data[0]` and moving on will silently miss a suppressed recipient.
+- **The key lives in the environment.** Agents that touch many files can drift a secret into the wrong one. Confirm the key is read from `process.env`, never written to anything git tracks, and never assigned to a client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`), which ships it to the browser.
+
+Then merge, set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_WEBHOOK_SECRET` in your hosting platform's secret store, turn `sandbox` off in production, and send one message to an address you control.
+
+<Warning>
+  Webhook signature verification needs the raw request body. If Claude mounted a global JSON parser in front of the webhook route, verification will fail no matter how correct the secret is. The [Express guide](/guides/express) shows the correct mounting order.
+</Warning>
+
+## Going Further
+
+- **Extend the loop to failure**: with a configured, reachable webhook, the same sandbox workflow can prove the bounce path. Ask Claude to drive `sandbox_result` through `bounce` and `suppress` and assert on what your code does next.
+- **Templating and webhooks**: per-recipient `substitutions` cover personalised batches, and `@ahasend/sdk/webhooks` verifies delivery-event signatures. Both belong in `CLAUDE.md` so the next workflow starts from them.
+- Same grounding trick, different file: [Cursor](/guides/cursor) reads `.cursor/rules/`, [GitHub Copilot](/guides/github-copilot) reads `.github/copilot-instructions.md`, and [Windsurf](/guides/windsurf) reads `.windsurf/rules/`.
+- For the finished shape of the integration Claude is writing, see [Express](/guides/express), [Next.js](/guides/nextjs), or [NestJS](/guides/nestjs).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Claude wrote code against a package that isn't installed">
+    Add `@ahasend/sdk` to `package.json` yourself before prompting. Run `/context` and check **Memory files** to confirm the intended `CLAUDE.md` loaded; use `/memory` to inspect or edit the configured files. Start a new session if you created the file after the current session began.
+  </Accordion>
+  <Accordion title="The sandbox script fails with a Node runtime error">
+    Check the Node runtime in the terminal Claude is using, not just your shell, since a version manager can leave the agent on a different runtime than your normal session.
+  </Accordion>
+  <Accordion title="Bounce webhook never reaches the handler">
+    Sandbox sends fire the matching webhook, but only if a webhook is configured in the dashboard and pointed at a URL AhaSend can reach. During local development, expose the endpoint through a tunnel and check the secret is copied exactly, including the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="A recipient came back with status error and a null id">
+    That's the multi-status response working as designed: the request was accepted, that address was not. The most common cause is a suppressed address from an earlier hard bounce. Inspect `result.data` entry by entry and check the suppression list in the dashboard.
+  </Accordion>
+</AccordionGroup>
+
+Every endpoint the SDK exposes is in the [API reference](/api-reference).

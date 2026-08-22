@@ -1,0 +1,241 @@
+---
+title: "How to Send Email with Hono"
+sidebarTitle: "Hono"
+description: "Send transactional email from a Hono app with the AhaSend SDK, plus signed webhook verification."
+keywords: ["hono send email", "hono transactional email", "hono email api", "ahasend hono", "hono webhook email"]
+---
+
+This guide builds a Hono server on Node.js and adds a protected email endpoint plus signed webhook handling. Hono also supports other runtimes, whose entry points and secret bindings differ; see the [Bun guide](/guides/bun) or [Cloudflare Workers guide](/guides/cloudflare-workers) for those platform-specific details.
+
+## Prerequisites
+
+- Node.js 22 or newer (the SDK's minimum)
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk hono @hono/node-server
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk hono @hono/node-server
+```
+
+```bash yarn
+yarn add @ahasend/sdk hono @hono/node-server
+```
+
+```bash bun
+bun add @ahasend/sdk hono
+```
+
+</CodeGroup>
+
+On Bun you don't need `@hono/node-server`: `Bun.serve` runs Hono natively via `export default app`.
+
+## Configure Environment Variables
+
+Add your credentials to `.env` (and load them with `node --env-file=.env`; Bun loads `.env` automatically):
+
+```bash .env
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_ROUTE_TOKEN=replace-with-a-long-random-token
+```
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests:
+
+```ts lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+
+export function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+export const ahasend = new AhaSendClient({
+  apiKey: requireEnv("AHASEND_API_KEY"),
+  accountId: requireEnv("AHASEND_ACCOUNT_ID"),
+});
+```
+
+## Send an Email from a Hono Route
+
+```ts server.ts
+import { Hono } from "hono";
+import { serve } from "@hono/node-server";
+import { bearerAuth } from "hono/bearer-auth";
+import { bodyLimit } from "hono/body-limit";
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { ahasend, requireEnv } from "./lib/ahasend.js";
+
+const app = new Hono();
+
+app.use(
+  "/api/*",
+  bearerAuth({ token: requireEnv("WELCOME_ROUTE_TOKEN") }),
+);
+
+type WelcomeInput = {
+  email: string;
+  name?: string;
+  eventId: string;
+};
+
+function isWelcomeInput(value: unknown): value is WelcomeInput {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  return (
+    typeof input.email === "string" &&
+    input.email.length <= 254 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email) &&
+    (input.name === undefined ||
+      (typeof input.name === "string" && input.name.length <= 200)) &&
+    typeof input.eventId === "string" &&
+    /^[A-Za-z0-9._~-]{1,240}$/.test(input.eventId)
+  );
+}
+
+app.post(
+  "/api/welcome",
+  bodyLimit({
+    maxSize: 16 * 1024,
+    onError: (c) => c.json({ error: "Request body is too large" }, 413),
+  }),
+  async (c) => {
+    let input: unknown;
+    try {
+      input = await c.req.json();
+    } catch {
+      return c.json({ error: "Request body must be valid JSON" }, 400);
+    }
+
+    if (!isWelcomeInput(input)) {
+      return c.json({ error: "Invalid email, name, or eventId" }, 400);
+    }
+
+    try {
+      const result = await ahasend.messages.send(
+        {
+          from: { email: "hello@yourdomain.com", name: "Your App" },
+          recipients: [{ email: input.email, name: input.name }],
+          subject: "Welcome to Your App!",
+          html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+          text_content: "Welcome aboard! We're glad you're here.",
+        },
+        { idempotencyKey: `welcome-${input.eventId}` },
+      );
+
+      const rejectedCount = result.data.filter((r) => r.status === "error").length;
+      if (rejectedCount > 0) {
+        console.warn("AhaSend rejected recipients", { rejectedCount });
+        return c.json({ error: "Email was not accepted" }, 502);
+      }
+
+      return c.json({ statuses: result.data.map((r) => r.status) }, 202);
+    } catch (err) {
+      if (err instanceof AhaSendAPIError) {
+        console.error("AhaSend request failed", {
+          status: err.status,
+          requestId: err.requestId,
+          errorCode: err.code,
+        });
+        return c.json({ error: "Failed to send email" }, 502);
+      }
+      throw err;
+    }
+  },
+);
+
+const port = Number(process.env.PORT ?? 3000);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error("PORT must be an integer from 1 to 65535");
+}
+serve({ fetch: app.fetch, port });
+```
+
+Call the route from a trusted backend with `Authorization: Bearer <WELCOME_ROUTE_TOKEN>`, and use a stable `eventId` for the business event that should send exactly one welcome email. Do not expose this route token to browser code, and put rate limiting in front of the route at your proxy or gateway: the token is the only thing between a caller and your sending quota, and the route will mail any address it is handed. Replace the token check with your application's normal authentication and authorization if the endpoint is user-facing.
+
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
+
+The SDK retries transient failures automatically. The stable key in the example is reused when your application retries the same business event; reuse it only with the exact same message payload. A key can expire, so it does not replace application-level state that records whether the welcome email was sent.
+
+Add `sandbox: true` to the send request to validate it without delivering anything. `sandbox` is part of the request body, and the server matches an idempotency key against a hash of that body, so a key already used for a sandbox send is rejected with a 422 when the same key is replayed for the live send — give the two runs different keys.
+
+## Handle Webhooks
+
+Pass Hono's raw Web `Request` to the SDK's web-standard adapter. The adapter reads the original bytes, enforces the configured size limit, verifies the signature and timestamp, parses the typed event, and returns opaque `400` or `413` responses for invalid or oversized deliveries:
+
+```ts server.ts
+// Add to the imports already at the top of server.ts; `requireEnv` is
+// imported there.
+import {
+  WebhookVerifier,
+  isKnownWebhookEvent,
+  nextRouteHandler,
+} from "@ahasend/sdk/webhooks";
+
+const verifier = new WebhookVerifier(requireEnv("AHASEND_WEBHOOK_SECRET"));
+
+const ahasendWebhook = nextRouteHandler(
+  verifier,
+  async (event, request) => {
+    // Verification already required a non-empty webhook-id. Commit this ID and
+    // your durable work in one transaction before acting on the event.
+    const webhookId = request.headers.get("webhook-id");
+
+    if (isKnownWebhookEvent(event)) {
+      switch (event.type) {
+        case "message.delivered":
+        case "message.bounced":
+        case "message.opened":
+          console.log("Received AhaSend webhook", { webhookId, type: event.type });
+          break;
+      }
+    }
+
+    return new Response(null, { status: 200 });
+  },
+  { maxBodyBytes: 1_000_000 },
+);
+
+app.post("/webhooks/ahasend", (c) => ahasendWebhook(c.req.raw));
+```
+
+Add this route before the `serve()` call. Signature timestamp checking does not prevent a valid delivery from being replayed within the accepted window. Before performing a side effect, atomically store the verified `webhook-id` — read from the handler's second `Request` argument, as above — together with durable work in one transaction, acknowledge an ID that transaction already holds without re-enqueueing it, and make the work itself idempotent.
+
+Let a failed commit reject: the adapter rethrows a handler error, Hono answers 500, and AhaSend retries. Never catch it into a 200. Every non-2xx answer counts as a failed delivery — [retried 6 times over 16+ minutes, with the webhook disabled after 100 consecutive failures](/api-reference/webhooks/retry-policy) — so the opaque 400 the adapter returns for a bad signature quietly spends that budget on every delivery until the secret is fixed.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60_000).toISOString() }` to defer delivery.
+- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` and reuse it only for the same operation and exact request payload.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+
+See the [API reference](/api-reference) for every endpoint the SDK exposes. For deployment, follow Hono's [Node.js build and deployment guidance](https://hono.dev/docs/getting-started/nodejs#building-deployment), serve the app over HTTPS, and configure your platform's `PORT`, secrets, and public webhook URL. Running Hono on Bun instead? The [Bun guide](/guides/bun) covers env loading and the Bun entry point.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Webhook verification always returns 400">
+    Verify `AHASEND_WEBHOOK_SECRET` matches the dashboard value exactly (including the `aha-whsec-` prefix), and make sure nothing consumes or rewrites the request body before `ahasendWebhook`: even reformatting the JSON invalidates the HMAC.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key is missing, malformed, or revoked. Verify that `AHASEND_API_KEY` is loaded without logging any part of it. On Node, remember to start with `node --env-file=.env`.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

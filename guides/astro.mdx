@@ -1,0 +1,335 @@
+---
+title: "How to Send Email with Astro"
+sidebarTitle: "Astro"
+description: "Send transactional email from Astro API endpoints in minutes with the AhaSend SDK, plus signed webhook handling: on-demand rendering, Node adapter."
+keywords: ["astro send email", "astro transactional email", "astro email api", "ahasend astro", "astro webhook email"]
+---
+
+In Astro the send has to live in an on-demand API endpoint, since pages are prerendered by default. Switch on on-demand rendering and add the [@astrojs/node](https://docs.astro.build/en/guides/integrations-guide/node/) adapter to get real server endpoints.
+
+## Prerequisites
+
+- An Astro project using the Node adapter
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK and the Node Adapter
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+npx astro add node
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+pnpm astro add node
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+yarn astro add node
+```
+
+```bash bun
+bun add @ahasend/sdk
+bunx astro add node
+```
+
+</CodeGroup>
+
+`astro add node` wires the adapter into `astro.config.mjs` for you:
+
+```js astro.config.mjs
+import { defineConfig } from "astro/config";
+import node from "@astrojs/node";
+
+export default defineConfig({
+  adapter: node({ mode: "standalone" }),
+});
+```
+
+<Note>
+  The SDK runs on the Node adapter and on Cloudflare's `workerd` runtime. For Cloudflare specifics, see the [Cloudflare Workers guide](/guides/cloudflare-workers). Astro's Vercel adapter runs on-demand routes in a serverless function; its optional Edge Function runs middleware only.
+</Note>
+
+## Configure Environment Variables
+
+```bash .env
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-uuid
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
+```
+
+Register them as secret server variables so Astro reads them from your adapter at runtime. Astro checks secrets lazily by default — the first import from `astro:env/server` throws, which means a missing key surfaces as a 500 on the first request rather than at boot. `validateSecrets: true` also checks them when the dev server starts and when `astro build` runs, so a missing value fails the build instead. Add the `env` block alongside the adapter configuration that `astro add node` created:
+
+```js astro.config.mjs
+import { defineConfig, envField } from "astro/config";
+import node from "@astrojs/node";
+
+export default defineConfig({
+  adapter: node({ mode: "standalone" }),
+  env: {
+    schema: {
+      AHASEND_API_KEY: envField.string({ context: "server", access: "secret" }),
+      AHASEND_ACCOUNT_ID: envField.string({ context: "server", access: "secret" }),
+      AHASEND_WEBHOOK_SECRET: envField.string({ context: "server", access: "secret" }),
+      WELCOME_ENDPOINT_TOKEN: envField.string({ context: "server", access: "secret" }),
+    },
+    validateSecrets: true,
+  },
+});
+```
+
+<Warning>
+  Never expose any of these values through `astro:env/client` or a `PUBLIC_` variable. That would ship the API key or endpoint token in your client bundle.
+</Warning>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests:
+
+```ts src/lib/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+import { AHASEND_API_KEY, AHASEND_ACCOUNT_ID } from "astro:env/server";
+
+export const ahasend = new AhaSendClient({
+  apiKey: AHASEND_API_KEY,
+  accountId: AHASEND_ACCOUNT_ID,
+});
+```
+
+Both endpoints below read their request body through the same bounded reader, so neither one buffers an unbounded upload:
+
+```ts src/lib/request.ts
+/** Reads the whole body, or returns `null` once it exceeds `maxBytes`. */
+export async function readBoundedBody(
+  request: Request,
+  maxBytes: number,
+): Promise<Uint8Array | null> {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > maxBytes) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+```
+
+## Send an Email from an Astro API Endpoint
+
+API routes live under `src/pages/api/`. Mark the route `prerender = false` so it renders on demand instead of being built as a static file (required in static-first projects; harmless if your whole site is already `output: "server"`):
+
+```ts src/pages/api/welcome.ts
+import type { APIRoute } from "astro";
+import { AhaSendAPIError } from "@ahasend/sdk";
+import { WELCOME_ENDPOINT_TOKEN } from "astro:env/server";
+import { ahasend } from "../../lib/ahasend";
+import { readBoundedBody } from "../../lib/request";
+
+export const prerender = false;
+
+const MAX_JSON_BYTES = 16_384;
+
+type WelcomeInput = { signupId: string; email: string; name?: string };
+
+function isWelcomeInput(value: unknown): value is WelcomeInput {
+  if (!value || typeof value !== "object") return false;
+  const input = value as Record<string, unknown>;
+  return (
+    typeof input.signupId === "string" &&
+    /^[A-Za-z0-9._:-]{1,200}$/.test(input.signupId) &&
+    typeof input.email === "string" &&
+    input.email.length > 0 &&
+    input.email.length <= 254 &&
+    (input.name === undefined || (typeof input.name === "string" && input.name.length <= 200))
+  );
+}
+
+/** Constant-time comparison, so a wrong token leaks nothing through timing. */
+async function secretsEqual(left: string, right: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [leftHash, rightHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(left)),
+    crypto.subtle.digest("SHA-256", encoder.encode(right)),
+  ]);
+  const leftBytes = new Uint8Array(leftHash);
+  const rightBytes = new Uint8Array(rightHash);
+  let difference = 0;
+  for (let i = 0; i < leftBytes.length; i += 1) difference |= leftBytes[i]! ^ rightBytes[i]!;
+  return difference === 0;
+}
+
+async function isAuthorized(request: Request): Promise<boolean> {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) return false;
+  return secretsEqual(authorization.slice("Bearer ".length), WELCOME_ENDPOINT_TOKEN);
+}
+
+export const POST: APIRoute = async ({ request }) => {
+  if (!(await isAuthorized(request))) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type") ?? "")) {
+    return Response.json({ error: "Content-Type must be application/json" }, { status: 415 });
+  }
+
+  const rawBody = await readBoundedBody(request, MAX_JSON_BYTES);
+  if (rawBody === null) {
+    return Response.json({ error: "Request body is too large" }, { status: 413 });
+  }
+
+  let input: unknown;
+  try {
+    input = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(rawBody));
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (!isWelcomeInput(input)) {
+    return Response.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  try {
+    const result = await ahasend.messages.send(
+      {
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email: input.email, name: input.name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      },
+      { idempotencyKey: `welcome-${input.signupId}` },
+    );
+
+    const rejected = result.data.filter((r) => r.status === "error");
+    if (rejected.length > 0) {
+      console.warn(`${rejected.length} of ${result.data.length} recipient(s) rejected`);
+      return Response.json({ error: "Recipient was not accepted" }, { status: 422 });
+    }
+
+    return Response.json({ statuses: result.data.map((r) => r.status) }); // ["queued"]
+  } catch (err) {
+    if (err instanceof AhaSendAPIError) {
+      console.error(`AhaSend error ${err.status} (request ${err.requestId})`);
+      return Response.json({ error: "Failed to send email" }, { status: 502 });
+    }
+    throw err;
+  }
+};
+```
+
+Call this route only from trusted server-side code over HTTPS, passing `Authorization: Bearer <WELCOME_ENDPOINT_TOKEN>`. Replace the bearer-token check with your application's normal authentication and authorization if this endpoint is user-facing, and add rate limiting appropriate to your traffic. A send endpoint that accepts an arbitrary recipient without credentials is an open mail relay, so the token check, the 16 KB body cap, and the recipient validation all run before anything reaches AhaSend. The error responses stay generic and the log line carries only the status and request ID — never the API key, the payload, or the provider's response body.
+
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first. This route has one recipient, so any rejection is a failed request and it answers 422 instead of a misleading 200 — a suppressed address will not start working on retry. Report per-recipient outcomes instead of a single status once you fan out to a batch, and keep the recipient-level `error` strings out of the response, since they can carry addresses and provider diagnostics.
+
+The SDK sends an `Idempotency-Key` with every send and retries transient failures automatically. The key it generates covers its own retries but not a retry your caller makes after a timeout, and a 5xx releases the key server-side for re-execution — so a duplicate is still possible. Passing your own key derived from the business event, as above, closes that gap: an exact repeat within 24 hours replays the stored result instead of sending again. Reuse a key only with an identical payload; on the same key with a different body the API answers 422 and the SDK throws `AhaSendIdempotencyMismatchError`, which the `catch` above reports as a 502.
+
+Add `sandbox: true` to the send request to validate it without delivering anything. That changes the request body, so give sandbox sends their own idempotency keys rather than reusing a live one.
+
+## Handle Webhooks
+
+Astro endpoints receive a standard `Request`, so `verifier.parse()` can take `request.headers` and the raw body bytes directly, no adapter needed. `parse()` is asynchronous, so await it. This endpoint is unauthenticated until the signature checks out, so read it through the same bounded reader: verification rejects bodies over `MAX_WEBHOOK_BODY_BYTES` (30 MB), but calling `request.text()` or `request.arrayBuffer()` first would buffer an oversized body before that check runs.
+
+```ts src/pages/api/webhooks/ahasend.ts
+import type { APIRoute } from "astro";
+import {
+  AhaSendWebhookVerificationError,
+  MAX_WEBHOOK_BODY_BYTES,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
+import { AHASEND_WEBHOOK_SECRET } from "astro:env/server";
+import { readBoundedBody } from "../../../lib/request";
+
+export const prerender = false;
+
+const verifier = new WebhookVerifier(AHASEND_WEBHOOK_SECRET);
+
+export const POST: APIRoute = async ({ request }) => {
+  const rawBody = await readBoundedBody(request, MAX_WEBHOOK_BODY_BYTES);
+  if (rawBody === null) return new Response(null, { status: 413 });
+
+  let event;
+  try {
+    event = await verifier.parse(request.headers, rawBody);
+  } catch (err) {
+    // `reason` is a fixed enum, so it is safe to log; the body and signature are not.
+    if (err instanceof AhaSendWebhookVerificationError) {
+      console.warn(`Webhook rejected: ${err.reason}`);
+    }
+    return new Response(null, { status: 400 });
+  }
+
+  if (isKnownWebhookEvent(event)) {
+    switch (event.type) {
+      case "message.delivered":
+        console.log("Message delivered");
+        break;
+      case "message.bounced":
+        console.log("Message bounced");
+        break;
+      case "message.opened":
+        console.log("Message opened");
+        break;
+    }
+  }
+
+  return new Response(null, { status: 200 });
+};
+```
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+<Warning>
+  Signature verification does not prevent replay of a valid delivery within the timestamp window, which is five minutes by default. Before adding side effects, persist the `webhook-id` header atomically with durable processing work, acknowledge duplicates without processing them again, and make the work idempotent.
+</Warning>
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour. The first attempt must be in the future and within seven days of the request.
+- **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself and pass the encoded string as `data` in `attachments: [{ data, content_type, file_name, base64: true }]`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
+
+See the [API reference](/api-reference) for every endpoint the SDK exposes. Using a different meta-framework? The same SDK powers the [Next.js](/guides/nextjs) and [SvelteKit](/guides/sveltekit) guides.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="POST returns 404 or a static HTML page">
+    The route was prerendered at build time. Add `export const prerender = false` to the endpoint (or set `output: "server"` globally) and make sure an adapter is configured. On-demand endpoints don't work with a purely static build.
+  </Accordion>
+  <Accordion title="A request fails with “AHASEND_API_KEY is missing”">
+    Astro validates secret server variables from the `env.schema` at runtime, the first time a module imports from `astro:env/server` — so a missing value surfaces as a 500 on the first request that touches it, not at boot. `validateSecrets: true` moves the check to dev-server start and `astro build`. Check that `.env` is in the project root for local development and set the same variables in your production host's runtime environment. Import secrets only from `astro:env/server`.
+  </Accordion>
+  <Accordion title="Webhook verification fails with 400">
+    The logged `reason` names the cause. `signature_mismatch` usually means the body bytes changed: pass the unchanged raw bytes to `verifier.parse()`, not a re-serialized `JSON.stringify(await request.json())`, since re-serialization changes the byte layout. `timestamp_outside_tolerance` means the server clock drifted more than five minutes from AhaSend's, so fix time sync rather than the handler.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

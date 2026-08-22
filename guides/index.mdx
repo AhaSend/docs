@@ -1,0 +1,104 @@
+---
+title: "Integration Guides"
+sidebarTitle: "Overview"
+description: "Step-by-step guides for sending transactional email from your framework, runtime, deployment platform, or AI coding tool with the AhaSend SDKs."
+icon: "plug"
+---
+
+Each guide focuses on one framework, runtime, platform, or development tool and
+shows the relevant server-side integration, credential boundary, and deployment
+details. Framework guides cover sending and webhook verification where the
+platform supports them; development-tool guides focus on grounding, review, and
+sandbox testing.
+
+Already have a mailer in your framework, such as Nodemailer or ActionMailer? Point it at the [SMTP relay](/smtp) instead: four settings, no new code. If your stack is not covered here at all, the [Quickstart](/quickstart) shows the plain REST API, which works anywhere.
+
+## Start with Your Language
+
+<CardGroup cols={2}>
+  <Card title="Node.js SDK" icon="node-js" href="/guides/nodejs-sdk">
+    `@ahasend/sdk` gives you a typed client, automatic retries, idempotency keys, and webhook adapters for Express, Fastify, and Next.js.
+  </Card>
+
+  <Card title="Go SDK" icon="golang" href="/guides/go-sdk">
+    `ahasend-go` gives you a typed client, built-in retries and idempotency, and a Standard Webhooks verifier for any `net/http` router.
+  </Card>
+</CardGroup>
+
+## Web Frameworks
+
+<CardGroup cols={3}>
+  <Card title="Express" icon="server" href="/guides/express" />
+  <Card title="Fastify" icon="server" href="/guides/fastify" />
+  <Card title="NestJS" icon="server" href="/guides/nestjs" />
+  <Card title="Next.js" icon="layer-group" href="/guides/nextjs" />
+  <Card title="Nuxt" icon="layer-group" href="/guides/nuxt" />
+  <Card title="SvelteKit" icon="layer-group" href="/guides/sveltekit" />
+</CardGroup>
+
+Also covered: [Hono](/guides/hono), [Koa](/guides/koa), [ElysiaJS](/guides/elysiajs), [Encore.ts](/guides/encore), [Remix](/guides/remix), [Astro](/guides/astro), and [Vite](/guides/vite).
+
+## Go Frameworks
+
+<CardGroup cols={3}>
+  <Card title="Gin" icon="golang" href="/guides/gin" />
+  <Card title="Echo" icon="golang" href="/guides/echo" />
+  <Card title="Fiber" icon="golang" href="/guides/fiber" />
+</CardGroup>
+
+Also covered: [chi](/guides/chi) and [gorilla/mux](/guides/gorilla-mux), plus [Azure Functions](/guides/azure-functions) and [Cloud Run functions](/guides/google-cloud-functions) for Go on serverless.
+
+## Runtimes and Deployment
+
+The SDK runs on Node.js, Deno, Bun, Cloudflare workerd, and Vercel Edge. These guides cover what each platform changes: where secrets live, how deploys work, and what to watch for.
+
+<CardGroup cols={3}>
+  <Card title="Bun" icon="bolt" href="/guides/bun" />
+  <Card title="Deno Deploy" icon="bolt" href="/guides/deno-deploy" />
+  <Card title="Cloudflare Workers" icon="cloudflare" href="/guides/cloudflare-workers" />
+  <Card title="AWS Lambda" icon="aws" href="/guides/aws-lambda" />
+  <Card title="Vercel" icon="cloud-arrow-up" href="/guides/vercel" />
+  <Card title="Railway" icon="train" href="/guides/railway" />
+</CardGroup>
+
+## AI Development Tools
+
+AI agents write email code quickly and invent APIs just as quickly. These guides show how to give each tool the verified AhaSend SDK as standing context, then check the result in sandbox mode before it can send anything real.
+
+<CardGroup cols={3}>
+  <Card title="Bolt.new" icon="bolt" href="/guides/bolt-new" />
+  <Card title="Claude" icon="robot" href="/guides/claude" />
+  <Card title="Cursor" icon="i-cursor" href="/guides/cursor" />
+  <Card title="GitHub Copilot" icon="github" href="/guides/github-copilot" />
+  <Card title="Lovable" icon="heart" href="/guides/lovable" />
+  <Card title="v0" icon="wand-magic-sparkles" href="/guides/v0" />
+  <Card title="Windsurf" icon="wind" href="/guides/windsurf" />
+</CardGroup>
+
+## What Every Guide Assumes
+
+<Steps>
+  <Step title="A Verified Sending Domain">
+    The `from` address must be on a domain you have verified. See [Domain Setup](/domains) if you have not done this yet.
+  </Step>
+
+  <Step title="An API Key with Send Scope">
+    Create one in the [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, or scope it to a single domain to limit the blast radius if it leaks. The guides read it from `AHASEND_API_KEY`, alongside `AHASEND_ACCOUNT_ID` and, for webhooks, `AHASEND_WEBHOOK_SECRET`.
+  </Step>
+
+  <Step title="Sandbox Mode for Testing">
+    Add `sandbox: true` to any send request and the API validates and accepts it without delivering mail. Use `sandbox_result` to rehearse a bounce or a suppression. See [Sandbox Mode](/send-api/sandbox).
+  </Step>
+</Steps>
+
+## Reference
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api-reference">
+    Every endpoint, parameter, and response, including the webhook event payloads.
+  </Card>
+
+  <Card title="CLI" icon="square-terminal" href="/cli">
+    Send test messages and forward webhook events to localhost from your terminal while building an integration.
+  </Card>
+</CardGroup>

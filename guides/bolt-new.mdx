@@ -1,0 +1,233 @@
+---
+title: "How to Send Email from a Bolt.new Project"
+sidebarTitle: "Bolt.new"
+description: "Add transactional email to a Bolt.new app with the AhaSend SDK, using a Bolt or Supabase server function or a Node backend, with the key stored where the send runs."
+keywords: ["bolt.new email integration", "bolt.new send email", "bolt.new ahasend", "bolt new transactional email", "bolt.new supabase edge function email"]
+icon: "bolt"
+---
+
+[Bolt.new](https://bolt.new) develops your app in a browser-based WebContainer. A WebContainer runs inside the browser tab, so it is not a safe place for an AhaSend API key: code there can make network requests, but it cannot keep the key from someone who can inspect or edit the project. Put the send in a Bolt or Supabase server function, or in a separately deployed Node backend.
+
+## Prerequisites
+
+- A Bolt project with Bolt Database or Supabase connected, or a separately deployed Node backend
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a [verified sending domain](/domains)
+- An [API key](/send-api/credentials) with a send scope, plus your account ID
+
+Set the AhaSend side up in the [dashboard](https://dash.ahasend.com) before Bolt writes a line: the [quickstart](/quickstart) covers domain verification and key creation. Scope the key to `messages:send:{your-domain}` instead of `messages:send:all` so a leaked key can only touch one domain's mail.
+
+## Pick Your Backend
+
+Two rules apply whichever shape your project takes. Never call AhaSend from the frontend or the WebContainer preview: that makes your API key available in the browser. Put the key in the secret store for the backend that sends the message, not in a project environment variable used by preview or client code.
+
+<Warning>
+  If Bolt already put the key in a `VITE_`-prefixed variable or referenced it from a client component, that value is public. Remove it and rotate the key in the dashboard before you continue.
+</Warning>
+
+[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) supports the common Bolt backend choices. What differs is where the key lives:
+
+| Your backend | Where the key goes |
+| --- | --- |
+| Bolt Database server function | Bolt Database **Secrets**, read with `Deno.env.get()` |
+| Supabase Edge Function (Deno) | Supabase secrets, read with `Deno.env.get()` |
+| Node server (Express, Fastify, Nitro, deployed to a Node host) | That host's environment variables, read from `process.env` |
+
+Bolt and Supabase server functions use the edge-function path below.
+
+## Send with the SDK
+
+Install the SDK, which handles retries, idempotency, and typed errors:
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+In a Bolt or Supabase server function there is nothing to install in the app package: import it with `import { AhaSendClient } from "npm:@ahasend/sdk"`.
+
+If you use Bolt Database, open the database icon, select **Secrets**, and create `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_SANDBOX` (set it to `true` while testing). Bolt makes database secrets available only to server functions.
+
+If you use your own Supabase project, add the same credentials as Supabase secrets:
+
+```bash
+supabase secrets set AHASEND_API_KEY=aha-sk-your-key
+supabase secrets set AHASEND_ACCOUNT_ID=your-account-uuid
+supabase secrets set AHASEND_SANDBOX=true
+```
+
+The Supabase dashboard does the same under your project's Edge Functions settings. On a Node host, set the same three variables in that host's environment settings.
+
+A server function is a public HTTPS endpoint: anyone who learns its URL can call it. Authentication and server-side authorization are what keep it from becoming an open mail relay, so name them in the prompt along with the architecture, or Bolt reaches for a client-side hook:
+
+> "Add a server function called `send-receipt` that emails an order confirmation with `@ahasend/sdk`. Authenticate the caller with `withSupabase({ auth: 'user' })` and keep JWT verification enabled. Accept only an order ID, then load the recipient address, name, and order details through the caller's RLS-scoped Supabase client instead of trusting them from the request body. Read the credentials from server-function secrets with `Deno.env.get()`, fail at startup if `AHASEND_API_KEY` or `AHASEND_ACCOUNT_ID` is missing, stay in sandbox mode unless `AHASEND_SANDBOX` is exactly `false`, and create one `AhaSendClient` at module scope. Use a stable, sandbox-or-production-specific idempotency key for each order. Treat the resolved send as an accepted HTTP 202 response, but inspect every recipient result for `status: \"error\"`. Return a generic error to the browser, and never log recipients, message content, secrets, or whole error objects. The frontend must call this function and must never call AhaSend directly or contain the API key."
+
+The function it generates should look close to this. Create the client once at module scope, authenticate the caller, and load the order before sending:
+
+```ts supabase/functions/send-receipt/index.ts
+import { AhaSendAPIError, AhaSendClient, isAhaSendError } from "npm:@ahasend/sdk";
+import { withSupabase } from "npm:@supabase/server";
+
+function requireEnv(name: string): string {
+  const value = Deno.env.get(name);
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+const ahasend = new AhaSendClient({
+  apiKey: requireEnv("AHASEND_API_KEY"),
+  accountId: requireEnv("AHASEND_ACCOUNT_ID"),
+});
+const sandbox = Deno.env.get("AHASEND_SANDBOX") !== "false";
+const environment = sandbox ? "sandbox" : "production";
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]!);
+}
+
+export default {
+  fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
+    if (req.method !== "POST") {
+      return Response.json(
+        { error: "Method not allowed" },
+        { status: 405, headers: { Allow: "POST" } },
+      );
+    }
+    if (Number(req.headers.get("content-length")) > 1024) {
+      return Response.json({ error: "Request body too large" }, { status: 413 });
+    }
+
+    let orderId: unknown;
+    try {
+      ({ orderId } = (await req.json()) as { orderId?: unknown });
+    } catch {
+      return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    if (typeof orderId !== "string" || orderId.length === 0) {
+      return Response.json({ error: "orderId is required" }, { status: 400 });
+    }
+
+    // ctx.supabase runs under the caller's RLS policies, so an order that
+    // belongs to someone else comes back empty instead of being emailed.
+    const { data: order } = await ctx.supabase
+      .from("orders")
+      .select("id, customer_email, customer_name")
+      .eq("id", orderId)
+      .maybeSingle<{ id: string; customer_email: string; customer_name: string }>();
+    if (!order) {
+      return Response.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    try {
+      const result = await ahasend.messages.send(
+        {
+          from: { email: "orders@yourdomain.com", name: "Your Store" },
+          recipients: [{ email: order.customer_email, name: order.customer_name }],
+          subject: `Order ${order.id} confirmed`,
+          html_content: `<p>Thanks ${escapeHtml(order.customer_name)}, order ${escapeHtml(order.id)} is confirmed.</p>`,
+          text_content: `Thanks ${order.customer_name}, order ${order.id} is confirmed.`,
+          sandbox,
+        },
+        { idempotencyKey: `order-receipt-${environment}-${order.id}` },
+      );
+
+      const rejectedCount = result.data.filter((recipient) => recipient.status === "error").length;
+      if (rejectedCount > 0) {
+        console.warn("AhaSend rejected recipients", { rejectedCount });
+        return Response.json({ error: "Email was not accepted" }, { status: 502 });
+      }
+
+      return Response.json({ queued: true }, { status: 202 });
+    } catch (err) {
+      if (isAhaSendError(err)) {
+        console.error(
+          "AhaSend request failed",
+          err instanceof AhaSendAPIError
+            ? { errorCode: err.code, status: err.status, requestId: err.requestId }
+            : { errorCode: err.code },
+        );
+        return Response.json({ error: "Failed to send email" }, { status: 502 });
+      }
+      throw err;
+    }
+  }),
+};
+```
+
+Note what never crosses the boundary: the recipient address comes from the order row, not the request, and the error path logs a status and request ID rather than the caught error, whose `message` and `body` carry the provider's response. The browser gets a generic 502.
+
+On a Node backend the code differs only in how it reads configuration and how it is routed: swap `Deno.env.get(...)` for `process.env`, and call the send from your Express, Fastify, or Nitro route after that route has authenticated the caller and loaded the order itself. Full framework setup lives in the [Express](/guides/express) and [Next.js](/guides/nextjs) guides.
+
+## Handle the 202 Response
+
+Success is **202**, not 200: AhaSend has accepted and queued your message for asynchronous delivery. A handler that expects 200 reports failures that did not happen.
+
+The 202 body is multi-status: it carries one result per recipient. An individual recipient can come back `status: "error"` with a null `id`, a suppressed address for example, while the request succeeded and the promise resolves. Inspect every entry, not just the first.
+
+## Test in Sandbox Mode
+
+Test through the deployed server function, including when you trigger it from Bolt's preview; do not put the key in the WebContainer to test locally. Keep `AHASEND_SANDBOX=true` and AhaSend accepts the message, validates it, triggers the relevant webhooks, and logs it in your dashboard, then stops before delivery. That gives you a real round-trip to the API confirmed by a real 202, with nothing landing in an inbox while you iterate.
+
+Rehearse the failures too. Add `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`, and `"suppress"` for the rest, and check your code handles each. The full set is in the [sandbox mode guide](/send-api/sandbox).
+
+## Deploy and Verify the Key
+
+Your deployed backend and frontend live in different homes. Before you call it done:
+
+<Steps>
+  <Step title="Search for the key in frontend code and preview settings">
+    No `aha-sk-` string anywhere in the frontend and no AhaSend variable exposed to the WebContainer. The key belongs in Bolt Database Secrets, Supabase Edge Function secrets, or the environment of the Node host that sends the message.
+  </Step>
+  <Step title="Confirm the browser calls your backend">
+    The frontend calls your Edge Function or your Node route; only that backend talks to `api.ahasend.com`.
+  </Step>
+  <Step title="Confirm the function rejects unauthenticated callers">
+    Call the deployed function URL with no session attached. It must answer 401 rather than send anything. Keep JWT verification enabled on it, and check that the recipient address is read from your database rather than from the request body: a function that emails whatever address the caller passes is a relay even when callers have to sign in.
+  </Step>
+  <Step title="Flip sandbox off deliberately">
+    Set `AHASEND_SANDBOX=false` in the backend's secret store, then send one real test to an address you control. Any other value, including a missing value, keeps the example in sandbox mode.
+  </Step>
+</Steps>
+
+## Going Further
+
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries, each of which gets its own message.
+- **Idempotency**: pass your own stable key as the second argument to `send()`, as the example does, so a double-click cannot send twice within the 24-hour replay window. Reuse a key only for the exact same payload; 5xx outcomes are not stored.
+- Building in a different AI tool? See [v0](/guides/v0) and [Lovable](/guides/lovable). See the [API reference](/api-reference) for every field.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error importing @ahasend/sdk in a Supabase Edge Function">
+    Confirm the import is server-side and uses the Deno npm specifier exactly as shown: `npm:@ahasend/sdk`. There is nothing to install in the app's `package.json` for this path — the runtime resolves the specifier. If it still fails, redeploy and inspect the function's logs.
+  </Accordion>
+  <Accordion title="undefined API key at runtime">
+    The key was set in the project preview or frontend host instead of where the send runs. For Bolt Database, use **Database > Secrets**. For your own Supabase project, use `supabase secrets set`; hosted Edge Functions receive updated secrets without a redeploy.
+  </Accordion>
+  <Accordion title="The frontend gets 401 from the server function">
+    The caller has no session. Sign in and invoke the function through the authenticated Supabase client so the request carries the user's JWT. Do not disable JWT verification or switch the function to unauthenticated access to make the error go away: that publishes a send endpoint to the internet.
+  </Accordion>
+  <Accordion title="The server function works while testing but not after publish">
+    Confirm the published frontend calls the same server-function URL and that the function's own secret store contains the API key, account ID, and intended sandbox setting. Then look at the AhaSend dashboard logs: a message that never reached AhaSend leaves no log line.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

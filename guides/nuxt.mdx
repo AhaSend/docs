@@ -1,0 +1,303 @@
+---
+title: "How to Send Email with Nuxt"
+sidebarTitle: "Nuxt"
+description: "Send transactional email from Nuxt server routes with the AhaSend TypeScript SDK, map runtimeConfig env vars, and verify webhooks in Nitro."
+keywords: ["nuxt send email", "nuxt transactional email", "nuxt server routes email", "ahasend nuxt", "nitro webhook verification"]
+---
+
+In [Nuxt](https://nuxt.com), declare the AhaSend credentials in the top-level, server-only section of `runtimeConfig`: anything under `runtimeConfig.public` is serialized into the client payload.
+
+## Prerequisites
+
+- A Nuxt project
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @ahasend/sdk
+```
+
+```bash pnpm
+pnpm add @ahasend/sdk
+```
+
+```bash yarn
+yarn add @ahasend/sdk
+```
+
+```bash bun
+bun add @ahasend/sdk
+```
+
+</CodeGroup>
+
+## Configure Environment Variables
+
+Declare the keys in `runtimeConfig` so Nuxt maps them from `NUXT_`-prefixed environment variables at runtime:
+
+```ts nuxt.config.ts
+export default defineNuxtConfig({
+  runtimeConfig: {
+    // server-only: never put these under runtimeConfig.public
+    ahasendApiKey: "",
+    ahasendAccountId: "",
+    ahasendWebhookSecret: "",
+    welcomeRouteToken: "",
+  },
+});
+```
+
+```bash .env
+NUXT_AHASEND_API_KEY=aha-sk-...
+NUXT_AHASEND_ACCOUNT_ID=your-account-uuid
+NUXT_AHASEND_WEBHOOK_SECRET=aha-whsec-...
+NUXT_WELCOME_ROUTE_TOKEN=replace-with-a-long-random-value
+```
+
+<Warning>
+  Anything under `runtimeConfig.public` (or a `NUXT_PUBLIC_`-prefixed variable) is serialized into the client payload and readable by anyone in the browser. Keep all AhaSend credentials in the top-level, server-only section of `runtimeConfig`.
+</Warning>
+
+## Create the Client
+
+Create the client once at module scope and reuse it across requests:
+
+```ts server/utils/ahasend.ts
+import { AhaSendClient } from "@ahasend/sdk";
+import type { H3Event } from "h3";
+
+let client: AhaSendClient | undefined;
+
+function requireSecret(value: unknown, name: string): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${name} is not configured`);
+  }
+  return value;
+}
+
+export function useAhaSend(event: H3Event): AhaSendClient {
+  if (!client) {
+    const config = useRuntimeConfig(event);
+    client = new AhaSendClient({
+      apiKey: requireSecret(config.ahasendApiKey, "NUXT_AHASEND_API_KEY"),
+      accountId: requireSecret(config.ahasendAccountId, "NUXT_AHASEND_ACCOUNT_ID"),
+    });
+  }
+  return client;
+}
+```
+
+Files in `server/utils/` are auto-imported in all server routes, so `useAhaSend()` is available everywhere without an import. Passing the request event lets Nuxt apply the runtime environment overrides for that request.
+
+## Send an Email from a Nuxt Server Route
+
+```ts server/api/welcome.post.ts
+import { isAhaSendError } from "@ahasend/sdk";
+import type { H3Event } from "h3";
+
+type WelcomeRequest = {
+  email: string;
+  name: string;
+  eventId: string;
+};
+
+function isWelcomeRequest(value: unknown): value is WelcomeRequest {
+  if (typeof value !== "object" || value === null) return false;
+  const body = value as Record<string, unknown>;
+  return (
+    typeof body.email === "string" &&
+    body.email.length <= 320 &&
+    /^[^\s@]+@[^\s@]+$/.test(body.email) &&
+    typeof body.name === "string" &&
+    body.name.length > 0 &&
+    body.name.length <= 100 &&
+    typeof body.eventId === "string" &&
+    /^[A-Za-z0-9._:-]{1,200}$/.test(body.eventId)
+  );
+}
+
+async function secretsEqual(left: string, right: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [leftHash, rightHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(left)),
+    crypto.subtle.digest("SHA-256", encoder.encode(right)),
+  ]);
+  const leftBytes = new Uint8Array(leftHash);
+  const rightBytes = new Uint8Array(rightHash);
+  let difference = 0;
+  for (let i = 0; i < leftBytes.length; i++) {
+    difference |= leftBytes[i]! ^ rightBytes[i]!;
+  }
+  return difference === 0;
+}
+
+async function requireAuthorizedCaller(event: H3Event): Promise<void> {
+  const expected = useRuntimeConfig(event).welcomeRouteToken;
+  if (typeof expected !== "string" || expected.length === 0) {
+    throw new Error("NUXT_WELCOME_ROUTE_TOKEN is not configured");
+  }
+  const authorization = getRequestHeader(event, "authorization") ?? "";
+  const supplied = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!(await secretsEqual(supplied, expected))) {
+    throw createError({ statusCode: 401, statusMessage: "Unauthorized" });
+  }
+}
+
+export default defineEventHandler(async (event) => {
+  await requireAuthorizedCaller(event);
+
+  const contentType = getRequestHeader(event, "content-type") ?? "";
+  if (!contentType.toLowerCase().startsWith("application/json")) {
+    throw createError({ statusCode: 415, statusMessage: "Expected application/json" });
+  }
+
+  const contentLength = Number(getRequestHeader(event, "content-length"));
+  if (Number.isFinite(contentLength) && contentLength > 16_384) {
+    throw createError({ statusCode: 413, statusMessage: "Request body too large" });
+  }
+
+  const { email, name, eventId } = await readValidatedBody<WelcomeRequest>(
+    event,
+    isWelcomeRequest,
+  );
+
+  let result;
+  try {
+    result = await useAhaSend(event).messages.send(
+      {
+        from: { email: "hello@yourdomain.com", name: "Your App" },
+        recipients: [{ email, name }],
+        subject: "Welcome to Your App!",
+        html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
+        text_content: "Welcome aboard! We're glad you're here.",
+      },
+      { idempotencyKey: `welcome:${eventId}` },
+    );
+  } catch (err) {
+    if (isAhaSendError(err)) {
+      const { code, status, requestId } = err.toJSON();
+      console.error("AhaSend request failed", { code, status, requestId });
+      throw createError({ statusCode: 502, statusMessage: "Failed to send email" });
+    }
+    throw err;
+  }
+
+  if (result.data.some((entry) => entry.status === "error")) {
+    throw createError({ statusCode: 502, statusMessage: "Failed to queue email" });
+  }
+
+  setResponseStatus(event, 202);
+  return { queued: true };
+});
+```
+
+A 202 from AhaSend is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` while the call itself succeeds. Inspect every entry, but do not return recipient-level errors to the browser because they can contain addresses and provider diagnostics.
+
+Require your application's authenticated server to call this route. If a browser calls it directly, replace the bearer-token check with your normal server-side session validation and derive the recipient from that verified identity. `eventId` must be a stable ID for the welcome-email business event, persisted by the caller and reused for every retry. The SDK reuses this explicit idempotency key during its retries; a 5xx can be re-executed, so your application must still reconcile an uncertain result instead of blindly creating a new event ID.
+
+The `content-length` check rejects an oversized declared body, but Nitro does not cap request bodies on its own. Set a matching body-size limit at your reverse proxy or platform ingress in front of both routes.
+
+Message sends draw on your account's [rate limit](/api-reference/rate-limits) of 100 requests per second with a 200-request burst, shared by every API key on the account. The SDK already retries 429 and 5xx responses with backoff and honors `Retry-After`, so bound the concurrency of whatever calls this route rather than adding a second retry loop on top of it.
+
+Add `sandbox: true` to the send request to validate it without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so sandbox is not a separate namespace: reusing `welcome:<eventId>` with `sandbox` flipped is the same key carrying a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Give sandbox sends their own key prefix.
+
+## Handle Webhooks
+
+Signature verification needs the **exact request bytes**. `readRawBody(event, false)` returns the undecoded buffer Nitro received, which is what the HMAC covers; `readBody()` parses the JSON, and its re-serialized output can never be verified. Answer every failed check with an empty body so nothing about the failure reaches the sender:
+
+```ts server/api/webhooks/ahasend.post.ts
+import {
+  AhaSendWebhookVerificationError,
+  WebhookVerifier,
+  isKnownWebhookEvent,
+} from "@ahasend/sdk/webhooks";
+import type { H3Event } from "h3";
+
+const MAX_WEBHOOK_BYTES = 1_000_000;
+
+let verifier: WebhookVerifier | undefined;
+
+function useWebhookVerifier(event: H3Event): WebhookVerifier {
+  if (!verifier) {
+    const secret = useRuntimeConfig(event).ahasendWebhookSecret;
+    if (typeof secret !== "string" || secret.length === 0) {
+      throw new Error("NUXT_AHASEND_WEBHOOK_SECRET is not configured");
+    }
+    verifier = new WebhookVerifier(secret);
+  }
+  return verifier;
+}
+
+export default defineEventHandler(async (event) => {
+  // Built before the verification try/catch so a missing secret surfaces as a
+  // server error instead of being answered as a signature failure.
+  const webhookVerifier = useWebhookVerifier(event);
+
+  const declaredLength = Number(getRequestHeader(event, "content-length"));
+  if (Number.isSafeInteger(declaredLength) && declaredLength > MAX_WEBHOOK_BYTES) {
+    setResponseStatus(event, 413);
+    return null;
+  }
+
+  const rawBody = await readRawBody(event, false);
+  if (!rawBody || rawBody.byteLength > MAX_WEBHOOK_BYTES) {
+    setResponseStatus(event, rawBody ? 413 : 400);
+    return null;
+  }
+
+  let webhookEvent;
+  try {
+    webhookEvent = await webhookVerifier.parse(getRequestHeaders(event), rawBody);
+  } catch (err) {
+    const tooLarge =
+      err instanceof AhaSendWebhookVerificationError && err.reason === "body_too_large";
+    setResponseStatus(event, tooLarge ? 413 : 400);
+    return null;
+  }
+
+  if (isKnownWebhookEvent(webhookEvent)) {
+    // Enqueue trusted work here; do not log the event or recipient data.
+    console.log("Verified AhaSend webhook", { type: webhookEvent.type });
+  }
+
+  setResponseStatus(event, 204);
+  return null;
+});
+```
+
+Do not convert the event into a web `Request` (with `toWebRequest` or `fromWebHandler`) so you can reuse a fetch-style webhook adapter: Nitro's Node request stream is wrapped in a stream that throws an uncaught error if the consumer stops reading before the upload finishes, which an oversized delivery does.
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `NUXT_AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+Signature timestamp checks do not prevent a valid delivery from being replayed inside the accepted window. Before adding side effects, atomically store the `webhook-id` header in a table with a unique constraint together with a durable work/outbox record. On a uniqueness conflict, acknowledge the delivery without enqueuing the work again. Process that work idempotently, acknowledge unknown event types, and return a successful response quickly so AhaSend does not retry completed work.
+
+## Going Further
+
+- **Deployment**: use a Nuxt server deployment preset; a static-only deployment cannot run these routes. Configure every `NUXT_` secret in the deployment platform's runtime environment because a built production server does not read your local `.env` file.
+- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
+- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
+- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60_000).toISOString() }` to defer delivery.
+- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+
+See the [API reference](/api-reference) for every endpoint the SDK exposes. The same server-route pattern works in the other meta-frameworks too: see the [SvelteKit](/guides/sveltekit) and [Next.js](/guides/nextjs) guides.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Webhook verification always returns 400">
+    Something consumed or rewrote the request body before `readRawBody` could return the exact bytes the HMAC was computed over, or the configured webhook secret does not match this dashboard endpoint. Keep body-parsing server middleware off this route, and check that no proxy in front of Nitro re-encodes the payload.
+  </Accordion>
+  <Accordion title="401 AhaSendAuthenticationError">
+    The API key never reached the client. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
+  </Accordion>
+  <Accordion title="Credentials work locally but are missing after deploy">
+    A built Nuxt server does not read your local `.env` file. Configure the matching `NUXT_AHASEND_*` and `NUXT_WELCOME_ROUTE_TOKEN` values in your deployment platform's runtime environment, never as `NUXT_PUBLIC_` variables.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>

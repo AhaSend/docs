@@ -1,0 +1,342 @@
+---
+title: "How to Send Email with Gin (Go)"
+sidebarTitle: "Gin"
+description: "Send transactional email from a Gin (Go) app with the AhaSend email API: client setup, send handlers, and HMAC-verified delivery webhooks."
+keywords: ["gin send email", "golang transactional email gin", "gin email api", "ahasend go sdk", "gin webhook email"]
+---
+
+A [Gin](https://gin-gonic.com) handler wraps a standard `*http.Request` inside `*gin.Context`, so unwrap it: `c.Request` for `verifier.ParseRequest`. Body-binding or body-logging middleware must not read the webhook body first; Gin's built-in request logger does not read it.
+
+## Prerequisites
+
+- Go 1.25 or newer, which Gin 1.12 requires
+- An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
+- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{yourdomain.com}` permission, and your account ID
+
+## Install the SDK
+
+```bash
+go get github.com/AhaSend/ahasend-go
+go get github.com/gin-gonic/gin
+go get github.com/google/uuid
+```
+
+`google/uuid` is a transitive dependency of the SDK, but the account ID is a `uuid.UUID`, so your own code imports it directly and it needs its own `go get`.
+
+## Configure Environment Variables
+
+```bash
+export AHASEND_API_KEY=aha-sk-...
+export AHASEND_ACCOUNT_ID=your-account-uuid
+export AHASEND_WEBHOOK_SECRET=aha-whsec-...
+export WELCOME_API_USER=your-internal-service
+export WELCOME_API_PASSWORD=a-long-random-secret
+```
+
+Use your deployment platform's secret manager rather than committing these values. The example protects the send route with HTTP Basic authentication for a concrete service-to-service boundary; serve it only over HTTPS. A user-facing application should use its existing session or token middleware and load the recipient from the authenticated user's server-side record. Authentication bounds *who* can send, not *how much*: add per-caller rate limiting to the group as well — a [`golang.org/x/time/rate`](https://pkg.go.dev/golang.org/x/time/rate) limiter keyed by caller is enough — so one leaked credential or one looping client cannot drain the account.
+
+## Create the Client
+
+Create the client once at startup and share it across handlers so its transport and rate limiter are reused. Automatic idempotency keys are still generated per request:
+
+```go main.go
+package main
+
+import (
+	"context"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/AhaSend/ahasend-go/api"
+	"github.com/AhaSend/ahasend-go/webhooks"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+)
+
+var (
+	ahasendClient *api.APIClient
+	accountID     uuid.UUID
+)
+
+func main() {
+	var err error
+	accountID, err = uuid.Parse(mustEnv("AHASEND_ACCOUNT_ID"))
+	if err != nil {
+		log.Fatal("invalid AHASEND_ACCOUNT_ID")
+	}
+
+	retryConfig := api.DefaultRetryConfig()
+	retryConfig.MaxRetries = 1
+	ahasendClient = api.NewAPIClient(
+		api.WithAPIKey(mustEnv("AHASEND_API_KEY")),
+		api.WithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
+		api.WithRetryConfig(retryConfig),
+	)
+	verifier, err = webhooks.NewWebhookVerifier(mustEnv("AHASEND_WEBHOOK_SECRET"))
+	if err != nil {
+		log.Fatal("failed to create webhook verifier")
+	}
+
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.Use(gin.Logger(), gin.Recovery())
+	if err := r.SetTrustedProxies(nil); err != nil {
+		log.Fatal("failed to configure trusted proxies")
+	}
+
+	internal := r.Group("/api", gin.BasicAuth(gin.Accounts{
+		mustEnv("WELCOME_API_USER"): mustEnv("WELCOME_API_PASSWORD"),
+	}))
+	internal.POST("/welcome", sendWelcome)
+	r.POST("/webhooks/ahasend", handleAhaSendWebhook)
+
+	server := &http.Server{
+		Addr:              ":8080",
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	serverErrors := make(chan error, 1)
+	go func() { serverErrors <- server.ListenAndServe() }()
+
+	shutdownSignal, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+	defer stop()
+
+	select {
+	case <-shutdownSignal.Done():
+	case err := <-serverErrors:
+		if !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal("server failed")
+		}
+		return
+	}
+
+	shutdownContext, cancel := context.WithTimeout(context.Background(), 35*time.Second)
+	defer cancel()
+	if err := server.Shutdown(shutdownContext); err != nil {
+		log.Print("server shutdown failed")
+	}
+}
+
+func mustEnv(name string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		log.Fatalf("%s is required", name)
+	}
+	return value
+}
+```
+
+The SDK's outbound timeout, retry count, and the handler's end-to-end context deadline fit within the server's write and shutdown budgets. Keep those budgets aligned if you change any of them. `SetTrustedProxies(nil)` ignores client-supplied forwarding headers. If a load balancer or reverse proxy terminates HTTPS, replace `nil` with only that proxy's IP addresses or CIDRs. `SetMode(gin.ReleaseMode)` matters for more than log volume: Gin defaults to debug mode, and in debug mode a recovered panic writes the request's entire header block to the error log — cookies, `webhook-signature`, and everything else except `Authorization`.
+
+## Send an Email from a Gin Handler
+
+```go send.go
+package main
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"log"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/AhaSend/ahasend-go"
+	"github.com/AhaSend/ahasend-go/api"
+	"github.com/AhaSend/ahasend-go/models/common"
+	"github.com/AhaSend/ahasend-go/models/requests"
+	"github.com/gin-gonic/gin"
+)
+
+type welcomeInput struct {
+	SignupID string `json:"signup_id" binding:"required,max=128"`
+	Email    string `json:"email" binding:"required,email"`
+	Name     string `json:"name" binding:"max=200"`
+}
+
+func sendWelcome(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 16<<10)
+
+	var in welcomeInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "request too large"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	recipient := common.Recipient{Email: in.Email}
+	if in.Name != "" {
+		recipient.Name = ahasend.String(in.Name)
+	}
+
+	message := requests.CreateMessageRequest{
+		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
+		Recipients:  []common.Recipient{recipient},
+		Subject:     "Welcome to Your App!",
+		HtmlContent: ahasend.String("<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>"),
+		TextContent: ahasend.String("Welcome aboard! We're glad you're here."),
+	}
+
+	digest := sha256.Sum256([]byte(in.SignupID))
+	idempotencyKey := "welcome-" + hex.EncodeToString(digest[:])
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 25*time.Second)
+	defer cancel()
+	response, _, err := ahasendClient.MessagesAPI.CreateMessage(
+		ctx,
+		accountID,
+		message,
+		api.WithIdempotencyKey(idempotencyKey),
+	)
+	if err != nil {
+		var apiErr *api.APIError
+		if errors.As(err, &apiErr) {
+			log.Printf(
+				"AhaSend request failed status=%d type=%s request_id=%s",
+				apiErr.StatusCode,
+				apiErr.Type,
+				apiErr.RequestID,
+			)
+			switch apiErr.Type {
+			case api.ErrorTypeIdempotency:
+				// This key was already used with a different payload. Retrying
+				// can never succeed, so do not answer with a 5xx.
+				c.JSON(http.StatusConflict, gin.H{"error": "idempotency key reused with a different payload"})
+				return
+			case api.ErrorTypeIdempotencyConflict:
+				// An earlier send with this key is still running upstream.
+				c.Header("Retry-After", strconv.Itoa(apiErr.RetryAfter))
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "send already in progress"})
+				return
+			case api.ErrorTypeValidation,
+				api.ErrorTypeAuthentication,
+				api.ErrorTypePermission,
+				api.ErrorTypeNotFound:
+				// A rejected message, a revoked key, or a missing scope is a
+				// deployment fault: every retry fails identically. Alert on
+				// this rather than inviting callers to hammer it.
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "email service is misconfigured"})
+				return
+			case api.ErrorTypeRateLimit:
+				// The SDK already backed off and retried. Hand the remaining
+				// wait to the caller instead of hiding it behind a bare 502.
+				if apiErr.RetryAfter > 0 {
+					c.Header("Retry-After", strconv.Itoa(apiErr.RetryAfter))
+				}
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "send rate limited"})
+				return
+			}
+		} else {
+			log.Print("AhaSend request failed")
+		}
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to send email"})
+		return
+	}
+
+	if response == nil || len(response.Data) != 1 {
+		log.Print("AhaSend returned an unexpected result count")
+		c.JSON(http.StatusBadGateway, gin.H{"error": "unexpected email result"})
+		return
+	}
+
+	result := response.Data[0]
+	if result.Status == "error" {
+		log.Print("AhaSend rejected 1 recipient")
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "recipient rejected"})
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"status": result.Status, "message_id": result.ID})
+}
+```
+
+The send API is multi-status: a `202` carries one `Data` entry per recipient, and an entry can report `Status == "error"` with a nil `ID` even though the SDK call itself returned no error. This handler sends to one recipient and checks the single entry it expects; loop over every entry once you extend `Recipients`. Split the failures the same way the handler does: a rejected payload, a revoked key, or a missing scope fails identically on every attempt, so surface it as a `500` and page someone, while a rate limit or an upstream `5xx` is worth retrying — the rate-limit branch passes AhaSend's own `Retry-After` back to the caller.
+
+The SDK automatically retries transient failures and attaches an automatic idempotency key to each send. This handler overrides it with a stable key derived from the immutable signup ID so a later retry of the same business operation can reuse the key. Reuse a key only with the exact same payload: the API rejects the same key carrying a changed body with `422`, which the SDK reports as `ErrorTypeIdempotency` and the handler turns into a `409` rather than a retryable `502`. A `409` from the API is the separate in-progress case — an earlier request with that key has not finished — which the SDK reports as `ErrorTypeIdempotencyConflict` with the remaining seconds in `RetryAfter`. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice; persist workflow state and make uncertain results safe to reconcile.
+
+## Handle Webhooks
+
+Gin handlers wrap a standard `*http.Request`, so the SDK's `ParseRequest` works directly: it verifies the HMAC signature and timestamp, then returns a typed event. Timestamp validation is not replay deduplication. No body-parsing middleware may run on this route first.
+
+```go webhook.go
+package main
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/AhaSend/ahasend-go/webhooks"
+	"github.com/gin-gonic/gin"
+)
+
+var verifier *webhooks.WebhookVerifier
+
+const maxWebhookBodyBytes int64 = 1 << 20
+
+func handleAhaSendWebhook(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWebhookBodyBytes)
+	_, err := verifier.ParseRequest(c.Request)
+	if err != nil {
+		var tooLarge *http.MaxBytesError
+		switch {
+		case errors.As(err, &tooLarge):
+			c.Status(http.StatusRequestEntityTooLarge)
+		case errors.Is(err, webhooks.ErrUnknownEventType):
+			// ParseRequest verifies the signature before classifying the event.
+			c.Status(http.StatusNoContent)
+		default:
+			c.Status(http.StatusBadRequest)
+		}
+		return
+	}
+
+	// This minimal receiver has no business side effect.
+	c.Status(http.StatusNoContent)
+}
+```
+
+Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
+
+This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process durable work idempotently. Do not launch a bare goroutine: it can be lost when the process exits, and `*gin.Context` is recycled once the handler returns, so anything that outlives the request must carry `c.Copy()` instead of `c`. Keep reverse-proxy request-size and concurrency limits at least as strict as the application limit above, return promptly, and keep failures opaque.
+
+## Going Further
+
+- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
+- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
+- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
+- **Rate limits**: when sending at volume, tune `SetSendMessageRateLimit(requestsPerSecond, burstCapacity)` to stay within your account's limits.
+- **Other frameworks**: the same SDK patterns work in [chi](/guides/chi), [Echo](/guides/echo), and [Fiber](/guides/fiber).
+- **Attachments**: add `Attachments` with `Data`, `ContentType`, `ContentDisposition: "attachment"`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
+
+See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="401 from the API">
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+  </Accordion>
+  <Accordion title="Webhook verification always fails">
+    Something consumed the request body before `ParseRequest` ran. Check for logging or body-buffering middleware on the webhook route. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
+  </Accordion>
+  <Accordion title="400 error mentioning the from address">
+    The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
+  </Accordion>
+</AccordionGroup>
