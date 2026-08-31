@@ -1,253 +1,80 @@
 ---
 title: "Roadmap"
 description: "Where AhaSend is headed, from active work to future ideas."
-mode: "center"
 ---
 
 Follow our progress from active work to future ideas. Timelines may shift as we
 learn and iterate.
 
-<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 20 August 2026</p>
-
-<p className="rm-jump"><a href="#shipped">See what we've shipped recently &darr;</a></p>
+<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 31 August 2026</p>
 
 <div className="rm">
-
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-active">Active (4)</h2>
+      <h2 className="rm-badge is-shipped">Recently shipped (7)</h2>
     </div>
+
     <div className="rm-list">
-      <div className="rm-card is-active">
+      <div className="rm-card is-shipped">
         <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Sub Accounts <span className="rm-tag is-early">Early access</span></p>
-          <p>Isolated sending environments so you can separate clients, brands or stages.</p>
-        </div>
-      </div>
-      <div className="rm-card is-active">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">JavaScript SDK <span className="rm-tag is-new">New feature</span></p>
-          <p>An official JavaScript and TypeScript client for the AhaSend API.</p>
-        </div>
-      </div>
-      <div className="rm-card is-active">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">AhaSend NPM package <span className="rm-tag is-new">New feature</span></p>
-          <p>Install the AhaSend JavaScript SDK straight from NPM.</p>
-        </div>
-      </div>
-      <div className="rm-card is-active">
-        <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Prettify dashboard errors <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Cleaner, clearer error messages across the dashboard and API, without internal stack traces.</p>
+          <p>Cleaner error messages across the dashboard, a clearer alert while a mailbox provider is asking us to slow down, and "Received" renamed to "Queued".</p>
         </div>
       </div>
-    </div>
-  </section>
 
-  <section>
-    <div className="rm-head">
-      <h2 className="rm-badge is-planned">Planned (28)</h2>
-    </div>
-    <div className="rm-list">
-      <div className="rm-card is-planned">
+      <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">JavaScript SDK <span className="rm-tag is-new">New feature</span></p>
+          <p>An official JavaScript and TypeScript client for the AhaSend API, installable from NPM.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Filter messages by deferred attempts <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Filter the message log down to messages that had deferred delivery attempts.</p>
         </div>
       </div>
-      <div className="rm-card is-planned">
+
+      <div className="rm-card is-shipped">
         <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Campaign Builder <span className="rm-tag is-product">New product</span></p>
-          <p>Send marketing campaigns to your contact lists, with list import and unsubscribe handling.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Marketing Delivery Tiers and Marketing domains</p>
-          <p>Mark a domain as Marketing to send through dedicated marketing delivery tiers and pools.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">SEPA payments <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Pay your AhaSend invoices by SEPA direct debit.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Temporary AhaSend accounts for AI agents <span className="rm-tag is-new">New feature</span></p>
-          <p>Short-lived accounts designed for use by AI agents.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Message count on the search page <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Show a result count when searching your messages.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Cleaner messages pagination <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Hide the Next button when there are no further messages to show.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Cumulative message status <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Message status that reflects the full delivery history at a glance.</p>
         </div>
       </div>
-      <div className="rm-card is-planned">
+
+      <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
-          <p className="rm-title">Simplified credentials and API keys <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Credentials and API keys combined into one place, with v2 keys as the default.</p>
+          <p className="rm-title">Integration guides <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>30 new guides covering popular frameworks, languages and automation tools.</p>
         </div>
       </div>
-      <div className="rm-card is-planned">
+
+      <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
-          <p className="rm-title">Account ID after creating credentials <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Surface the Account ID right after you create sending credentials.</p>
+          <p className="rm-title">SPF <code>redirect:</code> and <code>include:</code> support <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Domain verification now follows SPF redirect and include tags.</p>
         </div>
       </div>
-      <div className="rm-card is-planned">
+
+      <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
-          <p className="rm-title">More bounce categories in the dashboard <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>A broader set of bounce categories surfaced in the dashboard.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Email address validation <span className="rm-tag is-product">New product</span></p>
-          <p>Validate email addresses to catch typos and reduce bounces.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Inbound message forwarding <span className="rm-tag is-new">New feature</span></p>
-          <p>Forward inbound messages straight to another email address.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">IPv6 support for the API <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>IPv6 connectivity for api.ahasend.com.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Sandbox sending from unverified domains <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Send test messages from unverified domains while in Sandbox mode.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Move off Cloudflare <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Reduce third-party dependencies in our infrastructure.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Rotate BYO DKIM keys <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Rotate your own (BYO) DKIM keys after verification.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Billing contacts <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Add a dedicated billing contact to receive invoices.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Bad domain check API endpoint <span className="rm-tag is-new">New feature</span></p>
-          <p>An API endpoint to check addresses against our known bad-domain list.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Marketing Automation 1.0 <span className="rm-tag is-product">New product</span></p>
-          <p>Triggered, multi-step email journeys that go beyond one-off campaigns.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Team roles and permissions <span className="rm-tag is-new">New feature</span></p>
-          <p>User groups with granular permissions for your team.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Link webhook invocation data to messages <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>See the webhook delivery attempts tied to each individual message.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Suppression expiry webhook <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>A webhook event when a suppression expires.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Link branding <span className="rm-tag is-new">New feature</span></p>
-          <p>Whitelabel tracking and link domains, available as a Pro add-on.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Clearer <code>message_id_header</code> in CreateMessage <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Remove the confusion around the <code>message_id_header</code> field in the v2 CreateMessage API.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">DKIM rotation for older domains <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Add DKIM rotation support when upgrading legacy domains.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">All dashboard features visible on every plan <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Every dashboard feature visible to all users, disabled only where your plan doesn't include it.</p>
-        </div>
-      </div>
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-        <div>
-          <p className="rm-title">Rotate API keys <span className="rm-tag is-new">New feature</span></p>
-          <p>Rotate API keys without recreating your credentials.</p>
+          <p className="rm-title">Inbound routing between AhaSend domains <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>Fixed inbound delivery when both the sending and receiving domain are registered on AhaSend.</p>
         </div>
       </div>
     </div>
@@ -255,75 +82,409 @@ learn and iterate.
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-shipped" id="shipped">Shipped (9)</h2>
+      <h2 className="rm-badge is-active">Active (1)</h2>
     </div>
+
+    <div className="rm-list">
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Campaign Builder <span className="rm-tag is-early">Early access</span></p>
+          <p>Send marketing campaigns to your contact lists. Coming with reusable templates, contact and list management through the Management API, viewing campaign content after sending, and a required unsubscribe link in every campaign.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div className="rm-head">
+      <h2 className="rm-badge is-planned">Planned (29)</h2>
+    </div>
+
+    <div className="rm-list">
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Configuring Marketing domains</p>
+          <p>Mark a domain as Marketing to route it through dedicated marketing pools, with separate rate limits so a campaign can never slow down your transactional mail.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">SEPA payments <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Pay your AhaSend invoices by SEPA direct debit.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Temporary AhaSend accounts for AI agents <span className="rm-tag is-new">New feature</span></p>
+          <p>Short-lived accounts designed for use by AI agents.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Message count on the search page <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Show a result count when searching your messages.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Cleaner messages pagination <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Hide the Next button when there are no further messages to show.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Simplified credentials and API keys <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Credentials and API keys combined into one place, with v2 keys as the default.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Account ID after creating credentials <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Surface the Account ID right after you create sending credentials.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">More bounce categories in the dashboard <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>A broader set of bounce categories surfaced in the dashboard.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Account level notifications <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Webhook and email notifications for account events, including sub account status changes and rate limits being hit.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">See your account rate limit <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Show the current sending rate limit for your account in the dashboard.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Email address validation <span className="rm-tag is-product">New product</span></p>
+          <p>Validate email addresses to catch typos and reduce bounces, in real time or automatically within your account.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Inbound message forwarding <span className="rm-tag is-new">New feature</span></p>
+          <p>Forward inbound messages straight to another email address.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">IPv6 support for the API <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>IPv6 connectivity for api.ahasend.com.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Sandbox sending from unverified domains <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Send test messages from unverified domains while in Sandbox mode.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Move off Cloudflare <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Reduce third-party dependencies in our infrastructure.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Rotate BYO DKIM keys <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Rotate your own (BYO) DKIM keys after verification.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Billing contacts <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Add a dedicated billing contact to receive invoices.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Bad domain check API endpoint <span className="rm-tag is-new">New feature</span></p>
+          <p>An API endpoint to check addresses against our known bad-domain list.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Marketing Automation 1.0 <span className="rm-tag is-product">New product</span></p>
+          <p>Triggered, multi-step email journeys that go beyond one-off campaigns.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Team roles and permissions <span className="rm-tag is-new">New feature</span></p>
+          <p>User groups with granular permissions, including restricting who can view message content.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Role based access control <span className="rm-tag is-new">New feature</span></p>
+          <p>Define roles and assign them to team members.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Link webhook invocation data to messages <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>See the webhook delivery attempts tied to each individual message.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Suppression expiry webhook <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>A webhook event when a suppression expires.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Link branding <span className="rm-tag is-new">New feature</span></p>
+          <p>Whitelabel tracking and link domains, available as a Pro add-on.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Clearer <code>message\_id\_header</code> in CreateMessage <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Remove the confusion around the <code>message\_id\_header</code> field in the v2 CreateMessage API.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">DKIM rotation for older domains <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Add DKIM rotation support when upgrading legacy domains.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">All dashboard features visible on every plan <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Every dashboard feature visible to all users, disabled only where your plan doesn't include it.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Rotate API keys <span className="rm-tag is-new">New feature</span></p>
+          <p>Rotate API keys without recreating your credentials.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Daily limit per API key <span className="rm-tag is-new">New feature</span></p>
+          <p>Set a daily sending cap on an individual API key.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div className="rm-head">
+      <h2 className="rm-badge is-shipped" id="shipped">Shipped (12)</h2>
+    </div>
+
     <div className="rm-list">
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
-          <p className="rm-title">Delivery-attempt details in webhook payloads <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Delivered, deferred, and bounced message webhooks include SMTP outcome details when an attempt was recorded.</p>
+          <p className="rm-title">Sub Accounts</p>
+          <p>Isolated sending environments so you can separate clients, brands or stages, each with its own domains, credentials and sending reputation.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
+
+                              <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Delivery-attempt details in webhook payloads <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Delivered, deferred and bounced message webhooks include the SMTP outcome and bounce classification, so you can act on bounces without opening the dashboard. Supported in the TypeScript and Go SDKs.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+                  <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Same domain on multiple accounts <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Fixed a verification issue when the same domain is verified on more than one account.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Whitelabel-aware MX guidance <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Inbound routing instructions now account for whitelabeled MX hostnames.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Message Routing visibility <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Incoming Routes are easier to discover, with clear guidance to point your domain's MX record to mx.ahasend.com.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Bulk list management</p>
           <p>Add contacts to lists in bulk and edit existing lists.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Routed message attachments fix</p>
           <p>Fixed attachment handling for routed messages, with SDK and documentation updates.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Improve Sub Account Delivery Tier assignment <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Better delivery tier assignment for sub accounts, aligned with the parent account.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Higher default rate limits <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Increased default sending rate limits, with higher ceilings on Pro and Max plans.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Domain management locked while suspended <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Domain management is disabled while an account is suspended.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
           <p className="rm-title">IP allow list for API keys</p>
           <p>Restrict API key usage to specific IP addresses, managed from the dashboard.</p>
           <span className="rm-date">Q2 2026</span>
         </div>
       </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
+
         <div>
           <p className="rm-title">Domain-level DKIM selector</p>
           <p>Choose a custom DKIM selector for each of your domains.</p>
@@ -333,11 +494,9 @@ learn and iterate.
     </div>
   </section>
 
-
   <p className="rm-note">
     This roadmap reflects our current plans and priorities, not commitments. Items
     may move, change, or be dropped as we learn. Missing something you need?
     <a href="mailto:support@ahasend.com"> Send us a feature request</a>.
   </p>
-
 </div>
