@@ -123,6 +123,7 @@
 .rm-tag.is-product     { background: #be123c; }
 .rm-tag.is-improvement { background: #0e7490; }
 .rm-tag.is-early       { background: #1d4ed8; }
+.rm-tag.is-bugfix      { background: #c2410c; }
 
 /* Dark mode */
 .dark .rm-card   { background: rgba(255, 255, 255, 0.025); border-color: rgba(255, 255, 255, 0.09); }
