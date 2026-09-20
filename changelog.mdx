@@ -2,6 +2,60 @@
 title: "Product Updates"
 description: "New releases and improvements"
 ---
+<Update label="August 2026">
+#### New Features
+
+- **Official TypeScript / JavaScript SDK**: [`@ahasend/sdk`](https://github.com/AhaSend/ahasend-ts) is now available on npm (`npm install @ahasend/sdk`). It covers the full API v2: messages, domains, API keys, webhooks, statistics, suppressions, inbound routes, SMTP credentials, account members and sub-accounts, with TypeScript types included, automatic idempotency keys on create calls, retries, rate-limit handling and pagination helpers. A separate `@ahasend/sdk/webhooks` entry point verifies webhook signatures and parses all event types, with adapters for Express, Fastify and Next.js. It runs on Node.js 22+, Deno, Bun, Cloudflare Workers and Vercel Edge. It is a server-side SDK and is still v0.x, so pin an exact version in production.
+- **Delivery Attempt Details in Webhooks**: `message.delivered`, `message.bounced` and `message.transient_error` webhooks now include a `delivery_attempt` object with the SMTP result behind the event: `smtp_code`, `enhanced_status_code`, the receiving server's `response`, a plain-English `description`, the bounce `classification`, and the SMTP `command` stage. The field is additive and is left out of events that are not the result of a delivery attempt. Test webhooks and sandbox sends include a representative sample, so you can build against the real payload shape.
+- **See Why a Message Is Still Waiting**: The message details page now explains why an outbound message has not been attempted yet: that it is scheduled for a specific time (shown in your timezone), that your account has reached its sending rate limit, that deliveries to the recipient's mailbox provider are temporarily paused, or that deliveries are being paced.
+- **Find Messages That Were Ever Deferred**: A new "Has deferred attempts" filter on the Messages page finds messages that hit a temporary delivery failure at any point, even if they were delivered afterwards.
+- **Readable Delivery Diagnostics**: When a delivery problem happens on our side of the connection, the delivery attempts on the message details page, campaign bounce messages and the campaign recipient export now show a clear sentence instead of raw mail-server internals. For example "DNS lookup for the recipient domain gmail.con failed: NXDOMAIN (the domain does not exist)" or "The destination mail server did not respond to MAIL FROM within 10s". Responses from recipient mail servers are still shown exactly as received. Applies to newly logged attempts.
+
+#### Changes
+
+- **Outbound messages waiting for their first attempt now show as "Queued"** in the dashboard instead of "Received". Inbound messages still show "Received". API responses and webhooks are unchanged.
+- **The Messages status filter now offers "Queued" and "Received (inbound)"** in place of the single "Received" option, and the separate Direction filter has been removed. Saved links that filter on `status=Received` now return inbound messages only; use `status=Queued` for outbound.
+- **Message status search is now cumulative**, in both the dashboard and API v2. Filtering by `Delivered` also returns messages that have since been opened or clicked, and `Opened` also returns clicked messages. Integrations filtering on `status=Delivered` will see more results than before.
+- **Campaign messages that run out of delivery retries are now reported as Failed** and trigger a `message.failed` webhook, matching transactional messages. Previously they were reported as Bounced with `message.bounced`. If you handle campaign webhooks, make sure `message.failed` is processed. Bounce totals and bounce rates in campaign reports are unchanged.
+- **API v2 now returns `409 Conflict` for duplicates**: when adding a team member who already belongs to the account (previously `500`), and when creating a domain that already exists (previously `400`). Update any integration that checks for the old status codes.
+- **The per-recipient `error` text on API v2 sends has been reworded.** Numeric codes are kept, and `521` account-status messages are unchanged. The `556` "sending domain not allowed" error now explains that a newly added domain can take up to 2 minutes to propagate. Unexpected internal failures return a generic message instead of internal details. If your integration matches on exact error text, please review it.
+- **SPF validation now mirrors how receiving mail servers read your record.** An AhaSend include placed after `~all` or `-all`, given a `~`, `-` or `?` qualifier, placed after a broken include, or pushed beyond the 10-DNS-lookup limit is no longer reported as configured, since receivers would not honor it either.
+- **Suppressions created from mailbox-provider spam complaints now use the reason `FBL Complaint Report`** instead of `FBL Abuse Report`, in the dashboard, the API `reason` field and the `suppression.created` webhook. Existing suppressions keep their original text, so integrations matching on the exact string should accept both.
+- **The (somewhat broken) Re-check DNS button was removed from the domain list.** DNS checks are run from each domain's own page.
+
+#### Improvements
+
+- **SPF validation now follows nested `include:` chains and `redirect=`**, so domains that authorize AhaSend through an intermediate SPF record are correctly recognized as configured.
+- **SPF status is steadier during DNS trouble.** A temporary failure looking up your own domain no longer flips SPF to unconfigured, and an outage at a third-party SPF provider can no longer freeze a stale status.
+- **DNS setup instructions now explain where the AhaSend include belongs**: before the final `~all` or `-all` of an existing SPF record.
+- **When several of a recipient domain's mail servers all fail, the delivery log now sums up the outcome in one sentence**, with SMTP codes, rejection text and attempt counts, instead of a long chain. Temporary failures also say that another attempt has been scheduled.
+- **Test sends now report results per recipient**, for both transactional templates and campaigns. You see which addresses were accepted and a readable reason for any that were rejected. If the result cannot be confirmed, you are told to check the message log rather than to resend.
+- **Failed campaign recipients now always show a failure reason** in the campaign report's recipient list (for example "Inbox Out of Storage") instead of only after several attempts.
+- **The API v2 list messages endpoint now accepts `Opened` and `Clicked`** as `status` filter values. They were previously rejected as invalid.
+- **The Lists page loads faster and more reliably for large audiences.** Subscriber counts for filtered lists are now calculated far more efficiently.
+
+#### Bug Fixes
+
+- **Fixed click webhooks for campaign emails never being delivered.** `message.clicked` events for campaign sends were dropped; only clicks in transactional emails produced webhooks. They are now delivered.
+- **Fixed transactional `message.clicked` webhooks always reporting `is_bot: false` and an empty `user_agent`.** Both now carry the real values recorded at click time.
+- **Fixed campaign open webhooks not reporting the bot-detection result.**
+- **Fixed cancelling a scheduled message through API v2**, which returned a `500` error instead of cancelling the send. Cancellation now also covers messages from domains on a dedicated IP pool and sandbox messages.
+- **Fixed scheduled sends through the conversational message endpoint being delivered immediately.** The `schedule` is now honored.
+- **Fixed delivery events for campaign emails being recorded as transactional messages** when the campaign was sent from a domain on a dedicated IP pool or in sandbox mode.
+- **Fixed a rare condition in which a campaign batch could be queued a second time** if the sending server's confirmation could not be read, which could have caused duplicate campaign emails.
+- **Fixed a late temporary-failure event moving a campaign recipient back to "Deferred"** after it had already been delivered, failed, suppressed, unsubscribed or marked as a complaint. A late temporary failure on an already-bounced recipient now sends `message.transient_error` instead of a duplicate `message.bounced`.
+- **Fixed campaign test sends reporting success when the recipient had actually been rejected**, and test sends delivering duplicate copies when the same address was entered more than once.
+- **Fixed campaign recipients rejected at queueing time showing raw internal error text or "Unknown error"** in the campaign breakdown and export.
+- **Fixed test webhooks triggered through the API sending a malformed event `type`** (such as `message.message.delivered`) and `data.event` value. They now match real payloads.
+- **Fixed team members removed through the API not being able to be added back to the account.**
+- **Fixed the "Full Access" preset in the API key dialog silently leaving out the "Wipe All Suppressions" permission** (`suppressions:wipe`). Keys created earlier with this preset are unchanged; edit them to add the permission if you need it.
+- **Fixed the same domain staying verified in more than one account at once.** When a domain is verified, a copy in another account that has stopped validating and uses the same DKIM selector is now un-verified. Domains that are actively validating, or that use a different DKIM selector, are never affected.
+- **Fixed the API v2 domain DNS check when a domain is deleted while the check is running.** It now returns `404 domain not found`, and the dashboard shows a clear message.
+- **Fixed whitelabel accounts being shown the default AhaSend MX host** in the Incoming Routes setup instructions and MX error messages, instead of their own MX hostname.
+- **Fixed return-path lookups failing for domains or return-path subdomains entered with upper-case letters**, which could prevent delayed bounce reports from being matched to the right domain.
+- **Fixed a rare condition where an open or click on a campaign whose sending domain had been deleted could briefly interrupt open and click tracking.**
+- **Fixed the account settings descriptions for rejecting mistyped and temporary-mail recipient domains** to quote the exact `553` error text those features return.
+</Update>
 <Update label="July 2026">
 #### New Features
 
