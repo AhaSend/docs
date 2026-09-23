@@ -1,0 +1,82 @@
+---
+title: "Send Email from Azure Functions (Node.js)"
+sidebarTitle: "Azure Functions (Node.js)"
+description: "Send email from Azure Functions in Node.js with the AhaSend SDK, a protected HTTP handler, local Core Tools tests and sandbox-safe configuration."
+---
+
+import GuideRelated from "/snippets/guide-related.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import CloudSend from "/snippets/cloud-node-send.mdx";
+
+AhaSend lets you send transactional email from Azure Functions in Node.js with the official SDK; this guide builds a protected HTTP function and runs it locally.
+
+## Prerequisites
+
+Use a [verified sending domain](/domains), your account ID, and a domain-scoped [send-only API v2 key](/send-api/credentials). Use [sandbox mode](/send-api/sandbox) for every test. Management tasks need a separate [full API key](/api-reference/authentication).
+
+Use Node.js 22 and [Azure Functions Core Tools v4](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local). The code uses the [Node.js v4 programming model](https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference-node).
+
+## Install the Dependencies
+
+Run these commands in a new directory:
+
+```bash
+npm init -y
+npm install --save-exact @ahasend/sdk@0.2.1 @azure/functions@4
+npm pkg set main=index.cjs
+```
+
+<QuickSend />
+
+<CloudSend />
+
+## Create the HTTP Function
+
+Save this as `index.cjs`. The function accepts POST requests and also checks your server's bearer token; Azure's function key is an additional hosted check.
+
+```js index.cjs
+const { app } = require("@azure/functions");
+const { sendEmail } = require("./send-email.cjs");
+app.http("sendEmail", {
+  methods: ["POST"], authLevel: "function",
+  handler: async (request) => {
+    const raw = await request.text();
+    if (Buffer.byteLength(raw) > 16384) return { status: 413 };
+    let body;
+    try { body = JSON.parse(raw); }
+    catch { return { status: 400, jsonBody: { error: "Invalid JSON" } }; }
+    const [status, jsonBody] = await sendEmail(body, request.headers.get("authorization") || "");
+    return { status, jsonBody };
+  },
+});
+```
+
+Create `host.json`:
+
+```json host.json
+{"version":"2.0"}
+```
+
+## Run with Core Tools
+
+Keep `.env` and `local.settings.json` out of Git. Export the variables from the shared code, then start the local host:
+
+```bash
+FUNCTIONS_WORKER_RUNTIME=node func start
+```
+
+In another shell with `SEND_TOKEN` set, invoke the local function:
+
+```bash
+curl --fail-with-body http://localhost:7071/api/sendEmail   -H "Authorization: Bearer $SEND_TOKEN" -H 'Content-Type: application/json'   -d '{"event_id":"local-azure-node-001"}'
+```
+
+Expect HTTP 202 with acceptance statuses. Missing or wrong bearer tokens return 401; invalid event IDs return 400. Local Core Tools does not enforce function keys, so the handler keeps its own token check. To repeat a new test use a new event ID; to retry the same job keep its ID and message unchanged.
+
+## Prepare the Hosted App
+
+Select Node.js 22 and Functions runtime v4. Put the values in app settings, with [Key Vault references](https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references) for secrets. Send the Azure function key as `x-functions-key` in addition to the bearer token. Use your application's identity checks and request limits before allowing callers to trigger mail. Follow [Microsoft's deployment steps](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) to publish the app.
+
+Track final delivery with [webhooks](/integrations/webhooks). Also see [Azure in Python](/guides/azure-functions-python), [Azure in Go](/guides/azure-functions) and [Node.js SMTP](/smtp/nodejs).
+
+<GuideRelated />

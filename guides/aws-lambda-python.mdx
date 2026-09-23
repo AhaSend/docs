@@ -1,0 +1,61 @@
+---
+title: "How to Send Email from AWS Lambda (Python)"
+sidebarTitle: "AWS Lambda (Python)"
+description: "Send email from AWS Lambda in Python with AhaSend: a small HTTP API example, an IAM-invoked handler, sandbox tests and safe request retries."
+---
+
+import GuideRelated from "/snippets/guide-related.mdx";
+import QuickSend from "/snippets/quick-send-python.mdx";
+import CloudSend from "/snippets/cloud-python-send.mdx";
+
+AhaSend lets you send transactional email from AWS Lambda in Python through the HTTP API; this guide adds a locally testable handler for trusted, IAM-authorized invocations.
+
+## Prerequisites
+
+Use a [verified sending domain](/domains), your account ID, and a domain-scoped [send-only API v2 key](/send-api/credentials). Use [sandbox mode](/send-api/sandbox) for every test. Management tasks need a separate [full API key](/api-reference/authentication).
+
+Use Python 3.13, a runtime supported by [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html). This example needs no third-party packages.
+
+## Prepare the Python Environment
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+```
+
+<QuickSend />
+
+<CloudSend />
+
+## Create the Lambda Handler
+
+Save the following file as `lambda_function.py`. This handler accepts a direct Lambda invocation, with a JSON object containing `event_id`. Let IAM decide which backend roles may invoke it. If you later add a Function URL, use AWS_IAM authentication and adapt the request parsing; this file does not parse HTTP event envelopes.
+
+```python lambda_function.py
+import os
+from send_email import send_email
+
+def lambda_handler(event, context):
+    status, result = send_email(event, "Bearer " + os.environ["SEND_TOKEN"])
+    if status != 202:
+        raise RuntimeError(f"Email job failed with status {status}")
+    return result
+```
+
+## Run It Locally
+
+Export the environment variables named above, then run this in the same directory. A new test run needs a new `event_id`; retry a previous job with its original ID.
+
+```bash
+python -c 'from lambda_function import lambda_handler; print(lambda_handler({"event_id":"local-lambda-001"}, None))'
+```
+
+Expect `queued` or `scheduled` statuses. An invalid event or API failure raises an exception, so the caller can record the failed job. Before using asynchronous Lambda invocation, account for AWS retries and the AhaSend idempotency time limit; keep a durable job record.
+
+## Configure the Hosted Function
+
+Package both Python files at the archive root and set the handler to `lambda_function.lambda_handler` with runtime `python3.13`. Give the function enough time for its 10-second HTTP request and startup. Provide outbound HTTPS access; a function inside a private VPC needs an appropriate network path to the public API. Keep secrets in AWS Secrets Manager and load them in your deployment's secret-handling code. Follow [AWS's Python packaging steps](https://docs.aws.amazon.com/lambda/latest/dg/python-package.html) when publishing.
+
+Use [delivery webhooks](/integrations/webhooks) to track the final outcome after acceptance. See [Lambda in Node.js](/guides/aws-lambda) for the SDK version and [Python SMTP](/smtp/python) for the SMTP alternative.
+
+<GuideRelated />

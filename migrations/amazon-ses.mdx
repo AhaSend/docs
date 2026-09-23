@@ -1,0 +1,70 @@
+---
+title: "Migrate from Amazon SES"
+sidebarTitle: "From Amazon SES"
+description: "Migrate from Amazon SES to AhaSend with API field and SMTP setting maps, webhook event changes, suppression import steps and a gradual traffic switch."
+---
+
+import MigrationWebhookChecks from "/snippets/migration-webhook-checks.mdx";
+
+import MigrationSmtpSettings from "/snippets/migration-smtp-settings.mdx";
+
+import MigrationApiResult from "/snippets/migration-api-result.mdx";
+
+import MigrationPrepare from "/snippets/migration-prepare.mdx";
+
+import ImportSuppressions from "/snippets/migration-suppression-import.mdx";
+import MigrationCutover from "/snippets/migration-cutover.mdx";
+
+AhaSend migration from Amazon SES means changing your send call or SMTP settings, mapping delivery events and carrying blocked recipients across before moving traffic.
+
+<MigrationPrepare />
+
+## Map the API Fields
+
+Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message) with [v2 authentication](/api-reference/authentication). This is a field mapping from [Amazon SES's send API](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_SendEmail.html), not a drop-in change of base URL.
+
+| Amazon SES v2 field | AhaSend v2 field or change |
+|---|---|
+| `FromEmailAddress` | `from` address object |
+| `Destination.ToAddresses` | `recipients[]` address objects |
+| `Content.Simple.Subject.Data` | `subject` |
+| `Content.Simple.Body.Text.Data` / `.Html.Data` | `text_content` / `html_content` |
+| `ReplyToAddresses` | One `reply_to` address object; review multiple-reply-address workflows |
+| `EmailTags` name/value pairs | `tags` strings using an application-defined representation |
+| `Content.Template` | Render the template or adapt its content and substitutions in your app |
+| `Content.Raw` | Parse the MIME parts into AhaSend fields, or send the message over SMTP |
+| `ConfigurationSetName` | No identical request field; configure webhooks, tags and domain settings explicitly |
+| `Destination.CcAddresses` / `.BccAddresses` | [Create Conversation](/api-reference/messages/create-conversation) |
+
+<MigrationApiResult />
+
+## Replace the SMTP Settings
+
+Replace the regional SES SMTP endpoint and SES SMTP credentials with AhaSend's host and new SMTP credentials. SES SMTP credentials differ from AWS access keys; neither works as an AhaSend credential. See [SES SMTP credentials](https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html).
+
+<MigrationSmtpSettings />
+
+## Map Events by Meaning
+
+These are the closest matching outcomes, not identical payloads or a guaranteed one-to-one event sequence. Keep the provider name with each saved message ID while both systems are active. See [Amazon SES's event documentation](https://docs.aws.amazon.com/ses/latest/dg/event-publishing-retrieving-sns-contents.html) and the [AhaSend event list](/api-reference/webhooks).
+
+| SES notification or event | AhaSend event or application handling |
+|---|---|
+| `Send` | `message.reception` as the closest acceptance-stage event |
+| `Delivery` | `message.delivered` |
+| `DeliveryDelay` | `message.transient_error` |
+| `Bounce` | `message.bounced` or `message.failed`; inspect the bounce type and cause |
+| `Complaint` | `suppression.created` with a complaint reason |
+| `Open` / `Click` | `message.opened` / `message.clicked` when tracking is enabled |
+| `Reject` / `Rendering Failure` | Handle API acceptance or rendering errors and final failure separately; no exact event-name replacement |
+| `Subscription` | Keep list-specific subscription preferences in your application |
+
+<MigrationWebhookChecks />
+
+## Export the Old Recipient Blocks
+
+Export your [SES account-level suppression list](https://docs.aws.amazon.com/ses/latest/dg/sending-email-suppression-list.html) in each AWS Region used for sending. Preserve bounce and complaint reasons. Also bring over your own unsubscribe and contact-list preferences; the SES account suppression list alone does not contain every opt-out. Follow pagination and compare counts before importing.
+
+<ImportSuppressions />
+
+<MigrationCutover />

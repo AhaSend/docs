@@ -1,0 +1,36 @@
+---
+title: "Hetzner DNS: SPF, DKIM and DMARC"
+sidebarTitle: "Hetzner"
+description: "Add AhaSend SPF, DKIM and DMARC records in Hetzner: find the DNS form, enter the right names and values, then verify your sending domain."
+---
+
+import DnsPrerequisites from "/snippets/dns-prerequisites.mdx";
+import DnsChecks from "/snippets/dns-check-records.mdx";
+import DnsRelated from "/snippets/dns-related.mdx";
+
+AhaSend verifies domains hosted at Hetzner when you publish the SPF, DKIM and DMARC records from your domain page; this guide shows where to enter them.
+
+<DnsPrerequisites />
+
+## Open the DNS Form
+
+Open your project in **Hetzner Console**, choose **DNS**, then select your zone. Choose the type from AhaSend and fill in **Name** and the record value. These steps follow [Hetzner's DNS guide](https://docs.hetzner.com/networking/dns/getting-started/adding-records/).
+
+Choose the record Type, fill in its name and value, then select **Add**. Use Hetzner Console for current DNS management. Keep existing TXT values at a name when editing its record set, but keep only one value beginning with `v=spf1`.
+
+Hetzner requires [TXT values in double quotes](https://docs.hetzner.com/networking/dns/record-types/txt-record/). Put quotes around the complete SPF or DMARC value when entering it; keep the text inside unchanged. CNAME targets are not TXT values and do not use those quotes.
+
+## Add SPF, DKIM and DMARC
+
+For a zone named `example.com`, use this name mapping. The examples show a common managed-DKIM setup; your dashboard's names and targets take precedence.
+
+| AhaSend record | Type | Name in the provider form | Value |
+|---|---|---|---|
+| SPF for `example.com` | TXT | `@` | SPF value shown by AhaSend, merged into any existing SPF record |
+| `managed._domainkey.example.com` | CNAME | `managed._domainkey` | First DKIM target from your domain page |
+| `managed2._domainkey.example.com` | CNAME | `managed2._domainkey` | Second DKIM target from your domain page |
+| `_dmarc.example.com` | TXT | `_dmarc` | Your reviewed DMARC policy |
+
+<DnsChecks />
+
+<DnsRelated />

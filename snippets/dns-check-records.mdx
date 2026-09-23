@@ -1,0 +1,12 @@
+1. If an SPF record already exists at the sending name, edit it to include AhaSend as described in [domain setup](/domains). Do not add a second SPF record.
+2. Publish both managed DKIM CNAMEs. If AhaSend shows a manual DKIM TXT record, use TXT and its exact selector instead.
+3. Keep one DMARC record. Review all senders that use the domain before changing an existing policy; see [SPF, DKIM and DMARC](/email-authentication).
+4. Add the return-path and any tracking records displayed by AhaSend, using the same CNAME name mapping. Preserve your mailbox MX records unless you are deliberately configuring [inbound routing](/integrations/routing).
+
+For a sending subdomain such as `notify.example.com` in the `example.com` zone, use `notify` for SPF, `_dmarc.notify` for DMARC, and `managed._domainkey.notify` for that example DKIM name. If `notify.example.com` has its own delegated zone, names are relative to that zone instead.
+
+## Verify the Records in AhaSend
+
+Save the changes, then open the sending domain in AhaSend and click **Check DNS**. Compare each saved full hostname, record type and value with the dashboard. Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
+
+If a check fails, look for a repeated domain suffix, a CNAME at the wrong name, a missing record, or changes made at a DNS provider that does not serve the current nameservers. The [troubleshooting guide](/troubleshooting) explains how to narrow down a failed check.

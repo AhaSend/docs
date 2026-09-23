@@ -5,6 +5,10 @@ description: "Add and verify your sending domain in AhaSend: publish the SPF, DK
 icon: "globe"
 ---
 
+import DnsProviderCards from "/snippets/dns-provider-cards.mdx";
+
+import EmailHelpGuides from "/snippets/email-help-guides.mdx";
+
 
 To send email with AhaSend, add your domain, publish its SPF, DKIM and DMARC records, then run the DNS check; this guide walks through each step.
 
@@ -42,7 +46,7 @@ Email receivers use multiple authentication methods to verify that emails are le
 Without proper domain setup, your emails will either be **rejected outright** or **land in spam folders**, significantly impacting your delivery rates.
 
 <Tip>
-**Subdomain recommendation:** Use a subdomain like `email.yourcompany.com` instead of your main domain for transactional emails. This isolates your transactional email reputation from marketing campaigns.
+**Subdomain recommendation:** Use a subdomain like `email.yourcompany.com` instead of your main domain for transactional emails. This separates configuration and monitoring; mailbox providers can still consider the parent domain’s reputation. See [sending subdomains](/deliverability#should-transactional-mail-use-a-separate-subdomain).
 </Tip>
 
 ## Prerequisites
@@ -290,28 +294,9 @@ Before setting up your domain, make sure you have:
 
 ## DNS Provider Guides
 
-Need help adding DNS records? Here are guides for popular providers:
+Choose your authoritative DNS provider for record names and setup steps.
 
-<CardGroup cols={3}>
-  <Card title="Cloudflare" icon="cloud" href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/">
-    Manage DNS records in Cloudflare dashboard
-  </Card>
-  <Card title="GoDaddy" icon="globe" href="https://www.godaddy.com/help/add-a-txt-record-19232">
-    Add TXT and CNAME records in GoDaddy
-  </Card>
-  <Card title="Namecheap" icon="dollar-sign" href="https://www.namecheap.com/support/knowledgebase/article.aspx/317/2237/how-do-i-add-txtspfdkimdmarc-records-for-my-domain/">
-    Configure email authentication records
-  </Card>
-  <Card title="Route 53" icon="aws" href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html">
-    AWS Route 53 record management
-  </Card>
-  <Card title="Squarespace Domains" icon="globe" href="https://support.squarespace.com/hc/en-us/articles/360002101888-Adding-custom-DNS-records-to-your-Squarespace-managed-domain">
-    Add DNS records in Squarespace Domains
-  </Card>
-  <Card title="Other Providers" icon="question" href="mailto:support@ahasend.com">
-    Contact support for help with your DNS provider
-  </Card>
-</CardGroup>
+<DnsProviderCards />
 
 <a id="manage-domains-with-api" />
 
@@ -392,7 +377,7 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
   <Accordion title="Still Having Issues?">
     **We're here to help:**
 
-    - **Check our status page** for any ongoing DNS issues
+    - **Check our [status page](https://status.ahasend.com)** for any ongoing DNS issues
     - **Contact support** at [support@ahasend.com](mailto:support@ahasend.com)
     - **Include your domain name** and specific error messages
     - **Attach screenshots** of your DNS configuration if helpful
@@ -441,6 +426,8 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
 ### Should I Use a Subdomain?
 
 Use a dedicated subdomain when you want to separate transactional sending from other mail on your main domain. Add and verify that subdomain in AhaSend.
+
+<EmailHelpGuides />
 
 ## Related Guides
 

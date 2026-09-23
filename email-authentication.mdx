@@ -1,0 +1,53 @@
+---
+title: "SPF, DKIM and DMARC for Transactional Email"
+sidebarTitle: "SPF, DKIM and DMARC"
+description: "Understand SPF, DKIM and DMARC for AhaSend transactional email, check domain alignment, avoid duplicate records and choose a policy for all your senders."
+---
+
+import EmailConceptRelated from "/snippets/email-concept-related.mdx";
+
+AhaSend uses SPF, DKIM and DMARC to authenticate your sending domain; this guide explains what each check means and how to choose a policy without breaking existing mail.
+
+## What Does Each Record Do?
+
+| Check | Question it answers | DNS record | What it does not prove |
+|---|---|---|---|
+| SPF | Is this server allowed to send for the envelope sender's domain? | TXT at the SPF domain | That the visible From address is the same domain |
+| DKIM | Does the message match a signature made for the signing domain? | A selector's public key, reached through TXT or a managed CNAME | That the recipient asked for this message |
+| DMARC | Does passing SPF or DKIM align with the visible From domain? | TXT at `_dmarc` | That the email will land in the inbox |
+
+The envelope sender receives delivery errors; it can differ from the From address a reader sees. DKIM adds a signature to the email. DMARC ties at least one passing authentication result back to the visible From domain. See the [DMARC specification](https://www.rfc-editor.org/rfc/rfc7489.html) for alignment and policy rules.
+
+## How Do I Set Them Up in AhaSend?
+
+[Domain setup](/domains) gives the exact records and dashboard steps. Add your sending domain there, publish its records at your DNS host, then click **Check DNS**. The [provider guides](/dns) explain how providers handle names such as `managed._domainkey` and `_dmarc`.
+
+Keep one SPF record at each sending name. Add the AhaSend include to your existing record rather than adding a second record or dropping other senders. SPF also limits DNS lookups during evaluation; check the [SPF rules](https://www.rfc-editor.org/rfc/rfc7208.html#section-4.6.4) before stacking many providers.
+
+Managed DKIM uses the records AhaSend supplies; publish both active and standby selectors as explained in [domain setup](/domains). A different provider can use a different selector on the same domain. Do not overwrite a live selector simply to make room for the migration.
+
+## What Is DMARC Alignment?
+
+Alignment means the domain that passed SPF or DKIM matches the visible From domain under the policy's rules. Relaxed alignment can allow related subdomains under the same organizational domain; strict alignment requires an exact match. A passing SPF result for an unrelated return-path domain alone will not pass DMARC.
+
+For a sender such as `receipts@notify.example.com`, check the actual From domain, DKIM `d=` domain and envelope sender domain in a received message. Publishing a record at `example.com` does not automatically create every record needed at `notify.example.com`.
+
+## Which DMARC Policy Should I Choose?
+
+Choose a policy only after identifying every service that sends from the domain. DMARC affects those services too.
+
+| Policy | Requested handling when DMARC fails | When to consider it |
+|---|---|---|
+| `p=none` | Request no quarantine or rejection | Initial monitoring while you find and fix legitimate senders |
+| `p=quarantine` | Treat failing mail as suspicious | After legitimate senders pass alignment |
+| `p=reject` | Reject failing mail | After monitoring shows the domain is ready for enforcement |
+
+Receiving systems can still apply their own policies. If a DMARC record exists, review and update that one record. Do not publish two policies. The `sp` tag controls subdomain policy when applicable; check it before adding a transactional subdomain.
+
+The example policy on [domain setup](/domains) has no `rua` tag and sends no aggregate reports. You can add your own report mailbox or reporting service. Review its data handling before doing so; AhaSend does not become the report recipient just because you use its sending service.
+
+## How Do I Check Authentication After Setup?
+
+DNS verification checks the published setup. A real received message lets you inspect `Authentication-Results` for SPF, DKIM and DMARC and check alignment. Sandbox mode does not deliver to a mailbox, so it cannot prove inbox placement or a recipient's authentication result. See [deliverability](/deliverability) for sender requirements and [bounces](/bounces) for rejected messages.
+
+<EmailConceptRelated />

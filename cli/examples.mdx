@@ -246,7 +246,7 @@ ahasend webhooks listen \
   --events message.bounced,message.failed
 ```
 
-The receiver processes `payload.type` and `payload.data.recipient`. CLI listener output is for people, not a line-delimited JSON stream. See [webhook verification and processing](/integrations/webhooks). AhaSend already creates cause-dependent automatic suppressions; see [suppression durations](/api-reference/webhooks#suppression-duration).
+The receiver processes `payload.type` and `payload.data.recipient`. CLI listener output is for people, not a line-delimited JSON stream. See [webhook verification and processing](/integrations/webhooks). AhaSend already creates cause-dependent automatic suppressions; see [suppression durations](/bounces#suppression-duration).
 
 ### Webhook Testing Pipeline
 
@@ -525,4 +525,4 @@ echo "Emails sent to $ENVIRONMENT environment"
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
 - [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).
 - [Domain setup](/domains), [Sandbox behavior](/send-api/sandbox), [Tracking setup](/tracking/open-tracking).
-- [Suppression durations](/api-reference/webhooks#suppression-duration).
+- [Suppression durations](/bounces#suppression-duration).

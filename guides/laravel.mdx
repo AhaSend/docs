@@ -1,0 +1,94 @@
+---
+title: "How to Send Email with Laravel via SMTP"
+sidebarTitle: "Laravel"
+description: "Send email from Laravel through AhaSend SMTP: configure the mailer, require STARTTLS, run a sandbox command and handle failed submissions in your app."
+---
+
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpRelated from "/snippets/smtp-related.mdx";
+
+AhaSend lets Laravel send transactional email through its SMTP mailer; this guide gives you a short sandbox test and a production configuration with required TLS.
+
+<SmtpPrerequisites />
+
+Use PHP 8.2 or newer, Composer and a Laravel 12 application. In its private `.env`, set `MAIL_USERNAME`, `MAIL_PASSWORD` to sandbox SMTP credentials and `MAIL_FROM_ADDRESS` to your verified sender. Do not commit that file.
+
+## Install Laravel
+
+In a new working directory, create a test app. For an existing Laravel 12 app, use its root directory instead.
+
+```bash
+composer create-project laravel/laravel:^12.0 ahasend-laravel
+cd ahasend-laravel
+```
+
+Save `quick-send.php` in the app root:
+
+```php quick-send.php
+<?php
+require __DIR__.'/vendor/autoload.php';
+$app = require __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+config(['mail.default' => 'smtp', 'mail.mailers.smtp' => [
+    'transport' => 'smtp', 'scheme' => 'smtp', 'host' => 'send.ahasend.com', 'port' => 587,
+    'username' => env('MAIL_USERNAME'), 'password' => env('MAIL_PASSWORD'),
+    'require_tls' => true, 'timeout' => 10,
+]]);
+Illuminate\Support\Facades\Mail::raw('Hello from AhaSend', function ($message) {
+    $message->from(env('MAIL_FROM_ADDRESS'))->to('recipient@example.com')
+        ->subject('Laravel sandbox test');
+});
+echo "Accepted by SMTP\n";
+```
+
+Run `php quick-send.php`. A transport failure throws an exception.
+
+## Configure Laravel's SMTP Mailer
+
+Replace the sample app's `config/mail.php` with this file. In an existing app, merge the `smtp` mailer and sender settings with your current configuration.
+
+```php config/mail.php
+<?php
+return [
+    'default' => 'smtp',
+    'mailers' => ['smtp' => [
+        'transport' => 'smtp', 'scheme' => 'smtp',
+        'host' => 'send.ahasend.com', 'port' => 587,
+        'username' => env('MAIL_USERNAME'), 'password' => env('MAIL_PASSWORD'),
+        'require_tls' => true, 'timeout' => 10,
+    ]],
+    'from' => ['address' => env('MAIL_FROM_ADDRESS'), 'name' => env('MAIL_FROM_NAME', 'Example App')],
+];
+```
+
+Laravel passes `require_tls` to Symfony's SMTP transport. Keep TLS certificate checks enabled. Clear any old cached configuration with `php artisan config:clear`; rebuild the configuration cache in your normal deployment process after the secrets are present. See [Laravel Mail](https://laravel.com/docs/12.x/mail) for mailables and queues.
+
+## Add a Command with Failure Handling
+
+Add this to `routes/console.php`, after its existing opening PHP tag. The following complete file also works in the sample app.
+
+```php routes/console.php
+<?php
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Mail;
+Artisan::command('mail:send-test {recipient}', function (string $recipient) {
+    if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+        $this->error('Invalid recipient');
+        return 1;
+    }
+    try {
+        Mail::raw('Your account is ready.', function ($message) use ($recipient) {
+            $message->to($recipient)->subject('Welcome');
+        });
+        $this->info('Accepted by SMTP');
+        return 0;
+    } catch (Throwable $error) {
+        $this->error('Email failed; inspect the job and SMTP settings.');
+        return 1;
+    }
+});
+```
+
+Run `php artisan mail:send-test recipient@example.com` with a sandbox credential. In your app, choose the recipient from the authenticated user's data and dispatch a job after its database transaction commits. Save the job outcome. SMTP does not have API idempotency keys, so reconcile an uncertain submission before retrying. Track [delivery events](/integrations/webhooks) separately from SMTP acceptance.
+
+<SmtpRelated />

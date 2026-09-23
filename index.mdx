@@ -5,6 +5,8 @@ description: "AhaSend developer docs: send transactional email with the REST API
 icon: "book-open"
 ---
 
+import EmailHelpGuides from "/snippets/email-help-guides.mdx";
+
 import OfficialSdks from "/snippets/official-sdks.mdx";
 
 
@@ -65,8 +67,11 @@ AhaSend is a European transactional email service for developers: send through a
   <Card title="Express" icon="node-js" href="/guides/express">Add a protected send route and verified webhooks.</Card>
   <Card title="Hono" icon="server" href="/guides/hono">Send email from a Hono server.</Card>
   <Card title="Go with Gin" icon="golang" href="/guides/gin">Use the Go SDK in your Gin handlers.</Card>
-  <Card title="Python SMTP" icon="python" href="/smtp/python">Send with Python's smtplib and STARTTLS.</Card>
-  <Card title="PHP SMTP" icon="php" href="/smtp/php">Send with PHPMailer or Symfony Mailer.</Card>
+  <Card title="Django" icon="python" href="/guides/django">Send from Django through SMTP with STARTTLS.</Card>
+  <Card title="Laravel" icon="php" href="/guides/laravel">Configure Laravel’s SMTP mailer.</Card>
+  <Card title="WordPress" icon="wordpress" href="/guides/wordpress">Set up the existing email API plugin.</Card>
+  <Card title="Drupal" icon="drupal" href="/guides/drupal">Configure the module and Mail System.</Card>
+  <Card title="Symfony" icon="php" href="/guides/symfony">Use the SMTP bridge and Flex recipe.</Card>
 </CardGroup>
 
 Browse [all framework, platform and AI-tool guides](/guides).
@@ -77,7 +82,7 @@ Browse [all framework, platform and AI-tool guides](/guides).
   <Card title="Email Tracking" icon="chart-line" href="/tracking/open-tracking">Record open and click events.</Card>
   <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">Receive delivery, bounce and engagement events.</Card>
   <Card title="Inbound Routing" icon="route" href="/integrations/routing">Forward parsed incoming email to your application.</Card>
-  <Card title="Suppressions" icon="shield-xmark" href="/api-reference/suppressions/get-suppressions">Inspect blocked recipient addresses through the API.</Card>
+  <Card title="Suppressions" icon="shield-xmark" href="/bounces">Understand bounces, blocked recipients and suppression expiry.</Card>
 </CardGroup>
 
 ## Need Help?
@@ -104,10 +109,12 @@ Replace placeholder values with your API keys and verified domain. Use [sandbox 
 
 Ready to start sending emails that actually reach the inbox? Let's get you set up! 🚀
 
+<EmailHelpGuides />
+
 ## Related Guides
 
 - [Start sending](/quickstart), [Domain setup](/domains), [Send-only API keys](/send-api/credentials).
 - [Sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
 - [SDK and framework guides](/guides), [Plans and limits](/facts), [Product releases](/changelog).
 - [Retention rules](/retention), [Tracking setup](/tracking/open-tracking), [Sandbox behavior](/send-api/sandbox).
-- [Suppression durations](/api-reference/webhooks#suppression-duration), [Dedicated IP availability](/scale/dedicated-ips).
+- [Suppression durations](/bounces#suppression-duration), [Dedicated IP availability](/scale/dedicated-ips).

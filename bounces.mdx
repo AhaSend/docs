@@ -1,0 +1,57 @@
+---
+title: "Email Bounces, Failures and Suppressions"
+sidebarTitle: "Bounces and Suppressions"
+description: "Handle AhaSend email bounces, temporary failures and suppressed recipients: map webhook events to delivery outcomes and check suppression expiry rules."
+---
+
+import EmailConceptRelated from "/snippets/email-concept-related.mdx";
+
+AhaSend reports bounces, failures and suppressed recipients through message logs and webhooks; this guide maps those outcomes to the action your application should take.
+
+## What Is the Difference Between a Hard and Soft Bounce?
+
+A hard bounce is a permanent rejection for that delivery attempt, such as an invalid mailbox. A soft bounce is a temporary delivery problem, such as a busy server. Read the server's full reply and the [SMTP error reference](/smtp/errors), because the same broad code can have several causes.
+
+| AhaSend event | What happened | What your app should do |
+|---|---|---|
+| [`message.reception`](/api-reference/webhooks/message-reception) | AhaSend accepted the message | Record acceptance; wait for the delivery outcome |
+| [`message.delivered`](/api-reference/webhooks/message-delivered) | The recipient server accepted it | Record delivery to the server, without assuming inbox placement |
+| [`message.transient_error`](/api-reference/webhooks/message-transient_error) | An attempt hit a temporary problem | Let AhaSend continue its message delivery attempts; do not send another copy |
+| [`message.failed`](/api-reference/webhooks/message-failed) | Delivery failed, including an exhausted delivery window | Inspect attempts, cause and expiry before deciding on another send |
+| [`message.bounced`](/api-reference/webhooks/message-bounced) | The server rejected the message permanently, or a later bounce notice arrived | Stop retrying the same invalid address; inspect the reason |
+| [`message.suppressed`](/api-reference/webhooks/message-suppressed) | A suppression prevented this send | Look up the matching suppression and respect it |
+| [`suppression.created`](/api-reference/webhooks/suppression-created) | An address was added to the suppression list | Update your application's blocklist or recipient state |
+
+The response to [Create Message](/api-reference/messages/create-message) is an acceptance response with per-recipient `queued`, `scheduled` or `error` entries. It is not the final delivery state. Check each recipient even when the HTTP request succeeds.
+
+## Why Was My Email Suppressed?
+
+A suppression blocks sending to an address for the matching sending domain, or for the applicable account domains. Look up the address and sending domain with [List Suppressions](/api-reference/suppressions/get-suppressions) or the [suppression CLI](/cli/commands/suppressions). Read its reason and expiry instead of assuming every suppression came from a hard bounce.
+
+AhaSend can create suppressions from delivery problems or spam complaints. Your application can also create one for an unsubscribe or an internal blocklist. Reasons are readable strings, including caller-supplied text; do not treat them as a fixed enum.
+
+## Suppression Duration
+
+| Cause | Duration |
+|---|---|
+| Most bounces | 30 days |
+| Temporary delivery failures | 7 days |
+| Message expires after repeated attempts | 15 days |
+| Spam complaint | Effectively permanent |
+| Created through the API | Caller supplies the required `expires_at` |
+
+API-created suppressions do not inherit a default expiry from their reason. Keep unsubscribes and complaints in your own durable recipient preferences too; an expiry must not silently restore permission to send unwanted mail.
+
+## When Should I Remove a Suppression?
+
+Remove a suppression only after resolving its cause and confirming that sending is appropriate. For an invalid mailbox, ask the user to correct or verify the address. A complaint or unsubscribe is not a reason to try a different sender domain. Use [Delete Suppression](/api-reference/suppressions/delete-suppression) for the specific address and domain; clearing the whole list can restart unwanted mail.
+
+## How Should My Webhook Handler Update State?
+
+Verify the [signature](/api-reference/webhooks/security), save the `webhook-id` delivery header to detect duplicate deliveries, and record the message ID, event type and timestamp. Acknowledge verified unknown event types with 2xx. Keep the event history so a late bounce or repeated notification does not erase useful earlier evidence.
+
+A delivery attempt's `classification` is an open string. Values can change as classification improves; keep the original SMTP response and do not reject an entire webhook because a new classification appears. Distinguish [webhook delivery retries](/api-reference/webhooks/retry-policy) from the email's own [schedule and expiry](/send-api/send-email).
+
+Test each branch with the [sandbox outcomes](/send-api/sandbox) and [local webhook testing](/cli/webhook-testing). Use the [bounce report API](/api-reference/reports/get-bounce-report) to find patterns by recipient domain before changing volume.
+
+<EmailConceptRelated />

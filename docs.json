@@ -33,11 +33,44 @@
             ]
           },
           {
+            "group": "Domain Authentication",
+            "pages": [
+              "email-authentication",
+              {
+                "group": "DNS Providers",
+                "pages": [
+                  "dns/index",
+                  "dns/cloudflare",
+                  "dns/godaddy",
+                  "dns/namecheap",
+                  "dns/route-53",
+                  "dns/hetzner",
+                  "dns/ionos",
+                  "dns/strato",
+                  "dns/transip",
+                  "dns/ovh",
+                  "dns/squarespace",
+                  "dns/vercel"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Delivery and Troubleshooting",
+            "pages": [
+              "deliverability/index",
+              "bounces",
+              "troubleshooting",
+              "glossary"
+            ]
+          },
+          {
             "group": "Sending with SMTP",
             "pages": [
               "smtp/index",
               "smtp/credentials",
               "smtp/special-headers",
+              "smtp/errors",
               {
                 "group": "Code examples",
                 "icon": "code",
@@ -87,6 +120,7 @@
           {
             "group": "Security",
             "pages": [
+              "security/index",
               "security/2fa",
               "security/2fa-enforcement",
               "security/scoped-credentials",
@@ -368,30 +402,41 @@
             "pages": [
               "guides/astro",
               "guides/aws-lambda",
+              "guides/aws-lambda-python",
               "guides/azure-functions",
+              "guides/azure-functions-nodejs",
+              "guides/azure-functions-python",
               "guides/bun",
               "guides/chi",
               "guides/cloudflare-workers",
               "guides/deno-deploy",
+              "guides/django",
+              "guides/drupal",
               "guides/echo",
               "guides/elysiajs",
               "guides/encore",
               "guides/express",
               "guides/fastify",
               "guides/fiber",
+              "guides/flask",
               "guides/gin",
               "guides/google-cloud-functions",
+              "guides/google-cloud-functions-nodejs",
+              "guides/google-cloud-functions-python",
               "guides/gorilla-mux",
               "guides/hono",
               "guides/koa",
+              "guides/laravel",
               "guides/nestjs",
               "guides/nextjs",
               "guides/nuxt",
               "guides/railway",
               "guides/remix",
               "guides/sveltekit",
+              "guides/symfony",
               "guides/vercel",
-              "guides/vite"
+              "guides/vite",
+              "guides/wordpress"
             ]
           },
           {
@@ -404,6 +449,16 @@
               "guides/lovable",
               "guides/v0",
               "guides/windsurf"
+            ]
+          },
+          {
+            "group": "Migration Guides",
+            "pages": [
+              "migrations/sendgrid",
+              "migrations/mailgun",
+              "migrations/postmark",
+              "migrations/resend",
+              "migrations/amazon-ses"
             ]
           }
         ]
@@ -464,6 +519,14 @@
           {
             "label": "Support",
             "href": "mailto:support@ahasend.com"
+          },
+          {
+            "label": "Status",
+            "href": "https://status.ahasend.com"
+          },
+          {
+            "label": "Security",
+            "href": "https://ahasend.com/security"
           }
         ]
       },
@@ -496,7 +559,7 @@
             "href": "https://ahasend.com/privacy"
           },
           {
-            "label": "GDPR Compliance",
+            "label": "Data Processing Agreement",
             "href": "https://ahasend.com/dpa"
           }
         ]

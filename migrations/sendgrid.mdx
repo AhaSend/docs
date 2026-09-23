@@ -1,0 +1,71 @@
+---
+title: "Migrate from SendGrid"
+sidebarTitle: "From SendGrid"
+description: "Migrate from SendGrid to AhaSend with API field and SMTP setting maps, webhook event changes, suppression import steps and a gradual traffic switch."
+---
+
+import MigrationWebhookChecks from "/snippets/migration-webhook-checks.mdx";
+
+import MigrationSmtpSettings from "/snippets/migration-smtp-settings.mdx";
+
+import MigrationApiResult from "/snippets/migration-api-result.mdx";
+
+import MigrationPrepare from "/snippets/migration-prepare.mdx";
+
+import ImportSuppressions from "/snippets/migration-suppression-import.mdx";
+import MigrationCutover from "/snippets/migration-cutover.mdx";
+
+AhaSend migration from SendGrid means changing your send call or SMTP settings, mapping delivery events and carrying blocked recipients across before moving traffic.
+
+<MigrationPrepare />
+
+## Map the API Fields
+
+Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message) with [v2 authentication](/api-reference/authentication). This is a field mapping from [SendGrid's send API](https://www.twilio.com/docs/sendgrid/api-reference/mail-send/mail-send), not a drop-in change of base URL.
+
+| SendGrid field | AhaSend v2 field or change |
+|---|---|
+| `from` | `from` address object |
+| `personalizations[].to[]` | `recipients[]`; Create Message sends a separate copy to each recipient |
+| `subject` | `subject` |
+| `content[].value` with `text/plain` or `text/html` | `text_content` or `html_content` |
+| `reply_to` | `reply_to` address object |
+| `personalizations[].dynamic_template_data` | Adapt to `recipients[].substitutions` or render in your app; template syntax is not automatically portable |
+| `categories` | `tags` strings |
+| `attachments[].content`, `filename`, `type` | `attachments[].data`, `file_name`, `content_type`, with `base64: true` for base64 data |
+| `send_at` Unix seconds | `schedule.first_attempt` as RFC3339, within the AhaSend schedule window |
+| `mail_settings.sandbox_mode.enable` | `sandbox: true` |
+| `cc` / `bcc` in personalizations | Use [Create Conversation](/api-reference/messages/create-conversation) for shared To/CC/BCC semantics |
+
+<MigrationApiResult />
+
+## Replace the SMTP Settings
+
+Replace SendGrid's `smtp.sendgrid.net`, literal username `apikey` and API-key password with AhaSend's host and a newly created SMTP username and password. Do not keep `apikey` as the username. See [SendGrid's SMTP configuration](https://www.twilio.com/docs/sendgrid/for-developers/sending-email/integrating-with-the-smtp-api).
+
+<MigrationSmtpSettings />
+
+## Map Events by Meaning
+
+These are the closest matching outcomes, not identical payloads or a guaranteed one-to-one event sequence. Keep the provider name with each saved message ID while both systems are active. See [SendGrid's event documentation](https://www.twilio.com/docs/sendgrid/for-developers/tracking-events/event) and the [AhaSend event list](/api-reference/webhooks).
+
+| SendGrid event | AhaSend event or application handling |
+|---|---|
+| `processed` | `message.reception` |
+| `delivered` | `message.delivered` |
+| `deferred` | `message.transient_error` |
+| `bounce` | Usually `message.bounced`; inspect its cause and attempts |
+| `dropped` | Inspect `message.suppressed`, `message.failed` or a send-response error according to the cause |
+| `open` / `click` | `message.opened` / `message.clicked` when tracking is enabled |
+| `spamreport` | Observe `suppression.created` and its reason; there is no separate `spamreport` event |
+| `unsubscribe` / `group_unsubscribe` | Preserve the opt-out in your app and import the relevant suppression |
+
+<MigrationWebhookChecks />
+
+## Export the Old Recipient Blocks
+
+Export each relevant SendGrid suppression group: bounces, blocks, invalid emails, spam reports, global unsubscribes and unsubscribe-group entries. Include each subuser whose mail you are moving. Preserve unsubscribe-group membership in your app; a domain-level suppression does not model individual lists. Use [SendGrid suppression management](https://www.twilio.com/docs/sendgrid/ui/sending-email/index-suppressions) to obtain the records.
+
+<ImportSuppressions />
+
+<MigrationCutover />

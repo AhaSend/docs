@@ -1,0 +1,95 @@
+---
+title: "How to Send Email with Django via SMTP"
+sidebarTitle: "Django"
+description: "Send email from Django through AhaSend SMTP: configure the email backend with STARTTLS, run a short sandbox test and report failed sends clearly."
+---
+
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpRelated from "/snippets/smtp-related.mdx";
+
+AhaSend lets Django send email through its built-in SMTP backend; this guide configures STARTTLS and tests both a short send and an application setup.
+
+<SmtpPrerequisites />
+
+Use Python 3.13 for this Django 5.2 LTS example. Set `SMTP_USERNAME`, `SMTP_PASSWORD` and `AHASEND_FROM` in your local environment before running the code.
+
+## Install Django
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install 'Django>=5.2,<5.3'
+```
+
+Save this as `quick_send.py`:
+
+```python quick_send.py
+import os
+from django.conf import settings
+from django.core.mail import send_mail
+settings.configure(
+    EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+    EMAIL_HOST="send.ahasend.com", EMAIL_PORT=587, EMAIL_USE_TLS=True,
+    EMAIL_HOST_USER=os.environ["SMTP_USERNAME"],
+    EMAIL_HOST_PASSWORD=os.environ["SMTP_PASSWORD"], EMAIL_TIMEOUT=10,
+)
+count = send_mail("Django sandbox test", "Hello from AhaSend",
+                  os.environ["AHASEND_FROM"], ["recipient@example.com"],
+                  fail_silently=False)
+if count != 1:
+    raise RuntimeError("Email was not accepted")
+print("Accepted by SMTP")
+```
+
+Run `python quick_send.py`. It exits with an error if sending fails.
+
+## Configure the Application Backend
+
+Save this as `mail_settings.py` for the standalone check, or add the settings to your existing Django settings module. They use [Django's SMTP backend](https://docs.djangoproject.com/en/5.2/topics/email/#smtp-backend).
+
+```python mail_settings.py
+import os
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "send.ahasend.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = os.environ["SMTP_USERNAME"]
+EMAIL_HOST_PASSWORD = os.environ["SMTP_PASSWORD"]
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = os.environ["AHASEND_FROM"]
+```
+
+Keep credentials in your deployment's secret store. `EMAIL_USE_TLS` enables STARTTLS; [port 465 and implicit TLS are unsupported](/smtp).
+
+## Send from Your Application
+
+Save this as `send_email.py` beside `mail_settings.py`. Set `AHASEND_TO=recipient@example.com` for the sandbox check.
+
+```python send_email.py
+import os, sys
+import django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mail_settings")
+django.setup()
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+
+def send_welcome(recipient):
+    message = EmailMultiAlternatives("Your account is ready", "Welcome to your account.",
+                                    settings.DEFAULT_FROM_EMAIL, [recipient])
+    message.attach_alternative("<p>Welcome to your account.</p>", "text/html")
+    if message.send(fail_silently=False) != 1:
+        raise RuntimeError("Email was not accepted")
+
+if __name__ == "__main__":
+    try:
+        send_welcome(os.environ["AHASEND_TO"])
+        print("Accepted by SMTP")
+    except Exception:
+        print("Email failed; check the job and SMTP settings.", file=sys.stderr)
+        sys.exit(1)
+```
+
+Run `python send_email.py`. In a real Django project, call `send_welcome` from an authorized backend task using the recipient saved for that user. Save the job's result and avoid blind retries after a connection closes during submission: SMTP does not offer API idempotency keys. Use [webhooks](/integrations/webhooks) for final delivery outcomes.
+
+<SmtpRelated />

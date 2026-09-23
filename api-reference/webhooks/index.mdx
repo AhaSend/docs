@@ -28,13 +28,7 @@ Inbound routing has a separate [`message.routing` event](/api-reference/routes/r
 
 ## Suppression Duration
 
-| Cause | Duration |
-|---|---|
-| Most bounces | 30 days |
-| Temporary delivery failures | 7 days |
-| Message expires after repeated attempts | 15 days |
-| Spam complaint | Effectively permanent |
-| Created through the API | Caller supplies the required `expires_at` |
+See [bounces and suppression durations](/bounces#suppression-duration) for expiry rules and the next steps after a failed send.
 
 ## Payload Structure
 

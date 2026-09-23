@@ -1,0 +1,34 @@
+---
+title: "GoDaddy DNS: SPF, DKIM and DMARC"
+sidebarTitle: "GoDaddy"
+description: "Add AhaSend SPF, DKIM and DMARC records in GoDaddy: find the DNS form, enter the right names and values, then verify your sending domain."
+---
+
+import DnsPrerequisites from "/snippets/dns-prerequisites.mdx";
+import DnsChecks from "/snippets/dns-check-records.mdx";
+import DnsRelated from "/snippets/dns-related.mdx";
+
+AhaSend verifies domains hosted at GoDaddy when you publish the SPF, DKIM and DMARC records from your domain page; this guide shows where to enter them.
+
+<DnsPrerequisites />
+
+## Open the DNS Form
+
+Open your Domain Portfolio, select the domain, then **DNS → Add New Record**. Choose the type from AhaSend and fill in **Name** and **Value**. These steps follow [GoDaddy's DNS guide](https://www.godaddy.com/help/add-a-txt-record-19232).
+
+Enter only the prefix in Name: `managed._domainkey`, not `managed._domainkey.example.com`. Save with **Save**, or **Save All Records** if you added several rows. If DNS editing is unavailable, check whether another provider hosts the domain’s nameservers.
+
+## Add SPF, DKIM and DMARC
+
+For a zone named `example.com`, use this name mapping. The examples show a common managed-DKIM setup; your dashboard's names and targets take precedence.
+
+| AhaSend record | Type | Name in the provider form | Value |
+|---|---|---|---|
+| SPF for `example.com` | TXT | `@` | SPF value shown by AhaSend, merged into any existing SPF record |
+| `managed._domainkey.example.com` | CNAME | `managed._domainkey` | First DKIM target from your domain page |
+| `managed2._domainkey.example.com` | CNAME | `managed2._domainkey` | Second DKIM target from your domain page |
+| `_dmarc.example.com` | TXT | `_dmarc` | Your reviewed DMARC policy |
+
+<DnsChecks />
+
+<DnsRelated />

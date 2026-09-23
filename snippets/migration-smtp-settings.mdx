@@ -1,0 +1,9 @@
+| Setting | AhaSend value |
+|---|---|
+| Host | `send.ahasend.com` |
+| Port in this migration | `587` |
+| Encryption | STARTTLS |
+| Username and password | A new AhaSend SMTP credential; use sandbox credentials for tests |
+| Provider-specific headers | Replace with supported [AhaSend headers](/smtp/special-headers) only where they serve the same task |
+
+See [SMTP settings](/smtp) for all hosts, ports, TLS requirements and limits. Keep your existing mail library and change its transport configuration; use the [language examples](/smtp) to test.

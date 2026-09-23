@@ -1,0 +1,82 @@
+---
+title: "How to Send Email with Flask via SMTP"
+sidebarTitle: "Flask"
+description: "Send email from Flask with AhaSend SMTP and Python smtplib: test in sandbox mode, require STARTTLS and add a server-only command with failure handling."
+---
+
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpRelated from "/snippets/smtp-related.mdx";
+
+AhaSend lets Flask send transactional email over SMTP; this guide uses Python's built-in smtplib and a Flask command to keep sending on the server.
+
+<SmtpPrerequisites />
+
+Use Python 3.13. Set `SMTP_USERNAME`, `SMTP_PASSWORD` and `AHASEND_FROM` in your shell or secret store. A separate Flask mail extension is not needed.
+
+## Install Flask
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install 'Flask>=3.1,<4'
+```
+
+Save this as `quick_send.py`:
+
+```python quick_send.py
+import os, smtplib, ssl
+from email.message import EmailMessage
+from flask import Flask
+app = Flask(__name__)
+with app.app_context():
+    message = EmailMessage()
+    message["From"] = os.environ["AHASEND_FROM"]
+    message["To"] = "recipient@example.com"
+    message["Subject"] = "Flask sandbox test"
+    message.set_content("Hello from AhaSend")
+    with smtplib.SMTP("send.ahasend.com", 587, timeout=10) as smtp:
+        smtp.starttls(context=ssl.create_default_context())
+        smtp.login(os.environ["SMTP_USERNAME"], os.environ["SMTP_PASSWORD"])
+        if smtp.send_message(message):
+            raise RuntimeError("A recipient was rejected")
+    print("Accepted by SMTP")
+```
+
+Run `python quick_send.py`. A failure raises an exception and exits with an error.
+
+## Add a Flask Command for Your Worker
+
+Save this as `app.py`. Set `AHASEND_TO=recipient@example.com` for testing. The command has no public HTTP endpoint. Flask's [command support](https://flask.palletsprojects.com/en/stable/cli/#custom-commands) runs it with the application context active.
+
+```python app.py
+import os, smtplib, ssl
+from email.message import EmailMessage
+import click
+from flask import Flask
+app = Flask(__name__)
+
+@app.cli.command("send-welcome")
+def send_welcome():
+    try:
+        names = ("SMTP_USERNAME", "SMTP_PASSWORD", "AHASEND_FROM", "AHASEND_TO")
+        if any(not os.environ.get(name) for name in names):
+            raise ValueError("Missing configuration")
+        message = EmailMessage()
+        message["From"] = os.environ["AHASEND_FROM"]
+        message["To"] = os.environ["AHASEND_TO"]
+        message["Subject"] = "Your account is ready"
+        message.set_content("Welcome to your account.")
+        message.add_alternative("<p>Welcome to your account.</p>", subtype="html")
+        with smtplib.SMTP("send.ahasend.com", 587, timeout=10) as smtp:
+            smtp.starttls(context=ssl.create_default_context())
+            smtp.login(os.environ["SMTP_USERNAME"], os.environ["SMTP_PASSWORD"])
+            if smtp.send_message(message):
+                raise RuntimeError("A recipient was rejected")
+        click.echo("Accepted by SMTP")
+    except (OSError, smtplib.SMTPException, ValueError, RuntimeError):
+        raise click.ClickException("Email failed; check the job and SMTP settings.") from None
+```
+
+Run `flask --app app send-welcome`. SMTP acceptance is not inbox delivery; use [delivery webhooks](/integrations/webhooks) to track the outcome. When moving this into a queue worker, read the recipient from an authorized job, save the job result, and review uncertain submissions before retrying. SMTP has no API idempotency key.
+
+<SmtpRelated />

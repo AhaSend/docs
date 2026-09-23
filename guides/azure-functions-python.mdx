@@ -1,0 +1,83 @@
+---
+title: "Send Email from Azure Functions (Python)"
+sidebarTitle: "Azure Functions (Python)"
+description: "Send email from Azure Functions in Python using AhaSend: install the v2 programming model, run a protected function locally and test in sandbox mode."
+---
+
+import GuideRelated from "/snippets/guide-related.mdx";
+import QuickSend from "/snippets/quick-send-python.mdx";
+import CloudSend from "/snippets/cloud-python-send.mdx";
+
+AhaSend lets you send transactional email from Azure Functions in Python through the HTTP API; this guide adds a protected function with a local test.
+
+## Prerequisites
+
+Use a [verified sending domain](/domains), your account ID, and a domain-scoped [send-only API v2 key](/send-api/credentials). Use [sandbox mode](/send-api/sandbox) for every test. Management tasks need a separate [full API key](/api-reference/authentication).
+
+Use Python 3.13, [Azure Functions Core Tools v4](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) and the [Python v2 programming model](https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference-python).
+
+## Install the Dependencies
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install azure-functions
+python -m pip freeze > requirements.txt
+```
+
+<QuickSend />
+
+<CloudSend />
+
+## Create the HTTP Function
+
+Save this as `function_app.py`:
+
+```python function_app.py
+import json
+import azure.functions as func
+from send_email import send_email
+app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
+
+@app.route(route="sendEmail", methods=["POST"])
+def send_email_http(req: func.HttpRequest) -> func.HttpResponse:
+    raw = req.get_body()
+    if len(raw) > 16384:
+        return func.HttpResponse(status_code=413)
+    try:
+        body = json.loads(raw)
+    except (ValueError, UnicodeError):
+        return func.HttpResponse("Invalid JSON", status_code=400)
+    status, result = send_email(body, req.headers.get("authorization", ""))
+    return func.HttpResponse(json.dumps(result), status_code=status, mimetype="application/json")
+```
+
+Create `host.json`:
+
+```json host.json
+{"version":"2.0"}
+```
+
+## Run with Core Tools
+
+Activate `.venv`, export the variables from the shared code, and run:
+
+```bash
+FUNCTIONS_WORKER_RUNTIME=python func start
+```
+
+Keep secrets, `.venv` and `local.settings.json` out of Git. In another shell with `SEND_TOKEN` set, run:
+
+```bash
+curl --fail-with-body http://localhost:7071/api/sendEmail   -H "Authorization: Bearer $SEND_TOKEN" -H 'Content-Type: application/json'   -d '{"event_id":"local-azure-python-001"}'
+```
+
+Expect HTTP 202 with acceptance statuses. Invalid JSON or event IDs return 400; a wrong bearer token returns 401. Use a new event ID for a new test and the original ID for a retry of the same message. Local Core Tools does not enforce function keys; the bearer check still runs.
+
+## Prepare the Hosted App
+
+Select Python 3.13 on a supported Linux Functions plan. Include `requirements.txt`, `host.json`, `function_app.py` and `send_email.py` in the project. Keep secrets in [Key Vault references](https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references) and ordinary configuration in app settings. Add `x-functions-key` to hosted requests alongside the bearer token. Follow [Microsoft's Python deployment guidance](https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference-python) and enforce your application's permissions and request limits.
+
+Track final delivery with [webhooks](/integrations/webhooks). Also see [Azure in Node.js](/guides/azure-functions-nodejs), [Azure in Go](/guides/azure-functions) and [Python SMTP](/smtp/python).
+
+<GuideRelated />

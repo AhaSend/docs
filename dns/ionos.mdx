@@ -1,0 +1,34 @@
+---
+title: "IONOS DNS: SPF, DKIM and DMARC"
+sidebarTitle: "IONOS"
+description: "Add AhaSend SPF, DKIM and DMARC records in IONOS: find the DNS form, enter the right names and values, then verify your sending domain."
+---
+
+import DnsPrerequisites from "/snippets/dns-prerequisites.mdx";
+import DnsChecks from "/snippets/dns-check-records.mdx";
+import DnsRelated from "/snippets/dns-related.mdx";
+
+AhaSend verifies domains hosted at IONOS when you publish the SPF, DKIM and DMARC records from your domain page; this guide shows where to enter them.
+
+<DnsPrerequisites />
+
+## Open the DNS Form
+
+Open **Domains & SSL**, find your domain, choose its actions menu, then **DNS → Add Record**. Choose the type from AhaSend and fill in **Host name** and **Value** (TXT) or **Points to** (CNAME). These steps follow [IONOS's DNS guide](https://www.ionos.com/help/domains/configuring-txt-and-srv-records/managing-txt-records/).
+
+For managed DKIM, select **CNAME** and copy the AhaSend target into Points to. Keep the existing website and mailbox records. If IONOS reports that a managed service controls a conflicting record, identify that service before replacing its entry.
+
+## Add SPF, DKIM and DMARC
+
+For a zone named `example.com`, use this name mapping. The examples show a common managed-DKIM setup; your dashboard's names and targets take precedence.
+
+| AhaSend record | Type | Name in the provider form | Value |
+|---|---|---|---|
+| SPF for `example.com` | TXT | `@` | SPF value shown by AhaSend, merged into any existing SPF record |
+| `managed._domainkey.example.com` | CNAME | `managed._domainkey` | First DKIM target from your domain page |
+| `managed2._domainkey.example.com` | CNAME | `managed2._domainkey` | Second DKIM target from your domain page |
+| `_dmarc.example.com` | TXT | `_dmarc` | Your reviewed DMARC policy |
+
+<DnsChecks />
+
+<DnsRelated />

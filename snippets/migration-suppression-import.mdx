@@ -1,0 +1,48 @@
+## Import Suppressions Before Switching Traffic
+
+Export blocked addresses using the old provider's options described above. Include hard bounces, complaints, unsubscribes and application-level opt-outs; deduplicate by address and sending domain without losing the reason. Keep the original export and your application's durable preferences. A provider change is not permission to mail an opted-out address again.
+
+Normalize the export into a CSV with `email,domain,reason,expires_at` columns. `domain` is the **AhaSend sending domain**, not the recipient's domain. This sample row is a format template; replace both placeholders. Select an expiry that preserves your block policy, and keep permanent opt-outs blocked in your own app beyond that time. See [suppression durations](/bounces#suppression-duration).
+
+```csv suppressions.csv
+email,domain,reason,expires_at
+blocked@example.com,YOUR_SENDING_DOMAIN,Migrated unsubscribe,RFC3339_FUTURE_EXPIRY
+```
+
+Use Python 3.13 or newer; the script needs no third-party packages. Set `AHASEND_ACCOUNT_ID` and `AHASEND_IMPORT_KEY`, a separate [full API key](/api-reference/authentication) with `suppressions:write`. This is a real management operation: sandbox mode does not apply to suppressions. First test with a unique address on your test sending domain, then verify it with [List Suppressions](/api-reference/suppressions/get-suppressions).
+
+Save the following as `import_suppressions.py`. It validates the whole CSV before making changes and stops on the first failed request. It requires an explicit domain so an empty cell cannot broaden the import to all domains.
+
+```python import_suppressions.py
+import csv, hashlib, json, os, sys, time, urllib.error, urllib.request
+from datetime import datetime, timezone
+with open(sys.argv[1], newline="", encoding="utf-8-sig") as source:
+    rows = list(csv.DictReader(source))
+fields = ("email", "domain", "reason", "expires_at")
+for number, row in enumerate(rows, 1):
+    if any(not row.get(field, "").strip() for field in fields):
+        raise SystemExit(f"Row {number}: fill every required column")
+    expiry = datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00"))
+    if expiry.tzinfo is None or expiry <= datetime.now(timezone.utc):
+        raise SystemExit(f"Row {number}: use a future expiry with a timezone")
+url = f"https://api.ahasend.com/v2/accounts/{os.environ['AHASEND_ACCOUNT_ID']}/suppressions"
+for number, row in enumerate(rows, 1):
+    payload = {field: row[field].strip() for field in fields}
+    encoded = json.dumps(payload, sort_keys=True).encode()
+    request = urllib.request.Request(url, encoded, headers={
+        "Authorization": f"Bearer {os.environ['AHASEND_IMPORT_KEY']}",
+        "Content-Type": "application/json",
+        "Idempotency-Key": "import-" + hashlib.sha256(encoded).hexdigest(),
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            result = json.load(response)
+            if response.status != 201 or not result.get("data"):
+                raise ValueError("Unexpected import result")
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        raise SystemExit(f"Stopped at row {number}; inspect it before retrying") from None
+    print(f"Imported row {number}")
+    time.sleep(0.05)
+```
+
+Run `python import_suppressions.py suppressions.csv`. An existing suppression can return 409: compare its domain, reason and expiry before deciding what to do. Do not delete it just to make the import pass. A stopped run may have imported earlier rows, so keep the progress output and reconcile uncertain requests. Exact retries reuse a stable [idempotency key](/api-reference/idempotency); after its time limit, verify existing records before retrying. Keep imports within [API rate limits](/api-reference/rate-limits).

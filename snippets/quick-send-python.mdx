@@ -1,0 +1,26 @@
+## Try a Sandbox Send
+
+Set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID` and `AHASEND_FROM` in your shell or local secret store. Use a [send-only key](/send-api/credentials) and an address on your [verified domain](/domains). Save this as `quick_send.py`:
+
+```python quick_send.py
+import json, os, urllib.request
+payload = {
+    "from": {"email": os.environ["AHASEND_FROM"]},
+    "recipients": [{"email": "recipient@example.com"}],
+    "subject": "My first sandbox email",
+    "text_content": "Hello from AhaSend",
+    "sandbox": True,
+}
+url = f"https://api.ahasend.com/v2/accounts/{os.environ['AHASEND_ACCOUNT_ID']}/messages"
+request = urllib.request.Request(url, json.dumps(payload).encode(), headers={
+    "Authorization": f"Bearer {os.environ['AHASEND_API_KEY']}",
+    "Content-Type": "application/json",
+})
+with urllib.request.urlopen(request, timeout=10) as response:
+    statuses = [item["status"] for item in json.load(response)["data"]]
+if not statuses or any(s not in ("queued", "scheduled") for s in statuses):
+    raise RuntimeError("A recipient was rejected")
+print({"statuses": statuses})
+```
+
+Run `python quick_send.py` in the activated environment. It prints acceptance statuses and exits with an error if sending fails. Sandbox acceptance does not deliver mail. The production version below adds input checks and a stable request key.

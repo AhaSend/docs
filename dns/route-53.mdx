@@ -1,0 +1,34 @@
+---
+title: "Amazon Route 53 DNS: SPF, DKIM and DMARC"
+sidebarTitle: "Amazon Route 53"
+description: "Add AhaSend SPF, DKIM and DMARC records in Amazon Route 53: find the DNS form, enter the right names and values, then verify your sending domain."
+---
+
+import DnsPrerequisites from "/snippets/dns-prerequisites.mdx";
+import DnsChecks from "/snippets/dns-check-records.mdx";
+import DnsRelated from "/snippets/dns-related.mdx";
+
+AhaSend verifies domains hosted at Amazon Route 53 when you publish the SPF, DKIM and DMARC records from your domain page; this guide shows where to enter them.
+
+<DnsPrerequisites />
+
+## Open the DNS Form
+
+Open **Route 53 → Hosted zones**, select the public hosted zone for your domain, and choose **Create record**. Choose the type from AhaSend and fill in **Record name** and **Value**. These steps follow [Amazon Route 53's DNS guide](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html).
+
+Use a public hosted zone, simple routing and **Alias: No** for CNAMEs. A private hosted zone is only visible inside your VPC and cannot verify a public email domain. Route 53 appends the zone name to relative record names; check the resulting full name before saving.
+
+## Add SPF, DKIM and DMARC
+
+For a zone named `example.com`, use this name mapping. The examples show a common managed-DKIM setup; your dashboard's names and targets take precedence.
+
+| AhaSend record | Type | Name in the provider form | Value |
+|---|---|---|---|
+| SPF for `example.com` | TXT | leave Record name empty | SPF value shown by AhaSend, merged into any existing SPF record |
+| `managed._domainkey.example.com` | CNAME | `managed._domainkey` | First DKIM target from your domain page |
+| `managed2._domainkey.example.com` | CNAME | `managed2._domainkey` | Second DKIM target from your domain page |
+| `_dmarc.example.com` | TXT | `_dmarc` | Your reviewed DMARC policy |
+
+<DnsChecks />
+
+<DnsRelated />
