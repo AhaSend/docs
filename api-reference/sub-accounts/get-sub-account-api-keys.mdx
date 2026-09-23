@@ -5,8 +5,15 @@ openapi: "/openapi.yaml GET /v2/accounts/{account_id}/sub-accounts/{sub_account_
 description: "List all API keys owned by an AhaSend sub-account with cursor pagination, using parent credentials. Secret keys are omitted from list responses."
 ---
 
-Returns a cursor-paginated list of API keys owned by a sub-account. The `secret_key` field is omitted from list responses.
+
+The AhaSend API returns a cursor-paginated list of API keys owned by a sub-account. The `secret_key` field is omitted from list responses.
 
 <Info>
   **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sub-account setup](/scale/sub-accounts).
+- [Sub-account API rules](/api-reference/sub-accounts/overview), [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).

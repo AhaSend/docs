@@ -5,7 +5,8 @@ openapi: "/openapi.yaml GET /v2/accounts/{account_id}/statistics/transactional/d
 description: "Measure how fast your email is delivered with the AhaSend API: delivery time statistics per recipient domain (such as gmail.com) and per time period."
 ---
 
-Returns transactional delivery time statistics grouped by recipient domain
+
+The AhaSend API returns transactional delivery time statistics grouped by recipient domain.
 
 The global statistics role can query all sender domains. A
 domain-scoped key is limited to authorized domains and must authorize
@@ -18,3 +19,8 @@ every comma-separated value supplied in `sender_domain`.
 - `recipient_domains`: Filter by recipient domains
 - `tags`: Filter by tags (comma-separated)
 - `group_by`: Group by time period (hour, day, week, month)
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Statistics CLI](/cli/commands/stats).
+- [Delivery statistics API](/api-reference/reports/get-deliverability-report), [API rate limits](/api-reference/rate-limits), [API errors](/api-reference/errors).

@@ -5,5 +5,13 @@ openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/routes/{route_id}"
 description: "Permanently delete an AhaSend inbound email route so messages sent to its recipient pattern are no longer forwarded to your webhook URL."
 ---
 
-Deletes a route. Access requires the global delete role or a delete role
+
+The AhaSend API deletes a route. Access requires the global delete role or a delete role
 matching the route's recipient domain.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Inbound routing setup](/integrations/routing).
+- [Route payload](/api-reference/routes/route-message), [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

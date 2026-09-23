@@ -5,6 +5,11 @@ description: "Send email from PHP through the AhaSend SMTP relay with PHPMailer,
 icon: "php"
 ---
 
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
+
 Send emails through AhaSend's SMTP servers using PHP with popular libraries like PHPMailer and Symfony Mailer. This guide covers everything from basic setup to advanced features like attachments and HTML content.
 
 <Warning>
@@ -12,6 +17,8 @@ Send emails through AhaSend's SMTP servers using PHP with popular libraries like
 </Warning>
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -22,35 +29,12 @@ Before you begin, ensure you have:
     - Basic knowledge of PHP and command line usage
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Connection Settings
 
-Use these settings for all PHP SMTP configurations with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`
-    **Ports:** 587 (recommended), 25, 2525
-    **Security:** STARTTLS
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`
-    **Ports:** 587 (recommended), 25, 2525
-    **Security:** STARTTLS
-    **Authentication:** Required
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## PHPMailer Integration
 
@@ -433,3 +417,5 @@ $message->getHeaders()
 <Tip>
 **Pro Tip:** Start with sandbox mode when developing, use environment variables for credentials, and always provide both HTML and plain text versions of your emails for better compatibility.
 </Tip>
+
+<SmtpRelated />

@@ -5,18 +5,24 @@ description: "AhaSend developer docs: send transactional email with the REST API
 icon: "book-open"
 ---
 
-AhaSend is a European transactional email service for developers: send through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, with data stored in the EU and 1,000 free emails per month. See [key facts and limits](/facts).
+import OfficialSdks from "/snippets/official-sdks.mdx";
+
+
+AhaSend is a European transactional email service for developers: send through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, with data stored in the EU and 1,000 free emails per month.
 
 <Info>
 **New to AhaSend?** Start with our [Quickstart Guide](/quickstart) to send your first email in under 5 minutes, or [create your free account](https://dash.ahasend.com/user/register) to get 1,000 free emails per month.
 </Info>
+
+
+<OfficialSdks />
 
 ## Why Choose AhaSend?
 
 ### Built for Developers
 - **[Clean, intuitive REST APIs](/api-reference)** and [SMTP relay](/smtp)
 - **[Powerful CLI tool](/cli)** for development, testing, and automation
-- **Sandbox Mode** for [SMTP](/smtp/sandbox) and [API](/send-api/sandbox) testing and development
+- **Sandbox Mode** for [SMTP](/send-api/sandbox) and [API](/send-api/sandbox) testing and development
 - **[Engineering-led support](mailto:support@ahasend.com)** from real developers, not chatbots
 
 
@@ -54,52 +60,25 @@ AhaSend is a European transactional email service for developers: send through a
 
 ## Popular Integration Guides
 
-Get started quickly with your preferred technology stack:
-
 <CardGroup cols={3}>
-  <Card title="Node.js" icon="node-js" href="/smtp/nodejs">
-    Send email from Node.js with Nodemailer
-  </Card>
-  <Card title="Python" icon="python" href="/smtp/python">
-    Send email with Python's smtplib and STARTTLS
-  </Card>
-  <Card title="PHP" icon="php" href="/smtp/php">
-    Send email with PHPMailer or Laravel via SMTP
-  </Card>
-  <Card title="Go" icon="golang" href="/smtp/golang">
-    Lightweight integration for Go applications
-  </Card>
-  <Card title="Ruby" icon="gem" href="/smtp/ruby">
-    Rails and Ruby applications made simple
-  </Card>
-  <Card title="Command Line" icon="terminal" href="/smtp/cli">
-    Send emails directly from your terminal or scripts
-  </Card>
+  <Card title="Next.js" icon="layer-group" href="/guides/nextjs">Send from server routes and actions.</Card>
+  <Card title="Express" icon="node-js" href="/guides/express">Add a protected send route and verified webhooks.</Card>
+  <Card title="Hono" icon="server" href="/guides/hono">Send email from a Hono server.</Card>
+  <Card title="Go with Gin" icon="golang" href="/guides/gin">Use the Go SDK in your Gin handlers.</Card>
+  <Card title="Python SMTP" icon="python" href="/smtp/python">Send with Python's smtplib and STARTTLS.</Card>
+  <Card title="PHP SMTP" icon="php" href="/smtp/php">Send with PHPMailer or Symfony Mailer.</Card>
 </CardGroup>
+
+Browse [all framework, platform and AI-tool guides](/guides).
 
 ## Core Features
 
-<AccordionGroup>
-  <Accordion title="Email Tracking" icon="chart-line">
-    Track email opens and link clicks with detailed analytics. See exactly how your users engage with your emails.
-    [Learn more about tracking →](/tracking/open-tracking)
-  </Accordion>
-
-  <Accordion title="Webhooks" icon="webhook">
-    Real-time notifications for all email events - delivery, bounces, opens, clicks, and more.
-    [Explore webhooks →](/integrations/webhooks)
-  </Accordion>
-
-  <Accordion title="Email Routing" icon="route">
-    Forward incoming emails to your application with our email routing feature.
-    [Set up routing →](/integrations/routing)
-  </Accordion>
-
-  <Accordion title="Suppression Management" icon="shield-xmark">
-    Automatically handle bounces, complaints, and unsubscribes to maintain your sender reputation.
-    [Manage suppressions →](/api-reference/suppressions/get-suppressions)
-  </Accordion>
-</AccordionGroup>
+<CardGroup cols={2}>
+  <Card title="Email Tracking" icon="chart-line" href="/tracking/open-tracking">Record open and click events.</Card>
+  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">Receive delivery, bounce and engagement events.</Card>
+  <Card title="Inbound Routing" icon="route" href="/integrations/routing">Forward parsed incoming email to your application.</Card>
+  <Card title="Suppressions" icon="shield-xmark" href="/api-reference/suppressions/get-suppressions">Inspect blocked recipient addresses through the API.</Card>
+</CardGroup>
 
 ## Need Help?
 
@@ -124,3 +103,11 @@ Replace placeholder values with your API keys and verified domain. Use [sandbox 
 4. **[Configure webhooks](/integrations/webhooks)** to track email events in real-time
 
 Ready to start sending emails that actually reach the inbox? Let's get you set up! 🚀
+
+## Related Guides
+
+- [Start sending](/quickstart), [Domain setup](/domains), [Send-only API keys](/send-api/credentials).
+- [Sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [SDK and framework guides](/guides), [Plans and limits](/facts), [Product releases](/changelog).
+- [Retention rules](/retention), [Tracking setup](/tracking/open-tracking), [Sandbox behavior](/send-api/sandbox).
+- [Suppression durations](/api-reference/webhooks#suppression-duration), [Dedicated IP availability](/scale/dedicated-ips).

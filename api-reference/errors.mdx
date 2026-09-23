@@ -5,6 +5,9 @@ icon: "triangle-exclamation"
 sidebarTitle: "Errors"
 ---
 
+
+AhaSend API errors use an HTTP status and a JSON message; this reference explains status codes and how your application should handle them.
+
 ## Error Response Format
 
 All API errors return a consistent JSON structure with an HTTP status code and a descriptive message:
@@ -267,3 +270,10 @@ When your API key doesn't have sufficient permissions:
 <Note>
 Error messages are designed to be descriptive and actionable. They provide specific guidance on what needs to be corrected in your request.
 </Note>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
+- [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [Idempotency rules](/api-reference/idempotency).
+- [API rate limits](/api-reference/rate-limits).

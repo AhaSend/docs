@@ -5,6 +5,14 @@ openapi: "/openapi.yaml POST /v2/accounts/{account_id}/routes"
 description: "Create an AhaSend inbound email route that forwards messages sent to an address or wildcard on your domain to your webhook URL as JSON."
 ---
 
-Creates a new route for inbound email routing. Authorization uses the
+
+The AhaSend API creates a new route for inbound email routing. Authorization uses the
 domain in `recipient`: the global write role or its matching
 domain-specific write role is sufficient.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Inbound routing setup](/integrations/routing).
+- [Route payload](/api-reference/routes/route-message), [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

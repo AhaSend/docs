@@ -6,9 +6,13 @@ keywords: ["windsurf ide email integration", "windsurf cascade email", "windsurf
 icon: "wind"
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
 import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from an app built with Windsurf with AhaSend, keep credentials on the server, and test a sandbox send.
 
 Brief Cascade well and it will wire up email correctly, then you brief it again from scratch on the next project. Windsurf's Rules and Workflows files turn that briefing into something you replay instead.
 
@@ -53,6 +57,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Step 2: Give Cascade the Ground Truth with a Rules File
 
@@ -222,10 +228,7 @@ Confirm these before you commit:
 
 ## Going Further
 
-- **Write a second workflow for the failure path**: one that walks `sandbox_result` through `bounce` and `suppress`, so rehearsing a rejection is a slash command rather than a memory exercise.
-- **Templating and webhooks**: per-recipient `substitutions` cover personalised batches, and `@ahasend/sdk/webhooks` verifies delivery-event signatures. Add both to your rules file so Cascade reaches for them unprompted.
-- Same grounding trick, different file: [Cursor](/guides/cursor) reads `.cursor/rules/`, [Claude](/guides/claude) reads `CLAUDE.md`, and [GitHub Copilot](/guides/github-copilot) reads `.github/copilot-instructions.md`.
-- For the finished shape of what Cascade is building, see [Express](/guides/express), [Fastify](/guides/fastify), or [SvelteKit](/guides/sveltekit).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -245,3 +248,5 @@ Confirm these before you commit:
 </AccordionGroup>
 
 Every endpoint the SDK exposes is in the [API reference](/api-reference).
+
+<GuideRelated />

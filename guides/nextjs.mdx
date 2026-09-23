@@ -5,8 +5,12 @@ description: "Send transactional email from Next.js App Router route handlers an
 keywords: ["nextjs send email", "next.js transactional email", "nextjs email api route", "ahasend nextjs", "nextjs webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from Next.js with AhaSend, keep credentials on the server, and test a sandbox send.
 
 Route Handlers and Server Actions in the [Next.js](https://nextjs.org) App Router both run on the server, so the AhaSend SDK and your API key stay out of the browser bundle. This guide sends a welcome email from each of them, and receives verified AhaSend webhooks through the SDK's App Router adapter.
 
@@ -41,6 +45,8 @@ bun add @ahasend/sdk zod server-only
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -305,14 +311,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by one hour.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Deploying to Vercel?** The [Vercel guide](/guides/vercel) covers environment variable scoping, runtime choice, and webhook endpoints on Vercel Functions.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Building a standalone API server instead? Start from the [Express guide](/guides/express).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -327,3 +326,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Buil
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

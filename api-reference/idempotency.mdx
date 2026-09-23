@@ -7,6 +7,8 @@ sidebarTitle: "Idempotency"
 
 AhaSend uses an `Idempotency-Key` to replay a stored result when you retry the same request. It reduces duplicate operations, but a server error, an interrupted request, or an expired record can allow the operation to run again. Reconcile uncertain sends before retrying when duplicates are unacceptable.
 
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
 <Note>
   Idempotency is particularly important for critical operations like sending emails, creating resources, or processing payments where duplicate actions could cause problems.
 </Note>
@@ -379,3 +381,10 @@ Responses that contain a one-time secret — API key creation and sub-account AP
 <Tip>
   For high-volume applications, consider implementing client-side deduplication in addition to server-side idempotency to reduce unnecessary API calls.
 </Tip>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
+- [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Sandbox behavior](/send-api/sandbox), [Suppression durations](/api-reference/webhooks#suppression-duration).

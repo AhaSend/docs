@@ -5,7 +5,8 @@ openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/webhooks/{webhook_id}"
 description: "Update an AhaSend webhook with the API: change its URL, event types, enabled status or domain scope. Omitted fields stay unchanged; the secret can't change."
 ---
 
-Updates an existing webhook. Omitted or null fields are unchanged.
+
+The AhaSend API updates an existing webhook. Omitted or null fields are unchanged.
 Omitted/null `domains` preserves associations, while `[]` clears the
 associations of a resulting-scoped webhook. Moving from global to
 scoped requires a non-empty `domains` array in the same request. Moving
@@ -16,3 +17,10 @@ every newly supplied domain; changing to global requires
 `webhooks:write:all`.
 
 **Note:** The webhook secret is not updatable
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

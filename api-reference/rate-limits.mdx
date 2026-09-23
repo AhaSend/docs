@@ -5,6 +5,9 @@ description: "AhaSend API v2 allows 100 requests/second per account (burst 200);
 icon: "gauge-high"
 ---
 
+
+AhaSend API rate limits apply per account; this reference lists request limits, explains HTTP 429, and shows how to retry.
+
 ## Overview
 
 AhaSend API implements rate limiting to ensure fair usage and maintain optimal performance for all users. Rate limits are applied per account and vary depending on the endpoint category.
@@ -172,3 +175,10 @@ If your application requires higher rate limits due to legitimate high-volume us
 <Card title="Need Higher Limits?" icon="envelope">
 Reach out to our [support team](mailto:support@ahasend.com) if you need increased rate limits for your production application.
 </Card>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
+- [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors).
+- [Suppression durations](/api-reference/webhooks#suppression-duration).

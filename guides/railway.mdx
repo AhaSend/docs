@@ -5,8 +5,12 @@ description: "Deploy a Node.js app that sends transactional email with the AhaSe
 keywords: ["railway deploy nodejs email", "railway transactional email", "railway environment variables", "ahasend railway", "railway webhook url"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from a Node.js app on Railway with AhaSend, keep credentials on the server, and test a sandbox send.
 
 This guide deploys the [Express app](/guides/express) as a persistent Railway service. The same deployment steps apply to other Node.js frameworks such as [Fastify](/guides/fastify), [Koa](/guides/koa), and [NestJS](/guides/nestjs).
 
@@ -17,6 +21,16 @@ This guide deploys the [Express app](/guides/express) as a persistent Railway se
 - A [Railway account](https://railway.com) and the [Railway CLI](https://docs.railway.com/guides/cli) installed, or a GitHub repo connected to the service
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{yourdomain.com}` scope for your sending domain, and your account ID
+
+## Install the SDK
+
+In your local Node.js 22 or newer backend project, run:
+
+```bash
+npm install @ahasend/sdk express
+```
+
+<QuickSend />
 
 ## What You're Deploying
 
@@ -165,11 +179,7 @@ Anything your handler writes to standard output or standard error is captured in
 
 ## Going Further
 
-- **App-side detail**: the [Express guide](/guides/express) covers sends, per-recipient error handling, and the webhook adapter in full.
-- **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for timeouts, retries, idempotency, and the opt-in local rate pacing worth enabling on a long-lived service.
-- **An alternative host**: [Vercel](/guides/vercel) runs the same SDK on serverless functions if you'd rather not manage a process.
-- **Durable webhook work**: do not rely on untracked work after returning `2xx`; Railway can redeploy, restart, or scale the process. Hand work to a durable queue or transactional outbox before acknowledging the delivery.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -184,3 +194,5 @@ Anything your handler writes to standard output or standard error is captured in
     `AHASEND_WEBHOOK_SECRET` must be copied exactly as shown in the AhaSend dashboard, including the `aha-whsec-` prefix. Re-enter it with `railway variable set AHASEND_WEBHOOK_SECRET --stdin` to avoid shell quoting problems, or, once it is sealed, through the edit option in its three-dot menu — a sealed variable cannot be updated through the Raw Editor. Never print the secret or the raw signed body while diagnosing this.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

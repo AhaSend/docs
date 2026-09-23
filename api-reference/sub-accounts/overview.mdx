@@ -5,21 +5,14 @@ description: "Use the AhaSend Sub-Accounts API to provision isolated child accou
 icon: "sitemap"
 ---
 
+
+The AhaSend Sub-Accounts API reference covers child-account status values, parent credentials, permission scopes and retry rules.
+
 <Info>
   **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>
 
-Sub-accounts let a parent account create and manage isolated child accounts under a single billing relationship. Each sub-account has its own domains, members, suppressions, and sending activity, while the parent account retains administrative control and consolidated billing.
-
-This model is built for platforms and agencies that send on behalf of many customers: provision a sub-account per customer, issue that sub-account its own API key, and let it use the full v2 API in isolation — all billed back to the parent.
-
-## Overview
-
-From the parent account you can:
-
-- **Manage the sub-account lifecycle** — create, read, update, suspend, unsuspend, and soft-delete sub-accounts
-- **Provision sub-account API keys** — create a bootstrap API key that authenticates as the child account
-- **Track usage and cost** — read per-sub-account message volume and the proportional share of the parent's invoice allocated to each sub-account
+For the product model and a complete setup example, use the [sub-accounts guide](/scale/sub-accounts).
 
 <Note>
 All sub-account endpoints are addressed under the **parent** account ID, for example `/v2/accounts/{account_id}/sub-accounts`. The `{account_id}` path parameter is always the parent account, and `{sub_account_id}` identifies the child.
@@ -38,28 +31,9 @@ Each sub-account reports a `status` field:
 
 The `monthly_credit` field is an optional monthly cap on the sub-account, where `0` means no cap.
 
-## Provisioning a sub-account
+## Parent and Child Credentials
 
-Stand up a new sub-account and give it its own credentials in two calls, then use the returned child secret for all of that customer's traffic.
-
-<Steps>
-  <Step title="Create the sub-account">
-    Call [`POST /v2/accounts/{account_id}/sub-accounts`](/api-reference/sub-accounts/create-sub-account) with the parent account ID and a unique `Idempotency-Key`. Capture the `id` from the response — this is the `sub_account_id` (the child account ID).
-  </Step>
-  <Step title="Create a bootstrap API key">
-    Call [`POST /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/api-keys`](/api-reference/sub-accounts/create-sub-account-api-key) with the parent account ID, the new `sub_account_id`, and a **different** unique `Idempotency-Key`. The credential you use must belong to the parent account and hold the `sub-account-api-keys:write` scope.
-  </Step>
-  <Step title="Store the one-time secret">
-    The `201` response includes a one-time `secret_key`. Store it immediately — it is omitted from all list, get, update, and delete responses. Exact idempotent replays within 5 minutes return the same `secret_key`; after that window it cannot be retrieved again.
-  </Step>
-  <Step title="Send as the child account">
-    Use the child `secret_key` as the bearer token and the `sub_account_id` as the `account_id` on ordinary v2 routes (for example `GET /v2/accounts/{sub_account_id}/domains`). The child key authenticates as the sub-account and is scoped to its resources.
-  </Step>
-</Steps>
-
-<Warning>
-Sub-account API keys can only be managed with **parent** credentials that hold the relevant `sub-account-api-keys:*` scope. A sub-account's own credentials cannot create or manage its nested API keys.
-</Warning>
+Use a [full parent API key](/api-reference/authentication) for the sub-account endpoints. A child key uses the child account ID on ordinary v2 endpoints and cannot manage its own nested API keys. The [setup guide](/scale/sub-accounts) walks through creation and safe storage of the one-time child secret.
 
 ## Usage and billing
 
@@ -112,5 +86,8 @@ See the [Scopes reference](/api-reference/scopes#sub-account-management) for how
   </Card>
 </CardGroup>
 
+## Related Guides
 
-Sub-accounts and DNS whitelabel are available to Platform Partners. See [plan features](/facts#plans-and-features), [sub-accounts](/scale/sub-accounts), and [DNS whitelabel](/scale/dns-whitelabel), or [contact sales](mailto:sales@ahasend.com).
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sub-account setup](/scale/sub-accounts).
+- [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key), [Idempotency rules](/api-reference/idempotency).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).

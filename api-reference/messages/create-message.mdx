@@ -5,7 +5,8 @@ openapi: "/openapi.yaml POST /v2/accounts/{account_id}/messages"
 description: "Send transactional email with the AhaSend API v2: one POST request to up to 100 recipients with templates, attachments, tracking, tags and scheduled sending."
 ---
 
-Creates and sends a message to one or more recipients. This API cannot be used if you want to send a conversational/P2P message and set CC or BCC. Use [Create Conversation Message](/api-reference/messages/create-conversation) instead.
+
+The AhaSend API creates and sends a message to one or more recipients. This API cannot be used if you want to send a conversational/P2P message and set CC or BCC. Use [Create Conversation Message](/api-reference/messages/create-conversation) instead.
 
 **Validation Requirements:**
 - Either `text_content` or `html_content` is required
@@ -21,3 +22,12 @@ Creates and sends a message to one or more recipients. This API cannot be used i
 Authorization uses the domain in `from.email`: either
 `messages:send:all` or the matching domain-specific send role is
 sufficient.
+
+## Related Guides
+
+- Before sending: [verify your sender domain](/domains).
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sending guide](/send-api/send-email).
+- [Message CLI](/cli/commands/messages), [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk).
+- [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Retention rules](/retention).

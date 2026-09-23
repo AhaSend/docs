@@ -5,7 +5,10 @@ description: "Send your first email with AhaSend: verify a domain, create an API
 icon: "rocket"
 ---
 
-Get up and running with AhaSend in under 5 minutes. This guide will walk you through sending your first email using either our REST API or SMTP relay.
+import OfficialSdks from "/snippets/official-sdks.mdx";
+
+
+Send your first email with AhaSend by verifying a domain, creating a credential, and calling the REST API or connecting to the SMTP relay.
 
 <Info>
 **Before you start:** You'll need an AhaSend account. [Sign up for free](https://dash.ahasend.com/user/register) to get 1,000 emails per month at no cost.
@@ -89,12 +92,17 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
 
 ---
 
-## HTTP API
 
-Send emails using our modern HTTP API. Perfect for web applications and microservices.
+<OfficialSdks />
+
+<a id="http-api" />
+
+## How Do I Send Through the HTTP API?
+
+Call `POST https://api.ahasend.com/v2/accounts/{account_id}/messages` with your API key and a sender on your verified domain. See [API authentication](/api-reference/authentication) for the header and [sending limits](/send-api/send-email#limits) before adding recipients.
 
 <Info>
-**API Version Note:** These examples use our latest API v2, which provides the most powerful features including advanced tracking, bulk sending, and better error handling. For simpler use cases, you can also use our [API v1](/api-reference/v1).
+**API Version Note:** These examples use our latest API v2, which provides the most powerful features including advanced tracking, bulk sending, and better error handling. Existing v1 integrations can use the [legacy API v1 reference](/api-reference/v1); use v2 for new integrations.
 </Info>
 
 ### Basic Email
@@ -298,7 +306,9 @@ func main() {
 
 ---
 
-## SMTP Relay
+<a id="smtp-relay" />
+
+## How Do I Send Through SMTP?
 
 Use our SMTP servers with any email library. Great for existing applications or when you need SMTP compatibility.
 
@@ -461,12 +471,14 @@ Now that you've sent your first email, here's what to do next:
   <Card title="Send with API" icon="code" href="/api-reference/messages/create-message">
     **Advanced API features** like templates, attachments, and bulk sending
   </Card>
-  <Card title="Sandbox SMTP" icon="flask" href="/smtp/sandbox">
+  <Card title="Sandbox SMTP" icon="flask" href="/send-api/sandbox">
     **Test safely** with sandbox mode to avoid sending emails to real recipients
   </Card>
 </CardGroup>
 
-## Troubleshooting
+<a id="troubleshooting" />
+
+## Why Did My First Send Fail?
 
 Having issues? Here are the most common problems:
 
@@ -501,3 +513,10 @@ Having issues? Here are the most common problems:
 <Info>
 **Need more help?** Email our engineering team at [support@ahasend.com](mailto:support@ahasend.com) - we typically respond within a few hours!
 </Info>
+
+## Related Guides
+
+- [Domain setup](/domains), [Send-only API keys](/send-api/credentials), [Sending guide](/send-api/send-email).
+- [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart), [SDK and framework guides](/guides).
+- [Plans and limits](/facts), [Product releases](/changelog), [Tracking setup](/tracking/open-tracking).
+- [Sandbox behavior](/send-api/sandbox).

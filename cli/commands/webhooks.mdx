@@ -5,157 +5,11 @@ icon: webhook
 sidebarTitle: "webhooks"
 ---
 
-Manage webhook endpoints for receiving real-time email events.
+AhaSend CLI `webhooks` commands let you forward and trigger email event webhooks; this page lists their arguments and flags. For the complete workflow, use the [webhook testing guide](/cli/webhook-testing).
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+`webhooks get`, `webhooks update`, `webhooks delete` and `webhooks trigger` take the resource ID as their positional argument. `webhooks create`, `webhooks list` and `webhooks listen` use the flags below. For dashboard setup, see [the webhooks guide](/integrations/webhooks).
 
-## Overview
-
-```text
-ahasend webhooks [subcommand] [flags]
-```
-
-Available subcommands:
-- `list` - List all webhooks
-- `create` - Create a new webhook
-- `get` - Get webhook details
-- `update` - Update webhook configuration
-- `delete` - Delete a webhook
-- `listen` - Listen for webhook events (development)
-- `trigger` - Trigger test events (development)
-
-## List Webhooks
-
-```bash
-ahasend webhooks list
-```
-
-## Create Webhook
-
-Create and update use short event keys: `reception`, `delivered`, `transient_error`, `failed`, `bounced`, `suppressed`, `opened`, `clicked`, `suppression_created`, and `dns_error`. Listen and trigger use full event types such as `message.delivered`. See [event payloads](/api-reference/webhooks).
-
-```bash
-# Basic webhook
-ahasend webhooks create --scope global --name "Docs webhook" --non-interactive --disabled \
-  --url https://your-app.com/webhooks/ahasend \
-  --events delivered,bounced
-
-# With description
-ahasend webhooks create --scope global --non-interactive --disabled \
-  --url https://api.example.com/email-events \
-  --events delivered,opened,clicked \
-  --name "Production email event handler"
-
-# All events
-ahasend webhooks create --scope global --name "Docs webhook" --non-interactive --disabled \
-  --url https://app.example.com/webhooks \
-  --all-events
-```
-
-### Available Events
-
-| Event | Description |
-|-------|-------------|
-| `message.reception` | Email received by AhaSend |
-| `message.delivered` | Email delivered to recipient |
-| `message.transient_error` | Temporary delivery failure |
-| `message.failed` | Permanent delivery failure |
-| `message.bounced` | Email bounced |
-| `message.suppressed` | Email suppressed |
-| `message.opened` | Email opened by recipient |
-| `message.clicked` | Link clicked in email |
-| `suppression.created` | New suppression added |
-| `domain.dns_error` | DNS resolution failure |
-
-## Get Webhook Details
-
-```bash
-ahasend webhooks get YOUR_RESOURCE_ID
-```
-
-## Update Webhook
-
-```bash
-# Update URL
-ahasend webhooks update YOUR_RESOURCE_ID \
-  --url https://new-api.example.com/webhooks
-
-# Update events
-ahasend webhooks update YOUR_RESOURCE_ID \
-  --events delivered,opened,clicked
-
-# Update both
-ahasend webhooks update YOUR_RESOURCE_ID \
-  --url https://api.example.com/v2/webhooks \
-  --all-events \
-  --name "Updated webhook endpoint"
-```
-
-## Delete Webhook
-
-```bash
-# With confirmation prompt
-TEST_ID=$(ahasend webhooks create --scope global --name "Docs deletion test" --url https://example.com/webhook --all-events --disabled --non-interactive --output json | jq -er '.id')
-ahasend webhooks delete "$TEST_ID"
-
-# Skip confirmation
-TEST_ID=$(ahasend webhooks create --scope global --name "Docs deletion test" --url https://example.com/webhook --all-events --disabled --non-interactive --output json | jq -er '.id')
-ahasend webhooks delete "$TEST_ID" --force
-```
-
-## Listen for Events (Development)
-
-Listen for webhook events in real-time using WebSocket connection. This command establishes a WebSocket connection to receive webhook events and can forward them to a local endpoint for development.
-
-An existing webhook must be enabled to emit events. The create examples above leave it disabled: after its listener connects, run `ahasend webhooks update YOUR_RESOURCE_ID --enable` in another terminal. Disable it again before stopping the listener. A temporary listener created without `--webhook-id` is enabled automatically.
-
-```bash
-# Listen for all webhook events
-ahasend webhooks listen
-
-# Use existing webhook
-ahasend webhooks listen --webhook-id YOUR_RESOURCE_ID
-
-# Forward events to local endpoint
-ahasend webhooks listen --forward-to http://localhost:3000/webhook
-
-# Filter specific event types
-ahasend webhooks listen --events message.opened,message.clicked
-
-# Slim output (only event types)
-ahasend webhooks listen --slim-output
-
-# Skip SSL verification for local endpoints
-ahasend webhooks listen --forward-to https://localhost:3000/webhook --skip-verify
-```
-
-
-## Trigger Test Events (Development)
-
-Manually trigger webhook events for testing:
-
-```bash
-# Trigger single event
-ahasend webhooks trigger YOUR_RESOURCE_ID \
-  --events message.delivered
-
-# Trigger multiple events
-ahasend webhooks trigger YOUR_RESOURCE_ID \
-  --events message.delivered,message.opened,message.clicked
-
-# Trigger all events
-ahasend webhooks trigger YOUR_RESOURCE_ID \
-  --all-events
-```
-
-<Note>
-The trigger command is intended for development and may not be available in production environments for testing webhook integrations.
-</Note>
-
-## Next Steps
-
-- [Configure routes for inbound email](/cli/commands/routes)
-- [View statistics](/cli/commands/stats)
+Create and update use short event keys: `reception`, `delivered`, `transient_error`, `failed`, `bounced`, `suppressed`, `opened`, `clicked`, `suppression_created`, and `dns_error`. Listen and trigger use full event types such as `message.delivered`. See the [event reference](/api-reference/webhooks).
 
 ## Command Flags
 
@@ -224,3 +78,10 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | `--no-events` | Disable all event types |
 | `--scope string` | Update webhook scope |
 | `--url string` | Update webhook URL |
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Local webhook testing](/cli/webhook-testing), [Signature verification](/api-reference/webhooks/security).
+- [Retry policy](/api-reference/webhooks/retry-policy), [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication).
+- [Permission scopes](/api-reference/scopes), [Suppression durations](/api-reference/webhooks#suppression-duration).

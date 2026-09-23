@@ -5,8 +5,12 @@ description: "Send transactional email from an on-demand Astro API endpoint with
 keywords: ["astro send email", "astro transactional email", "astro email api", "ahasend astro", "astro webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from Astro with AhaSend, keep credentials on the server, and test a sandbox send.
 
 In Astro the send has to live in an on-demand API endpoint, since pages are prerendered by default. Switch on on-demand rendering and add the [@astrojs/node](https://docs.astro.build/en/guides/integrations-guide/node/) adapter to get real server endpoints.
 
@@ -43,6 +47,8 @@ bunx astro add node
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 `astro add node` wires the adapter into `astro.config.mjs` for you:
 
@@ -316,12 +322,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour. The first attempt must be in the future and within seven days of the request.
-- **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself and pass the encoded string as `data` in `attachments: [{ data, content_type, file_name, base64: true }]`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Using a different meta-framework? The same SDK powers the [Next.js](/guides/nextjs) and [SvelteKit](/guides/sveltekit) guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -339,3 +340,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Usin
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

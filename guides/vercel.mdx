@@ -5,8 +5,12 @@ description: "Send transactional email from Vercel Functions with the AhaSend No
 keywords: ["vercel deploy email app", "vercel transactional email", "vercel serverless functions email", "ahasend vercel", "nextjs vercel email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from Vercel Functions with AhaSend, keep credentials on the server, and test a sandbox send.
 
 The AhaSend SDK runs in [Vercel Functions](https://vercel.com/docs/functions).
 This guide covers deployment; for complete application handlers, see the
@@ -41,6 +45,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Choose a Runtime
 
@@ -251,11 +257,7 @@ for durable persistence.
 
 ## Going Further
 
-- **Framework detail**: the [Next.js guide](/guides/nextjs) covers authenticated route handlers, server actions, and the `nextRouteHandler` webhook adapter.
-- **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for timeouts, retries, and idempotency options.
-- **Durable processing**: use a durable queue or outbox for webhook work, and deduplicate both webhook deliveries and at-least-once queue messages.
-- **Safer previews**: keep `AHASEND_SANDBOX=true` in Preview and use credentials separate from Production.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`; binary data must be base64 encoded.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -282,3 +284,5 @@ for durable persistence.
     untracked promise or timestamp validation to prevent replay.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

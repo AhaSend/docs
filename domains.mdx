@@ -5,13 +5,33 @@ description: "Add and verify your sending domain in AhaSend: publish the SPF, DK
 icon: "globe"
 ---
 
-Setting up your domain correctly is **essential** for email deliverability. This guide walks you through adding and verifying your domain with AhaSend to ensure your emails reach the inbox, not the spam folder.
+
+To send email with AhaSend, add your domain, publish its SPF, DKIM and DMARC records, then run the DNS check; this guide walks through each step.
+
+Free includes 3 sending domains; Pro and Max include unlimited domains. Automatic DKIM rotation is available on all three plans. Custom DKIM selectors and bring-your-own DKIM are Platform Partner features. See [plans and features](/facts#plans-and-features).
 
 <Warning>
 **Domain verification is required** before you can send any emails through AhaSend. Unverified domains cannot send emails and will result in API errors.
 </Warning>
 
-## Why Domain Setup Matters
+<a id="why-domain-setup-matters" />
+
+## Which DNS Records Do I Need?
+
+Publish the records shown for your domain in the dashboard. New managed-DNS domains use these record types:
+
+| Record | Type | Purpose | Required for sending? |
+|---|---|---|---|
+| SPF | TXT | Authorizes AhaSend through `include:spf.ahasend.com` | Yes |
+| DKIM | Two CNAMEs | Active and standby signing keys | Yes; publish both for rotation |
+| DMARC | TXT | Sets your domain's authentication policy | Yes |
+| Return-path | CNAME | Handles bounces and supports SPF alignment | Recommended |
+| Tracking | CNAME | Uses your domain for tracking links | When tracking is used |
+| MX | Dashboard values | Receives inbound email for routing | When inbound routing is used |
+
+Copy the exact hostnames and values from your domain page; manual DNS and whitelabel setups can differ.
+
+## Why Does AhaSend Need DNS Records?
 
 Email receivers use multiple authentication methods to verify that emails are legitimate. When you properly configure your domain with AhaSend, you're telling receiving servers that:
 
@@ -293,7 +313,9 @@ Need help adding DNS records? Here are guides for popular providers:
   </Card>
 </CardGroup>
 
-## Manage Domains with API
+<a id="manage-domains-with-api" />
+
+## How Do I Manage Domains Through the API?
 
 For programmatic domain management, use our comprehensive Domains API:
 
@@ -316,7 +338,9 @@ For programmatic domain management, use our comprehensive Domains API:
 API v2 also supports updating domain DNS settings such as tracking, return-path, subscription, media, and DKIM rotation interval, as well as requesting a DNS check for an existing domain.
 </Info>
 
-## Troubleshooting
+<a id="troubleshooting" />
+
+## Why Is My Domain Not Verified?
 
 Most records verify within minutes. DNS changes can take up to 48 hours to propagate. After a domain is added or verified, allow up to 2 minutes for the SMTP configuration to refresh if you see `556 Invalid account or domain`.
 
@@ -399,3 +423,27 @@ Once your domain is verified, you're ready to start sending emails:
 <Info>
 **Domain setup complete?** Your domain is now ready to send emails through AhaSend. Test it out with our [quickstart guide](/quickstart) to send your first email!
 </Info>
+
+## Common Domain Questions
+
+### Can I Keep My Existing SPF Record?
+
+Yes. Add `include:spf.ahasend.com` to the existing SPF record before its final `~all` or `-all` mechanism. Do not publish a second SPF record.
+
+### Why Are There Two DKIM Records?
+
+Managed DNS uses one active key and one standby key so AhaSend can rotate signing keys. Publish both CNAMEs shown in your dashboard.
+
+### How Long Does Verification Take?
+
+Most records verify within minutes. DNS changes can take up to 48 hours to propagate. Check the DNS host, type and value if verification still fails.
+
+### Should I Use a Subdomain?
+
+Use a dedicated subdomain when you want to separate transactional sending from other mail on your main domain. Add and verify that subdomain in AhaSend.
+
+## Related Guides
+
+- [Account quickstart](/quickstart), [Domain API](/api-reference/domains/create-domain), [Domain CLI](/cli/commands/domains).
+- [DNS whitelabel](/scale/dns-whitelabel), [Send-only API keys](/send-api/credentials), [Inbound MX setup](/integrations/routing).
+- [Plans and limits](/facts), [Tracking setup](/tracking/open-tracking).

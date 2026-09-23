@@ -5,8 +5,15 @@ openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/sub-accounts/{sub_accou
 description: "Delete (revoke) an API key owned by an AhaSend sub-account using parent credentials with the sub-account-api-keys:delete scope."
 ---
 
-Deletes an API key owned by a sub-account.
+
+The AhaSend API deletes an API key owned by a sub-account.
 
 <Info>
   **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sub-account setup](/scale/sub-accounts).
+- [Sub-account API rules](/api-reference/sub-accounts/overview), [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).

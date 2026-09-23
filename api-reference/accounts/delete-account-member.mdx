@@ -5,8 +5,15 @@ openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/members/{user_id}"
 description: "Remove a member from your AhaSend account through the API to revoke their access. You cannot remove yourself or the account owner this way."
 ---
 
-Removes a member from the account
+
+The AhaSend API removes a member from the account.
 
 **Restrictions:**
 - You cannot delete yourself
 - You cannot delete the account owner
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Account settings API](/api-reference/accounts/update-account).
+- [Team members API](/api-reference/accounts/get-account-members), [Retention rules](/retention), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).

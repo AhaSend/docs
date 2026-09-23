@@ -5,8 +5,12 @@ description: "Send transactional email from a Bun.serve route with the AhaSend T
 keywords: ["bun send email", "bun transactional email", "bun email api", "ahasend bun", "bun.serve webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-bun.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from Bun with AhaSend, keep credentials on the server, and test a sandbox send.
 
 [Bun](https://bun.sh) is one of the runtimes the SDK officially supports, alongside Node.js and Deno. The package runs unchanged on the latest Bun, webhook signature verification included.
 
@@ -23,6 +27,8 @@ import SendGuideRules from "/snippets/send-guide-rules.mdx";
 ```bash
 bun add @ahasend/sdk
 ```
+
+<QuickSend />
 
 The latest Bun is a supported runtime for the package, so no shims or flags are needed.
 
@@ -198,13 +204,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Attachments**: pass `attachments: [{ data: pdfBase64, content_type: "application/pdf", file_name: "document.pdf", base64: true }]`. When `base64` is `true`, `data` must already be base64-encoded.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Prefer a framework on top of Bun? The [ElysiaJS guide](/guides/elysiajs) uses the same SDK with typed routes.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -222,3 +222,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Pref
     Edge platforms are supported, including Cloudflare workerd with no `nodejs_compat` flag. See the [Cloudflare Workers guide](/guides/cloudflare-workers) for the details there.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

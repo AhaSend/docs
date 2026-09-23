@@ -5,8 +5,12 @@ description: "Send transactional email from Remix and React Router 7 framework-m
 keywords: ["remix send email", "remix transactional email", "remix resource route email", "ahasend remix", "remix webhook action"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from Remix and React Router Framework Mode with AhaSend, keep credentials on the server, and test a sandbox send.
 
 Remix has merged into React Router, so this guide uses [React Router Framework Mode](https://reactrouter.com/start/framework/installation) — the direct continuation of the Remix server, loaders, and actions. If your project is still on Remix v2, work through the [upgrade guide](https://reactrouter.com/upgrading/remix) first: the `app/routes.ts` and `./+types/*` APIs below do not exist there.
 
@@ -41,6 +45,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -299,13 +305,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Deployment**: deploy the server build to a Node host and inject the three `AHASEND_*` variables through that host's secret storage. A static-only deployment cannot run server actions or receive webhooks.
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule.first_attempt` to a future RFC 3339 timestamp within seven days of the request.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. The same server-side pattern works in the other full-stack frameworks: see the [Next.js](/guides/nextjs) and [SvelteKit](/guides/sveltekit) guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -323,3 +323,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. The 
     The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the server environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

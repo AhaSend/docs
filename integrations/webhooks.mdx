@@ -5,13 +5,18 @@ description: "Receive real-time AhaSend email events (delivered, bounced, deferr
 icon: "webhook"
 ---
 
-Webhooks provide real-time notifications about events in your AhaSend account. When an email is delivered, bounced, opened, or when other important events occur, AhaSend sends HTTP requests to your configured webhook URLs, enabling you to automate responses and keep your systems synchronized.
+
+AhaSend webhooks send email events to your application as HTTP requests; this guide shows how to create an endpoint, choose events and test delivery.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Info>
 **Real-Time Integration:** Unlike polling APIs that require you to repeatedly check for updates, webhooks deliver event data instantly as it happens, making your applications more responsive and efficient.
 </Info>
 
-## What are Webhooks?
+<a id="what-are-webhooks" />
+
+## What Are AhaSend Webhooks?
 
 Webhooks are user-defined HTTP callbacks triggered by specific events in AhaSend. When an event occurs—such as an email being delivered or bouncing—AhaSend automatically sends a POST request to your webhook URL with detailed event data.
 
@@ -56,24 +61,11 @@ This enables you to:
 **Delivery Guarantee:** AhaSend makes 6 attempts over about 16 minutes, including the first attempt. Only HTTP status codes 200-299 are considered successful.
 </Note>
 
-## Available Webhook Events
+<a id="available-webhook-events" />
 
-AhaSend supports webhooks for various event types. You can choose which events to receive when configuring your webhook:
+## Which Events Can I Receive?
 
-| Event type | When it fires | Payload |
-|---|---|---|
-| `message.reception` | Message accepted | [Reference](/api-reference/webhooks/message-reception) |
-| `message.delivered` | Recipient server accepts delivery | [Reference](/api-reference/webhooks/message-delivered) |
-| `message.transient_error` | Temporary delivery failure | [Reference](/api-reference/webhooks/message-transient_error) |
-| `message.failed` | Delivery fails | [Reference](/api-reference/webhooks/message-failed) |
-| `message.bounced` | Permanent SMTP rejection or later bounce | [Reference](/api-reference/webhooks/message-bounced) |
-| `message.suppressed` | Suppression prevents sending | [Reference](/api-reference/webhooks/message-suppressed) |
-| `message.opened` | Tracking image requested | [Reference](/api-reference/webhooks/message-opened) |
-| `message.clicked` | Tracked link requested | [Reference](/api-reference/webhooks/message-clicked) |
-| `suppression.created` | Suppression added | [Reference](/api-reference/webhooks/suppression-created) |
-| `domain.dns_error` | Domain DNS problem detected | [Reference](/api-reference/webhooks/domain-dns_error) |
-
-See [suppression durations](/api-reference/webhooks#suppression-duration) and [domain verification](/domains) for their rules. Inbound routes use the separate [`message.routing` event](/api-reference/routes/route-message).
+Choose delivery, bounce, deferral, failure, suppression, open, click and domain-DNS events when configuring your webhook. The [event reference](/api-reference/webhooks#event-types) lists every event, its filter flag and its payload. Inbound routes use the separate [`message.routing` event](/api-reference/routes/route-message).
 
 ## Understanding Message Lifecycle
 
@@ -126,7 +118,9 @@ Reception → Delivered → [Opened] → [Clicked]
   </Accordion>
 </AccordionGroup>
 
-## Creating Webhooks
+<a id="creating-webhooks" />
+
+## How Do I Create a Webhook?
 <Frame>
 <img src="https://ahasend.com/sites/default/files/inline-images/webhooks.png" alt="Screenshot of the webhooks dashboard" className="rounded-md" width="300"/>
 </Frame>
@@ -173,7 +167,11 @@ Configure webhooks in your AhaSend dashboard to start receiving event notificati
   </Step>
 </Steps>
 
-## Testing Your Webhooks
+<a id="testing-your-webhooks" />
+
+## How Do I Test a Webhook Locally?
+
+Use [CLI webhook testing](/cli/webhook-testing) to forward events to localhost and trigger sample events. Use [sandbox sends](/send-api/sandbox) to exercise delivery outcomes without real mail.
 
 Verify your webhook integration works correctly before going live:
 
@@ -214,7 +212,9 @@ Verify your webhook integration works correctly before going live:
   </Step>
 </Steps>
 
-## Security and Verification
+<a id="security-and-verification" />
+
+## How Do I Verify a Webhook?
 
 AhaSend follows the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks) for secure webhook delivery:
 
@@ -554,7 +554,9 @@ events or fixtures you control.
   </Accordion>
 </AccordionGroup>
 
-## Troubleshooting
+<a id="troubleshooting" />
+
+## Why Did My Webhook Fail?
 
 <AccordionGroup>
   <Accordion title="Webhooks Not Being Received" icon="question">
@@ -646,18 +648,11 @@ events or fixtures you control.
   </Card>
 </CardGroup>
 
-## Related Documentation
 
-<CardGroup cols={3}>
-  <Card title="Webhook API Reference" icon="code" href="/api-reference/webhooks">
-    Complete API documentation for webhook management
-  </Card>
+## Related Guides
 
-  <Card title="Security Guide" icon="shield" href="/api-reference/webhooks/security">
-    Detailed security implementation and best practices
-  </Card>
-
-  <Card title="Retry Policy" icon="arrows-rotate" href="/api-reference/webhooks/retry-policy">
-    Understanding webhook delivery and retry behavior
-  </Card>
-</CardGroup>
+- [Domain setup](/domains), [API authentication](/api-reference/authentication), [Event reference](/api-reference/webhooks).
+- [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing), [Signature verification](/api-reference/webhooks/security).
+- [Retry policy](/api-reference/webhooks/retry-policy), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [Plans and limits](/facts), [Tracking setup](/tracking/open-tracking), [Sandbox behavior](/send-api/sandbox).
+- [Suppression durations](/api-reference/webhooks#suppression-duration).

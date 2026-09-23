@@ -6,10 +6,13 @@ keywords: ["ahasend node sdk", "nodejs transactional email sdk", "@ahasend/sdk",
 icon: "node-js"
 ---
 
+import FrameworkCards from "/snippets/framework-cards.mdx";
+
+import GuideRelated from "/snippets/guide-related.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
-
-[`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is the official Node.js and TypeScript SDK for AhaSend. Typed models, retries that carry an idempotency key, and a separate webhooks entry point that verifies signatures for you.
+The AhaSend Node.js and TypeScript SDK lets you send email, handle recipient results and verify webhooks; this guide covers installation and the client options.
 
 This page is the SDK reference. To wire it into a specific framework, pick a guide from the sidebar.
 
@@ -38,6 +41,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Runtime Compatibility
 
@@ -111,7 +116,7 @@ export const ahasend = new AhaSendClient({
 });
 ```
 
-`AhaSendClient.fromEnv()` builds the same client from `AHASEND_API_KEY` (or `AHASEND_TOKEN`) and `AHASEND_ACCOUNT_ID`, along with the other `AHASEND_*` variables. It reads `process.env` by default and accepts any string record instead, which is how runtimes that hand you bindings rather than a process environment — Cloudflare Workers, for one — supply the same variables: `AhaSendClient.fromEnv(env)`.
+`AhaSendClient.fromEnv()` builds the same client from `AHASEND_API_KEY` (or `AHASEND_TOKEN`) and `AHASEND_ACCOUNT_ID`, along with the other `AHASEND_*` variables. It reads `process.env` by default and accepts a string record instead. In Cloudflare Workers, use the [explicit constructor with bound fetch](/guides/cloudflare-workers#send-an-email-from-a-worker) shown in the Worker guide; it passes `fetch.bind(globalThis)` along with the credential bindings.
 
 | Option | Default | Purpose |
 | --- | --- | --- |
@@ -251,17 +256,16 @@ Direct verification and every adapter enforce a fixed 30,000,000-byte body ceili
 
 ## Framework Guides
 
-<CardGroup cols={3}>
-  <Card title="Express" icon="server" href="/guides/express" />
-  <Card title="Next.js" icon="layer-group" href="/guides/nextjs" />
-  <Card title="Fastify" icon="server" href="/guides/fastify" />
-  <Card title="NestJS" icon="server" href="/guides/nestjs" />
-  <Card title="Nuxt" icon="layer-group" href="/guides/nuxt" />
-  <Card title="SvelteKit" icon="layer-group" href="/guides/sveltekit" />
-</CardGroup>
+The JavaScript and TypeScript guides use this SDK. The Go framework cards use the [Go SDK](/guides/go-sdk).
+
+<FrameworkCards />
 
 Every other framework, runtime, and platform is in the sidebar. Building in Go instead? See the [Go SDK](/guides/go-sdk).
 
 ## Source and Support
 
 MIT licensed, developed at [github.com/AhaSend/ahasend-ts](https://github.com/AhaSend/ahasend-ts). Report reproducible bugs as GitHub issues, without credentials, message content, or webhook payloads.
+
+Use [Nodemailer over SMTP](/smtp/nodejs) if your Node.js app already has an SMTP mailer.
+
+<GuideRelated />

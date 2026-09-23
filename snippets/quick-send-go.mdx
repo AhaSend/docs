@@ -1,0 +1,32 @@
+## Try a Sandbox Send
+
+Run this short SDK check locally before adding the longer server integration below. Use a [verified sender](/domains), a [send-only API key](/send-api/credentials), and your account ID. It sends to a reserved test address with `sandbox: true`, so no email is delivered.
+
+In your terminal, set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_FROM` (an address on your verified domain) as environment variables. Go does not load `.env` files by itself. Keep the key in your local secret store and out of source control.
+
+Save this standalone check as `quick-send.go` in the module directory where you ran `go get`:
+
+```go quick-send.go
+package main
+import (
+  "context"
+  "os"
+  "github.com/AhaSend/ahasend-go/api"
+  "github.com/AhaSend/ahasend-go/models/common"
+  "github.com/AhaSend/ahasend-go/models/requests"
+  "github.com/google/uuid"
+)
+func main() {
+  client := api.NewAPIClient(api.WithAPIKey(os.Getenv("AHASEND_API_KEY")))
+  text, sandbox := "Hello from AhaSend", true
+  result, response, err := client.MessagesAPI.CreateMessage(context.Background(), uuid.MustParse(os.Getenv("AHASEND_ACCOUNT_ID")), requests.CreateMessageRequest{
+    From: common.SenderAddress{Email: os.Getenv("AHASEND_FROM")}, Recipients: []common.Recipient{{Email: "recipient@example.com"}},
+    Subject: "My first sandbox email", TextContent: &text, Sandbox: &sandbox,
+  })
+  if err != nil { panic("Sandbox request failed; check credentials, sender and account") }
+  if len(result.Data) == 0 { panic("No recipient results") }
+  for _, item := range result.Data { println("HTTP", response.StatusCode, "recipient status", item.Status); if item.Status != "queued" && item.Status != "scheduled" { panic("Recipient rejected") } }
+}
+```
+
+Run `go run quick-send.go`. It prints the HTTP status and each recipient status and exits with a failure on a request error or rejected recipient. This checks the SDK locally; it does not deploy a cloud function. Delete `quick-send.go` after the check so its `main` function does not conflict with the full app below.

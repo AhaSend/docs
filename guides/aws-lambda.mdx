@@ -5,8 +5,12 @@ description: "Send transactional email from AWS Lambda with the AhaSend Node.js 
 keywords: ["aws lambda send email", "lambda transactional email", "nodejs email api lambda", "ahasend aws lambda", "api gateway webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to use AhaSend to send transactional email from AWS Lambda in Node.js, keep credentials on the server, and test a sandbox send.
 
 The one hard requirement is the runtime: the function must be on `nodejs22.x` or newer. Everything after that is ordinary Lambda work, and the handler below covers both API Gateway and Function URL event shapes.
 
@@ -40,6 +44,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -301,13 +307,7 @@ This is a smoke test, not a pattern to build on. It has no retries, no idempoten
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries, and each one gets a separate, individually-substituted message.
-- **Dry runs**: set `sandbox: true` to have the API validate and accept a message without delivering it, and `sandbox_result` (`deliver`, `bounce`, `defer`, `fail`, or `suppress`) to exercise your webhook handling. The `from` domain still has to be verified. `sandbox` is a body field, so a key already spent on a sandbox send comes back `422` when the same key is replayed for the live one — give the two runs different `event_id`s.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by one hour (`first_attempt` must be in the future and within 7 days).
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes, and the [Node.js SDK page](/guides/nodejs-sdk) for client configuration in depth.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -322,3 +322,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes, and 
     The default Lambda timeout (3s) is shorter than even one SDK attempt, whose default timeout is 30s. The SDK can retry transient failures up to 3 times, and retry backoff sits outside the per-attempt timeout. Raise the function timeout, then cap the complete SDK call below it—for example, with a 15s Lambda timeout, pass `{ signal: AbortSignal.timeout(12_000), retry: { maxRetries: 1 }, timeoutMs: 5_000 }` as the trailing options argument to `send()`. Behind API Gateway there's a ceiling on how far you can raise the function timeout: an HTTP API's integration timeout is a fixed 30 seconds, and the client gets a 504 at that point no matter what the function is still doing.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

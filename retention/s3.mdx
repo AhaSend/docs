@@ -5,7 +5,10 @@ description: "Archive every AhaSend email (.eml) and delivery log to your own S3
 icon: "aws"
 ---
 
-Archive your email messages and delivery logs to any S3-compatible object storage service for long-term retention beyond AhaSend's 30-day limit. This feature is essential for legal compliance, audit requirements, and internal retention policies that require extended email archiving.
+
+AhaSend S3 archiving copies email messages and delivery logs to S3-compatible storage; this guide covers setup and long-term retention.
+
+Available on Max. See [plans and features](/facts#plans-and-features).
 
 <Tip>
 **Max Plan Feature:** S3 Object Storage archiving is available exclusively to [Max plan subscribers](https://ahasend.com/pricing).
@@ -348,3 +351,8 @@ AhaSend saves two types of files for each message:
     ```
   </Accordion>
 </AccordionGroup>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [Retention settings](/retention).
+- [Account settings API](/api-reference/accounts/update-account), [Message API](/api-reference/messages/get-message), [Plans and limits](/facts).

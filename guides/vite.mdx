@@ -5,8 +5,12 @@ description: "Send transactional email from a Vite app safely: an Express backen
 keywords: ["vite send email", "vite transactional email", "vite email backend", "ahasend vite", "vite api proxy email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from a Vite app through an Express backend with AhaSend, keep credentials on the server, and test a sandbox send.
 
 [Vite](https://vite.dev) builds browser applications, so AhaSend credentials and
 SDK calls belong in a backend. This guide adds an Express server and uses Vite's
@@ -49,6 +53,8 @@ bun add @ahasend/sdk express
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 Create an uncommitted backend environment file. Do not use a `VITE_` prefix:
 
@@ -266,10 +272,7 @@ click events.
 
 ## Going Further
 
-- **Backend details**: see [Express](/guides/express) for the webhook adapter and [Hono](/guides/hono) for another backend option.
-- **Meta-frameworks**: [Next.js](/guides/nextjs), [SvelteKit](/guides/sveltekit), [Nuxt](/guides/nuxt), and [Remix](/guides/remix) provide their own server integrations.
-- **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for backend timeouts, retries, and idempotency options.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`; binary data must be base64 encoded.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -305,3 +308,5 @@ click events.
     them. Do not add `express.raw()` in front of the adapter.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

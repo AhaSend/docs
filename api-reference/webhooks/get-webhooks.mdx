@@ -5,7 +5,8 @@ openapi: "/openapi.yaml GET /v2/accounts/{account_id}/webhooks"
 description: "List the webhooks in your AhaSend account with the API, filtered by enabled status or event type, with cursor pagination of up to 100 items per page."
 ---
 
-Returns a list of webhooks for the account
+
+The AhaSend API returns a list of webhooks for the account.
 
 The global read role sees all webhooks. Domain-scoped read roles return
 only webhooks associated with at least one authorized domain.
@@ -16,3 +17,10 @@ only webhooks associated with at least one authorized domain.
 - `limit`: Maximum number of items to return (1-100, default: 100)
 - `after`: Pagination cursor for the next page
 - `before`: Pagination cursor for the previous page
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Suppression durations](/api-reference/webhooks#suppression-duration).

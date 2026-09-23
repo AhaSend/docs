@@ -5,8 +5,12 @@ description: "Send transactional email from a NestJS app with the AhaSend email 
 keywords: ["nestjs send email", "nestjs transactional email", "nestjs email service", "ahasend nestjs", "nestjs webhook verification"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from NestJS with AhaSend, keep credentials on the server, and test a sandbox send.
 
 In [NestJS](https://nestjs.com) the send belongs in an injectable service. The webhook needs one decision made at bootstrap: without `{ rawBody: true }` on `NestFactory.create`, there is nothing left to verify the signature against.
 
@@ -39,6 +43,8 @@ bun add @ahasend/sdk @nestjs/config @nestjs/throttler class-transformer class-va
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -312,13 +318,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by one hour.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. For binary files such as PDFs, base64-encode the bytes yourself and pass the encoded string as `data` — `base64: true` tells AhaSend how to decode `data`, it does not encode for you.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Nest runs on Express or Fastify under the hood, so the standalone [Express](/guides/express) and [Fastify](/guides/fastify) guides show the SDK's built-in webhook adapters for those platforms.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -336,3 +336,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Nest
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

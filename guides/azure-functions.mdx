@@ -5,8 +5,12 @@ description: "Send transactional email from Azure Functions in Go with a custom 
 keywords: ["azure functions go send email", "golang transactional email azure functions", "azure functions custom handler go", "ahasend go sdk", "azure functions email api"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-go.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to use AhaSend to send transactional email from Azure Functions in Go, keep credentials on the server, and test a sandbox send.
 
 This guide runs Go as an Azure Functions **custom handler**: a small HTTP server the Functions host forwards requests to. Ordinary `net/http` code works, including the SDK's `verifier.ParseRequest`. As of September 2026, Microsoft documents first-class Go support as a public preview and recommends it for new Go function apps. Check the [Azure custom-handler documentation](https://learn.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers) and its linked Go preview requirements before choosing a hosting plan.
 
@@ -43,6 +47,8 @@ go mod init example.com/yourapp
 go get github.com/AhaSend/ahasend-go
 go get github.com/google/uuid
 ```
+
+<QuickSend />
 
 `google/uuid` arrives with the SDK as a transitive dependency, but the account ID is a `uuid.UUID` that your own code parses, so it needs its own `go get` or the build fails on a missing `go.sum` entry.
 
@@ -381,14 +387,7 @@ For local testing, build for your own OS and run `func start`: the host reads `l
 
 ## Going Further
 
-- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
-- **Batch idempotency**: one key covers one whole `CreateMessage` call, recipient list included. Adding a recipient changes the body, so the same key then returns `422` rather than sending to the newcomer.
-- **Other platforms**: deploying on Google Cloud instead? See the [Cloud Run functions guide](/guides/google-cloud-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
-- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -409,3 +408,5 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

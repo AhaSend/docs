@@ -5,7 +5,8 @@ openapi: "/openapi.yaml POST /v2/accounts/{account_id}/messages/conversation"
 description: "Send one conversational email with To, CC and BCC recipients through the AhaSend API, for person-to-person or reply-style mail."
 ---
 
-Creates and sends a conversational message (with support for CC and BCC) to one or more recipients. This API does not support template substitutions, use [Create Message](/api-reference/messages/create-message) instead if you need substitutions.
+
+The AhaSend API creates and sends a conversational message (with support for CC and BCC) to one or more recipients. This API does not support template substitutions, use [Create Message](/api-reference/messages/create-message) instead if you need substitutions.
 
 **Validation Requirements:**
 - Either `text_content` or `html_content` is required
@@ -22,3 +23,10 @@ Creates and sends a conversational message (with support for CC and BCC) to one 
 Authorization uses the domain in `from.email`: either
 `messages:send:all` or the matching domain-specific send role is
 sufficient.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sending guide](/send-api/send-email).
+- [Message CLI](/cli/commands/messages), [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk).
+- [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Retention rules](/retention).

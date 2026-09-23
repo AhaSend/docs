@@ -5,8 +5,12 @@ description: "Send transactional email from an ElysiaJS app on Bun with the AhaS
 keywords: ["elysiajs send email", "elysia transactional email", "bun email api elysia", "ahasend elysia", "elysia webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-bun.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to use AhaSend to send transactional email from ElysiaJS in Bun, keep credentials on the server, and test a sandbox send.
 
 [ElysiaJS](https://elysiajs.com) runs on Bun, which is one of the runtimes the SDK officially supports. Elysia has no dedicated adapter, so the webhook route calls the generic `WebhookVerifier` on the raw request body.
 
@@ -39,6 +43,8 @@ yarn add @ahasend/sdk elysia
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -247,13 +253,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour. The first attempt must be in the future and within seven days of the request.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself, use the encoded string as `data`, and set `base64: true`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Prefer a plain server or a different router? See the [Bun](/guides/bun) and [Hono](/guides/hono) guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -271,3 +271,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Pref
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

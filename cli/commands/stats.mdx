@@ -5,7 +5,8 @@ icon: chart-line
 sidebarTitle: "stats"
 ---
 
-View email statistics and analytics for your account.
+
+AhaSend CLI `stats` commands report delivery, bounce and delivery-time statistics; this page covers filters and output.
 
 Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
 
@@ -156,3 +157,10 @@ These flags come from the current CLI. All commands also accept the [global flag
 | `--show-totals` | Show summary statistics (default true) |
 | `--tags string` | Filter by message tags (comma-separated) |
 | `--to-time string` | End time (RFC3339 format or relative, defaults to now) |
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Delivery statistics API](/api-reference/reports/get-deliverability-report).
+- [API rate limits](/api-reference/rate-limits), [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication).
+- [Permission scopes](/api-reference/scopes), [Domain setup](/domains), [Sandbox behavior](/send-api/sandbox).
+- [Tracking setup](/tracking/open-tracking), [Suppression durations](/api-reference/webhooks#suppression-duration).

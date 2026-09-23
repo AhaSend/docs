@@ -5,6 +5,11 @@ description: "Send email from Go through AhaSend's SMTP relay using net/smtp or 
 icon: "golang"
 ---
 
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
+
 Send emails through AhaSend's SMTP servers using Go with the standard library `net/smtp` package or the more feature-rich `gomail.v2` library. This guide covers everything from basic setup to advanced features like attachments and custom headers.
 
 <Info>
@@ -12,6 +17,8 @@ Send emails through AhaSend's SMTP servers using Go with the standard library `n
 </Info>
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -22,35 +29,12 @@ Before you begin, ensure you have:
     - Go modules enabled (Go 1.11+)
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Connection Settings
 
-Use these settings for all Go SMTP configurations with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## Using net/smtp (Standard Library)
 
@@ -689,3 +673,5 @@ func main() {
     Get help from our engineering team
   </Card>
 </CardGroup>
+
+<SmtpRelated />

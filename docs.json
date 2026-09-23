@@ -37,7 +37,6 @@
             "pages": [
               "smtp/index",
               "smtp/credentials",
-              "smtp/sandbox",
               "smtp/special-headers",
               {
                 "group": "Code examples",
@@ -297,8 +296,6 @@
             "group": "Message Routing",
             "pages": [
               "api-reference/routes/index",
-              "api-reference/routes/security",
-              "api-reference/routes/retry-policy",
               "api-reference/routes/route-message"
             ]
           },
@@ -555,5 +552,19 @@
       "Use send.ahasend.com for SMTP in the EU, or send-us.ahasend.com as a US connection point forwarding to the EU. Ports 25, 587 and 2525 use STARTTLS. Port 465 is not supported. See /smtp.",
       "For send-only integrations, create an API Key v2 under Credentials → Add and scope it to messages:send:{your-domain}. See /send-api/credentials and /api-reference/scopes."
     ]
-  }
+  },
+  "redirects": [
+    {
+      "source": "/smtp/sandbox",
+      "destination": "/send-api/sandbox"
+    },
+    {
+      "source": "/api-reference/routes/security",
+      "destination": "/api-reference/webhooks/security"
+    },
+    {
+      "source": "/api-reference/routes/retry-policy",
+      "destination": "/api-reference/webhooks/retry-policy"
+    }
+  ]
 }

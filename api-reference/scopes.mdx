@@ -5,7 +5,13 @@ description: "Every AhaSend API key scope, from messages:send:all to domain-spec
 icon: "lock"
 ---
 
-API key scopes define the permissions and access levels for your API keys. They control which operations your API key can perform and which resources it can access. AhaSend uses a granular scoping system that allows you to grant only the minimum necessary permissions for enhanced security.
+
+AhaSend API key scopes control which operations and domains a key can access; this reference lists the scope names and their rules.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
+
+In a domain scope such as `messages:send:{example.com}`, keep the braces and replace only `example.com` with your domain. The braces are part of the scope string.
 
 ## Types of Scopes
 
@@ -296,3 +302,10 @@ When an API request is made, the system checks scopes in the following order:
     Regularly review your API key scopes and remove any that are no longer needed. Update scopes when your application requirements change.
   </Accordion>
 </AccordionGroup>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [REST sending guide](/send-api/send-email).
+- [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart), [Node.js SDK](/guides/nodejs-sdk).
+- [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Suppression durations](/api-reference/webhooks#suppression-duration).

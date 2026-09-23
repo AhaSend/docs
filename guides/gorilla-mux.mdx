@@ -5,8 +5,12 @@ description: "Send transactional email from a gorilla/mux (Go) app with the AhaS
 keywords: ["gorilla mux send email", "golang transactional email gorilla mux", "gorilla mux email api", "ahasend go sdk", "gorilla mux webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-go.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to use AhaSend to send transactional email from gorilla/mux in Go, keep credentials on the server, and test a sandbox send.
 
 [gorilla/mux](https://github.com/gorilla/mux) routes plain `net/http` handlers, so AhaSend's webhook verifier accepts the `*http.Request` your handler receives. Middleware registered with `Router.Use` runs in registration order and must leave the signed webhook body untouched.
 
@@ -27,6 +31,8 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/gorilla/mux
 go get github.com/google/uuid
 ```
+
+<QuickSend />
 
 `google/uuid` is a transitive dependency of the SDK, but the account ID is a `uuid.UUID`, so your own code imports it directly and it needs its own `go get`.
 
@@ -390,14 +396,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
-- **Rate limits**: local pacing is per client instance. If you tune `SetSendMessageRateLimit`, keep it at or below the send limit assigned to your account and coordinate aggregate traffic across replicas.
-- **Other frameworks**: the same SDK patterns work in [chi](/guides/chi), [Gin](/guides/gin), and [Echo](/guides/echo).
-- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -415,3 +414,5 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

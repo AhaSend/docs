@@ -5,7 +5,10 @@ description: "Give each customer an isolated AhaSend sub-account with its own do
 icon: "diagram-subtask"
 ---
 
-Sub-Accounts let a parent account create and manage isolated child accounts under a single billing relationship. A sub-account is a full, regular AhaSend account in its own right, with the same feature set and isolation as any standalone account. It simply lives and is billed under the parent's umbrella. Each sub-account has its own domains, members, suppressions, and sending activity, while the parent keeps administrative control and one consolidated bill.
+
+AhaSend sub-accounts give each customer an isolated email account under one parent; this guide covers use cases, setup and billing.
+
+Available to Platform Partners. [Contact sales](mailto:sales@ahasend.com) for access. See [plans and features](/facts#plans-and-features).
 
 This model is built for platforms and agencies that send on behalf of many customers: provision a sub-account per customer, and let it use the full feature set of AhaSend in complete isolation, all billed back to the parent.
 
@@ -123,14 +126,7 @@ See [Create Domain](/api-reference/domains/create-domain), [Check Domain DNS](/a
 
 ## Sub-Account Status
 
-Each sub-account reports a `status`:
-
-| Status             | Meaning                                                                 |
-| ------------------ | ---------------------------------------------------------------------- |
-| `active`           | The sub-account is operating normally.                                 |
-| `suspended`        | The sub-account was suspended directly via the suspend endpoint.       |
-| `parent-suspended` | The sub-account is suspended because its parent account is suspended.  |
-| `deleted`          | The sub-account has been soft-deleted.                                 |
+See the API overview for [sub-account status values](/api-reference/sub-accounts/overview#sub-account-status).
 
 ## Usage and Billing
 
@@ -142,18 +138,7 @@ The [usage endpoint](/api-reference/sub-accounts/get-sub-accounts-usage) returns
 
 ## Scopes
 
-Sub-account operations require dedicated scopes, all granted to **parent**-account API keys:
-
-| Scope                         | Grants                                          |
-| ----------------------------- | ----------------------------------------------- |
-| `sub-accounts:read`           | List and read sub-accounts                      |
-| `sub-accounts:write`          | Create and update sub-accounts                  |
-| `sub-accounts:delete`         | Soft-delete sub-accounts                        |
-| `sub-accounts:suspend`        | Suspend and unsuspend sub-accounts              |
-| `sub-accounts:usage`          | Read per-sub-account usage and allocated cost   |
-| `sub-account-api-keys:read`   | List and read sub-account API keys              |
-| `sub-account-api-keys:write`  | Create and update sub-account API keys          |
-| `sub-account-api-keys:delete` | Delete sub-account API keys                     |
+Use parent-account keys with the [sub-account permission scopes](/api-reference/sub-accounts/overview#scopes) needed for each task.
 
 ## Next Steps
 
@@ -177,3 +162,9 @@ Sub-account operations require dedicated scopes, all granted to **parent**-accou
 
 
 Sub-accounts and DNS whitelabel are available to Platform Partners. See [plan features](/facts#plans-and-features), [sub-accounts](/scale/sub-accounts), and [DNS whitelabel](/scale/dns-whitelabel), or [contact sales](mailto:sales@ahasend.com).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [Sub-account API rules](/api-reference/sub-accounts/overview).
+- [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key), [Plans and limits](/facts).
+- [Suppression durations](/api-reference/webhooks#suppression-duration).

@@ -5,7 +5,10 @@ description: "Lock AhaSend API keys to specific IPv4/IPv6 addresses or CIDR rang
 icon: "network-wired"
 ---
 
-An IP allow list restricts an API key to a set of IP addresses. Once a key has an allow list, requests made with it from anywhere else are rejected, so a leaked key is useless outside your own infrastructure.
+
+AhaSend API key IP allow lists limit where a key can be used; this guide shows how to add allowed addresses and avoid locking yourself out.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Info>
 **Scope of this feature:** IP allow lists apply to Full API keys only. SMTP credentials and sending credentials are not affected.
@@ -136,3 +139,9 @@ The field is always present on API key responses. An empty array means the key c
     Endpoint reference including the `ip_allow_list` field
   </Card>
 </CardGroup>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [Permission scopes](/api-reference/scopes).
+- [Scoped credentials](/security/scoped-credentials), [API key CLI](/cli/commands/apikeys), [Create key API](/api-reference/api-keys/create-api-key).
+- [Plans and limits](/facts).

@@ -5,7 +5,14 @@ openapi: "/openapi.yaml POST /v2/accounts/{account_id}/domains"
 description: "Add a sending domain to AhaSend with the API and get the SPF, DKIM, return-path and tracking DNS records to publish, with optional custom subdomains."
 ---
 
-Creates a new domain
+
+The AhaSend API creates a new domain.
 
 <Warning>The `dkim_private_key` parameter is currently only supported for <a href="https://ahasend.com/partners">Platform Partner</a> accounts.</Warning>
 Bring-your-own DKIM uses RSA keys: 1024 bits minimum, 2048 bits recommended. See [Platform Partner features](/facts).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Domain setup](/domains).
+- [Domain CLI](/cli/commands/domains), [DNS whitelabel](/scale/dns-whitelabel), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

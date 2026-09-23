@@ -1,0 +1,28 @@
+## Try a Sandbox Send
+
+Run this short SDK check locally before adding the longer server integration below. Use a [verified sender](/domains), a [send-only API key](/send-api/credentials), and your account ID. It sends to a reserved test address with `sandbox: true`, so no email is delivered.
+
+In the server project directory, add `.env` to `.gitignore`, then create `.env` with `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_FROM` (an address on your verified domain). Keep these values out of browser code and AI prompts. Use Node.js 22 or newer. Save this as `quick-send.mjs`:
+
+```js quick-send.mjs
+import { AhaSendClient } from "@ahasend/sdk";
+try {
+  const client = AhaSendClient.fromEnv();
+  const result = await client.messages.send({
+    from: { email: process.env.AHASEND_FROM },
+    recipients: [{ email: "recipient@example.com" }],
+    subject: "My first sandbox email",
+    text_content: "Hello from AhaSend",
+    sandbox: true,
+  });
+  const statuses = result.data.map((entry) => entry.status);
+  console.log({ statuses });
+  if (!statuses.length || statuses.some((s) => !["queued", "scheduled"].includes(s)))
+    throw new Error("A recipient was rejected");
+} catch {
+  console.error("Sandbox send failed; check your credentials, sender and account.");
+  process.exitCode = 1;
+}
+```
+
+Run `node --env-file=.env quick-send.mjs` from that directory. The output lists each recipient status; `queued` or `scheduled` means accepted for sandbox processing. The process exits with a failure if the request or any recipient fails. Continue below for the full integration.

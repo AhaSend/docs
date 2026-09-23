@@ -5,8 +5,16 @@ openapi: "/webhooks.yaml webhook message.delivered"
 description: "The message.delivered webhook fires when the recipient's mail server accepts an email sent through AhaSend. Payload fields, example and caveats."
 ---
 
-Triggered when an email has been successfully delivered to the recipient's mail server.
+
+AhaSend sends this event when an email has been successfully delivered to the recipient's mail server.
 
 This indicates that the recipient's mail server has accepted the email. Note that this doesn't guarantee the email reached the recipient's inbox (it could still be filtered to spam).
 
 **When it's sent**: When the recipient's mail server confirms successful delivery.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

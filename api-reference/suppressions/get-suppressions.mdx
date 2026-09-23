@@ -5,7 +5,8 @@ openapi: "/openapi.yaml GET /v2/accounts/{account_id}/suppressions"
 description: "List the addresses on your AhaSend suppression list through the API, filtered by email, domain or creation time, to find out why an email was not sent."
 ---
 
-Returns a list of suppressions for the account
+
+The AhaSend API returns a list of suppressions for the account.
 
 **Query Parameters:**
 - `domain`: Filter by domain (optional)
@@ -15,3 +16,8 @@ Returns a list of suppressions for the account
 - `limit`: Maximum number of items to return (1-100, default: 100)
 - `after`: Pagination cursor for the next page
 - `before`: Pagination cursor for the previous page
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Suppression CLI](/cli/commands/suppressions).
+- [Suppression durations](/api-reference/webhooks#suppression-duration), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

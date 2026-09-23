@@ -5,4 +5,11 @@ openapi: "/openapi.yaml POST /v2/accounts/{account_id}/domains/{domain}/check-dn
 description: "Trigger an AhaSend DNS check to verify a sending domain's SPF, DKIM and other records. Results are cached for 60 seconds between checks."
 ---
 
-Triggers a DNS validation check for the domain. If the domain was checked within the last 60 seconds, the cached validation result is returned instead of performing a fresh lookup.
+
+The AhaSend API triggers a DNS validation check for the domain. If the domain was checked within the last 60 seconds, the cached validation result is returned instead of performing a fresh lookup.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Domain setup](/domains).
+- [Domain API](/api-reference/domains/create-domain), [Domain CLI](/cli/commands/domains), [DNS whitelabel](/scale/dns-whitelabel).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

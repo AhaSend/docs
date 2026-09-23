@@ -5,8 +5,12 @@ description: "Send transactional email from Google Cloud Run functions (formerly
 keywords: ["cloud run functions go email", "google cloud functions go send email", "golang transactional email cloud functions", "ahasend go sdk", "cloud functions email api"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-go.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to use AhaSend to send transactional email from Google Cloud Run functions in Go, keep credentials on the server, and test a sandbox send.
 
 [Cloud Run functions](https://cloud.google.com/functions) run Go through the [Functions Framework](https://github.com/GoogleCloudPlatform/functions-framework-go), which hands each invocation a standard `http.ResponseWriter` and `*http.Request`. The AhaSend SDK works directly with those standard HTTP types.
 
@@ -27,6 +31,8 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/GoogleCloudPlatform/functions-framework-go
 go get github.com/google/uuid
 ```
+
+<QuickSend />
 
 ## Write the Cloud Run Functions Code
 
@@ -362,14 +368,7 @@ Prompt for the credentials rather than writing them inline here too: a key on th
 
 ## Going Further
 
-- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message and its own entry in `response.Data`. The call can return `2xx` while individual entries carry `Status: "error"` and a nil `ID`, so check every entry rather than only the HTTP status.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
-- **Cold starts**: the client and verifier are cached per instance and reused across warm invocations. Setting `--min-instances=1` can reduce cold starts for latency-sensitive sends, but scaling and instance replacement can still start new instances.
-- **Other platforms**: deploying on Azure instead? See the [Azure Functions guide](/guides/azure-functions); for long-running servers, start with [Gin](/guides/gin) or [chi](/guides/chi).
-- **Attachments**: add `Attachments` with `Data`, `ContentType`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -390,3 +389,5 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

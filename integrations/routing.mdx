@@ -5,7 +5,10 @@ description: "Receive inbound email in your app with AhaSend routing: point MX r
 icon: "route"
 ---
 
-Message routing enables you to automatically process inbound emails sent to your domains by forwarding them to your application endpoints in real-time. When someone sends an email to addresses on your AhaSend domains, the system can automatically parse and route these messages to your applications, making it perfect for support ticket systems, reply handling, and automated email processing workflows.
+
+AhaSend inbound routes turn email sent to your domain into JSON requests to your app; this guide covers MX setup, address matching and route configuration.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Info>
 **Inbound Email Processing:** Message routing handles emails sent TO your domains, while webhooks track emails sent FROM your domains. Both use similar HTTP POST mechanisms but serve different purposes.
@@ -58,7 +61,7 @@ This functionality enables you to:
 
 ## Delivery Limits
 
-AhaSend makes 12 attempts over about 11 hours, including the first attempt. Each attempt times out after 5 seconds. After more than 100 consecutive failed attempts, the route is disabled and account users are emailed. See [route retry policy](/api-reference/routes/retry-policy) and [security](/api-reference/routes/security).
+AhaSend makes 12 attempts over about 11 hours, including the first attempt. Each attempt times out after 5 seconds. After more than 100 consecutive failed attempts, the route is disabled and account users are emailed. See [route retry policy](/api-reference/webhooks/retry-policy) and [security](/api-reference/webhooks/security).
 
 ## Prerequisites
 
@@ -764,18 +767,10 @@ The workflow functions below use application-owned callbacks such as `createSupp
   </Accordion>
 </AccordionGroup>
 
-## Related Documentation
 
-<CardGroup cols={3}>
-  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
-    Track outbound email events and delivery status
-  </Card>
+## Related Guides
 
-  <Card title="Domain Setup" icon="globe" href="/domains">
-    Configure domains and [MX records from your domain details](/domains) for routing
-  </Card>
-
-  <Card title="API Reference" icon="code" href="/api-reference/routes">
-    Complete API documentation for message routing
-  </Card>
-</CardGroup>
+- [Domain setup](/domains), [API authentication](/api-reference/authentication), [Route payload](/api-reference/routes/route-message).
+- [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing), [Signature verification](/api-reference/webhooks/security).
+- [Retry policy](/api-reference/webhooks/retry-policy), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [Plans and limits](/facts).

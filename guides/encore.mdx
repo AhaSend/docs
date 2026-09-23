@@ -5,8 +5,12 @@ description: "Send transactional email from an Encore.ts service with the AhaSen
 keywords: ["encore.ts send email", "encore transactional email", "encore email api", "ahasend encore", "encore webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from Encore.ts with AhaSend, keep credentials on the server, and test a sandbox send.
 
 Two [Encore.ts](https://encore.dev) specifics shape the code below: credentials come from `secret()` rather than `process.env`, and the webhook endpoint must be declared `raw`, since signature verification needs the unparsed body.
 
@@ -40,6 +44,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Store Credentials as Encore Secrets
 
@@ -262,13 +268,7 @@ Not on Encore everywhere? The same SDK, including dedicated webhook adapters, po
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Tags**: pass `tags` on the send to group messages for filtering and statistics later.
-- **Secrets for everything**: the webhook secret belongs in `encore secret set` alongside the API key, so neither value lives in your repo or in a `.env` file.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration options, and the [API reference](/api-reference) for every endpoint the SDK exposes.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -283,3 +283,5 @@ See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration options
     Either the endpoint isn't `api.raw` (typed endpoints consume the raw body), or `AhaSendWebhookSecret` doesn't match the dashboard value exactly.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

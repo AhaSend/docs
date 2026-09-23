@@ -5,8 +5,12 @@ description: "Send transactional email from a Go chi router with the AhaSend Go 
 keywords: ["chi send email", "golang transactional email chi", "chi router email api", "ahasend go sdk", "chi webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-go.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to use AhaSend to send transactional email from chi in Go, keep credentials on the server, and test a sandbox send.
 
 [chi](https://github.com/go-chi/chi) handlers are plain `net/http`, so the SDK and its webhook verifier work without an adapter.
 
@@ -26,6 +30,8 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/google/uuid
 go get github.com/go-chi/chi/v5
 ```
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -287,14 +293,7 @@ Return 2xx promptly after durable work has been accepted. Do slow processing in 
 
 ## Going Further
 
-- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
-- **Rate limits**: keep each client at or below [100 requests per second with a 200 burst](/api-reference/rate-limits), and coordinate the total across all processes.
-- **Other frameworks**: the same SDK patterns work in [Gin](/guides/gin), [Echo](/guides/echo), and [gorilla/mux](/guides/gorilla-mux).
-- **Attachments**: every entry needs `Data`, `ContentType`, and `FileName`. For binary files such as PDFs, encode the bytes with `base64.StdEncoding.EncodeToString(data)`, use that string as `Data`, and set `Base64: true`. The flag tells AhaSend how to decode `Data`; it does not perform the encoding.
-
-See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -312,3 +311,5 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

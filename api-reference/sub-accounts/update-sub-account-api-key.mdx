@@ -5,10 +5,17 @@ openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/sub-accounts/{sub_account_
 description: "Change the label, scopes, or IP allow list of an API key owned by an AhaSend sub-account. Scopes are validated against the child account."
 ---
 
-Updates the label and scopes for an API key owned by a sub-account. Updated scopes are validated against the child account.
+
+The AhaSend API updates the label and scopes for an API key owned by a sub-account. Updated scopes are validated against the child account.
 
 <Info>
   **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>
 
 You can update `label`, `scopes`, and `ip_allow_list`. See [IP allow lists](/security/ip-allow-lists).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sub-account setup](/scale/sub-accounts).
+- [Sub-account API rules](/api-reference/sub-accounts/overview), [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).

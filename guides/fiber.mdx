@@ -5,8 +5,12 @@ description: "Send transactional email from a Fiber v3 (Go) app with the AhaSend
 keywords: ["fiber send email", "golang transactional email fiber", "fiber email api", "ahasend go sdk", "fiber webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-go.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to use AhaSend to send transactional email from Fiber in Go, keep credentials on the server, and test a sandbox send.
 
 [Fiber](https://gofiber.io) runs on [fasthttp](https://github.com/valyala/fasthttp), not `net/http`, so a handler never sees an `*http.Request`: pass the Fiber context to the SDK, and verify webhooks with `verifier.Parse` instead of `verifier.ParseRequest`.
 
@@ -27,6 +31,8 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/google/uuid
 go get github.com/gofiber/fiber/v3
 ```
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -315,14 +321,7 @@ Return 200 promptly after that durable handoff, because unsuccessful webhook req
 
 ## Going Further
 
-- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter message lists and statistics.
-- **Rate limits**: local pacing is per client instance. If you tune `ahasendClient.SetSendMessageRateLimit(requestsPerSecond, burstCapacity)`, keep it at or below the send limit assigned to your account and coordinate aggregate traffic across replicas.
-- **Other frameworks**: prefer `net/http`-style routing? The same SDK patterns work in [Gin](/guides/gin) and [Echo](/guides/echo).
-- **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself, use the encoded string as `Data`, and set `Base64: true`. The flag does not perform the encoding.
-
-See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -343,3 +342,5 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

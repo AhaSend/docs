@@ -5,5 +5,13 @@ openapi: "/openapi.yaml GET /v2/accounts/{account_id}/routes/{route_id}"
 description: "Retrieve a single AhaSend inbound email route by ID, including its recipient pattern, webhook URL and attachment, header and reply settings."
 ---
 
-Returns a specific route by ID. Access requires the global read role or
+
+The AhaSend API returns a specific route by ID. Access requires the global read role or
 a read role matching the route's recipient domain.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Inbound routing setup](/integrations/routing).
+- [Route payload](/api-reference/routes/route-message), [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

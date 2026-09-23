@@ -5,5 +5,12 @@ openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/messages/{message_id}/c
 description: "Cancel a scheduled email through the AhaSend API before its first delivery attempt, using the UUID portion of the message identifier."
 ---
 
-Cancels a scheduled message. Access requires `messages:cancel:all` or a
+
+The AhaSend API cancels a scheduled message. Access requires `messages:cancel:all` or a
 cancel role matching the message's sender domain.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sending guide](/send-api/send-email).
+- [Message CLI](/cli/commands/messages), [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk).
+- [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

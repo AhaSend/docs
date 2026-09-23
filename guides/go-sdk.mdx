@@ -6,10 +6,11 @@ keywords: ["ahasend go sdk", "golang transactional email", "go email api client"
 icon: "golang"
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import QuickSend from "/snippets/quick-send-go.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
-
-[`ahasend-go`](https://github.com/AhaSend/ahasend-go) is the official Go SDK for AhaSend. Typed models for every endpoint, retries and idempotency keys handled for you, and a Standard Webhooks verifier that drops into any `net/http` router.
+The AhaSend Go SDK lets you send email, handle recipient results and verify webhooks; this guide covers installation and the client options.
 
 This page is the SDK reference. To wire it into a specific framework, pick a guide from the sidebar.
 
@@ -31,6 +32,8 @@ go mod init example.com/ahasend-go-sdk
 go get github.com/AhaSend/ahasend-go
 go get github.com/google/uuid
 ```
+
+<QuickSend />
 
 ## Send Your First Email
 
@@ -308,3 +311,7 @@ Azure Functions is in the sidebar too. Building in Node.js instead? See the [Nod
 ## Source and Support
 
 MIT licensed, developed at [github.com/AhaSend/ahasend-go](https://github.com/AhaSend/ahasend-go), with reference docs on [pkg.go.dev](https://pkg.go.dev/github.com/AhaSend/ahasend-go). The [AhaSend CLI](https://github.com/AhaSend/ahasend-cli) is built on this SDK.
+
+Use [Go over SMTP](/smtp/golang) if your app already has an SMTP client.
+
+<GuideRelated />

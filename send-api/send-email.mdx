@@ -5,13 +5,23 @@ description: "Send transactional email with AhaSend's REST API v2: curl quick st
 icon: "paper-plane"
 ---
 
-Send emails programmatically using AhaSend's powerful API v2 create-message endpoint. This guide covers everything from basic email sending to advanced features like template variables, bulk operations, and scheduled delivery.
+import OfficialSdks from "/snippets/official-sdks.mdx";
+
+
+This guide shows how to send email through AhaSend API v2, add substitutions, attachments and schedules, and check each recipient result.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Info>
 **API v2 Features:** This guide covers the advanced API v2 create-message endpoint, which provides enhanced features like template substitutions, bulk sending, scheduled delivery, and comprehensive webhook support.
 </Info>
 
-## Limits
+
+<OfficialSdks />
+
+<a id="limits" />
+
+## What Are the API Sending Limits?
 
 | Setting | Limit |
 |---|---|
@@ -21,7 +31,9 @@ Send emails programmatically using AhaSend's powerful API v2 create-message endp
 | Scheduled expiry | After the first attempt, within 8 days |
 | Retention | [Plan-specific ranges](/retention); new-account default 7 days |
 
-## Quick Start
+<a id="quick-start" />
+
+## How Do I Send an Email Through the API?
 
 Here's a simple example to send your first email using the API:
 
@@ -47,7 +59,9 @@ curl --request POST \
   }'
 ```
 
-## Authentication
+<a id="authentication" />
+
+## Which Credentials Do I Need?
 
 All API requests require authentication using your API v2 key:
 
@@ -258,7 +272,9 @@ Per-recipient `substitutions` override the global `substitutions` for that recip
 
 </CodeGroup>
 
-## Response Handling
+<a id="response-handling" />
+
+## How Do I Read the Sending Response?
 
 The API returns a response with information about each message created:
 
@@ -308,7 +324,9 @@ The API returns a response with information about each message created:
   </Accordion>
 </AccordionGroup>
 
-## Error Handling
+<a id="error-handling" />
+
+## How Do I Handle a Failed Request?
 
 HTTP `202` means the request was accepted for processing. Inspect every item's `status`; a rejected recipient has `status: "error"` and `id: null` even if the HTTP request succeeded.
 
@@ -397,3 +415,12 @@ Based on the [API documentation](/api-reference/messages/create-message), ensure
     - Use [webhooks](/integrations/webhooks) for delivery confirmation
   </Accordion>
 </AccordionGroup>
+
+## Related Guides
+
+- [Domain setup](/domains), [Send-only API keys](/send-api/credentials), [API authentication](/api-reference/authentication).
+- [Create Message reference](/api-reference/messages/create-message), [SMTP settings](/smtp), [CLI sending](/cli/commands/messages).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [Sandbox mode](/send-api/sandbox).
+- [CLI webhook testing](/cli/webhook-testing), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [API errors](/api-reference/errors), [Rate limits](/api-reference/rate-limits), [Retention rules](/retention).
+- [Tracking setup](/tracking/open-tracking).

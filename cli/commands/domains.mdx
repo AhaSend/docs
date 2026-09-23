@@ -5,7 +5,8 @@ icon: globe
 sidebarTitle: "domains"
 ---
 
-Manage your sending domains for email authentication.
+
+AhaSend CLI `domains` commands let you add and verify sending domains; this page covers their arguments and flags.
 
 Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
 
@@ -178,3 +179,10 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | Flag | Description and default |
 |---|---|
 | `--verbose` | Show detailed DNS information |
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Domain setup](/domains).
+- [Domain API](/api-reference/domains/create-domain), [DNS whitelabel](/scale/dns-whitelabel), [CLI configuration and output](/cli/configuration).
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sandbox behavior](/send-api/sandbox).
+- [Tracking setup](/tracking/open-tracking).

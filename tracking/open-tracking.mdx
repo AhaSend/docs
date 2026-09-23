@@ -5,7 +5,10 @@ description: "Turn on AhaSend open tracking for the whole account or per message
 icon: "envelope-open"
 ---
 
-Open tracking allows you to monitor when recipients open your emails by embedding an invisible tracking pixel. This feature provides valuable insights into email engagement, though it comes with inherent accuracy limitations that are important to understand.
+
+AhaSend open tracking records requests for a tracking image in your emails; this guide explains setup, events and the limits of open data.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Warning>
 **Accuracy Limitations:** Open tracking is inherently inaccurate due to email client behavior, bot activity, and privacy features. Use open tracking data as approximate engagement indicators rather than precise metrics.
@@ -288,3 +291,9 @@ For API v1 (`/v1/email/send`), include tracking headers in the `content.headers`
     - Ensure GDPR/CCPA compliance where applicable
   </Accordion>
 </AccordionGroup>
+
+## Related Guides
+
+- [Account quickstart](/quickstart), [Domain setup](/domains), [Open event payload](/api-reference/webhooks/message-opened).
+- [Click tracking](/tracking/click-tracking), [API tracking options](/api-reference/messages/create-message), [SMTP tracking headers](/smtp/special-headers).
+- [Plans and limits](/facts), [Retention rules](/retention).

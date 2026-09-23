@@ -5,9 +5,16 @@ description: "Send email from Python with smtplib and AhaSend's SMTP relay: STAR
 icon: "python"
 ---
 
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
+
 Send emails through AhaSend's SMTP servers using Python's built-in [smtplib](https://docs.python.org/3/library/smtplib.html) and [email](https://docs.python.org/3/library/email.html) modules. This guide covers everything from basic setup to advanced features like HTML content, attachments, and custom headers.
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -18,16 +25,8 @@ Before you begin, ensure you have:
     - Basic knowledge of Python programming
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Built-in Modules
 
@@ -50,22 +49,7 @@ Python's standard library includes everything you need for SMTP:
 
 ## Connection Settings
 
-Use these settings for all Python SMTP configurations with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## Basic Email Examples
 
@@ -463,3 +447,5 @@ if __name__ == "__main__":
     Get help from our engineering team
   </Card>
 </CardGroup>
+
+<SmtpRelated />

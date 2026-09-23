@@ -5,7 +5,10 @@ description: "Set AhaSend email content and metadata retention within your plan 
 icon: "clock"
 ---
 
-AhaSend retains message data and metadata for 7 days by default to support email delivery tracking, auditing, and troubleshooting. You can customize these retention periods to comply with legal requirements or privacy policies, especially when handling sensitive information like financial, health, or legal data.
+
+AhaSend retention settings control how long message metadata and content remain available; this guide explains the defaults, plan ranges and per-message overrides.
+
+Available on Free, Pro and Max; the retention ranges depend on your plan, and zero message-data retention needs approval. See [plans and features](/facts#plans-and-features).
 
 <Info>
 Choose retention periods that fit your privacy policy. A retention setting alone does not establish compliance with a law or standard.
@@ -243,14 +246,9 @@ Use the settings below only when they fit your plan's range. Any 0-day data sett
   </Accordion>
 </AccordionGroup>
 
-## Related Documentation
 
-<CardGroup cols={2}>
-  <Card title="Special Headers" icon="list" href="/smtp/special-headers">
-    Complete reference for SMTP headers including retention
-  </Card>
+## Related Guides
 
-  <Card title="API Reference" icon="code" href="/api-reference/messages/create-message">
-    API documentation for setting retention in message requests
-  </Card>
-</CardGroup>
+- [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [Account settings API](/api-reference/accounts/update-account).
+- [SMTP retention headers](/smtp/special-headers), [API message retention](/api-reference/messages/create-message), [S3 archiving](/retention/s3).
+- [Plans and limits](/facts), [Tracking setup](/tracking/open-tracking).

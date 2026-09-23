@@ -7,6 +7,8 @@ icon: "key"
 
 AhaSend uses API keys to authenticate requests. Your API keys carry many privileges, so be sure to keep them secure! Do not share your secret API keys in publicly accessible areas such as GitHub, client-side code, and so forth.
 
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
 All API requests must be made over HTTPS. Calls made over plain HTTP will fail. API requests without authentication will also fail.
 
 The API base URL is `https://api.ahasend.com`. Find your account ID in the dashboard account settings. Message-list examples below need a full API key with `messages:read:{your-domain}` or `messages:read:all`.
@@ -209,3 +211,9 @@ Now that you understand authentication, you can:
 - Explore [API Scopes](/api-reference/scopes) to understand permission levels
 - Check [Rate Limits](/api-reference/rate-limits) to understand usage restrictions
 - Start [sending messages](/api-reference/messages/create-message) with the API
+
+## Related Guides
+
+- [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials), [REST sending guide](/send-api/send-email).
+- [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart), [Node.js SDK](/guides/nodejs-sdk).
+- [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

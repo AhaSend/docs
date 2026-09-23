@@ -6,9 +6,13 @@ keywords: ["claude ai email integration", "claude code email workflow", "claude 
 icon: "robot"
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
 import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from an app built with Claude Code with AhaSend, keep credentials on the server, and test a sandbox send.
 
 Claude Code can run the code it writes after you approve the command and permit the required network access, so it can send a test message and read the response back. That turns plausible code into observed-working code, as long as you hand it the real API first.
 
@@ -46,6 +50,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Step 2: Write a CLAUDE.md With the Real API Facts
 
@@ -150,10 +156,7 @@ Then merge, set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_WEBHOOK_SE
 
 ## Going Further
 
-- **Extend the loop to failure**: with a configured, reachable webhook, the same sandbox workflow can prove the bounce path. Ask Claude to drive `sandbox_result` through `bounce` and `suppress` and assert on what your code does next.
-- **Templating and webhooks**: per-recipient `substitutions` cover personalised batches, and `@ahasend/sdk/webhooks` verifies delivery-event signatures. Both belong in `CLAUDE.md` so the next workflow starts from them.
-- Same grounding trick, different file: [Cursor](/guides/cursor) reads `.cursor/rules/`, [GitHub Copilot](/guides/github-copilot) reads `.github/copilot-instructions.md`, and [Windsurf](/guides/windsurf) reads `.devin/rules/` (preferred) or `.windsurf/rules/` (legacy fallback).
-- For the finished shape of the integration Claude is writing, see [Express](/guides/express), [Next.js](/guides/nextjs), or [NestJS](/guides/nestjs).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -173,3 +176,5 @@ Then merge, set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_WEBHOOK_SE
 </AccordionGroup>
 
 Every endpoint the SDK exposes is in the [API reference](/api-reference).
+
+<GuideRelated />

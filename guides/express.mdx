@@ -5,8 +5,12 @@ description: "Send transactional email from an Express 5 app with the AhaSend No
 keywords: ["express send email", "express transactional email", "nodejs email api express", "ahasend express", "express webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to use AhaSend to send transactional email from Express in Node.js, keep credentials on the server, and test a sandbox send.
 
 The webhook route is where [Express](https://expressjs.com) apps usually go wrong: signature verification needs the raw request body, so mount `expressWebhookHandler` directly, with no `express.raw()` in front of it and no global JSON parser on that path.
 
@@ -43,6 +47,8 @@ bun add --dev typescript @types/express @types/node
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -219,13 +225,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour. The first attempt must be in the future and within seven days of the request.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers, reusing each key only with the same payload.
-- **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself, use the encoded string as `data`, and set `base64: true`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. On a different Node framework? The same SDK powers the [Fastify](/guides/fastify) and [NestJS](/guides/nestjs) guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -240,3 +240,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. On a
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

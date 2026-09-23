@@ -5,6 +5,11 @@ description: "Send email from C# and .NET through AhaSend's SMTP relay with Mail
 icon: "microsoft"
 ---
 
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
+
 Send emails through AhaSend's SMTP servers using C# and .NET with the powerful MailKit library. This guide covers why you should avoid `System.Net.Mail` and use MailKit instead for reliable email delivery.
 
 <Warning>
@@ -12,6 +17,8 @@ Send emails through AhaSend's SMTP servers using C# and .NET with the powerful M
 </Warning>
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -23,11 +30,6 @@ Before you begin, ensure you have:
     - Basic knowledge of C# programming
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 
   <Accordion title="Project Dependencies" icon="code-fork">
     - **MailKit** NuGet package (recommended)
@@ -36,9 +38,6 @@ Before you begin, ensure you have:
   </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Why MailKit Over System.Net.Mail?
 
@@ -61,22 +60,7 @@ AhaSend works with any SMTP-compatible library, but for C#/.NET applications, we
 
 ## Connection Settings
 
-Use these settings for all C#/.NET SMTP configurations with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## Why System.Net.Mail Fails
 
@@ -744,3 +728,5 @@ class Program
 <Tip>
 **Pro Tip:** Always use MailKit instead of System.Net.Mail for AhaSend integration. Configure your SMTP settings through dependency injection, implement proper error handling with retry logic, and start with sandbox mode during development. Use async patterns for better performance in web applications.
 </Tip>
+
+<SmtpRelated />

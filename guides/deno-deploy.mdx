@@ -5,8 +5,12 @@ description: "Send transactional email from Deno and Deno Deploy with the AhaSen
 keywords: ["deno deploy send email", "deno transactional email", "deno email api", "ahasend deno", "deno deploy webhooks"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-deno.mdx";
 import SendGuideRules from "/snippets/send-guide-rules.mdx";
 
+This guide shows how to send transactional email from Deno and Deno Deploy with AhaSend, keep credentials on the server, and test a sandbox send.
 
 Deno Deploy can run npm packages without a Node build step, so you can use the AhaSend SDK directly from a Deno application.
 
@@ -26,6 +30,8 @@ Add the SDK to your Deno project:
 ```bash
 deno add npm:@ahasend/sdk
 ```
+
+<QuickSend />
 
 This writes the dependency to `deno.json`. Commit both `deno.json` and `deno.lock`, then import the saved bare specifier:
 
@@ -218,13 +224,7 @@ deno deploy --org your-org --app your-app --prod
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour; the first attempt must be in the future and within 7 days.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()`, reuse it only for the exact same payload, and account for the 24-hour result-retention window.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Running on another modern runtime? See the [SDK runtime and verification reference](/guides/nodejs-sdk).
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -242,3 +242,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Runn
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

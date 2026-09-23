@@ -5,9 +5,13 @@ icon: "shield-check"
 description: "Verify AhaSend webhook signatures with HMAC-SHA256 over id.timestamp.body using your raw webhook secret, and reject replayed or tampered deliveries."
 ---
 
-## Security & Verification
+AhaSend signs every webhook and inbound route request with HMAC-SHA256; this page shows how to verify the signature before trusting the payload.
 
-All webhooks include Standard Webhooks security headers for verification:
+Signed webhooks and routes are available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
+## Which Headers Does AhaSend Send?
+
+All webhook and route requests include Standard Webhooks security headers for verification:
 - `webhook-id`: Unique identifier for the webhook event (used as idempotency key)
 - `webhook-timestamp`: Unix timestamp when the webhook was sent
 - `webhook-signature`: HMAC signature of the payload using your webhook secret
@@ -33,15 +37,17 @@ against the raw request body bytes (before any JSON parsing), and reject
 deliveries whose `webhook-timestamp` is outside your tolerance window in either
 direction to prevent replay.
 
-## Secret and Header Format
+## Which Secret Should I Use?
 
 Webhook secrets start with `aha-whsec-`; route secrets start with `aha-rsec-`. Use the entire secret, including its prefix, as the HMAC-SHA256 key. Do not base64-decode it.
 
 The signed input is the delivery ID, a dot, the Unix timestamp, a dot, and the exact raw request body. The `webhook-signature` header contains `v1,<base64 signature>` values separated by spaces; accept a delivery if any supported signature matches. The recommended timestamp tolerance is five minutes in either direction, matching the AhaSend SDK default.
 
-The `webhook-id` header identifies a delivery. Payload `webhook_id` identifies the configured webhook, and `route_id` identifies a route. Deduplicate the header value only after verification, atomically with durable work. Return 2xx for verified unknown event types.
+The `webhook-id` header identifies a delivery. Payload `webhook_id` identifies the configured webhook, and `route_id` identifies a route. Deduplicate the header value only after verification, atomically with durable work. Return 2xx for verified unknown event types and already-processed deliveries.
 
 ## Runnable Verification Examples
+
+For a route delivery, set `AHASEND_WEBHOOK_SECRET` in these examples to that route's `aha-rsec-` secret; the verification code is the same. For an email event, use that webhook's `aha-whsec-` secret.
 
 Save an incoming raw body as `payload.json` without reformatting it. Set `AHASEND_WEBHOOK_SECRET`, `WEBHOOK_ID`, `WEBHOOK_TIMESTAMP`, and `WEBHOOK_SIGNATURE` to the secret and headers from that same delivery. Run the check while its timestamp is within five minutes. These scripts print only whether verification succeeded.
 
@@ -193,3 +199,12 @@ echo "Verified", PHP_EOL;
 Python's bytes constructor preserves the raw key. The PHP example computes `base64(HMAC-SHA256(secret_utf8, id + "." + timestamp + "." + body))` directly. It avoids the current Standard Webhooks PHP `fromRaw` constructor issue. See the upstream [Python](https://github.com/standard-webhooks/standard-webhooks/blob/main/libraries/python/standardwebhooks/webhooks.py) and [PHP](https://github.com/standard-webhooks/standard-webhooks/blob/main/libraries/php/src/Webhook.php) implementations.
 
 In an HTTP handler, enforce the 30,000,000-byte limit while reading the stream, before buffering. Keep a lower limit if your hosting platform requires one. SDK adapters already bound their reads; see the [Node.js SDK](/guides/nodejs-sdk) and [Go SDK](/guides/go-sdk) examples.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Retry policy](/api-reference/webhooks/retry-policy), [Idempotency rules](/api-reference/idempotency), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).
+
+- For inbound email: [routing setup](/integrations/routing), [route payload](/api-reference/routes/route-message) and [CLI route testing](/cli/route-testing).

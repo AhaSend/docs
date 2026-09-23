@@ -5,6 +5,11 @@ description: "Send and test email over AhaSend SMTP from the terminal with Swaks
 icon: "terminal"
 ---
 
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
+
 Send emails through AhaSend's SMTP servers directly from your terminal using Swaks, a powerful command-line tool designed for testing and debugging SMTP servers. Perfect for scripting, automation, and troubleshooting email delivery issues.
 
 <Info>
@@ -12,6 +17,8 @@ Send emails through AhaSend's SMTP servers directly from your terminal using Swa
 </Info>
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -22,16 +29,8 @@ Before you begin, ensure you have:
     - Basic familiarity with command-line tools
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Installation
 
@@ -66,22 +65,7 @@ wsl --install
 
 ## Connection Settings
 
-Use these settings for all Swaks commands with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`
-    **Ports:** 587 (recommended), 25, 2525
-    **Security:** TLS (--tls flag)
-    **Authentication:** Plain (--auth plain)
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`
-    **Ports:** 587 (recommended), 25, 2525
-    **Security:** TLS (--tls flag)
-    **Authentication:** Plain (--auth plain)
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## Basic Email Examples
 
@@ -379,7 +363,7 @@ swaks \
   <Card title="Swaks Documentation" icon="book" href="http://www.jetmore.org/john/code/swaks/">
     Official Swaks documentation and manual
   </Card>
-  <Card title="SMTP Testing Guide" icon="flask" href="/smtp/sandbox">
+  <Card title="SMTP Testing Guide" icon="flask" href="/send-api/sandbox">
     Complete guide to testing email delivery
   </Card>
   <Card title="AhaSend SMTP Settings" icon="server" href="/smtp">
@@ -393,3 +377,5 @@ swaks \
 <Tip>
 **Pro Tip:** Start with sandbox mode and basic commands before building complex automation. Use environment variables for credentials and always test scripts thoroughly before production use.
 </Tip>
+
+<SmtpRelated />

@@ -5,136 +5,9 @@ icon: route
 sidebarTitle: "routes"
 ---
 
-Manage inbound email routes for processing incoming messages through webhooks.
+AhaSend CLI `routes` commands let you forward and trigger inbound email events; this page lists their arguments and flags. For the complete workflow, use the [route testing guide](/cli/route-testing).
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
-
-## Overview
-
-```text
-ahasend routes [subcommand] [flags]
-```
-
-Available subcommands:
-- `list` - List all inbound email routes
-- `create` - Create a new inbound email route
-- `get` - Get detailed information about a specific route
-- `update` - Update an existing inbound email route
-- `delete` - Delete an inbound email route
-- `listen` - Listen for inbound email events in real-time
-- `trigger` - Trigger route events for testing
-
-Routes enable you to:
-- Process inbound emails through webhooks
-- Filter emails by recipient patterns
-- Opt into attachment and header fields
-- Group copies with the same Message-ID into one request
-- Strip reply content for cleaner processing
-
-## List Routes
-
-```bash
-ahasend routes list
-```
-
-## Create Route
-
-```bash
-# Basic route
-ahasend routes create --name "Docs route" --interactive=false \
-  --recipient "support@example.com" \
-  --url "https://your-app.com/webhooks/inbound"
-
-# With recipient pattern filtering
-ahasend routes create --interactive=false \
-  --recipient "*@help.example.com" \
-  --url "https://api.example.com/email-handler" \
-  --name "Help desk routing"
-
-# Advanced route with options
-ahasend routes create --interactive=false \
-  --recipient "support-*@example.com" \
-  --url "https://support.example.com/webhook" \
-  --strip-replies \
-  --group-by-message-id \
-  --name "Support ticket routing"
-```
-
-## Get Route Details
-
-```bash
-ahasend routes get YOUR_RESOURCE_ID
-```
-
-## Update Route
-
-```bash
-# Update webhook URL
-ahasend routes update YOUR_RESOURCE_ID \
-  --url "https://new-api.example.com/webhook"
-
-# Update recipient pattern
-ahasend routes update YOUR_RESOURCE_ID \
-  --recipient "new-pattern@example.com"
-
-# Update processing options
-ahasend routes update YOUR_RESOURCE_ID \
-  --strip-replies \
-  --group-by-message-id
-```
-
-## Delete Route
-
-```bash
-TEST_ID=$(ahasend routes create --name "Docs deletion test" --url https://example.com/inbound --recipient "docs-delete-test@yourdomain.com" --interactive=false --output json | jq -er '.id')
-ahasend routes delete "$TEST_ID"
-```
-
-## Listen for Events (Development)
-
-Listen for inbound email routing events in real-time using WebSocket connection. This command establishes a WebSocket connection to receive inbound email events and can forward them to a local endpoint for development.
-
-Temporary routes need a domain in your account with its AhaSend MX records configured. An existing route must be enabled to emit events: after its listener connects, run `ahasend routes update YOUR_RESOURCE_ID --enabled` in another terminal, then disable it again before stopping the listener. Temporary listeners are enabled automatically.
-
-```bash
-# Listen with existing route
-ahasend routes listen --route-id YOUR_RESOURCE_ID
-
-# Listen with recipient pattern (backend creates temporary route)
-ahasend routes listen --recipient "*@example.com"
-
-# Forward events to local endpoint
-ahasend routes listen \
-  --recipient "support-*@example.com" \
-  --forward-to http://localhost:3000/webhook
-
-# Slim output (minimal event display)
-ahasend routes listen --route-id YOUR_RESOURCE_ID --slim-output
-
-# Skip SSL verification for local endpoints
-ahasend routes listen \
-  --route-id YOUR_RESOURCE_ID \
-  --forward-to https://localhost:3000/webhook \
-  --skip-verify
-```
-
-
-## Trigger Test Events (Development)
-
-Manually trigger route events for testing:
-
-```bash
-ahasend routes trigger YOUR_RESOURCE_ID
-```
-
-<Warning>
-This is a development-only feature and may not be available in production environments.
-</Warning>
-
-## Next Steps
-
-- [Configure webhooks](/cli/commands/webhooks)
-- [View statistics](/cli/commands/stats)
+`routes get`, `routes update`, `routes delete` and `routes trigger` take the resource ID as their positional argument. `routes create`, `routes list` and `routes listen` use the flags below. For dashboard setup, see [the routes guide](/integrations/routing).
 
 ## Command Flags
 
@@ -204,3 +77,10 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | `--recipient string` | Update recipient filter pattern |
 | `--strip-replies` | Enable stripping reply content from emails |
 | `--url string` | Update webhook URL |
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Inbound routing setup](/integrations/routing).
+- [Route payload](/api-reference/routes/route-message), [Local route testing](/cli/route-testing), [Signature verification](/api-reference/webhooks/security).
+- [Retry policy](/api-reference/webhooks/retry-policy), [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication).
+- [Permission scopes](/api-reference/scopes).

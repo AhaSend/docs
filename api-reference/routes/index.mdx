@@ -5,27 +5,19 @@ description: "Receive inbound email as JSON webhooks with AhaSend message routes
 icon: "route"
 ---
 
-<Note>
-**New to message routing?** Start with our [comprehensive routing guide](/integrations/routing) to learn how to create and configure message routes in your dashboard before diving into the API details.
-</Note>
+The AhaSend Routes API lets you create, list, update and delete inbound email routes; this page links the endpoints and the received-message payload. Follow the [routing guide](/integrations/routing) for MX setup, matching rules and dashboard configuration.
 
-Message routes enable automatic processing of inbound emails sent to your AhaSend domains. When emails arrive at configured addresses, AhaSend parses the content and forwards it to your application endpoints via HTTP POST requests.
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-## Overview
+## API Operations
 
-Message routing provides intelligent inbound email handling with:
-
-- **Pattern-based routing** using exact addresses or wildcards (`*`, `ticket-*`, `*-support`)
-- **Real-time delivery** via HTTP POST to your configured endpoints
-- **Flexible processing options** for attachments, headers, and reply extraction
-- **Secure payload delivery** following the Standard Webhooks specification
-
-## Prerequisites
-
-Message routing requires:
-- Domain added and verified in AhaSend
-- [MX records copied from your domain details](/domains); use the target and priority shown there
-- Endpoint accepting HTTP POST requests with 2xx responses
+| Task | Endpoint reference |
+|---|---|
+| Create a route | [Create Route](/api-reference/routes/create-route) |
+| List routes | [List Routes](/api-reference/routes/get-routes) |
+| Read one route | [Get Route](/api-reference/routes/get-route) |
+| Change settings or re-enable a route | [Update Route](/api-reference/routes/update-route) |
+| Remove a route | [Delete Route](/api-reference/routes/delete-route) |
 
 ## Payload Structure
 
@@ -48,24 +40,13 @@ All routing events use a consistent JSON structure:
 
 This is a shortened payload. See [the full routing schema](/api-reference/routes/route-message) for attachments, headers and reply fields.
 
-## Security Headers
+## Delivery and Verification
 
-Every routing request includes security headers for verification:
+The [signature reference](/api-reference/webhooks/security) covers route secrets and raw-body verification. The [retry policy](/api-reference/webhooks/retry-policy) covers timeouts, duplicate deliveries and automatic disabling.
 
-- `webhook-id`: Unique event identifier for idempotency
-- `webhook-timestamp`: Unix timestamp when the route was triggered
-- `webhook-signature`: HMAC signature for payload verification
+## Related Guides
 
-## Getting Started
-
-<CardGroup cols={2}>
-  <Card title="Create Routes" icon="plus" href="/integrations/routing">
-    Learn how to configure message routes and handle inbound emails
-  </Card>
-  <Card title="Security" icon="shield" href="/api-reference/routes/security">
-    Implement signature verification for secure route handling
-  </Card>
-  <Card title="Retry Policy" icon="arrows-rotate" href="/api-reference/routes/retry-policy">
-    Understand routing delivery guarantees and retry behavior
-  </Card>
-</CardGroup>
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Inbound routing setup](/integrations/routing).
+- [Route payload](/api-reference/routes/route-message), [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).
