@@ -1,6 +1,10 @@
 ---
-title: "List API Keys"
+title: "List API Keys via the API"
 sidebarTitle: "List API Keys"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/api-keys"
+description: "List every API key on your AhaSend account with its label, scopes, and IP allow list, so you can audit or rotate credentials programmatically."
 ---
+
+Returns a list of API keys for the account
+
 This endpoint returns a cursor-paginated list. Use `after` or `before` from the returned pagination cursors, but not both in one request.

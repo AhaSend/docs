@@ -1,7 +1,8 @@
 ---
-title: "Email Routing Security and Verification"
+title: "Verify Inbound Email Route Signatures"
 sidebarTitle: "Security"
 icon: "shield-check"
+description: "Verify AhaSend inbound email route signatures using the full signing secret as a raw HMAC key, and reject stale or invalid webhook requests."
 ---
 
 AhaSend signs inbound route deliveries using the Standard Webhooks headers and format. The route secret starts with `aha-rsec-`; use the literal UTF-8 bytes of the full secret, prefix included, as the HMAC-SHA256 key. Never base64-decode it.

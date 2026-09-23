@@ -1,5 +1,24 @@
 ---
-title: "Create Conversational Message"
+title: "Send Email with CC and BCC via the API"
 sidebarTitle: "Create Conversation"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/messages/conversation"
+description: "Send one conversational email with To, CC and BCC recipients through the AhaSend API, for person-to-person or reply-style mail."
 ---
+
+Creates and sends a conversational message (with support for CC and BCC) to one or more recipients. This API does not support template substitutions, use [Create Message](/api-reference/messages/create-message) instead if you need substitutions.
+
+**Validation Requirements:**
+- Either `text_content` or `html_content` is required
+- `from.email` must be from a domain you own with valid DNS records
+- `retention.metadata` must be between 1 and 30 days
+- `retention.data` must be between 0 and 30 days
+- If the `reply_to` parameter is provided, do not include `reply-to` in headers
+- If the `cc` parameter is provided, do not include `cc` in headers
+- `message-id` header will be ignored and automatically generated
+- Schedule times must be in RFC3339 format
+- `schedule.first_attempt` must be in the future and within 7 days of the request
+- `schedule.expires` must be in the future and within 8 days of the request
+
+Authorization uses the domain in `from.email`: either
+`messages:send:all` or the matching domain-specific send role is
+sufficient.

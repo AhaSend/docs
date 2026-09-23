@@ -1,5 +1,9 @@
 ---
-title: "Cancel Message"
+title: "Cancel a Scheduled Email via the API"
 sidebarTitle: "Cancel Message"
 openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/messages/{message_id}/cancel"
+description: "Cancel a scheduled email through the AhaSend API before its first delivery attempt, using the UUID portion of the message identifier."
 ---
+
+Cancels a scheduled message. Access requires `messages:cancel:all` or a
+cancel role matching the message's sender domain.

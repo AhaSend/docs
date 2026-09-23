@@ -1,5 +1,23 @@
 ---
-title: "Create Message"
+title: "Send an Email via the API"
 sidebarTitle: "Create Message"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/messages"
+description: "Send transactional email with the AhaSend API v2: one POST request to up to 100 recipients with templates, attachments, tracking, tags and scheduled sending."
 ---
+
+Creates and sends a message to one or more recipients. This API cannot be used if you want to send a conversational/P2P message and set CC or BCC. Use [Create Conversation Message](/api-reference/messages/create-conversation) instead.
+
+**Validation Requirements:**
+- Either `text_content` or `html_content` is required
+- `from.email` must be from a domain you own with valid DNS records
+- `retention.metadata` must be between 1 and 30 days
+- `retention.data` must be between 0 and 30 days
+- If `reply_to` is provided, do not include `reply-to` in headers
+- `message-id` header will be ignored and automatically generated
+- Schedule times must be in RFC3339 format
+- `schedule.first_attempt` must be in the future and within 7 days of the request
+- `schedule.expires` must be in the future and within 8 days of the request
+
+Authorization uses the domain in `from.email`: either
+`messages:send:all` or the matching domain-specific send role is
+sufficient.

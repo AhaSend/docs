@@ -1,5 +1,12 @@
 ---
-title: "Message Delivery Failed Webhook"
+title: "message.failed Webhook Event"
 sidebarTitle: "Failed"
 openapi: "/webhooks.yaml webhook message.failed"
+description: "The message.failed webhook fires when an AhaSend email exhausts its retry window without delivery. Learn how it differs from message.bounced."
 ---
+
+Triggered when an email exhausts its retry window without being delivered.
+
+No more delivery attempts will be made. This event reports retry exhaustion rather than one specific SMTP exchange, so `data.delivery_attempt` is omitted. An immediate permanent rejection from a recipient server is reported as `message.bounced` instead.
+
+**When it's sent**: After all retry attempts have been exhausted.

@@ -1,9 +1,12 @@
 ---
-title: "Get Sub-Account API Key"
+title: "Get a Sub-Account API Key via the API"
 sidebarTitle: "Get API Key"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/api-keys/{key_id}"
+description: "Retrieve one API key owned by an AhaSend sub-account, including its label, scopes, and IP allow list. The secret_key is never returned after creation."
 ---
 
+Returns a specific API key owned by a sub-account. The `secret_key` field is omitted from read responses.
+
 <Info>
-  **Platform Partner feature:** Sub Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
+  **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>

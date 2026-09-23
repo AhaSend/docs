@@ -203,7 +203,7 @@
                 ]
               },
               {
-                "group": "Sub Accounts",
+                "group": "Sub-Accounts",
                 "icon": "sitemap",
                 "pages": [
                   "api-reference/sub-accounts/overview",
@@ -508,7 +508,18 @@
   },
   "seo": {
     "metatags": {
-      "canonical": "https://ahasend.com/docs"
+      "canonical": "https://ahasend.com/docs",
+      "twitter:site": "@aha_send"
+    },
+    "organization": {
+      "name": "AhaSend",
+      "legalName": "AhaSend B.V.",
+      "url": "https://ahasend.com",
+      "sameAs": [
+        "https://x.com/aha_send",
+        "https://www.linkedin.com/company/ahasend",
+        "https://github.com/ahasend"
+      ]
     }
   },
   "integrations": {
@@ -532,5 +543,17 @@
     "404": {
       "redirect": true
     }
+  },
+  "thumbnails": {
+    "appearance": "dark",
+    "background": "/images/social-background.svg"
+  },
+  "markdown": {
+    "instructions": [
+      "AhaSend stores all message data in the EU. See /facts.",
+      "The API base URL is https://api.ahasend.com. Send the API key in the Authorization: Bearer header. See /api-reference/authentication.",
+      "Use send.ahasend.com for SMTP in the EU, or send-us.ahasend.com as a US connection point forwarding to the EU. Ports 25, 587 and 2525 use STARTTLS. Port 465 is not supported. See /smtp.",
+      "For send-only integrations, create an API Key v2 under Credentials → Add and scope it to messages:send:{your-domain}. See /send-api/credentials and /api-reference/scopes."
+    ]
   }
 }

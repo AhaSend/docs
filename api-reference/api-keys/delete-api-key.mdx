@@ -1,5 +1,8 @@
 ---
-title: "Delete API Key"
+title: "Delete an API Key via the API"
 sidebarTitle: "Delete API Key"
 openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/api-keys/{key_id}"
+description: "Revoke an AhaSend API key permanently by ID. Requires the api-keys:delete scope. Create the replacement key first when you rotate credentials."
 ---
+
+Deletes an API key

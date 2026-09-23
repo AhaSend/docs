@@ -1,8 +1,13 @@
 ---
-title: "Get Message"
+title: "Get a Message by ID via the API"
 sidebarTitle: "Get Message"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/messages/{message_id}"
+description: "Retrieve a single email sent through AhaSend by message ID, including its delivery status and the raw email content when your retention settings keep it."
 ---
+
+Returns the complete message by its ID, including raw content and parsed content structure.
+Access requires `messages:read:all` or a read role matching the
+message's sender domain.
 
 Returns a message by its ID.
 

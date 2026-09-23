@@ -1,5 +1,12 @@
 ---
-title: "Remove Account Member"
-sidebarTitle: "Delete Account Member"
+title: "Remove an Account Member via the API"
+sidebarTitle: "Remove Account Member"
 openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/members/{user_id}"
+description: "Remove a member from your AhaSend account through the API to revoke their access. You cannot remove yourself or the account owner this way."
 ---
+
+Removes a member from the account
+
+**Restrictions:**
+- You cannot delete yourself
+- You cannot delete the account owner

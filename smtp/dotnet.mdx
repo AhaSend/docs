@@ -1,11 +1,9 @@
 ---
-title: "Sending emails in C#"
+title: "Send Email in C# via SMTP (MailKit)"
 sidebarTitle: "C# / .NET"
-description: "Learn how to send emails using AhaSend SMTP with C# and .NET, featuring MailKit for reliable SMTP integration"
+description: "Send email from C# and .NET through AhaSend's SMTP relay with MailKit, and why System.Net.Mail SmtpClient fails AUTH over STARTTLS. HTML, attachments, headers."
 icon: "microsoft"
 ---
-
-# Sending Emails with SMTP in C# / .NET
 
 Send emails through AhaSend's SMTP servers using C# and .NET with the powerful MailKit library. This guide covers why you should avoid `System.Net.Mail` and use MailKit instead for reliable email delivery.
 
@@ -80,7 +78,7 @@ Use these settings for all C#/.NET SMTP configurations with AhaSend:
   </Card>
 </CardGroup>
 
-## ❌ Why System.Net.Mail Fails
+## Why System.Net.Mail Fails
 
 The built-in `System.Net.Mail.SmtpClient` in .NET has fundamental issues with STARTTLS authentication that make it incompatible with AhaSend.
 
@@ -148,7 +146,7 @@ You can confirm this authentication failure by capturing SMTP traffic with tools
 **Know a Workaround?** If you've found a way to make `System.Net.Mail` work reliably with AhaSend's AUTH PLAIN over STARTTLS, please [contact our support team](mailto:support@ahasend.com). We'd be happy to update this guide with your solution!
 </Info>
 
-## ✅ Use MailKit (Recommended)
+## Use MailKit (Recommended)
 
 MailKit is a modern, actively maintained .NET library that correctly handles SMTP authentication with AhaSend. It properly negotiates authentication mechanisms like `PLAIN` and `LOGIN` over `STARTTLS`.
 

@@ -1,5 +1,10 @@
 ---
-title: "List Routes"
+title: "List Inbound Email Routes via the API"
 sidebarTitle: "List Routes"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/routes"
+description: "List the inbound email routes in your AhaSend account, optionally filtered by domain. Domain-scoped API keys must pass the matching domain filter."
 ---
+
+Returns a list of routes for the account. A domain-scoped key must
+provide the matching `domain` query parameter; the global read role can
+list without that filter.

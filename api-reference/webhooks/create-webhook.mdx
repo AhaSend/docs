@@ -1,5 +1,12 @@
 ---
-title: "Create Webhook"
+title: "Create a Webhook via the API"
 sidebarTitle: "Create Webhook"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/webhooks"
+description: "Create an AhaSend webhook with the API: set the endpoint URL, choose event types and domain scope, and get the signing secret used for verification."
 ---
+
+Creates a new webhook for event notifications. A `scoped` webhook
+requires at least one domain and the key must have write permission for
+every supplied domain. A `global` webhook requires
+`webhooks:write:all`; supplied domains are accepted but ignored, and
+the response contains `domains: []`.

@@ -1,5 +1,14 @@
 ---
-title: "Update Account"
+title: "Update Account Settings via the API"
 sidebarTitle: "Update Account"
 openapi: "/openapi.yaml PUT /v2/accounts/{account_id}"
+description: "Update AhaSend account settings through the API: change the account name, website, and message data or metadata retention within your plan limits."
 ---
+
+Updates account settings
+
+**Validation Requirements:**
+- `name` must be maximum 255 characters
+- `website` must be a valid URL
+- `message_metadata_retention` must be between 1 and 30 days
+- `message_data_retention` must be between 0 and 30 days

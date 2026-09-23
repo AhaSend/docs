@@ -1,5 +1,9 @@
 ---
-title: "Get Route"
+title: "Get an Inbound Email Route via the API"
 sidebarTitle: "Get Route"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/routes/{route_id}"
+description: "Retrieve a single AhaSend inbound email route by ID, including its recipient pattern, webhook URL and attachment, header and reply settings."
 ---
+
+Returns a specific route by ID. Access requires the global read role or
+a read role matching the route's recipient domain.

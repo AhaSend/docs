@@ -1,7 +1,8 @@
 ---
-title: "Request Idempotency"
-description: "Ensure safe retries of API requests using idempotency keys"
+title: "Idempotency Keys for Safe API Retries"
+description: "Use AhaSend Idempotency-Key headers on supported API operations to reduce duplicate requests, replay stored results, and handle expiry or conflicts."
 icon: "repeat"
+sidebarTitle: "Idempotency"
 ---
 
 AhaSend uses an `Idempotency-Key` to replay a stored result when you retry the same request. It reduces duplicate operations, but a server error, an interrupted request, or an expired record can allow the operation to run again. Reconcile uncertain sends before retrying when duplicates are unacceptable.
@@ -31,7 +32,7 @@ When you make a request with an `Idempotency-Key` header:
     - **Routes**: Create message routes
     - **Webhooks**: Create webhook endpoints
     - **SMTP Credentials**: Create SMTP credentials
-    - **Sub Accounts**: Create sub accounts
+    - **Sub-Accounts**: Create sub-accounts
     - **Sub-Account API Keys**: Create sub-account API keys
   </Accordion>
 
@@ -269,7 +270,7 @@ The API responds differently based on the idempotency key status:
   <Card title="Unique Keys" icon="fingerprint">
     Use unique, descriptive keys that won't conflict with other operations. Consider including timestamps or UUIDs.
 
-    ```
+    ```text
     Good: user_123_welcome_20240115_001
     Bad: request_1
     ```

@@ -1,5 +1,8 @@
 ---
-title: "Check Domain DNS"
+title: "Check Domain DNS Records via the API"
 sidebarTitle: "Check Domain DNS"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/domains/{domain}/check-dns"
+description: "Trigger an AhaSend DNS check to verify a sending domain's SPF, DKIM and other records. Results are cached for 60 seconds between checks."
 ---
+
+Triggers a DNS validation check for the domain. If the domain was checked within the last 60 seconds, the cached validation result is returned instead of performing a fresh lookup.

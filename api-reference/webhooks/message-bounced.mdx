@@ -1,5 +1,12 @@
 ---
-title: "Message Bounce Webhook"
+title: "message.bounced Webhook Event"
 sidebarTitle: "Bounced"
 openapi: "/webhooks.yaml webhook message.bounced"
+description: "The message.bounced webhook fires when a recipient server permanently rejects an AhaSend email or a later bounce notice arrives. Payload and SMTP codes."
 ---
+
+Triggered when a message reaches a bounced outcome. This includes an immediate permanent SMTP rejection or an out-of-band delivery status notification received after the message was accepted.
+
+A direct SMTP rejection normally includes `data.delivery_attempt`. An out-of-band bounce does not describe one SMTP attempt, so the object is omitted in that case.
+
+**When it's sent**: When a recipient server permanently rejects the message or AhaSend receives a later bounce notification.

@@ -1,5 +1,10 @@
 ---
-title: "Create Route"
+title: "Create an Inbound Email Route via the API"
 sidebarTitle: "Create Route"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/routes"
+description: "Create an AhaSend inbound email route that forwards messages sent to an address or wildcard on your domain to your webhook URL as JSON."
 ---
+
+Creates a new route for inbound email routing. Authorization uses the
+domain in `recipient`: the global write role or its matching
+domain-specific write role is sufficient.

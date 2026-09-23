@@ -1,5 +1,31 @@
 ---
-title: "Inbound Message Route Event"
+title: "message.routing Inbound Email Webhook Event"
 sidebarTitle: "Message Routing"
 openapi: "/webhooks.yaml webhook message.routing"
+description: "Reference for the AhaSend message.routing event: the JSON payload with sender, subject, HTML and text bodies, attachments and headers for inbound email."
 ---
+
+Triggered when an inbound email is received and processed through a configured route.
+
+**Purpose**: This webhook delivers complete inbound email data to your application for processing inbound emails (like support tickets, replies, etc.).
+
+**Difference from message events**:
+- **Route events**: Process *inbound* emails sent TO your domains
+- **Message events**: Track *outbound* emails sent FROM your domains
+
+**Route configuration**:
+- Configure routes in your AhaSend dashboard
+- Choose whether to include attachments and headers
+- Set recipient filters and processing options
+
+When attachments are enabled, `attachments` includes conventional attachments,
+inline MIME parts (such as images referenced by `cid:` URLs in `html_body`), and
+filename-bearing MIME parts that omit the `Content-Disposition` header.
+
+**Use cases**:
+- Support ticket systems
+- Email-to-ticket conversion
+- Automated email processing
+- Reply handling
+
+**When it's sent**: When an inbound email matches a configured route.

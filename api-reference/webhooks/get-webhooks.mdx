@@ -1,5 +1,18 @@
 ---
-title: "List Webhooks"
+title: "List Webhooks via the API"
 sidebarTitle: "List Webhooks"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/webhooks"
+description: "List the webhooks in your AhaSend account with the API, filtered by enabled status or event type, with cursor pagination of up to 100 items per page."
 ---
+
+Returns a list of webhooks for the account
+
+The global read role sees all webhooks. Domain-scoped read roles return
+only webhooks associated with at least one authorized domain.
+
+**Query Parameters:**
+- `enabled`: Filter by enabled status
+- Event filters: `on_reception`, `on_delivered`, `on_transient_error`, `on_failed`, `on_bounced`, `on_suppressed`, `on_opened`, `on_clicked`, `on_suppression_created`, `on_dns_error`
+- `limit`: Maximum number of items to return (1-100, default: 100)
+- `after`: Pagination cursor for the next page
+- `before`: Pagination cursor for the previous page

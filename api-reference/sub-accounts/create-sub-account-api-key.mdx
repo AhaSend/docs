@@ -1,9 +1,18 @@
 ---
-title: "Create Sub-Account API Key"
+title: "Create a Sub-Account API Key via the API"
 sidebarTitle: "Create API Key"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/api-keys"
+description: "Issue an API key that authenticates as an AhaSend sub-account, using parent credentials with sub-account-api-keys:write. The secret_key is shown only once."
 ---
 
+Creates an API key owned by the sub-account. Parent credentials must belong to the parent account and include `sub-account-api-keys:write`; sub-account credentials cannot manage nested API keys. The returned `secret_key` authenticates as the child account and should be stored immediately.
+
+Bootstrap example:
+1. Create the sub-account with `POST /v2/accounts/{account_id}/sub-accounts` and a unique `Idempotency-Key`.
+2. Create the bootstrap child API key with this endpoint and a different unique `Idempotency-Key`.
+3. Store the one-time `secret_key` from the `201` response. Exact idempotent replays within 5 minutes return the same `secret_key`.
+4. Use that child secret with the child `sub_account_id` as the `account_id` on ordinary v2 routes.
+
 <Info>
-  **Platform Partner feature:** Sub Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
+  **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>

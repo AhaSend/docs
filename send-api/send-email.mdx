@@ -1,7 +1,7 @@
 ---
-title: "Send emails using the API"
-sidebarTitle: "Send emails using the API"
-description: "Learn how to send emails using AhaSend's API v2 create-message endpoint with comprehensive examples and best practices"
+title: "Send Email with the REST API"
+sidebarTitle: "Send Email"
+description: "Send transactional email with AhaSend's REST API v2: curl quick start, HTML and template examples, scheduling, sandbox testing, response fields and error codes."
 icon: "paper-plane"
 ---
 
@@ -54,14 +54,14 @@ All API requests require authentication using your API v2 key:
 <AccordionGroup>
   <Accordion title="Authorization Header" icon="key">
     Include your API key in the Authorization header:
-    ```
+    ```text
     Authorization: Bearer YOUR_API_KEY_HERE
     ```
   </Accordion>
 
   <Accordion title="Account ID" icon="id-card">
     Replace `{account_id}` in the URL with your actual account ID. Find the account ID in the dashboard account settings. Use a send-only key from **Credentials → Add → API Key v2** with `messages:send:{your-domain}`. Use `messages:send:all` when sending from many domains.
-    ```
+    ```text
     https://api.ahasend.com/v2/accounts/{account_id}/messages
     ```
   </Accordion>

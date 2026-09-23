@@ -1,5 +1,8 @@
 ---
-title: "Create API Key"
+title: "Create an API Key via the API"
 sidebarTitle: "Create API Key"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/api-keys"
+description: "Create a scoped AhaSend API key through the API, with an optional IP allow list. The secret_key is returned only once, so store it right away."
 ---
+
+Creates a new API key with the specified scopes

@@ -1,9 +1,11 @@
 ---
-title: "Ping"
+title: "Test Your API Key with the Ping Endpoint"
 sidebarTitle: "Ping"
-description: "Health check endpoint for testing API connectivity and authentication"
+description: "Call GET /v2/ping to check that the AhaSend API is reachable and your API key is valid. Works with a key of any scope and returns pong."
 openapi: "/openapi.yaml GET /v2/ping"
 ---
+
+Health check endpoint that returns a simple pong response
 
 The ping endpoint is a simple health check, particularly useful for:
 
@@ -12,8 +14,6 @@ The ping endpoint is a simple health check, particularly useful for:
 - **Connection Testing**: Verify network connectivity before sending important emails
 - **Integration Testing**: Validate your authentication setup during development
 
-### Authentication
+## Authentication
 
 This endpoint requires a valid API key with **any scope**. It's the most permissive endpoint in the API, making it ideal for basic connectivity testing without requiring specific permissions.
-
-

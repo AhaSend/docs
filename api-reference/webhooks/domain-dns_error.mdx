@@ -1,5 +1,22 @@
 ---
-title: "Domain DNS Error Webhook"
+title: "domain.dns_error Webhook Event"
 sidebarTitle: "DNS Error"
 openapi: "/webhooks.yaml webhook domain.dns_error"
+description: "The domain.dns_error webhook fires when AhaSend's DNS checks find SPF, DKIM or DMARC problems that block sending on your domain. Payload and resolution."
 ---
+
+AhaSend automatically checks your domain's DNS configuration every 15 to 30 minutes and sends this webhook if any severe issues are detected that will prevent the system from sending emails on your domain's behalf.
+
+Triggered when DNS configuration issues are detected for any domain in your account.
+
+**Common DNS issues**:
+- Missing or invalid SPF record
+- Missing or invalid DKIM record
+- Missing or invalid DMARC record
+- DNS propagation delays
+
+**Impact**: After this event, email sending will be rejected until DNS configuration is fixed.
+
+**Resolution**: Check your domain's DNS settings in the AhaSend dashboard and update your DNS records as needed.
+
+**When it's sent**: When AhaSend's automated DNS checker detects configuration problems.

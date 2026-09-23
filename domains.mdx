@@ -1,7 +1,7 @@
 ---
-title: "Domain Setup"
-sidebarTitle: "Domains"
-description: "Set up and verify your sending domains for optimal email deliverability with AhaSend"
+title: "Domain Setup: SPF, DKIM and DMARC Records"
+sidebarTitle: "Domain Setup"
+description: "Add and verify your sending domain in AhaSend: publish the SPF, DKIM (CNAME), DMARC, return-path and tracking DNS records, then run the DNS check."
 icon: "globe"
 ---
 
@@ -74,7 +74,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `TXT`
         **Purpose:** Prevents email spoofing by specifying authorized sending servers
 
-        ```
+        ```text
         Name: @ (or your subdomain)
         Type: TXT
         Value: v=spf1 include:spf.ahasend.com ~all
@@ -97,7 +97,7 @@ Before setting up your domain, make sure you have:
 
         **Managed DNS (DNS v3):**
 
-        ```
+        ```text
         Name: managed._domainkey.(your domain or subdomain)
         Type: CNAME
         Value: [AhaSend alias shown in dashboard]
@@ -113,7 +113,7 @@ Before setting up your domain, make sure you have:
 
         **Manual DNS:**
 
-        ```
+        ```text
         Name: [selector]._domainkey.(your domain or subdomain)
         Type: TXT
         Value: [unique DKIM public key]
@@ -130,7 +130,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `TXT`
         **Purpose:** Protects your domain from email spoofing and phishing attacks
 
-        ```
+        ```text
         Name: _dmarc
         Type: TXT
         Value: v=DMARC1; p=quarantine; sp=none; adkim=r; aspf=r;
@@ -147,7 +147,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `CNAME`
         **Purpose:** Improves deliverability by providing a communication channel for bounce handling and SPF alignment
 
-        ```
+        ```text
         Name: [return-path subdomain].(your domain or subdomain)
         Type: CNAME
         Value: [value shown in dashboard]
@@ -164,7 +164,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `CNAME`
         **Purpose:** Improves deliverability and maintains brand consistency for tracked links
 
-        ```
+        ```text
         Name: [tracking subdomain].(your domain or subdomain)
         Type: CNAME
         Value: [value shown in dashboard]
@@ -181,7 +181,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `CNAME`
         **Purpose:** Keeps subscription management links branded on your domain
 
-        ```
+        ```text
         Name: [subscription subdomain].(your domain or subdomain)
         Type: CNAME
         Value: [value shown in dashboard]
@@ -198,7 +198,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `CNAME`
         **Purpose:** Keeps hosted assets and media URLs branded on your domain
 
-        ```
+        ```text
         Name: [media subdomain].(your domain or subdomain)
         Type: CNAME
         Value: [value shown in dashboard]
@@ -215,7 +215,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `MX`
         **Purpose:** Required for receiving emails, recommended for better sending reputation
 
-        ```
+        ```text
         Name: @ (or your subdomain)
         Type: MX
         Priority: 10
@@ -339,7 +339,7 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
     3. **Place it before the final mechanism** (`~all` or `-all`)
 
     Example:
-    ```
+    ```text
     OLD: v=spf1 include:_spf.google.com ~all
     NEW: v=spf1 include:_spf.google.com include:spf.ahasend.com ~all
     ```

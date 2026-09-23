@@ -1,5 +1,9 @@
 ---
-title: "Delete Route"
+title: "Delete an Inbound Email Route via the API"
 sidebarTitle: "Delete Route"
 openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/routes/{route_id}"
+description: "Permanently delete an AhaSend inbound email route so messages sent to its recipient pattern are no longer forwarded to your webhook URL."
 ---
+
+Deletes a route. Access requires the global delete role or a delete role
+matching the route's recipient domain.

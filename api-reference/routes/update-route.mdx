@@ -1,5 +1,10 @@
 ---
-title: "Update Route"
+title: "Update an Inbound Email Route via the API"
 sidebarTitle: "Update Route"
 openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/routes/{route_id}"
+description: "Update an AhaSend inbound email route: change its webhook URL or recipient pattern, toggle attachments, headers or reply stripping, or re-enable it."
 ---
+
+Updates an existing route. A domain-scoped key must authorize the
+existing recipient domain and, when `recipient` changes, the new domain;
+`routes:write:all` satisfies both checks.

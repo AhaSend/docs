@@ -1,9 +1,12 @@
 ---
-title: "Suspend Sub Account"
-sidebarTitle: "Suspend Sub Account"
+title: "Suspend a Sub-Account via the API"
+sidebarTitle: "Suspend Sub-Account"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/suspend"
+description: "Suspend an AhaSend sub-account from the parent account. Its status becomes suspended until you call the unsuspend endpoint. Requires sub-accounts:suspend."
 ---
 
+Suspends a sub-account under the parent account
+
 <Info>
-  **Platform Partner feature:** Sub Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
+  **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>

@@ -1,5 +1,8 @@
 ---
-title: "Get API Key"
+title: "Get an API Key via the API"
 sidebarTitle: "Get API Key"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/api-keys/{key_id}"
+description: "Retrieve one AhaSend API key by ID, including its label, scopes, and IP allow list. The secret key value is never returned after creation."
 ---
+
+Returns a specific API key by ID

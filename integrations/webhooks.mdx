@@ -1,7 +1,7 @@
 ---
-title: "Webhooks"
+title: "Email Webhooks: Delivery, Bounce and Open Events"
 sidebarTitle: "Webhooks"
-description: "Receive real-time notifications about email events with AhaSend webhooks - track deliveries, bounces, opens, and more to automate your workflows"
+description: "Receive real-time AhaSend email events (delivered, bounced, deferred, opened, clicked) with webhooks, verify signatures and handle retries."
 icon: "webhook"
 ---
 
@@ -81,7 +81,7 @@ The message lifecycle helps you understand when different webhook events occur:
 
 ### Successful Delivery Path
 
-```
+```text
 Reception → Delivered → [Opened] → [Clicked]
 ```
 
@@ -94,7 +94,7 @@ Reception → Delivered → [Opened] → [Clicked]
 
 <AccordionGroup>
   <Accordion title="Hard Bounce (Immediate Failure)" icon="x">
-    ```
+    ```text
     Reception → Bounced → Suppression Created
     ```
 
@@ -102,7 +102,7 @@ Reception → Delivered → [Opened] → [Clicked]
   </Accordion>
 
   <Accordion title="Soft Bounce with Recovery" icon="arrows-rotate">
-    ```
+    ```text
     Reception → Deferred → Deferred → ... → Delivered
     ```
 
@@ -110,7 +110,7 @@ Reception → Delivered → [Opened] → [Clicked]
   </Accordion>
 
   <Accordion title="Soft Bounce with Final Failure" icon="triangle-exclamation">
-    ```
+    ```text
     Reception → Deferred → Deferred → ... → Failed → Suppression Created
     ```
 
@@ -118,7 +118,7 @@ Reception → Delivered → [Opened] → [Clicked]
   </Accordion>
 
   <Accordion title="Suppressed Email" icon="ban">
-    ```
+    ```text
     Reception → Suppressed
     ```
 
@@ -146,7 +146,7 @@ Configure webhooks in your AhaSend dashboard to start receiving event notificati
     - Should respond with 2xx status codes for successful processing
 
     **Example URLs:**
-    ```
+    ```text
     https://api.yourapp.com/webhooks/ahasend
     https://yourapp.com/api/email-events
     ```

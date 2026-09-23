@@ -1,7 +1,7 @@
 ---
-title: "S3 Object Storage"
-sidebarTitle: "S3 Object Storage"
-description: "Archive your email messages and delivery logs to S3-compatible object storage for long-term retention and compliance"
+title: "Archive Emails to S3-Compatible Storage"
+sidebarTitle: "S3 Archiving"
+description: "Archive every AhaSend email (.eml) and delivery log to your own S3, Backblaze B2, DigitalOcean Spaces, Wasabi or MinIO bucket for retention beyond 30 days."
 icon: "aws"
 ---
 
@@ -122,7 +122,7 @@ AhaSend organizes archived messages in a logical directory structure for easy na
 
 ### Directory Pattern
 
-```
+```text
 RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID/MESSAGE_ID.eml
 RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID/YYYYMMDDTHHMMSSZ-STATUS.txt
 ```
@@ -143,7 +143,7 @@ Special characters in email addresses are replaced for S3 compatibility:
 
 ### Complete Example Structure
 
-```
+```text
 my-email-archive/
 ├── john_AT_example.com/
 │   ├── 2024-01-15/
@@ -192,7 +192,7 @@ AhaSend saves two types of files for each message:
     - Content: Raw delivery attempt log from the SMTP server
 
     **Example content:**
-    ```
+    ```text
     The recipient's inbox is out of storage space. Please direct the recipient to  https://support.google.com/mail/?p=OverQuotaTemp 5b1f17b1804b1-46e619a90c2si94549775e9.46 - gsmtp
     ```
   </Accordion>

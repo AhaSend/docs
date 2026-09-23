@@ -1,10 +1,9 @@
 ---
-title: Domains
-description: Manage sending domains and DNS configuration
+title: "ahasend domains: Add and Verify Domains"
+description: "Add, verify, inspect, and delete AhaSend sending domains from the command line, and export the SPF, DKIM, and DMARC records as BIND, Cloudflare, or Terraform."
 icon: globe
+sidebarTitle: "domains"
 ---
-
-# Domains Command
 
 Manage your sending domains for email authentication.
 
@@ -107,7 +106,7 @@ Deleting a domain is irreversible. You'll need to re-add and re-verify the domai
 
 If you already have SPF records, merge them:
 
-```
+```text
 # Before
 v=spf1 include:_spf.google.com ~all
 

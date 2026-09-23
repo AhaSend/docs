@@ -1,7 +1,7 @@
 ---
-title: "SMTP Server Information"
+title: "SMTP Relay Settings: Host, Ports, TLS, Limits"
 sidebarTitle: "Server Information"
-description: "Complete guide to AhaSend SMTP servers, connection settings, limits, and response codes"
+description: "AhaSend SMTP relay settings: send.ahasend.com and send-us.ahasend.com, ports 25/587/2525 with STARTTLS, PLAIN auth, message limits and SMTP error codes."
 icon: "server"
 ---
 
@@ -38,7 +38,7 @@ All message data is stored in the EU. `send-us.ahasend.com` is a US connection p
 
 All AhaSend SMTP servers support the following configurations:
 
-```
+```text
 Servers: send.ahasend.com | send-us.ahasend.com
 Ports: 25, 587, 2525
 Encryption: STARTTLS (required)
@@ -72,7 +72,7 @@ Understanding AhaSend's SMTP limits helps you optimize your email sending:
 
     This is the maximum number of consecutive `RCPT TO` commands that can be issued for a single SMTP transaction.
 
-    ```
+    ```text
     MAIL FROM: <sender@yourdomain.com>
     RCPT TO: <user1@example.com>
     RCPT TO: <user2@example.com>
@@ -165,7 +165,7 @@ AhaSend supports special email headers that modify system behavior:
 
 ### Basic SMTP Configuration
 
-```
+```text
 Host: send.ahasend.com
 Port: 587
 Security: STARTTLS

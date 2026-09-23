@@ -1,7 +1,7 @@
 ---
-title: "Message Routing"
-sidebarTitle: "Message Routing"
-description: "Automatically process inbound emails with AhaSend message routing - route emails to your applications for support tickets, replies, and automated workflows"
+title: "Inbound Email Routing and Parsing to Webhooks"
+sidebarTitle: "Inbound Routing"
+description: "Receive inbound email in your app with AhaSend routing: point MX records to AhaSend, match addresses with wildcards and get parsed JSON."
 icon: "route"
 ---
 
@@ -111,7 +111,7 @@ Configure message routes in your AhaSend dashboard to start processing inbound e
     - Should respond with 2xx status codes for successful processing
 
     **Example URLs:**
-    ```
+    ```text
     https://api.yourapp.com/inbound-email
     https://yourapp.com/api/support/tickets
     ```
