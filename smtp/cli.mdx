@@ -220,8 +220,8 @@ swaks \
   --auth-user 'YOUR_SMTP_USERNAME' \
   --auth-password 'YOUR_SMTP_PASSWORD' \
   --header 'Subject: Temporary Notification' \
-  --add-header "ahasend-message-retention: 7" \
-  --add-header "ahasend-message-data-retention: 1" \
+  --add-header "AhaSend-Metadata-Retention: 7" \
+  --add-header "AhaSend-Data-Retention: 1" \
   --body "This is a temporary notification that will be automatically deleted."
 ```
 
@@ -239,8 +239,8 @@ swaks \
   --add-header "ahasend-track-opens: true" \
   --add-header "ahasend-track-clicks: true" \
   --add-header "ahasend-tags: product-update,announcement,cli" \
-  --add-header "ahasend-message-retention: 30" \
-  --add-header "ahasend-message-data-retention: 7" \
+  --add-header "AhaSend-Metadata-Retention: 30" \
+  --add-header "AhaSend-Data-Retention: 7" \
   --body "<html><body><h1>Product Updates</h1><p>We've launched <a href='https://yourdomain.com/new-features'>exciting new features</a>!</p></body></html>" \
   --add-header "Content-Type: text/html"
 ```

@@ -159,12 +159,13 @@ func main() {
     to := []string{"user@example.com"}
 
     // Message with AhaSend special headers
-    msg := []byte("To: user@example.com\r\n" +
+    msg := []byte("From: " + from + "\r\n" +
+        "To: user@example.com\r\n" +
         "Subject: Welcome Newsletter\r\n" +
         "ahasend-track-opens: true\r\n" +
         "ahasend-track-clicks: true\r\n" +
         "ahasend-tags: welcome,newsletter,golang\r\n" +
-        "ahasend-message-retention: 7\r\n" +
+        "AhaSend-Metadata-Retention: 7\r\n" +
         "MIME-Version: 1.0\r\n" +
         "Content-Type: text/html; charset=UTF-8\r\n" +
         "\r\n" +
@@ -337,8 +338,8 @@ func main() {
     m.SetHeader("ahasend-track-opens", "true")
     m.SetHeader("ahasend-track-clicks", "true")
     m.SetHeader("ahasend-tags", "newsletter,product-update,golang")
-    m.SetHeader("ahasend-message-retention", "14")
-    m.SetHeader("ahasend-message-data-retention", "3")
+    m.SetHeader("AhaSend-Metadata-Retention", "14")
+    m.SetHeader("AhaSend-Data-Retention", "3")
 
     // For sandbox testing:
     // m.SetHeader("AhaSend-Sandbox", "true")

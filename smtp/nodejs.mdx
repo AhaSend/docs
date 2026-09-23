@@ -88,7 +88,7 @@ Use these settings for all Nodemailer configurations with AhaSend:
 const nodemailer = require('nodemailer');
 
 // Create transporter
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true, // Force TLS
@@ -119,7 +119,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 ```javascript HTML Email
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true,
@@ -157,7 +157,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 ```javascript With Attachments
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true,
@@ -215,7 +215,7 @@ Use sandbox mode to safely test your Node.js email integration:
 ```javascript Sandbox Test
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true,
@@ -248,7 +248,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 ```javascript Sandbox Bounce Test
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true,
@@ -289,7 +289,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 const nodemailer = require('nodemailer');
 
 async function sendSandboxEmail() {
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
         host: 'send.ahasend.com',
         port: 587,
         requireTLS: true,
@@ -338,7 +338,7 @@ sendSandboxEmail();
 const nodemailer = require('nodemailer');
 require('dotenv').config(); // npm install dotenv
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'send.ahasend.com',
     port: parseInt(process.env.SMTP_PORT) || 587,
     requireTLS: true,

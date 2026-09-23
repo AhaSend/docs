@@ -393,8 +393,8 @@ class Program
                 message.Headers.Add("ahasend-track-opens", "true");
                 message.Headers.Add("ahasend-track-clicks", "true");
                 message.Headers.Add("ahasend-tags", "product-update,newsletter,csharp");
-                message.Headers.Add("ahasend-message-retention", "30");
-                message.Headers.Add("ahasend-message-data-retention", "7");
+                message.Headers.Add("AhaSend-Metadata-Retention", "30");
+                message.Headers.Add("AhaSend-Data-Retention", "7");
 
                 var builder = new BodyBuilder();
                 builder.TextBody = "Check out our latest features at https://yourdomain.com/features";

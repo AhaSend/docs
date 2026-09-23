@@ -361,8 +361,8 @@ def send_email_with_special_headers():
     msg['ahasend-track-opens'] = 'true'
     msg['ahasend-track-clicks'] = 'true'
     msg['ahasend-tags'] = 'product-update,newsletter,python'
-    msg['ahasend-message-retention'] = '30'
-    msg['ahasend-message-data-retention'] = '7'
+    msg['AhaSend-Metadata-Retention'] = '30'
+    msg['AhaSend-Data-Retention'] = '7'
 
     # Set content
     msg.set_content("Check out our latest features at https://yourdomain.com/features")
