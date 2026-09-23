@@ -166,11 +166,15 @@ Test how your application handles different delivery scenarios by controlling th
 
 Use the `sandbox_result` parameter to specify the simulated result:
 
-- **`deliver`** - Simulates successful delivery (default)
-- **`bounce`** - Simulates a hard bounce
-- **`defer`** - Simulates temporary delivery deferral
-- **`fail`** - Simulates permanent delivery failure
-- **`suppress`** - Simulates suppression list blocking
+| Result | Simulated outcome | Corresponding event |
+|---|---|---|
+| `deliver` (default) | Successful delivery | `message.delivered` |
+| `bounce` | Hard bounce | `message.bounced` |
+| `defer` | Temporary delivery failure | `message.transient_error` |
+| `fail` | Permanent delivery failure | `message.failed` |
+| `suppress` | Suppression blocking | `message.suppressed` |
+
+See the [event reference](/api-reference/webhooks) for payloads. These are simulated delivery outcomes, not open or click events.
 
 ### Examples
 
@@ -234,6 +238,17 @@ Use the `sandbox_result` parameter to specify the simulated result:
 }
 ```
 
+```json Permanent Failure
+{
+  "from": { "email": "hello@yourdomain.com" },
+  "recipients": [{ "email": "test@example.com" }],
+  "subject": "Sandbox failure test",
+  "text_content": "This email simulates a permanent failure.",
+  "sandbox": true,
+  "sandbox_result": "fail"
+}
+```
+
 ```json Suppression Testing
 {
   "from": {
@@ -266,7 +281,7 @@ Sandbox mode is perfect for testing webhook integrations with API v2:
 <AccordionGroup>
   <Accordion title="Webhook Events Still Fire" icon="webhook">
     - All webhook events are triggered normally in sandbox mode
-    - Test delivery confirmations, bounces, opens, and clicks
+    - Test delivery confirmations, bounces, deferrals, failures, and suppressions. Sandbox messages cannot generate real opens or clicks; use [test webhook events](/cli/webhook-testing) for those payloads
     - Verify your webhook endpoint receives correct payloads
     - Delivery, deferral, and bounce webhooks include a representative `delivery_attempt` object
 
@@ -340,7 +355,7 @@ API v2 sandbox mode supports advanced features for comprehensive testing:
       "subject": "Scheduled Test Email",
       "text_content": "This is a scheduled sandbox email.",
       "schedule": {
-        "first_attempt": "2024-12-25T10:30:00Z"
+        "first_attempt": "<RFC3339 time within the next 7 days>"
       },
       "sandbox": true
     }

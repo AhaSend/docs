@@ -5,13 +5,18 @@ description: "Send transactional email from Cloudflare Workers with the AhaSend 
 keywords: ["cloudflare workers send email", "cloudflare workers email api", "workers transactional email", "ahasend cloudflare", "workers webhook verification"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 The SDK runs on workerd natively and needs no `nodejs_compat` flag, so a Worker gets the same typed client, retries and webhook verifier as a Node server.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - A Workers project set up with [Wrangler](https://developers.cloudflare.com/workers/wrangler/)
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) scoped to `messages:send:{your-domain}`, matching the domain in `from.email`, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) scoped to `messages:send:{your-domain}`, matching the domain in `from.email`, and your account ID
 
 If you're starting from scratch:
 
@@ -95,6 +100,17 @@ Secrets arrive on the `env` argument, which is how Workers deliver bindings whet
 ```ts src/index.ts
 import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
 
+async function tokenMatches(header: string | null, expected: string): Promise<boolean> {
+  const supplied = header?.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!supplied) return false;
+  const hash = (value: string) => crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  const [a, b] = await Promise.all([hash(supplied), hash(expected)]);
+  const left = new Uint8Array(a), right = new Uint8Array(b);
+  let difference = 0;
+  for (let i = 0; i < left.length; i++) difference |= left[i] ^ right[i];
+  return difference === 0;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -102,7 +118,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/welcome") {
       if (
         !env.AHASEND_SEND_TOKEN ||
-        request.headers.get("authorization") !== `Bearer ${env.AHASEND_SEND_TOKEN}`
+        !(await tokenMatches(request.headers.get("authorization"), env.AHASEND_SEND_TOKEN))
       ) {
         return new Response("Unauthorized", { status: 401 });
       }
@@ -137,7 +153,7 @@ export default {
       });
 
       try {
-        const sandbox = true;
+        const sandbox = true; // Set to false only when ready to deliver real mail.
         const result = await ahasend.messages.send({
           from: { email: "hello@yourdomain.com", name: "Your App" },
           recipients: [{ email: body.email, name: body.name }],
@@ -202,7 +218,7 @@ if (request.method === "POST" && url.pathname === "/webhooks/ahasend") {
       }
       return new Response(null, { status: 200 });
     },
-    { maxBodyBytes: 1_000_000 },
+    { maxBodyBytes: 30_000_000 },
   )(request);
 }
 ```

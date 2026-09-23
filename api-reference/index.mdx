@@ -18,14 +18,14 @@ For SMTP integration, please see
 
 ## Features
 
-- **Full-featured API with Idempotency**: Complete REST API with built-in idempotency support for safe retries
-- **Reliable Delivery**: 99.9% uptime with redundant infrastructure
-- **Global Scale**: Send millions of emails with low latency worldwide
-- **Real-time Analytics**: Track opens, clicks, bounces, and deliverability
-- **Advanced Routing**: Intelligent routing and failover mechanisms
-- **Webhook Support**: Real-time event notifications for all email activity
-- **Domain Management**: Easy setup and verification of sending domains
-- **Suppression Lists**: Automated bounce and complaint handling
+- [Messages](/api-reference/messages/create-message): send transactional email, schedule it, and inspect delivery results.
+- [Domains](/api-reference/domains/create-domain): add domains and check their DNS records.
+- [Webhooks](/api-reference/webhooks): receive signed delivery events.
+- [Routes](/api-reference/routes): receive inbound email at an HTTP endpoint.
+- [Suppressions](/api-reference/suppressions/get-suppressions): manage addresses blocked from sending.
+- [Reports](/api-reference/reports/get-deliverability-report): query delivery statistics.
+- [Sub-accounts](/api-reference/sub-accounts/overview): manage tenant accounts as a Platform Partner.
+- [Idempotency](/api-reference/idempotency): replay stored results on the operations that support it.
 
 ## Getting Started
 

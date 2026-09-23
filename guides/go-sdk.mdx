@@ -6,16 +6,30 @@ keywords: ["ahasend go sdk", "golang transactional email", "go email api client"
 icon: "golang"
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [`ahasend-go`](https://github.com/AhaSend/ahasend-go) is the official Go SDK for AhaSend. Typed models for every endpoint, retries and idempotency keys handled for you, and a Standard Webhooks verifier that drops into any `net/http` router.
 
 This page is the SDK reference. To wire it into a specific framework, pick a guide from the sidebar.
 
 Before sending, [verify a sending domain](/domains) and create an [API key](/send-api/credentials) plus an account ID. Give the key the domain-specific `messages:send:{your-domain}` scope when it only sends from one domain, and keep it in a server-side secret store.
 
+<SendGuideRules />
+
 ## Install
 
+| Fact | Value |
+|---|---|
+| Module | `github.com/AhaSend/ahasend-go` |
+| Minimum Go version | 1.18 (frameworks may require newer) |
+| License | MIT |
+| Source | [ahasend-go](https://github.com/AhaSend/ahasend-go) |
+
 ```bash
+go mod init example.com/ahasend-go-sdk
 go get github.com/AhaSend/ahasend-go
+go get github.com/google/uuid
 ```
 
 ## Send Your First Email
@@ -44,7 +58,7 @@ func main() {
 	}
 	welcomeEventID := os.Getenv("WELCOME_EVENT_ID")
 	if welcomeEventID == "" {
-		log.Fatal("WELCOME_EVENT_ID is required")
+		welcomeEventID = uuid.NewString() // Use a stable business-event ID in production.
 	}
 
 	accountID, err := uuid.Parse(os.Getenv("AHASEND_ACCOUNT_ID"))
@@ -101,7 +115,7 @@ Optional fields are pointers, so the SDK exports helpers such as `ahasend.String
 
 ## Configure the Client
 
-Build the client once at startup and share it. It holds rate-limit, retry, and idempotency state.
+The following configuration fragment belongs inside your startup function and requires `import "time"`. Build the client once at startup and share it. It holds rate-limit, retry, and idempotency state.
 
 `api.NewAPIClientFromEnv()` builds the same client from the `AHASEND_*` environment variables. It does not fail when `AHASEND_API_KEY` is unset — construction succeeds and every request fails instead, so check the variable yourself at startup. To override the key for one call, pass `api.WithRequestAPIKey(key)` as that method's final request option. Keep `context.Context` for cancellation, deadlines, and request-scoped values rather than using it for optional parameters.
 
@@ -127,11 +141,11 @@ client := api.NewAPIClient(
 	api.WithRetryConfig(retryConfig),
 )
 
-// Only if your account's send limit differs from the 100/s default.
-client.SetSendMessageRateLimit(500, 1000) // requests per second, burst
+// Keep aggregate requests across all client instances within your account limit.
+client.SetSendMessageRateLimit(100, 200) // requests per second, burst
 ```
 
-Pacing is already on when you build the client, preset to the standard account limits: 100 requests per second with a 200 burst for sends and other general endpoints, 1 per second with no burst for statistics. These setters move a bucket to whatever limit your account actually has; they do not switch pacing on. That matters in both directions — an account provisioned above 100 sends per second stays capped at the default until you raise the bucket. The token buckets are local to one client instance, so they do not coordinate across application replicas and do not eliminate API `429` responses.
+See [API rate limits](/api-reference/rate-limits). Pacing is already on when you build the client, preset to the standard account limits: 100 requests per second with a 200 burst for sends and other general endpoints, 1 per second with no burst for statistics. These setters move a bucket to whatever limit your account actually has; they do not switch pacing on. That matters in both directions — an account provisioned above 100 sends per second stays capped at the default until you raise the bucket. The token buckets are local to one client instance, so they do not coordinate across application replicas and do not eliminate API `429` responses.
 
 ## Errors
 

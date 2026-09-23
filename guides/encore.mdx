@@ -5,14 +5,19 @@ description: "Send transactional email from an Encore.ts backend in minutes with
 keywords: ["encore.ts send email", "encore transactional email", "encore email api", "ahasend encore", "encore webhook email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 Two [Encore.ts](https://encore.dev) specifics shape the code below: credentials come from `secret()` rather than `process.env`, and the webhook endpoint must be declared `raw`, since signature verification needs the unparsed body.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Node.js 22 or newer (the SDK's supported floor) and the [Encore CLI](https://encore.dev/docs/ts/install)
 - An Encore app with a [service](https://encore.dev/docs/ts/primitives/services): the files below live in a service directory (`email/`, alongside its `encore.service.ts`)
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{yourdomain.com}` permission, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the domain-scoped `messages:send:{yourdomain.com}` permission, and your account ID
 
 ## Install the SDK
 
@@ -97,20 +102,22 @@ export const sendWelcome = api(
     try {
       const result = await ahasend().messages.send(
         {
+          sandbox: true,
           from: { email: "hello@yourdomain.com", name: "Your App" },
           recipients: [{ email: user.email }],
           subject: "Welcome to Your App!",
           html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
           text_content: "Welcome aboard! We're glad you're here.",
         },
-        { idempotencyKey: `welcome-${welcomeKey}` },
+        { idempotencyKey: `sandbox-welcome-${welcomeKey}` },
       );
 
       const rejected = result.data.filter((r) => r.status === "error");
-      if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
+      if (rejected.length > 0) throw APIError.failedPrecondition("Recipient rejected");
 
       return { statuses: result.data.map((r) => r.status) }; // ["queued"]
     } catch (err) {
+      if (err instanceof APIError) throw err;
       if (err instanceof AhaSendAPIError) {
         console.error("AhaSend request failed", {
           status: err.status,
@@ -142,7 +149,7 @@ curl -X POST http://localhost:4000/welcome \
   -H "Authorization: Bearer <your-app-token>"
 ```
 
-Add `sandbox: true` to the send request to validate it without delivering anything. Give that trial its own idempotency key: AhaSend matches a key against a hash of the request body, so a sandbox call under the `welcome-` key makes the first real send for that user fail with `422` instead of delivering.
+The send example uses `sandbox: true` to validate the request without delivering anything. Give that trial its own idempotency key: AhaSend matches a key against a hash of the request body, so a sandbox call under the `welcome-` key makes the first real send for that user fail with `422` instead of delivering.
 
 ## Handle Webhooks with a Raw Endpoint
 
@@ -161,7 +168,7 @@ const ahasendWebhookSecret = secret("AhaSendWebhookSecret");
 
 let verifier: WebhookVerifier | undefined;
 let verifierSecret: string | undefined;
-const maxWebhookBodyBytes = 1_000_000;
+const maxWebhookBodyBytes = 30_000_000;
 
 function webhookVerifier(): WebhookVerifier {
   const secretValue = ahasendWebhookSecret();
@@ -200,7 +207,11 @@ async function readRawBody(req: IncomingMessage): Promise<Buffer> {
     };
     const onError = (err: Error) => {
       cleanup();
-      reject(err);
+      reject(
+        err.message === "length limit exceeded"
+          ? new WebhookBodyTooLargeError()
+          : err,
+      );
     };
 
     req.on("data", onData);
@@ -214,7 +225,7 @@ export const ahasendWebhook = api.raw(
     expose: true,
     path: "/webhooks/ahasend",
     method: "POST",
-    bodyLimit: maxWebhookBodyBytes,
+    bodyLimit: 30_000_000,
   },
   async (req, resp) => {
     try {
@@ -243,7 +254,7 @@ export const ahasendWebhook = api.raw(
 );
 ```
 
-This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process the durable work idempotently. Timestamp verification alone does not prevent a valid delivery from being replayed inside the tolerance window. `bodyLimit` is Encore's own cap for this endpoint — it defaults to 2 MiB when left unset — and the streaming counter bounds what the handler buffers even if that cap is later raised; an oversized body is refused either way. Keep any proxy in front at least as strict, and keep failures opaque. The verifier is rebuilt when the secret value changes, for the same reason the API client is: a webhook secret rotated in the dashboard would otherwise leave a stale verifier rejecting every delivery as `400` until the next deploy, and AhaSend [gives up on an event after 6 retries and disables the endpoint after 100 consecutive failures](/api-reference/webhooks/retry-policy).
+This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process the durable work idempotently. Timestamp verification alone does not prevent a valid delivery from being replayed inside the tolerance window. `bodyLimit` is Encore's own cap for this endpoint — it defaults to 2 MiB when left unset — and the streaming counter bounds what the handler buffers even if that cap is later raised; an oversized body is refused either way. Keep any proxy in front at least as strict, and keep failures opaque. The verifier is rebuilt when the secret value changes, for the same reason the API client is: a webhook secret rotated in the dashboard would otherwise leave a stale verifier rejecting every delivery as `400` until the next deploy, and AhaSend [gives up on an event after 6 attempts, including the first, and disables the endpoint after more than 100 consecutive failed attempts](/api-reference/webhooks/retry-policy).
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend` (locally, `encore run` serves it at `http://localhost:4000/webhooks/ahasend`), and set the secret via `encore secret set` exactly as shown in the dashboard, including the `aha-whsec-` prefix.
 
@@ -266,7 +277,7 @@ See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration options
     Secrets are per-environment. If it works locally but fails when deployed, you set `--type local` but not `--type prod` (or the environment type you deployed to).
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
-    The `AhaSendApiKey` secret holds a missing, malformed, or revoked key. Re-set it and verify the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The `AhaSendApiKey` secret holds a missing, malformed, or revoked key. Re-set it and verify the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
   <Accordion title="Webhook verification always returns 400">
     Either the endpoint isn't `api.raw` (typed endpoints consume the raw body), or `AhaSendWebhookSecret` doesn't match the dashboard value exactly.

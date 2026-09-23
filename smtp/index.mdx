@@ -13,7 +13,7 @@ AhaSend provides high-performance SMTP relay servers for sending transactional e
 
 ## Server Endpoints
 
-AhaSend operates SMTP servers in multiple regions for optimal performance:
+All message data is stored in the EU. `send-us.ahasend.com` is a US connection point that accepts SMTP and forwards it to the EU.
 
 <CardGroup cols={2}>
   <Card title="European Server" icon="earth-europe">
@@ -23,7 +23,7 @@ AhaSend operates SMTP servers in multiple regions for optimal performance:
   </Card>
   <Card title="US Server" icon="earth-americas">
     **Hostname:** `send-us.ahasend.com`<br />
-    **Location:** Oregon, USA<br />
+    **Connection point:** Oregon, USA; message data is stored in the EU<br />
     **Best for:** North American traffic
   </Card>
 </CardGroup>
@@ -51,7 +51,7 @@ Authentication: PLAIN (required)
 
 ### Authentication Requirements
 
-- **Authentication Method:** PLAIN authentication over STARTTLS
+- **Authentication Method:** AUTH PLAIN only after STARTTLS
 - **Username:** Your SMTP username from the dashboard
 - **Password:** Your SMTP password from the dashboard
 - **STARTTLS:** Required for all connections
@@ -61,6 +61,8 @@ Authentication: PLAIN (required)
 </Note>
 
 ## Connection Limits & Specifications
+
+Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. See [facts and limits](/facts).
 
 Understanding AhaSend's SMTP limits helps you optimize your email sending:
 
@@ -141,7 +143,7 @@ AhaSend returns standard SMTP response codes with specific meanings:
 |------|-------------|-----------------|
 | `421` | **Service Unavailable** - This error could be returned as a result of **disconnecting idle connections** (idle too long), **Load shedding** (server is overwhelmed and cannot accept new connections), or temporary internal errors | Retry with exponential backoff |
 | `451` | **Internal server error** - Temporary server issue | Retry the request |
-| `500` | **Invalid credentials** - Authentication failed | Check username/password |
+| `535 5.7.8` | **Invalid credentials** - Authentication failed | Check username/password |
 | `521` | **Account disabled** - Account suspended or out of credits | Check account status in dashboard |
 | `552` | **Invalid message format** - Malformed email content | Validate email structure and headers |
 | `553` | **Email rejected** - Recipient domain is toxic, temporary, or has typos | Verify recipient domain |

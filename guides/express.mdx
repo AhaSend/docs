@@ -5,13 +5,18 @@ description: "Send transactional email from Express in under 5 minutes with the 
 keywords: ["express send email", "express transactional email", "nodejs email api express", "ahasend express", "express webhook email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 The webhook route is where [Express](https://expressjs.com) apps usually go wrong: signature verification needs the raw request body, so mount `expressWebhookHandler` directly, with no `express.raw()` in front of it and no global JSON parser on that path.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Node.js 22 or newer, and Express 5. The code below relies on Express 5 forwarding a rejected promise from an `async` handler to your error middleware; on Express 4 the same `throw` becomes an unhandled rejection and the request never completes.
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{domain}` scope for your sending domain (or `messages:send:all` if it must cover multiple domains), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{domain}` scope for your sending domain (or `messages:send:all` if it must cover multiple domains), and your account ID
 
 ## Install the SDK
 
@@ -65,7 +70,7 @@ export const ahasend = new AhaSendClient({
 
 ## Send an Email from an Express Route
 
-```ts server.ts
+```ts server.ts (part 1 of 2)
 import express, { type ErrorRequestHandler } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { AhaSendAPIError } from "@ahasend/sdk";
@@ -111,13 +116,14 @@ app.post(
     try {
       const result = await ahasend.messages.send(
         {
+          sandbox: true,
           from: { email: "hello@yourdomain.com", name: "Your App" },
           recipients: [{ email, name }],
           subject: "Welcome to Your App!",
           html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
           text_content: "Welcome aboard! We're glad you're here.",
         },
-        { idempotencyKey: `welcome-${eventId}` },
+        { idempotencyKey: `sandbox-welcome-${eventId}` },
       );
 
       const rejected = result.data.filter((r) => r.status === "error");
@@ -161,15 +167,15 @@ Call this route only from trusted server-side code with `Authorization: Bearer <
 
 AhaSend's 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry rather than treating a resolved promise as full success.
 
-The SDK generates an `Idempotency-Key` for every `send()` and reuses it across its own internal retries, so a transient 5xx does not become two emails. It cannot cover a retry your *caller* makes — and a timeout never proves the send did not land — which is what the stable `idempotencyKey` above is for: a stored result is replayed for 24 hours, while a server error releases the key for re-execution. Reuse a key only with an identical request body — the same key with different content is rejected as `AhaSendIdempotencyMismatchError` (HTTP 422).
+The SDK generates an `Idempotency-Key` for every `send()` and reuses it across its own internal retries, but a 5xx releases the server record and a retry can send twice. It cannot cover a retry your *caller* makes — and a timeout never proves the send did not land — which is what the stable `idempotencyKey` above is for: a stored result is replayed for 24 hours, while a server error releases the key for re-execution. Reuse a key only with an identical request body — the same key with different content is rejected as `AhaSendIdempotencyMismatchError` (HTTP 422).
 
-Add `sandbox: true` to the send request to validate it without delivering anything. It changes the request body, so give a sandbox send a different `idempotencyKey` from the live send it stands in for.
+The send example uses `sandbox: true` to validate the request without delivering anything. It changes the request body, so give a sandbox send a different `idempotencyKey` from the live send it stands in for.
 
 ## Handle Webhooks
 
 The SDK ships a dedicated Express adapter that verifies the HMAC signature and timestamp, then hands you a typed event. Mount `expressWebhookHandler` **directly** on the route: it reads and size-bounds the raw request stream itself, so you don't need `express.raw()` (or any other body parser) in front of it. Do not put a global `express.json()` middleware before this route, or the body will already be parsed by the time the adapter runs.
 
-```ts server.ts
+```ts server.ts (part 2 of 2)
 import {
   WebhookVerifier,
   expressWebhookHandler,
@@ -195,7 +201,7 @@ app.post(
         console.log("Message opened");
         break;
     }
-  }, { maxBodyBytes: 1_000_000 }),
+  }, { maxBodyBytes: 30_000_000 }),
 );
 
 // Error middleware must be registered after every route.
@@ -225,10 +231,10 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. On a
 
 <AccordionGroup>
   <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). Do not print any part of the key while troubleshooting.
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials). Do not print any part of the key while troubleshooting.
   </Accordion>
   <Accordion title="The webhook route errors out with an already-parsed body">
-    A body parser ran before the adapter. The adapter treats this as a setup error and passes it to `next`, so it surfaces through your error middleware rather than as a signature failure. The fix is to stop parsing that route: register it before any global `express.json()`, or scope the parser to your other routes. Don't add `express.raw()`: the adapter reads the raw stream itself, and a parser in front of it will always break verification.
+    A JSON parser converted the signed bytes into an object before the adapter ran. The adapter treats that object as a setup error and passes it to `next`, so it surfaces through your error middleware. Register the webhook route before global `express.json()`, or scope JSON parsing to your other routes. The adapter can also use a Buffer preserved by `express.raw()`; keep those bytes unchanged and set a matching body-size limit.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.

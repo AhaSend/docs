@@ -5,13 +5,18 @@ description: "Send transactional email from Cloud Run functions in Go with the F
 keywords: ["cloud run functions go email", "google cloud functions go send email", "golang transactional email cloud functions", "ahasend go sdk", "cloud functions email api"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [Cloud Run functions](https://cloud.google.com/functions) run Go through the [Functions Framework](https://github.com/GoogleCloudPlatform/functions-framework-go), which hands each invocation a standard `http.ResponseWriter` and `*http.Request`. The AhaSend SDK works directly with those standard HTTP types.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Go
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
 - A Google Cloud project with the `gcloud` CLI configured
 
 ## Install the Dependencies
@@ -144,6 +149,7 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := requests.CreateMessageRequest{
+		Sandbox: ahasend.Bool(true),
 		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
 		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
 		Subject:     "Welcome to Your App!",
@@ -155,7 +161,7 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		accountID,
 		message,
-		api.WithIdempotencyKey("welcome-"+eventID.String()),
+		api.WithIdempotencyKey("sandbox-welcome-"+eventID.String()),
 	)
 	if err != nil {
 		var apiErr *api.APIError
@@ -205,12 +211,16 @@ func ahaSendWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, 1_000_000)
+	r.Body = http.MaxBytesReader(w, r.Body, 30_000_000)
 	event, err := verifier.ParseRequest(r)
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
 			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+		if errors.Is(err, webhooks.ErrUnknownEventType) {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		w.WriteHeader(http.StatusBadRequest)
@@ -281,7 +291,7 @@ gcloud functions deploy ahasend-webhook \
 
 Pass `--region` on every command (substitute your own): without it, `gcloud` falls back to the `functions/region` property and prompts when that is unset.
 
-Pick a `--runtime` at least as new as the `go` directive `go mod init` wrote into `go.mod` — `go126` builds a module declaring `go 1.26` or older, and a newer local toolchain will write a directive the runtime's builder rejects. `gcloud functions runtimes list --region=us-central1` shows what your project can deploy today.
+`go126` is an example runtime ID. Choose an available runtime at least as new as the `go` directive in your `go.mod`; a newer local toolchain may write a directive the selected builder cannot compile. `gcloud functions runtimes list --region=us-central1` shows what your project can deploy today.
 
 `--no-allow-unauthenticated` is what keeps `send-welcome` from becoming an open mail relay — it accepts any recipient address its caller supplies, so anyone who can invoke it can send mail from your domain. A `--gen2` function is backed by a Cloud Run service of the same name, so grant only its intended caller:
 
@@ -374,7 +384,7 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
     Confirm the secret in Secret Manager matches the dashboard exactly, including the `aha-whsec-` prefix (watch for a trailing newline: use `printf`, not `echo`, when creating the secret). `ParseRequest` must be the first thing to read the request body on that route.
   </Accordion>
   <Accordion title="401 from the AhaSend API">
-    The API key is missing, malformed, or revoked. Verify the secret binding (`--set-secrets AHASEND_API_KEY=...`) is present on the function and the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, or revoked. Verify the secret binding (`--set-secrets AHASEND_API_KEY=...`) is present on the function and the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.

@@ -31,3 +31,164 @@ the official [AhaSend SDKs](https://github.com/AhaSend). Whatever you use, verif
 against the raw request body bytes (before any JSON parsing), and reject
 deliveries whose `webhook-timestamp` is outside your tolerance window in either
 direction to prevent replay.
+
+## Secret and Header Format
+
+Webhook secrets start with `aha-whsec-`; route secrets start with `aha-rsec-`. Use the entire secret, including its prefix, as the HMAC-SHA256 key. Do not base64-decode it.
+
+The signed input is the delivery ID, a dot, the Unix timestamp, a dot, and the exact raw request body. The `webhook-signature` header contains `v1,<base64 signature>` values separated by spaces; accept a delivery if any supported signature matches. The recommended timestamp tolerance is five minutes in either direction, matching the AhaSend SDK default.
+
+The `webhook-id` header identifies a delivery. Payload `webhook_id` identifies the configured webhook, and `route_id` identifies a route. Deduplicate the header value only after verification, atomically with durable work. Return 2xx for verified unknown event types.
+
+## Runnable Verification Examples
+
+Save an incoming raw body as `payload.json` without reformatting it. Set `AHASEND_WEBHOOK_SECRET`, `WEBHOOK_ID`, `WEBHOOK_TIMESTAMP`, and `WEBHOOK_SIGNATURE` to the secret and headers from that same delivery. Run the check while its timestamp is within five minutes. These scripts print only whether verification succeeded.
+
+Install the package used by your chosen example: `npm install @ahasend/sdk@0.2.1` or `npm install standardwebhooks` for Node.js; `go mod init example.com/verify` followed by `go get github.com/AhaSend/ahasend-go` or `go get github.com/standard-webhooks/standard-webhooks/libraries/go` for Go; `python3 -m pip install standardwebhooks` for Python. PHP below uses its built-in HMAC functions.
+
+<CodeGroup>
+
+```javascript Node.js SDK (verify.mjs)
+import { readFileSync } from "node:fs";
+import { WebhookVerifier } from "@ahasend/sdk/webhooks";
+const body = readFileSync("payload.json");
+if (body.length > 30_000_000) throw new Error("Body too large");
+const verifier = new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET);
+await verifier.parse({
+  "webhook-id": process.env.WEBHOOK_ID,
+  "webhook-timestamp": process.env.WEBHOOK_TIMESTAMP,
+  "webhook-signature": process.env.WEBHOOK_SIGNATURE,
+}, body);
+console.log("Verified; acknowledge known and unknown event types with 2xx");
+```
+
+```go Go SDK (main.go)
+package main
+
+import (
+    "errors"
+    "fmt"
+    "net/http"
+    "os"
+    "github.com/AhaSend/ahasend-go/webhooks"
+)
+
+func main() {
+    body, err := os.ReadFile("payload.json")
+    if err != nil { panic(err) }
+    if len(body) > 30_000_000 { panic("body too large") }
+    verifier, err := webhooks.NewWebhookVerifier(os.Getenv("AHASEND_WEBHOOK_SECRET"))
+    if err != nil { panic(err) }
+    headers := http.Header{}
+    headers.Set("webhook-id", os.Getenv("WEBHOOK_ID"))
+    headers.Set("webhook-timestamp", os.Getenv("WEBHOOK_TIMESTAMP"))
+    headers.Set("webhook-signature", os.Getenv("WEBHOOK_SIGNATURE"))
+    _, err = verifier.Parse(body, headers)
+    if err != nil && !errors.Is(err, webhooks.ErrUnknownEventType) { panic("verification failed") }
+    fmt.Println("Verified; acknowledge known and unknown event types with 2xx")
+}
+```
+
+```javascript Standard Webhooks (verify.mjs)
+import { readFileSync } from "node:fs";
+import { Webhook } from "standardwebhooks";
+const body = readFileSync("payload.json");
+if (body.length > 30_000_000) throw new Error("Body too large");
+const verifier = new Webhook(process.env.AHASEND_WEBHOOK_SECRET, { format: "raw" });
+verifier.verify(body.toString("utf8"), {
+  "webhook-id": process.env.WEBHOOK_ID,
+  "webhook-timestamp": process.env.WEBHOOK_TIMESTAMP,
+  "webhook-signature": process.env.WEBHOOK_SIGNATURE,
+});
+console.log("Verified");
+```
+
+```go Standard Webhooks (main.go)
+package main
+
+import (
+    "fmt"
+    "net/http"
+    "os"
+    standardwebhooks "github.com/standard-webhooks/standard-webhooks/libraries/go"
+)
+
+func main() {
+    body, err := os.ReadFile("payload.json")
+    if err != nil { panic(err) }
+    if len(body) > 30_000_000 { panic("body too large") }
+    verifier, err := standardwebhooks.NewWebhookRaw([]byte(os.Getenv("AHASEND_WEBHOOK_SECRET")))
+    if err != nil { panic(err) }
+    headers := http.Header{}
+    headers.Set("webhook-id", os.Getenv("WEBHOOK_ID"))
+    headers.Set("webhook-timestamp", os.Getenv("WEBHOOK_TIMESTAMP"))
+    headers.Set("webhook-signature", os.Getenv("WEBHOOK_SIGNATURE"))
+    if err := verifier.Verify(body, headers); err != nil { panic("verification failed") }
+    fmt.Println("Verified")
+}
+```
+
+```python Standard Webhooks (verify.py)
+import base64
+import binascii
+
+def supported_signatures(header):
+    # Skip unsupported or malformed entries before the library decodes them.
+    supported = []
+    for entry in (header or "").split():
+        version, separator, encoded = entry.partition(",")
+        if version != "v1" or not separator:
+            continue
+        try:
+            signature = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError):
+            continue
+        if len(signature) == 32:
+            supported.append(entry)
+    return " ".join(supported)
+
+import os
+from pathlib import Path
+from standardwebhooks.webhooks import Webhook
+
+body = Path("payload.json").read_bytes()
+if len(body) > 30_000_000:
+    raise ValueError("Body too large")
+secret = os.environ["AHASEND_WEBHOOK_SECRET"].encode("utf-8")
+Webhook(secret).verify(body, {
+    "webhook-id": os.environ["WEBHOOK_ID"],
+    "webhook-timestamp": os.environ["WEBHOOK_TIMESTAMP"],
+    "webhook-signature": supported_signatures(os.environ["WEBHOOK_SIGNATURE"]),
+})
+print("Verified")
+```
+
+```php PHP raw HMAC (verify.php)
+<?php
+$body = file_get_contents('payload.json', false, null, 0, 30_000_001);
+$secret = getenv('AHASEND_WEBHOOK_SECRET');
+$id = getenv('WEBHOOK_ID');
+$timestamp = getenv('WEBHOOK_TIMESTAMP');
+$signatures = getenv('WEBHOOK_SIGNATURE');
+if ($body === false || strlen($body) > 30_000_000 || !$secret || !$id ||
+    !ctype_digit($timestamp ?: '') || abs(time() - (int)$timestamp) > 300) {
+    throw new RuntimeException('Invalid webhook');
+}
+$expected = base64_encode(hash_hmac('sha256', "$id.$timestamp.$body", $secret, true));
+$valid = false;
+foreach (explode(' ', $signatures ?: '') as $candidate) {
+    $parts = explode(',', $candidate, 2);
+    if (count($parts) === 2 && $parts[0] === 'v1' && hash_equals($expected, $parts[1])) {
+        $valid = true;
+    }
+}
+if (!$valid) throw new RuntimeException('Invalid signature');
+json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+echo "Verified", PHP_EOL;
+```
+
+</CodeGroup>
+
+Python's bytes constructor preserves the raw key. The PHP example computes `base64(HMAC-SHA256(secret_utf8, id + "." + timestamp + "." + body))` directly. It avoids the current Standard Webhooks PHP `fromRaw` constructor issue. See the upstream [Python](https://github.com/standard-webhooks/standard-webhooks/blob/main/libraries/python/standardwebhooks/webhooks.py) and [PHP](https://github.com/standard-webhooks/standard-webhooks/blob/main/libraries/php/src/Webhook.php) implementations.
+
+In an HTTP handler, enforce the 30,000,000-byte limit while reading the stream, before buffering. Keep a lower limit if your hosting platform requires one. SDK adapters already bound their reads; see the [Node.js SDK](/guides/nodejs-sdk) and [Go SDK](/guides/go-sdk) examples.

@@ -5,17 +5,26 @@ description: "Send transactional email from a Fiber (Go) app with the AhaSend em
 keywords: ["fiber send email", "golang transactional email fiber", "fiber email api", "ahasend go sdk", "fiber webhook email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [Fiber](https://gofiber.io) runs on [fasthttp](https://github.com/valyala/fasthttp), not `net/http`, so a handler never sees an `*http.Request`: pass the Fiber context to the SDK, and verify webhooks with `verifier.Parse` instead of `verifier.ParseRequest`.
+
+<SendGuideRules />
 
 ## Prerequisites
 
+Use Go 1.26 or later for current Fiber v3; check the [module requirement](https://github.com/gofiber/fiber/blob/main/go.mod) when choosing a pinned release.
+
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{domain}` scope for your sending domain (or `messages:send:all` if it must cover multiple domains), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{domain}` scope for your sending domain (or `messages:send:all` if it must cover multiple domains), and your account ID
 
 ## Install the SDK
 
 ```bash
+go mod init example.com/ahasend-fiber
 go get github.com/AhaSend/ahasend-go
+go get github.com/google/uuid
 go get github.com/gofiber/fiber/v3
 ```
 
@@ -302,7 +311,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
   Timestamp verification is not replay deduplication. Before adding side effects, atomically persist the verified `webhook-id` together with durable queue/outbox work. Acknowledge an already-recorded ID without processing it again, and make the worker idempotent. Do not use an untracked goroutine as the durable handoff.
 </Warning>
 
-Return 200 promptly after that durable handoff, because unsuccessful webhook requests are retried: six times over 16 minutes, and after 100 consecutive failures the webhook is disabled. Fiber reuses request buffers, so copy any `c.BodyRaw()` or `c.Get()` value that must outlive the handler — `strings.Clone` on the `webhook-id` you persist, for instance. Parsed event structs contain decoded copies. As you replace the `log.Print` calls with real handling, keep the raw body, the signature header, and the event object itself out of your logs: those carry recipient addresses and message content.
+Return 200 promptly after that durable handoff, because unsuccessful webhook requests are retried: with 6 attempts over about 16 minutes, and after more than 100 consecutive failed attempts the webhook is disabled. Fiber reuses request buffers, so copy any `c.BodyRaw()` or `c.Get()` value that must outlive the handler — `strings.Clone` on the `webhook-id` you persist, for instance. Parsed event structs contain decoded copies. As you replace the `log.Print` calls with real handling, keep the raw body, the signature header, and the event object itself out of your logs: those carry recipient addresses and message content.
 
 ## Going Further
 
@@ -319,7 +328,7 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
 
 <AccordionGroup>
   <Accordion title="401 from the API">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
   <Accordion title="Webhook verification always fails">
     Confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix, and pass `c.BodyRaw()` directly to `verifier.Parse`: the signature is computed over the exact raw bytes AhaSend sent. Do not use `c.Body()` or body-mutating middleware on this route.

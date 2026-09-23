@@ -8,9 +8,11 @@ icon: route
 
 Manage inbound email routes for processing incoming messages through webhooks.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Overview
 
-```bash
+```text
 ahasend routes [subcommand] [flags]
 ```
 
@@ -26,8 +28,8 @@ Available subcommands:
 Routes enable you to:
 - Process inbound emails through webhooks
 - Filter emails by recipient patterns
-- Control attachment handling and formatting
-- Group messages by conversation threads
+- Opt into attachment and header fields
+- Group copies with the same Message-ID into one request
 - Strip reply content for cleaner processing
 
 ## List Routes
@@ -40,61 +42,64 @@ ahasend routes list
 
 ```bash
 # Basic route
-ahasend routes create \
-  --match-recipient "support@example.com" \
-  --forward-to "https://your-app.com/webhooks/inbound"
+ahasend routes create --name "Docs route" --interactive=false \
+  --recipient "support@example.com" \
+  --url "https://your-app.com/webhooks/inbound"
 
 # With recipient pattern filtering
-ahasend routes create \
-  --match-recipient "*@help.example.com" \
-  --forward-to "https://api.example.com/email-handler" \
-  --description "Help desk routing"
+ahasend routes create --interactive=false \
+  --recipient "*@help.example.com" \
+  --url "https://api.example.com/email-handler" \
+  --name "Help desk routing"
 
 # Advanced route with options
-ahasend routes create \
-  --match-recipient "support-*@example.com" \
-  --forward-to "https://support.example.com/webhook" \
+ahasend routes create --interactive=false \
+  --recipient "support-*@example.com" \
+  --url "https://support.example.com/webhook" \
   --strip-replies \
-  --group-by-conversation \
-  --description "Support ticket routing"
+  --group-by-message-id \
+  --name "Support ticket routing"
 ```
 
 ## Get Route Details
 
 ```bash
-ahasend routes get route_1234567890abcdef
+ahasend routes get YOUR_RESOURCE_ID
 ```
 
 ## Update Route
 
 ```bash
 # Update webhook URL
-ahasend routes update route_1234567890abcdef \
-  --forward-to "https://new-api.example.com/webhook"
+ahasend routes update YOUR_RESOURCE_ID \
+  --url "https://new-api.example.com/webhook"
 
 # Update recipient pattern
-ahasend routes update route_1234567890abcdef \
-  --match-recipient "new-pattern@example.com"
+ahasend routes update YOUR_RESOURCE_ID \
+  --recipient "new-pattern@example.com"
 
 # Update processing options
-ahasend routes update route_1234567890abcdef \
+ahasend routes update YOUR_RESOURCE_ID \
   --strip-replies \
-  --group-by-conversation
+  --group-by-message-id
 ```
 
 ## Delete Route
 
 ```bash
-ahasend routes delete route_1234567890abcdef
+TEST_ID=$(ahasend routes create --name "Docs deletion test" --url https://example.com/inbound --recipient "docs-delete-test@yourdomain.com" --interactive=false --output json | jq -er '.id')
+ahasend routes delete "$TEST_ID"
 ```
 
 ## Listen for Events (Development)
 
 Listen for inbound email routing events in real-time using WebSocket connection. This command establishes a WebSocket connection to receive inbound email events and can forward them to a local endpoint for development.
 
+Temporary routes need a domain in your account with its AhaSend MX records configured. An existing route must be enabled to emit events: after its listener connects, run `ahasend routes update YOUR_RESOURCE_ID --enabled` in another terminal, then disable it again before stopping the listener. Temporary listeners are enabled automatically.
+
 ```bash
 # Listen with existing route
-ahasend routes listen --route-id abcd1234-5678-90ef-abcd-1234567890ab
+ahasend routes listen --route-id YOUR_RESOURCE_ID
 
 # Listen with recipient pattern (backend creates temporary route)
 ahasend routes listen --recipient "*@example.com"
@@ -105,37 +110,22 @@ ahasend routes listen \
   --forward-to http://localhost:3000/webhook
 
 # Slim output (minimal event display)
-ahasend routes listen --route-id abc123 --slim-output
+ahasend routes listen --route-id YOUR_RESOURCE_ID --slim-output
 
 # Skip SSL verification for local endpoints
 ahasend routes listen \
-  --route-id abc123 \
+  --route-id YOUR_RESOURCE_ID \
   --forward-to https://localhost:3000/webhook \
   --skip-verify
 ```
 
-### Listen Flags
-
-| Flag | Description |
-|------|-------------|
-| `--route-id` | Use existing route instead of creating temporary one |
-| `--recipient` | Recipient pattern for temporary route (e.g., *@domain.com) |
-| `--forward-to` | Local endpoint to forward events to |
-| `--slim-output` | Slim down the payload for printing to the console |
-| `--skip-verify` | Skip SSL certificate verification for local endpoints |
-
-<Note>
-- Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
-- The command generates a webhook secret for signing forwarded events using the standard-webhooks specification.
-- The command handles disconnections with buffered event replay.
-</Note>
 
 ## Trigger Test Events (Development)
 
 Manually trigger route events for testing:
 
 ```bash
-ahasend routes trigger route_1234567890abcdef
+ahasend routes trigger YOUR_RESOURCE_ID
 ```
 
 <Warning>
@@ -146,3 +136,72 @@ This is a development-only feature and may not be available in production enviro
 
 - [Configure webhooks](/cli/commands/webhooks)
 - [View statistics](/cli/commands/stats)
+
+## Command Flags
+
+These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `routes create`
+
+| Flag | Description and default |
+|---|---|
+| `--enabled` | Enable the route immediately after creation |
+| `--group-by-message-id` | Group related emails by message ID (conversation threading) |
+| `--include-attachments` | Include email attachments in webhook payload |
+| `--include-headers` | Include email headers in webhook payload |
+| `--interactive` | Use interactive mode for route configuration (default true) |
+| `--name string` | Route name |
+| `--recipient string` | Recipient filter pattern (e.g., 'support-*@example.com', '*@example.com'); the domain must belong to your account |
+| `--strip-replies` | Strip reply content from emails |
+| `--url string` | Webhook URL for processing emails |
+
+### `routes delete`
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt (for automation) |
+
+### `routes get`
+
+This command has no command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `routes list`
+
+| Flag | Description and default |
+|---|---|
+| `--cursor string` | Pagination cursor for continued results |
+| `--enabled` | Show only enabled routes |
+| `--limit int32` | Maximum number of routes to return (default 50) |
+
+### `routes listen`
+
+| Flag | Description and default |
+|---|---|
+| `--forward-to string` | Local endpoint to forward events to |
+| `--recipient string` | Recipient pattern for temporary route (e.g., *@domain.com) |
+| `--route-id string` | Use existing route instead of creating temporary one |
+| `--skip-verify` | Skip SSL certificate verification for local endpoints when forwarding events |
+| `--slim-output` | Slim down the payload for printing to the console |
+
+### `routes trigger`
+
+This command has no command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `routes update`
+
+| Flag | Description and default |
+|---|---|
+| `--clear-recipient` | Clear recipient filter (accept all emails) |
+| `--disabled` | Disable the route |
+| `--enabled` | Enable the route |
+| `--group-by-message-id` | Enable grouping related emails by message ID |
+| `--include-attachments` | Enable including attachments in webhook payload |
+| `--include-headers` | Enable including headers in webhook payload |
+| `--name string` | Update route name |
+| `--no-group-by-message-id` | Disable grouping related emails by message ID |
+| `--no-include-attachments` | Disable including attachments in webhook payload |
+| `--no-include-headers` | Disable including headers in webhook payload |
+| `--no-strip-replies` | Disable stripping reply content from emails |
+| `--recipient string` | Update recipient filter pattern |
+| `--strip-replies` | Enable stripping reply content from emails |
+| `--url string` | Update webhook URL |

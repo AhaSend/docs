@@ -8,6 +8,8 @@ icon: envelopes-bulk
 
 Test and debug inbound email routing locally using the AhaSend CLI's WebSocket-based route listener.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Overview
 
 The CLI provides tools for:
@@ -22,23 +24,25 @@ The CLI provides tools for:
 
 ### Basic Usage
 
+Temporary routes need a domain in your account with its AhaSend MX records configured. An existing route must be enabled to emit events. For a disabled test route, start its listener, then run `ahasend routes update YOUR_RESOURCE_ID --enabled` in another terminal; disable it again before stopping the listener. Temporary listeners are enabled automatically.
+
 ```bash
 # Listen with existing route
-ahasend routes listen --route-id abcd1234-5678-90ef-abcd-1234567890ab
+ahasend routes listen --route-id YOUR_RESOURCE_ID
 
 # Listen with recipient pattern (backend creates temporary route)
 ahasend routes listen --recipient "*@example.com"
 
-# Listen for specific subdomain patterns
+# Listen for local-part patterns
 ahasend routes listen --recipient "support-*@example.com"
 
 # Slim output (minimal event display)
-ahasend routes listen --route-id abc123 --slim-output
+ahasend routes listen --route-id YOUR_RESOURCE_ID --slim-output
 ```
 
 <Note>
 - Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
-- The command generates a webhook secret for signing forwarded events using the standard-webhooks specification.
+- The command generates a webhook secret for signing forwarded events using the Standard Webhooks headers and format, with the full secret as raw UTF-8 bytes.
 </Note>
 
 ### Event Type
@@ -57,12 +61,12 @@ ahasend routes listen \
 
 # Forward with existing route
 ahasend routes listen \
-  --route-id abcd1234-5678-90ef-abcd-1234567890ab \
+  --route-id YOUR_RESOURCE_ID \
   --forward-to http://localhost:3000/webhook
 
 # Skip SSL verification for self-signed certificates
 ahasend routes listen \
-  --route-id abcd1234-5678-90ef-abcd-1234567890ab \
+  --route-id YOUR_RESOURCE_ID \
   --forward-to https://localhost:8443/webhook \
   --skip-verify
 ```
@@ -80,7 +84,7 @@ Forwarded requests include standard webhook headers:
 
 ```bash
 # Trigger a message.routing event for testing
-ahasend routes trigger abcd1234-5678-90ef-abcd-1234567890ab
+ahasend routes trigger YOUR_RESOURCE_ID
 ```
 
 ### Finding Route IDs
@@ -96,17 +100,17 @@ ahasend routes list
 
 ```bash
 # 1. Create a route for testing
-ahasend routes create \
-  --match-recipient "test@example.com" \
-  --forward-to "https://app.example.com/webhook" \
-  --description "Test inbound route"
+ahasend routes create --interactive=false \
+  --recipient "test@example.com" \
+  --url "https://app.example.com/webhook" \
+  --name "Test inbound route"
 
 # 2. Start listening for events
-ahasend routes listen --route-id <route-id> \
+ahasend routes listen --route-id YOUR_RESOURCE_ID \
   --forward-to http://localhost:3000/webhook
 
 # 3. Trigger test event (in another terminal)
-ahasend routes trigger <route-id>
+ahasend routes trigger YOUR_RESOURCE_ID
 
 # 4. Send test email to the route address
 # test@example.com will trigger the route
@@ -118,14 +122,14 @@ ahasend routes trigger <route-id>
 
 ```bash
 # Full event details (default)
-ahasend routes listen --route-id abc123
+ahasend routes listen --route-id YOUR_RESOURCE_ID
 ```
 
 ### Slim Output
 
 ```bash
 # Minimal console display
-ahasend routes listen --route-id abc123 --slim-output
+ahasend routes listen --route-id YOUR_RESOURCE_ID --slim-output
 ```
 
 ## Common Flags
@@ -168,7 +172,7 @@ ahasend routes listen --recipient "tasks@example.com" \
 
 1. **Use Temporary Routes for Testing**: Create temporary routes with wildcards during development
 2. **Verify Signatures**: Always validate webhook signatures in production
-3. **Handle WebSocket Disconnects**: Implement reconnection logic for production use
+3. **Use listeners for development**: Configure a real route URL for production
 4. **Test with Trigger Command**: Use trigger to test without sending real emails
 5. **Use Slim Output for Monitoring**: Reduce console clutter when monitoring events
 
@@ -178,7 +182,7 @@ ahasend routes listen --recipient "tasks@example.com" \
 
 **Events Not Received**: Verify the route pattern matches the recipient address
 
-**Signature Verification Failed**: The command automatically generates a webhook secret using the standard-webhooks specification
+**Signature Verification Failed**: The listener prints its signing secret when it starts. Store that secret in your local handler's configuration; use the full string as the raw UTF-8 HMAC key. Do not base64-decode it. See [signature verification](/api-reference/webhooks/security). The command automatically generates a webhook secret using the Standard Webhooks headers and format, with the full secret as raw UTF-8 bytes
 
 **Route Not Found**: Check route ID with `ahasend routes list`
 

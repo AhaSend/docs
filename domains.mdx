@@ -137,7 +137,7 @@ Before setting up your domain, make sure you have:
         ```
 
         <Info>
-        This DMARC policy tells receiving servers to quarantine emails that fail authentication and send reports to AhaSend for monitoring.
+        This DMARC policy asks receiving servers to quarantine messages that fail DMARC. It has no `rua` tag and sends no aggregate reports. You can add your own `rua=mailto:reports@yourdomain.com` address to receive reports. If the domain already has a DMARC record, update that record instead of adding another. Check all services that send from the domain before enforcing a quarantine policy.
         </Info>
       </Accordion>
 
@@ -285,8 +285,8 @@ Need help adding DNS records? Here are guides for popular providers:
   <Card title="Route 53" icon="aws" href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html">
     AWS Route 53 record management
   </Card>
-  <Card title="Google Domains" icon="google" href="https://support.google.com/domains/answer/3251147">
-    Add DNS records in Google Domains
+  <Card title="Squarespace Domains" icon="globe" href="https://support.squarespace.com/hc/en-us/articles/360002101888-Adding-custom-DNS-records-to-your-Squarespace-managed-domain">
+    Add DNS records in Squarespace Domains
   </Card>
   <Card title="Other Providers" icon="question" href="mailto:support@ahasend.com">
     Contact support for help with your DNS provider
@@ -317,6 +317,8 @@ API v2 also supports updating domain DNS settings such as tracking, return-path,
 </Info>
 
 ## Troubleshooting
+
+Most records verify within minutes. DNS changes can take up to 48 hours to propagate. After a domain is added or verified, allow up to 2 minutes for the SMTP configuration to refresh if you see `556 Invalid account or domain`.
 
 <AccordionGroup>
   <Accordion title="DNS Records Not Verifying">

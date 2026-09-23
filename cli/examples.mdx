@@ -8,13 +8,15 @@ icon: lightbulb
 
 This page provides comprehensive examples for common email sending scenarios using the AhaSend CLI.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash and Python 3 for portable future dates; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Transactional Emails
 
 ### Order Confirmation
 
 ```bash
 # Single order confirmation
-ahasend messages send \
+ahasend messages send --sandbox \
   --from orders@shop.com \
   --to customer@example.com \
   --subject "Order #12345 Confirmed" \
@@ -34,7 +36,7 @@ ahasend messages send \
     {"name": "Product A", "quantity": 2, "price": "$49.99"},
     {"name": "Product B", "quantity": 1, "price": "$50.01"}
   ],
-  "delivery_date": "January 20, 2024"
+  "delivery_date": "<delivery date>"
 }
 ```
 
@@ -42,78 +44,82 @@ ahasend messages send \
 
 ```bash
 # Secure password reset email
-ahasend messages send \
+ahasend messages send --sandbox \
   --from security@app.com \
   --to user@example.com \
   --subject "Password Reset Request" \
   --html-template password-reset.html \
   --global-substitutions reset-data.json \
   --header "X-Priority: high" \
-  --track-clicks false \
+  --track-clicks=false \
   --idempotency-key "reset-user123-$(date +%s)"
 ```
 
 ### Account Verification
 
 ```bash
+# Save global substitutions in a file (the flag takes a path).
+cat > verification-data.json <<'JSON'
+{"verify_url":"https://example.com/verify?token=TEST_TOKEN"}
+JSON
 # New user verification
-ahasend messages send \
+ahasend messages send --sandbox \
   --from noreply@app.com \
   --to newuser@example.com \
   --subject "Verify Your Email Address" \
   --html "<h2>Welcome!</h2><p>Please verify your email by clicking <a href='{{verify_url}}'>here</a></p>" \
   --text "Welcome! Please verify your email by visiting: {{verify_url}}" \
-  --global-substitutions '{"verify_url": "https://app.com/verify?token=abc123"}' \
+  --global-substitutions verification-data.json \
   --tags signup,verification
 ```
 
-## Marketing Campaigns
+## Lifecycle Notifications
 
-### Newsletter Distribution
+### Account Activity Digest
 
 ```bash
 #!/bin/bash
 # send-newsletter.sh
 
 # Prepare data
-TEMPLATE="newsletter-january.html"
-RECIPIENTS="subscribers.csv"
-SUBJECT="📰 January Newsletter: New Year, New Features!"
+TEMPLATE="account-digest.html"
+RECIPIENTS="account-users.csv"
+SUBJECT="Your Account Activity Digest"
 
 # Send newsletter with tracking
-ahasend messages send \
+ahasend messages send --sandbox \
   --from newsletter@company.com \
   --recipients "$RECIPIENTS" \
   --subject "$SUBJECT" \
   --html-template "$TEMPLATE" \
-  --track-opens true \
-  --track-clicks true \
-  --tags newsletter,january,2024 \
+  --track-opens=true \
+  --track-clicks=true \
+  --tags account-digest,transactional \
   --max-concurrency 5 \
   --progress \
   --show-metrics
 
 # Check delivery stats after 1 hour
-sleep 3600
+# Check recent statistics after the sandbox send.
 ahasend stats deliverability \
-  --start-date $(date +%Y-%m-%d) \
+  --from-time 7d \
   --group-by hour
 ```
 
-### Product Launch Announcement
+### Account Feature Notifications
 
 ```bash
-# Segmented product launch campaign
+# Notify account users about an enabled feature
 for segment in vip regular trial; do
   echo "Sending to $segment segment..."
 
-  ahasend messages send \
-    --from marketing@startup.com \
+  ahasend messages send --sandbox \
+    --from notifications@yourdomain.com \
     --recipients "${segment}-users.csv" \
-    --subject "{{first_name}}, Introducing Our New Product!" \
+    --subject "{{first_name}}, Your Account Feature Is Ready" \
     --html-template "launch-${segment}.html" \
     --global-substitutions launch-data.json \
-    --tags "product-launch,${segment}" \
+    --tags "account-feature,${segment}" \
     --max-concurrency 3 \
     --progress
 
@@ -121,17 +127,17 @@ for segment in vip regular trial; do
 done
 ```
 
-### Abandoned Cart Recovery
+### Pending Order Reminder
 
 ```bash
 #!/bin/bash
-# abandoned-cart-recovery.sh
+# pending-order-reminder.sh
 
-# Query abandoned carts from database
+# Query pending orders from database
 # ... database query logic ...
 
 # Create recipients file
-cat > abandoned-carts.json << EOF
+cat > pending-orders.json << 'EOF'
 [
   {
     "email": "shopper@example.com",
@@ -148,13 +154,13 @@ cat > abandoned-carts.json << EOF
 EOF
 
 # Send recovery emails
-ahasend messages send \
+ahasend messages send --sandbox \
   --from shop@store.com \
-  --recipients abandoned-carts.json \
-  --subject "{{first_name}}, you left something behind!" \
-  --html-template abandoned-cart.html \
-  --schedule "$(date -d '+2 hours' --iso-8601=seconds)" \
-  --tags "abandoned-cart,recovery,automated"
+  --recipients pending-orders.json \
+  --subject "{{first_name}}, your order is waiting for confirmation" \
+  --html-template pending-order.html \
+  --schedule "$(python3 -c 'from datetime import datetime,timedelta,timezone; print((datetime.now(timezone.utc)+timedelta(hours=2)).isoformat())')" \
+  --tags "pending-order,recovery,automated"
 ```
 
 ## Notification Systems
@@ -165,9 +171,9 @@ ahasend messages send \
 #!/bin/bash
 # send-alert.sh
 
-ALERT_TYPE=$1
-ALERT_MESSAGE=$2
-RECIPIENTS=$3
+ALERT_TYPE=${1:-info}
+ALERT_MESSAGE=${2:-"Docs alert test"}
+RECIPIENTS=${3:-test@example.com}
 
 case $ALERT_TYPE in
   critical)
@@ -182,13 +188,14 @@ case $ALERT_TYPE in
     SUBJECT="ℹ️ Information"
     PRIORITY="low"
     ;;
+  *) echo "Use critical, warning, or info"; exit 1 ;;
 esac
 
-ahasend messages send \
+ahasend messages send --sandbox \
   --from alerts@monitoring.com \
   --to "$RECIPIENTS" \
   --subject "$SUBJECT: $ALERT_MESSAGE" \
-  --text "$ALERT_MESSAGE\n\nTime: $(date)\nSystem: Production" \
+  --text "$(printf '%s\n\nTime: %s\nSystem: Test' "$ALERT_MESSAGE" "$(date)")" \
   --header "X-Priority: $PRIORITY" \
   --tags "alert,${ALERT_TYPE},automated"
 ```
@@ -205,7 +212,7 @@ generate_report() {
   echo "  \"date\": \"$(date +%Y-%m-%d)\","
   echo "  \"total_users\": 15234,"
   echo "  \"new_signups\": 87,"
-  echo "  \"revenue\": \"$12,456.78\","
+  echo "  \"revenue\": \"\$12,456.78\","
   echo "  \"top_products\": ["
   echo "    {\"name\": \"Product A\", \"sales\": 234},"
   echo "    {\"name\": \"Product B\", \"sales\": 189}"
@@ -217,14 +224,14 @@ generate_report() {
 generate_report > report-data.json
 
 # Send daily report
-ahasend messages send \
+ahasend messages send --sandbox \
   --from reports@analytics.com \
   --recipients executives.csv \
   --subject "Daily Report - $(date +%Y-%m-%d)" \
   --html-template daily-report.html \
   --global-substitutions report-data.json \
   --attach "reports/detailed-$(date +%Y%m%d).pdf" \
-  --schedule "$(date -d 'today 09:00' --iso-8601=seconds)" \
+  --schedule "$(python3 -c 'from datetime import datetime,timedelta,timezone; print((datetime.now(timezone.utc)+timedelta(hours=1)).isoformat())')" \
   --tags "report,daily,automated"
 ```
 
@@ -233,49 +240,38 @@ ahasend messages send \
 ### Process Webhook Events
 
 ```bash
-#!/bin/bash
-# webhook-processor.sh
-
-# Start webhook listener and forward to local processor
+# Run your local, signature-verifying receiver first; see the webhook guide.
 ahasend webhooks listen \
   --forward-to http://localhost:8080/webhook \
-  --events message.bounced,message.failed \
-  --output json | while read -r event; do
-
-  EVENT_TYPE=$(echo "$event" | jq -r '.event')
-  EMAIL=$(echo "$event" | jq -r '.recipient')
-
-  case $EVENT_TYPE in
-    message.bounced)
-      echo "Processing bounce for: $EMAIL"
-      # Add to suppression list
-      ahasend suppressions create "$EMAIL" --type bounce
-      ;;
-    message.failed)
-      echo "Processing failure for: $EMAIL"
-      # Log and alert
-      echo "$event" >> failed-emails.log
-      ;;
-  esac
-done
+  --events message.bounced,message.failed
 ```
+
+The receiver processes `payload.type` and `payload.data.recipient`. CLI listener output is for people, not a line-delimited JSON stream. See [webhook verification and processing](/integrations/webhooks). AhaSend already creates cause-dependent automatic suppressions; see [suppression durations](/api-reference/webhooks#suppression-duration).
 
 ### Webhook Testing Pipeline
 
 ```bash
 #!/bin/bash
 # test-webhook-integration.sh
+set -euo pipefail
 
 # 1. Create test webhook
-WEBHOOK_ID=$(ahasend webhooks create \
-  --url http://localhost:3000/test-webhook \
-  --events all \
-  --description "Integration test webhook" \
-  --output json | jq -r '.id')
+WEBHOOK_ID=$(ahasend webhooks create --scope global --non-interactive --disabled \
+  --url https://example.com/test-webhook \
+  --all-events \
+  --name "Integration test webhook" \
+  --output json | jq -er '.id')
+
+cleanup() {
+  ahasend webhooks update "$WEBHOOK_ID" --disable || true
+  if [ -n "${LISTENER_PID:-}" ]; then kill "$LISTENER_PID" 2>/dev/null || true; fi
+  ahasend webhooks delete "$WEBHOOK_ID" --force
+}
+trap cleanup EXIT
 
 echo "Created webhook: $WEBHOOK_ID"
 
-# 2. Start listener with forwarding
+# 2. Start listener with forwarding (a local handler must already be running)
 ahasend webhooks listen \
   --webhook-id "$WEBHOOK_ID" \
   --forward-to http://localhost:3000/test-webhook \
@@ -284,6 +280,8 @@ LISTENER_PID=$!
 
 # 3. Trigger test events
 sleep 2
+# Enable only after the listener connects; disabled webhooks emit no events.
+ahasend webhooks update "$WEBHOOK_ID" --enable
 ahasend webhooks trigger "$WEBHOOK_ID" --all-events
 
 # 4. Send test email
@@ -296,11 +294,6 @@ ahasend messages send \
 
 # 5. Wait and cleanup
 sleep 5
-kill $LISTENER_PID
-
-# 6. Delete test webhook
-ahasend webhooks delete "$WEBHOOK_ID" --yes
-
 echo "Integration test complete"
 ```
 
@@ -331,7 +324,7 @@ jobs:
           AHASEND_API_KEY: ${{ secrets.AHASEND_API_KEY }}
           AHASEND_ACCOUNT_ID: ${{ secrets.AHASEND_ACCOUNT_ID }}
         run: |
-          ahasend messages send \
+          ahasend --api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID" messages send --sandbox \
             --from ci@company.com \
             --to team@company.com \
             --subject "✅ Deployment Successful: ${{ github.event.deployment.environment }}" \
@@ -349,14 +342,18 @@ jobs:
 #!/bin/bash
 # backup-notification.sh
 
-# Perform backup
+# Set BACKUP_SOURCE to your database dump. This small fixture makes the test runnable.
+printf '%s
+' 'SELECT 1;' > docs-backup-source.sql
+BACKUP_SOURCE=docs-backup-source.sql
 BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S).sql.gz"
-BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+gzip -c "$BACKUP_SOURCE" > "$BACKUP_FILE"
 BACKUP_STATUS=$?
+BACKUP_SIZE=$(wc -c < "$BACKUP_FILE")
 
 if [ $BACKUP_STATUS -eq 0 ]; then
   SUBJECT="✅ Backup Successful"
-  MESSAGE="Database backup completed successfully.\nFile: $BACKUP_FILE\nSize: $BACKUP_SIZE"
+  MESSAGE=$(printf 'Backup completed.\nFile: %s\nBytes: %s' "$BACKUP_FILE" "$BACKUP_SIZE")
   TAGS="backup,success"
 else
   SUBJECT="❌ Backup Failed"
@@ -365,7 +362,7 @@ else
 fi
 
 # Send notification
-ahasend messages send \
+ahasend messages send --sandbox \
   --from backup@database.com \
   --to admin@company.com \
   --subject "$SUBJECT - $(date +%Y-%m-%d)" \
@@ -379,47 +376,49 @@ ahasend messages send \
 #!/bin/bash
 # onboarding-sequence.sh
 
-USER_EMAIL=$1
-USER_NAME=$2
+USER_EMAIL=${1:-test@example.com}
+USER_NAME=${2:-"Test User"}
+# jq safely escapes the name and writes the file expected by the CLI.
+jq -n --arg name "$USER_NAME" '{name:$name}' > onboarding-data.json
 
 # Welcome email (immediate)
-ahasend messages send \
+ahasend messages send --sandbox \
   --from welcome@app.com \
   --to "$USER_EMAIL" \
   --subject "Welcome to Our App, $USER_NAME!" \
   --html-template templates/welcome.html \
-  --global-substitutions "{\"name\": \"$USER_NAME\"}" \
+  --global-substitutions onboarding-data.json \
   --tags "onboarding,day0,welcome"
 
 # Day 1: Getting started guide
-ahasend messages send \
+ahasend messages send --sandbox \
   --from tips@app.com \
   --to "$USER_EMAIL" \
   --subject "Getting Started with Our App" \
   --html-template templates/getting-started.html \
-  --global-substitutions "{\"name\": \"$USER_NAME\"}" \
-  --schedule "$(date -d '+1 day 10:00' --iso-8601=seconds)" \
+  --global-substitutions onboarding-data.json \
+  --schedule "$(python3 -c 'from datetime import datetime,timedelta,timezone; print((datetime.now(timezone.utc)+timedelta(days=1)).isoformat())')" \
   --tags "onboarding,day1,guide"
 
 # Day 3: Feature highlights
-ahasend messages send \
+ahasend messages send --sandbox \
   --from tips@app.com \
   --to "$USER_EMAIL" \
   --subject "Discover Our Best Features" \
   --html-template templates/features.html \
-  --global-substitutions "{\"name\": \"$USER_NAME\"}" \
-  --schedule "$(date -d '+3 days 10:00' --iso-8601=seconds)" \
+  --global-substitutions onboarding-data.json \
+  --schedule "$(python3 -c 'from datetime import datetime,timedelta,timezone; print((datetime.now(timezone.utc)+timedelta(days=3)).isoformat())')" \
   --tags "onboarding,day3,features"
 
-# Day 7: Check-in
-ahasend messages send \
+# Day 6: Check-in
+ahasend messages send --sandbox \
   --from support@app.com \
   --to "$USER_EMAIL" \
   --subject "How's Everything Going?" \
   --html-template templates/checkin.html \
-  --global-substitutions "{\"name\": \"$USER_NAME\"}" \
-  --schedule "$(date -d '+7 days 10:00' --iso-8601=seconds)" \
-  --tags "onboarding,day7,checkin"
+  --global-substitutions onboarding-data.json \
+  --schedule "$(python3 -c 'from datetime import datetime,timedelta,timezone; print((datetime.now(timezone.utc)+timedelta(days=6)).isoformat())')" \
+  --tags "onboarding,day6,checkin"
 
 echo "Onboarding sequence scheduled for $USER_EMAIL"
 ```
@@ -433,8 +432,7 @@ echo "Onboarding sequence scheduled for $USER_EMAIL"
 # load-test.sh
 
 # Configuration
-TOTAL_EMAILS=10000
-BATCH_SIZE=1000
+TOTAL_EMAILS=${TOTAL_EMAILS:-10}
 CONCURRENCY=10
 
 echo "Starting load test: $TOTAL_EMAILS emails"
@@ -462,21 +460,10 @@ ahasend messages send \
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 
-# Analyze results
-SUCCESS=$(jq '.successful_jobs' load-test-results.json)
-FAILED=$(jq '.failed_jobs' load-test-results.json)
-RATE=$(jq '.emails_per_sec' load-test-results.json)
-
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Load Test Results"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Total Emails:    $TOTAL_EMAILS"
-echo "Successful:      $SUCCESS"
-echo "Failed:          $FAILED"
-echo "Duration:        ${DURATION}s"
-echo "Rate:            $RATE emails/sec"
-echo "Concurrency:     $CONCURRENCY"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+# The CLI does not expose successful_jobs, failed_jobs, or emails_per_sec.
+# Inspect the returned JSON and elapsed time without assuming those fields.
+cat load-test-results.json
+echo "Elapsed: ${DURATION}s; requested recipients: $TOTAL_EMAILS"
 
 # Cleanup
 rm test-recipients.csv
@@ -515,7 +502,7 @@ case $ENVIRONMENT in
 esac
 
 # Send with environment-specific profile
-ahasend messages send \
+ahasend messages send --sandbox \
   --profile "$PROFILE" \
   --from "$FROM" \
   --recipients "$RECIPIENTS" \

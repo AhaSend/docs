@@ -5,6 +5,9 @@ description: "Step-by-step guides for sending transactional email from your fram
 icon: "plug"
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 Each guide focuses on one framework, runtime, platform, or development tool and
 shows the relevant server-side integration, credential boundary, and deployment
 details. Framework guides cover sending and webhook verification where the
@@ -12,6 +15,8 @@ platform supports them; development-tool guides focus on grounding, review, and
 sandbox testing.
 
 Already have a mailer in your framework, such as Nodemailer or ActionMailer? Point it at the [SMTP relay](/smtp) instead: four settings, no new code. If your stack is not covered here at all, the [Quickstart](/quickstart) shows the plain REST API, which works anywhere.
+
+<SendGuideRules />
 
 ## Start with Your Language
 
@@ -83,7 +88,7 @@ AI agents write email code quickly and invent APIs just as quickly. These guides
   </Step>
 
   <Step title="An API Key with Send Scope">
-    Create one in the [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, or scope it to a single domain to limit the blast radius if it leaks. The guides read it from `AHASEND_API_KEY`, alongside `AHASEND_ACCOUNT_ID` and, for webhooks, `AHASEND_WEBHOOK_SECRET`.
+    Create one in the [dashboard](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{your-domain}` scope (`messages:send:all` for sending from many domains), or scope it to a single domain to limit the blast radius if it leaks. The guides read it from `AHASEND_API_KEY`, alongside `AHASEND_ACCOUNT_ID` and, for webhooks, `AHASEND_WEBHOOK_SECRET`.
   </Step>
 
   <Step title="Sandbox Mode for Testing">

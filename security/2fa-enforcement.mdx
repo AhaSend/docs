@@ -60,6 +60,8 @@ Once your personal 2FA is active, enable enforcement for your team:
   </Step>
 </Steps>
 
+Enforcement includes the account owner. When OIDC SSO is enabled for the account, enforce MFA at your identity provider; AhaSend skips its own profile-2FA gate for that SSO account. See [SSO configuration](/security/sso).
+
 ## What Happens to Team Members
 
 When 2FA enforcement is enabled, team members experience the following:
@@ -104,7 +106,7 @@ Mandatory 2FA provides critical security benefits for team accounts:
 
   <Accordion title="Compliance Requirements" icon="scale-balanced">
     **Meet security standards:**
-    - Required for many industry regulations
+    - Helps enforce your team's account-access policy
     - Demonstrates security best practices to auditors
     - Reduces liability from security incidents
   </Accordion>

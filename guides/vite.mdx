@@ -5,10 +5,15 @@ description: "Send transactional email from a Vite app safely: an Express backen
 keywords: ["vite send email", "vite transactional email", "vite email backend", "ahasend vite", "vite api proxy email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [Vite](https://vite.dev) builds browser applications, so AhaSend credentials and
 SDK calls belong in a backend. This guide adds an Express server and uses Vite's
 development proxy. On a meta-framework, use its server integration instead,
 for example [Astro](/guides/astro).
+
+<SendGuideRules />
 
 ## Prerequisites
 
@@ -17,7 +22,7 @@ for example [Astro](/guides/astro).
 - Express 5 for the backend. Express 5 forwards a rejected promise from an `async` route handler to the error middleware below; on Express 4 the same rejection becomes an unhandled rejection and the request never completes. `npm install express` installs 5.
 - An application authentication system that can identify the current user on the backend
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) permitted to send from that domain, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) permitted to send from that domain, and your account ID
 
 ## 1. Add a Backend
 
@@ -72,6 +77,7 @@ user from request-body fields.
 import { createHash } from "node:crypto";
 import express from "express";
 import { AhaSendClient, isAhaSendError } from "@ahasend/sdk";
+import { WebhookVerifier, expressWebhookHandler } from "@ahasend/sdk/webhooks";
 import { authorizeWelcome } from "./auth.mjs";
 
 const ahasend = AhaSendClient.fromEnv();
@@ -96,7 +102,7 @@ app.post("/api/welcome", authorizeWelcome, async (_req, res) => {
     return;
   }
 
-  const idempotencyKey = `welcome-${createHash("sha256")
+  const idempotencyKey = `sandbox-welcome-${createHash("sha256")
     .update(user.signupId)
     .digest("hex")}`;
 
@@ -106,6 +112,7 @@ app.post("/api/welcome", authorizeWelcome, async (_req, res) => {
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email: user.email, name: user.name }],
         subject: "Welcome to Your App!",
+        sandbox: true,
         html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
         text_content: "Welcome aboard! We're glad you're here.",
       },
@@ -130,7 +137,14 @@ app.post("/api/welcome", authorizeWelcome, async (_req, res) => {
   }
 });
 
-// Register this after every route, including the webhook route below.
+// The adapter reads the raw stream; do not put a global body parser before it.
+app.post("/webhooks/ahasend", expressWebhookHandler(
+  new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET),
+  async (_event, _req, res) => { res.status(204).end(); },
+  { maxBodyBytes: 30_000_000 },
+)); // Verification only; add durable deduplication before side effects.
+
+// Register this after every route.
 app.use((error, _req, res, next) => {
   if (res.headersSent) {
     next(error);
@@ -146,8 +160,8 @@ app.listen(3000, "127.0.0.1");
 Bind the backend to loopback. Vite's proxy connects over loopback, so nothing is
 lost, and the backend port stays off the local network. The bind does not hide
 the endpoint behind `vite --host`: Vite then accepts requests from the network
-and proxies `/api` into the loopback backend, so the authentication and rate
-limit below are what keep a live API key from becoming an open mail relay for
+and proxies `/api` into the loopback backend, so the authentication middleware and the per-user rate
+limit you add protect a live API key from becoming an open mail relay for
 anyone who can reach the development server.
 
 Rate-limit the mutation in addition to authenticating it: cap sends per session
@@ -280,7 +294,7 @@ click events.
   </Accordion>
   <Accordion title="import.meta.env.VITE_AHASEND_API_KEY is visible">
     Remove the variable and rotate the exposed key in the
-    [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). Keep the
+    [dashboard](https://dash.ahasend.com/account/-/transactional/credentials). Keep the
     replacement only in the backend environment. Also inspect custom
     `envPrefix` and `define` settings, and never print the key while
     troubleshooting.

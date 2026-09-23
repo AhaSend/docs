@@ -6,7 +6,19 @@ keywords: ["v0 send email", "v0 vercel email integration", "v0 ahasend", "v0 nex
 icon: "wand-magic-sparkles"
 ---
 
+import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [v0](https://v0.app) can generate full-stack Next.js applications, including Route Handlers and other server-side code. When you ask it to add email, keep the AhaSend API key and SDK calls behind that server boundary.
+
+<SendGuideRules />
+
+## AhaSend Rules for AI Coding Agents
+
+Add this shared block to your project instructions:
+
+<AiEmailRules />
 
 ## Prerequisites
 
@@ -43,19 +55,19 @@ Next.js only includes variables prefixed with `NEXT_PUBLIC_` in the browser bund
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk
+npm install @ahasend/sdk server-only
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk
+pnpm add @ahasend/sdk server-only
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk
+yarn add @ahasend/sdk server-only
 ```
 
 ```bash bun
-bun add @ahasend/sdk
+bun add @ahasend/sdk server-only
 ```
 
 </CodeGroup>

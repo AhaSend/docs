@@ -8,7 +8,7 @@ icon: "network-wired"
 An IP allow list restricts an API key to a set of IP addresses. Once a key has an allow list, requests made with it from anywhere else are rejected, so a leaked key is useless outside your own infrastructure.
 
 <Info>
-**Scope of this feature:** IP allow lists apply to Management API keys only. SMTP credentials and sending credentials are not affected.
+**Scope of this feature:** IP allow lists apply to Full API keys only. SMTP credentials and sending credentials are not affected.
 </Info>
 
 ## How it works
@@ -31,9 +31,9 @@ The IP check runs before scope validation, so it is not another permission dimen
 
 A request made with a restricted key from an IP that is not covered by the list is rejected with **HTTP 403** on every v2 endpoint, whatever the key's scopes allow.
 
-```json theme={null}
+```json
 {
-  "message": "Error message"
+  "message": "Request rejected by the API key IP allow list"
 }
 ```
 
@@ -85,7 +85,7 @@ To lift the restriction again, delete every entry and save. An empty list allows
 
 Set the `ip_allow_list` field when you [create a key](/api-reference/api-keys/create-api-key), or when you [update an existing one](/api-reference/api-keys/update-api-key). The same field is available on the sub-account API key endpoints.
 
-```bash theme={null}
+```bash
 curl -X POST "https://api.ahasend.com/v2/accounts/{account_id}/api-keys" \
   -H "Authorization: Bearer aha-sk-your-64-character-key" \
   -H "Content-Type: application/json" \
@@ -98,7 +98,7 @@ curl -X POST "https://api.ahasend.com/v2/accounts/{account_id}/api-keys" \
 
 To change the list on an existing key, send a `PUT` to the key's endpoint:
 
-```bash theme={null}
+```bash
 curl -X PUT "https://api.ahasend.com/v2/accounts/{account_id}/api-keys/{key_id}" \
   -H "Authorization: Bearer aha-sk-your-64-character-key" \
   -H "Content-Type: application/json" \

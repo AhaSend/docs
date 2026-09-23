@@ -5,14 +5,19 @@ description: "Send transactional email from SvelteKit server endpoints with the 
 keywords: ["sveltekit send email", "sveltekit transactional email", "sveltekit server endpoint email", "ahasend sveltekit", "sveltekit webhook verification"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 Keep your AhaSend credentials in SvelteKit's private environment modules and
 send email only from server endpoints or server form actions.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - A SvelteKit project
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{yourdomain.com}` scope for that domain (or `messages:send:all`), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{yourdomain.com}` scope for that domain (or `messages:send:all`), and your account ID
 
 ## Install the SDK
 
@@ -218,13 +223,14 @@ export const POST: RequestHandler = async ({ request }) => {
   try {
     const result = await ahasend().messages.send(
       {
+        sandbox: true,
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email: input.email, name: input.name }],
         subject: "Welcome to Your App!",
         html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
         text_content: "Welcome aboard! We're glad you're here.",
       },
-      { idempotencyKey: `welcome:${input.eventId}` },
+      { idempotencyKey: `sandbox-welcome:${input.eventId}` },
     );
 
     const rejectedCount = result.data.filter((entry) => entry.status === "error").length;
@@ -308,7 +314,7 @@ export const POST: RequestHandler = ({ request }) => {
       }
       return new Response(null, { status: 200 });
     },
-    { maxBodyBytes: 1_000_000 },
+    { maxBodyBytes: 30_000_000 },
   );
 
   return route(request);

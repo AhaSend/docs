@@ -8,9 +8,11 @@ icon: globe
 
 Manage your sending domains for email authentication.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Overview
 
-```bash
+```text
 ahasend domains [subcommand] [flags]
 ```
 
@@ -19,6 +21,8 @@ Available subcommands:
 - `create` - Add a new domain
 - `get` - Get domain details
 - `verify` - Verify domain DNS configuration
+- `check-dns` - Check published DNS records
+- `edit` - Update domain settings
 - `delete` - Remove a domain
 
 ## List Domains
@@ -39,13 +43,6 @@ ahasend domains list --limit 10
 ahasend domains list --status verified
 ```
 
-### List Flags
-
-| Flag | Description |
-|------|-------------|
-| `--cursor` | Pagination cursor for next page |
-| `--limit` | Maximum number of domains to return |
-| `--status` | Filter by DNS status (verified, pending, failed) |
 
 ## Create Domain
 
@@ -53,10 +50,7 @@ ahasend domains list --status verified
 ahasend domains create example.com
 ```
 
-The command returns DNS records that need to be configured:
-- **SPF Record**: `v=spf1 include:spf.ahasend.com ~all`
-- **DKIM Record**: CNAME `mail._domainkey` → `mail._domainkey.ahasend.com`
-- **DMARC Record**: `v=DMARC1; p=none;`
+The command prints the exact SPF, DKIM, and DMARC records for your domain. Copy those values; see [domain setup](/domains).
 
 ## Verify Domain
 
@@ -67,7 +61,7 @@ ahasend domains verify example.com
 ```
 
 <Note>
-DNS propagation can take up to 24 hours, but typically completes within minutes.
+Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
 </Note>
 
 ## Get Domain Details
@@ -76,14 +70,31 @@ DNS propagation can take up to 24 hours, but typically completes within minutes.
 ahasend domains get example.com
 ```
 
+## Check and Edit DNS Settings
+
+```bash
+ahasend domains check-dns yourdomain.com --verbose
+ahasend domains edit yourdomain.com --tracking-subdomain track
+```
+
+Tracking and other service subdomains lock after DNS verification. To export records while adding a new test subdomain:
+
+```bash
+ahasend domains create docs-test.yourdomain.com --format terraform
+```
+
+`--format` also accepts `bind` and `cloudflare`; `--no-dns-help` omits DNS help.
+
 ## Delete Domain
 
 ```bash
 # Delete with confirmation
-ahasend domains delete example.com
+ahasend domains create docs-delete-test.yourdomain.com
+ahasend domains delete docs-delete-test.yourdomain.com
 
 # Skip confirmation
-ahasend domains delete example.com --force
+ahasend domains create docs-delete-test.yourdomain.com
+ahasend domains delete docs-delete-test.yourdomain.com --force
 ```
 
 <Warning>
@@ -117,3 +128,54 @@ ahasend domains create mail.example.com
 - [Send emails from verified domains](/cli/commands/messages)
 - [Configure webhooks](/cli/commands/webhooks)
 - [View statistics](/cli/commands/stats)
+
+## Command Flags
+
+These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `domains check-dns`
+
+| Flag | Description and default |
+|---|---|
+| `--verbose` | Show detailed DNS information |
+
+### `domains create`
+
+| Flag | Description and default |
+|---|---|
+| `--format string` | DNS record format (bind, cloudflare, terraform) |
+| `--no-dns-help` | Skip DNS configuration instructions |
+
+### `domains delete`
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt (use with caution) |
+
+### `domains edit`
+
+| Flag | Description and default |
+|---|---|
+| `--dkim-rotation-interval int` | DKIM rotation interval in days (managed DNS only, 30-180) |
+| `--media-subdomain string` | Custom media subdomain |
+| `--return-path-subdomain string` | Custom return-path subdomain |
+| `--subscription-subdomain string` | Custom subscription management subdomain |
+| `--tracking-subdomain string` | Custom tracking subdomain |
+
+### `domains get`
+
+This command has no command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `domains list`
+
+| Flag | Description and default |
+|---|---|
+| `--cursor string` | Pagination cursor for next page |
+| `--limit int32` | Maximum number of domains to return |
+| `--status string` | Filter by DNS status (verified, pending, failed) |
+
+### `domains verify`
+
+| Flag | Description and default |
+|---|---|
+| `--verbose` | Show detailed DNS information |

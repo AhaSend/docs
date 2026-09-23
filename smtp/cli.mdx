@@ -48,7 +48,8 @@ sudo apt-get install swaks
 
 ```bash CentOS/RHEL/Fedora
 # CentOS/RHEL
-sudo yum install swaks
+sudo dnf install epel-release
+sudo dnf install swaks
 
 # Fedora
 sudo dnf install swaks
@@ -59,7 +60,8 @@ brew install swaks
 ```
 
 ```bash Windows (Chocolatey)
-choco install swaks
+wsl --install
+# In the Ubuntu WSL shell, follow the Ubuntu/Debian instructions above.
 ```
 
 </CodeGroup>
@@ -382,7 +384,7 @@ swaks \
   <Card title="SMTP Testing Guide" icon="flask" href="/smtp/sandbox">
     Complete guide to testing email delivery
   </Card>
-  <Card title="AhaSend SMTP Settings" icon="server" href="/smtp/credentials">
+  <Card title="AhaSend SMTP Settings" icon="server" href="/smtp">
     SMTP server configuration and credentials
   </Card>
   <Card title="AhaSend Support" icon="life-ring" href="mailto:support@ahasend.com">

@@ -6,7 +6,19 @@ keywords: ["github copilot email integration", "github copilot coding agent emai
 icon: "github"
 ---
 
+import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 GitHub Copilot cloud agent works asynchronously and can open a pull request for your review. It is limited to its working branch and a human must review and merge its pull request. It cannot access Actions, Codespaces, or Dependabot secrets, but it can access any **Agents** secrets that an administrator explicitly gives it.
+
+<SendGuideRules />
+
+## AhaSend Rules for AI Coding Agents
+
+Add this shared block to .github/copilot-instructions.md:
+
+<AiEmailRules />
 
 ## Prerequisites
 
@@ -155,7 +167,7 @@ Prefer mocked tests: Copilot can validate request construction, error handling, 
 
 If you deliberately want the agent to call the real AhaSend API in sandbox mode, create a dedicated, domain-scoped API key that you can revoke immediately afterward. In the repository, go to **Settings → Secrets and variables → Agents**, store it as `AHASEND_API_KEY`, store the account ID as an Agents secret or variable, and add Agents variables for `AHASEND_FROM_ADDRESS` and `AHASEND_DELIVERY_MODE`. The sender must use the verified domain, and the delivery mode must be `sandbox`. A sandbox send validates the request without delivering email; use `sandbox_result` values such as `deliver`, `bounce`, `defer`, `fail`, and `suppress` to exercise different outcomes.
 
-This is an ordinary API key, not a sandbox-restricted credential. Agents secrets are exposed as environment variables to scripts and tools Copilot runs, and `sandbox: true` is only a request field. Only provide the key if you accept that risk. Keep the agent firewall enabled and explicitly allow `api.ahasend.com` if the request is blocked; do not disable the firewall just to make the test pass.
+Create a domain-scoped credential in **Sandbox** mode under **Credentials → Add → API Key v2** for the Agents secret. It simulates sending even when generated code omits `sandbox: true`; see [sandbox credentials](/send-api/sandbox#creating-sandbox-credentials). Keep production credentials out of agent test environments. Keep the agent firewall enabled and explicitly allow `api.ahasend.com` if the request is blocked; do not disable the firewall just to make the test pass.
 
 <Warning>
   Never give the agent a production credential. GitHub masks Agents secret values in session logs, but masking is not an authorization boundary and does not prevent a process from using the credential.

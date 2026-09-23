@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "AhaSend",
-  "description": "Email for developers.",
+  "description": "AhaSend is a European transactional email service for developers: send through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, with data stored in the EU and 1,000 free emails per month.",
   "colors": {
     "primary": "#066fd1",
     "light": "#F8FAFC",
@@ -27,6 +27,7 @@
             "group": "Getting Started",
             "pages": [
               "index",
+              "facts",
               "quickstart",
               "domains"
             ]
@@ -337,7 +338,9 @@
               "cli/commands/apikeys",
               "cli/commands/stats",
               "cli/commands/auth",
-              "cli/commands/ping"
+              "cli/commands/ping",
+              "cli/commands/contacts",
+              "cli/commands/subaccounts"
             ]
           },
           {

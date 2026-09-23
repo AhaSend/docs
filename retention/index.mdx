@@ -5,11 +5,22 @@ description: "Customize how long AhaSend retains your email data and metadata to
 icon: "clock"
 ---
 
-AhaSend retains message data and metadata for 30 days by default to support email delivery tracking, auditing, and troubleshooting. You can customize these retention periods to comply with legal requirements or privacy policies, especially when handling sensitive information like financial, health, or legal data.
+AhaSend retains message data and metadata for 7 days by default to support email delivery tracking, auditing, and troubleshooting. You can customize these retention periods to comply with legal requirements or privacy policies, especially when handling sensitive information like financial, health, or legal data.
 
 <Info>
-**Compliance Ready:** Customize retention periods to meet regulatory requirements for your industry.
+Choose retention periods that fit your privacy policy. A retention setting alone does not establish compliance with a law or standard.
 </Info>
+
+## Retention Limits
+
+| Setting | Free | Pro | Max | New-account default |
+|---|---|---|---|---|
+| Message metadata | 1–7 days | 1–14 days | 1–30 days | 7 days |
+| Message data | 1–7 days | 0–14 days | 0–30 days | 7 days |
+
+Zero data retention needs approval from AhaSend, to prevent abuse. Per-message retention headers are capped at the plan's maximum. Both settings are configurable within your plan's range.
+
+All message data is stored in the EU. See [data location and the data processing agreement](/facts). After retention expires, the affected content or metadata is no longer available; [S3 archives](/retention/s3) have their own storage policy.
 
 ## Message Data vs Metadata
 
@@ -24,7 +35,7 @@ Understanding the difference between data and metadata helps you set appropriate
     - Delivery status (received, delivered, bounced, failed)
     - Delivery attempt logs and timestamps
 
-    **Retention:** Minimum 1 day, maximum 30 days
+    **Retention:** 1 day to your plan's maximum (see the table above)
   </Accordion>
 
   <Accordion title="Message Data" icon="envelope">
@@ -34,7 +45,7 @@ Understanding the difference between data and metadata helps you set appropriate
     - File attachments
     - Full message payload
 
-    **Retention:** 0-30 days (can be completely disabled)
+    **Retention:** Within your plan's range; 0 days needs approval
   </Accordion>
 </AccordionGroup>
 
@@ -51,11 +62,11 @@ Configure default retention periods for your entire account:
 
   <Step title="Set Default Periods" icon="calendar">
     **Configure retention periods:**
-    - **Message Metadata:** 1-30 days (default: 30 days)
-    - **Message Data:** 0-30 days (default: 30 days)
+    - **Message Metadata:** Within your plan's range (new-account default: 7 days)
+    - **Message Data:** Within your plan's range (new-account default: 7 days)
 
     <Warning>
-    **Minimum Requirements:** Message metadata requires at least 1 day retention for delivery tracking. Message data can be set to 0 days for immediate deletion.
+    **Minimum Requirements:** Message metadata requires at least 1 day retention for delivery tracking. Message data can be set to 0 days on Pro and Max after approval from AhaSend.
     </Warning>
   </Step>
 
@@ -84,14 +95,14 @@ ahasend-data-retention: 0
 <AccordionGroup>
   <Accordion title="ahasend-metadata-retention" icon="tag">
     **Controls metadata retention period:**
-    - **Value:** Integer between 1 and 30 (days)
+    - **Value:** Integer from 1 to your plan's maximum (days)
     - **Purpose:** Set how long delivery tracking data is kept
     - **Example:** `ahasend-metadata-retention: 7` (keep for 7 days)
   </Accordion>
 
   <Accordion title="ahasend-data-retention" icon="envelope">
     **Controls full email data retention:**
-    - **Value:** Integer between 0 and 30 (days)
+    - **Value:** Integer within your plan's range (days); 0 needs approval
     - **Purpose:** Set how long complete email content is stored
     - **Example:** `ahasend-data-retention: 0` (delete immediately)
   </Accordion>
@@ -159,6 +170,8 @@ For API v2, use the dedicated retention fields:
 
 ## Common Use Cases
 
+Use the settings below only when they fit your plan's range. Any 0-day data setting needs prior approval.
+
 <AccordionGroup>
   <Accordion title="Financial Services" icon="building-columns">
     **Compliance Requirements:**
@@ -171,7 +184,7 @@ For API v2, use the dedicated retention fields:
   </Accordion>
 
   <Accordion title="Healthcare" icon="user-doctor">
-    **HIPAA Compliance:**
+    **Data minimisation:**
     - Minimal retention of patient information
     - Quick deletion of medical data
 

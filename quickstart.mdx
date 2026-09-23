@@ -26,7 +26,7 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
     3. **Wait for verification** (usually takes a few minutes)
 
     <Info>
-    **Need help with domain setup?** Check out our detailed [domain configuration guide](/domains) for step-by-step instructions for all major DNS providers.
+    **Need help with domain setup?** Check out our detailed [domain configuration guide](/domains) for the required DNS records and links to DNS provider help.
     </Info>
 
     <Warning>
@@ -57,7 +57,7 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
     Create the appropriate credentials for your chosen method:
 
     **For HTTP API:**
-    - Go to **API Keys** in your dashboard
+    - Go to **Credentials → Add** in your dashboard and choose **API Key v2** for a send-only key (or use a full API v2 key with a send scope from **Account Settings → API Keys**)
     - Click "Create API Key"
     - Copy and securely store your API key
 
@@ -197,6 +197,7 @@ send_email()
 ```php PHP
 <?php
 $email = [
+    'sandbox' => true,
     'from' => [
         'name' => 'My App',
         'email' => 'hello@yourdomain.com'
@@ -223,7 +224,7 @@ $options = [
 $context = stream_context_create($options);
 $response = file_get_contents('https://api.ahasend.com/v2/accounts/{account_id}/messages', false, $context);
 
-var_export($response, true);
+echo $response;
 ?>
 ```
 
@@ -477,10 +478,10 @@ Having issues? Here are the most common problems:
   </Accordion>
 
   <Accordion title="Domain Still Not Verified">
-    - DNS changes can take up to 24 hours to propagate
+    - Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
     - Double-check that you added all required DNS records exactly as shown
     - Use a DNS checker tool to verify your records are live
-    - Contact support if verification fails after 24 hours
+    - Contact support if verification fails after 48 hours
   </Accordion>
 
   <Accordion title="SMTP Authentication Failed">
@@ -493,7 +494,7 @@ Having issues? Here are the most common problems:
     - Check your dashboard message logs for delivery status
     - Verify the recipient email address is correct
     - Check the recipient's spam folder
-    - Make sure you're not hitting rate limits (1,000 emails/month on free plan)
+    - Make sure you're not hitting monthly allowance (the Free plan includes 1,000 emails/month); see [API rate limits](/api-reference/rate-limits) for request limits
   </Accordion>
 </AccordionGroup>
 

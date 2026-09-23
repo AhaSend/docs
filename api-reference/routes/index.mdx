@@ -24,7 +24,7 @@ Message routing provides intelligent inbound email handling with:
 
 Message routing requires:
 - Domain added and verified in AhaSend
-- MX records pointing to AhaSend mail servers
+- [MX records copied from your domain details](/domains); use the target and priority shown there
 - Endpoint accepting HTTP POST requests with 2xx responses
 
 ## Payload Structure
@@ -34,17 +34,19 @@ All routing events use a consistent JSON structure:
 ```json
 {
   "type": "message.routing",
-  "timestamp": "2024-05-07T10:41:45.026792973Z",
+  "route_id": "11111111-1111-4111-8111-111111111111",
+  "timestamp": "<RFC3339 delivery timestamp>",
   "data": {
     "from": "sender@example.com",
     "to": "support@yourdomain.com",
     "subject": "Email subject",
     "html_body": "<p>Email content</p>",
-    "plain_body": "Email content",
-    // Additional fields based on configuration
+    "plain_body": "Email content"
   }
 }
 ```
+
+This is a shortened payload. See [the full routing schema](/api-reference/routes/route-message) for attachments, headers and reply fields.
 
 ## Security Headers
 

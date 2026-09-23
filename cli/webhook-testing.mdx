@@ -8,6 +8,8 @@ icon: bug
 
 Test and debug webhook events locally without deploying to production using the AhaSend CLI.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Overview
 
 The CLI provides tools for:
@@ -20,12 +22,14 @@ The CLI provides tools for:
 
 ### Basic Usage
 
+An existing webhook must be enabled to emit events. For a disabled test webhook, start its listener, then run `ahasend webhooks update YOUR_RESOURCE_ID --enable` in another terminal. Disable it again before stopping the listener. A listener without `--webhook-id` creates an enabled temporary webhook.
+
 ```bash
 # Listen for all webhook events
 ahasend webhooks listen
 
 # Use existing webhook
-ahasend webhooks listen --webhook-id abcd1234-5678-90ef-abcd-1234567890ab
+ahasend webhooks listen --webhook-id YOUR_RESOURCE_ID
 
 # Forward events to local endpoint
 ahasend webhooks listen --forward-to http://localhost:3000/webhook
@@ -56,15 +60,15 @@ ahasend webhooks listen --slim-output
 
 ```bash
 # Trigger single event
-ahasend webhooks trigger webhook_1234567890abcdef \
+ahasend webhooks trigger YOUR_RESOURCE_ID \
   --events "message.delivered"
 
 # Trigger multiple events
-ahasend webhooks trigger webhook_1234567890abcdef \
+ahasend webhooks trigger YOUR_RESOURCE_ID \
   --events "message.delivered,message.opened,message.clicked"
 
 # Trigger all available events
-ahasend webhooks trigger webhook_1234567890abcdef \
+ahasend webhooks trigger YOUR_RESOURCE_ID \
   --all-events
 ```
 
@@ -141,7 +145,7 @@ ahasend webhooks listen \
 
 ### Common Issues
 
-**Signature Verification Failed**: The command automatically generates a webhook secret using the standard-webhooks specification
+**Signature Verification Failed**: The listener prints its signing secret when it starts. Store that secret in your local handler's configuration; use the full string as the raw UTF-8 HMAC key. Do not base64-decode it. See [signature verification](/api-reference/webhooks/security). The command automatically generates a webhook secret using the Standard Webhooks headers and format, with the full secret as raw UTF-8 bytes
 
 **Events Not Received**: Check that the webhook URL is correct and the local server is running
 

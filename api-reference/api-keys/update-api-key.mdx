@@ -3,3 +3,6 @@ title: "Update API Key"
 sidebarTitle: "Update API Key"
 openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/api-keys/{key_id}"
 ---
+You can update `label`, `scopes`, and `ip_allow_list`. See [IP allow lists](/security/ip-allow-lists).
+
+Updating the key you are using returns `409` if its new IP allow list would exclude your current IP.

@@ -55,10 +55,11 @@ AhaSend supports three types of scopes:
 |-------|-------------|
 | `domains:read` | List and view domain information |
 | `domains:write` | Add and update domains |
+| `domains:delete:all` | Delete any domain in the account |
 | `domains:delete:{domain}` | Delete a specific domain |
 
 <Warning>
-  Domain deletion requires a domain-specific scope for security. You cannot use a global scope for domain deletion.
+  Domain deletion accepts `domains:delete:all` or the matching `domains:delete:{domain}` scope.
 </Warning>
 
 ### Message Operations
@@ -250,16 +251,10 @@ When an API request is made, the system checks scopes in the following order:
     Grant only the minimum scopes necessary for your application to function. This reduces security risks if an API key is compromised.
 
     ```json
-    // Good: Specific scopes for a newsletter application
     [
       "messages:send:{newsletter.com}",
       "suppressions:write",
       "statistics-transactional:read:{newsletter.com}"
-    ]
-
-    // Avoid: Overly broad permissions
-    [
-      "*"
     ]
     ```
   </Accordion>
@@ -268,7 +263,6 @@ When an API request is made, the system checks scopes in the following order:
     Use domain-specific scopes when working with multi-tenant applications or when you want to restrict access to specific domains.
 
     ```json
-    // For a multi-tenant SaaS app
     [
       "messages:send:{client1.com}",
       "messages:read:{client1.com}",
@@ -281,13 +275,15 @@ When an API request is made, the system checks scopes in the following order:
     Create separate API keys for different applications or environments with appropriate scopes for each.
 
     ```json
-    // Production key - minimal scopes
     [
       "messages:send:all",
       "suppressions:write"
     ]
+    ```
 
-    // Admin key - broader access
+    A separate reporting or management key can use:
+
+    ```json
     [
       "accounts:read",
       "api-keys:read",

@@ -16,7 +16,7 @@ Before you begin, ensure you have:
 <AccordionGroup>
   <Accordion title="System Requirements" icon="server">
     - **Python installed** on your system ([Download Python](https://python.org/downloads/))
-    - Python 3.6 or higher (recommended)
+    - a supported Python 3 release (recommended)
     - Basic knowledge of Python programming
   </Accordion>
 
@@ -99,11 +99,11 @@ def send_plain_text_email():
 
     # Connect to the SMTP server and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()  # Secure the connection
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()  # Secure the connection
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Email sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -151,11 +151,11 @@ def send_html_email():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("HTML email sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -215,11 +215,11 @@ def send_email_with_attachment():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Email with attachment sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -269,11 +269,11 @@ def send_sandbox_email():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Sandbox email sent successfully!")
     except Exception as e:
         print(f"Failed to send sandbox email: {e}")
@@ -323,11 +323,11 @@ def send_sandbox_bounce_test():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Sandbox bounce test sent - check webhooks!")
     except Exception as e:
         print(f"Failed to send sandbox email: {e}")
@@ -381,11 +381,11 @@ def send_email_with_special_headers():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Email sent with special headers!")
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -433,11 +433,11 @@ def send_email_with_env_vars():
 
     # Send email
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Email sent using environment variables!")
         return True
     except Exception as e:

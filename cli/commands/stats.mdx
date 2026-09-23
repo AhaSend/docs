@@ -8,9 +8,11 @@ icon: chart-line
 
 View email statistics and analytics for your account.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Overview
 
-```bash
+```text
 ahasend stats [subcommand] [flags]
 ```
 
@@ -22,18 +24,18 @@ Available subcommands:
 ## Deliverability Statistics
 
 ```bash
-# Basic deliverability stats (last 30 days)
+# Basic deliverability stats (last 7 days)
 ahasend stats deliverability
 
 # Custom date range
 ahasend stats deliverability \
-  --start-date 2024-01-01 \
-  --end-date 2024-01-31
+  --from-time 7d \
+  --to-time 0h
 
 # Group by time period
 ahasend stats deliverability \
   --group-by day \
-  --start-date 2024-01-01
+  --from-time 7d
 ```
 
 ### Grouping Options
@@ -47,8 +49,8 @@ ahasend stats deliverability \
 
 ```bash
 ahasend stats deliverability \
-  --start-date 2024-01-01 \
-  --end-date 2024-01-31 \
+  --from-time 7d \
+  --to-time 0h \
   --output csv > deliverability-report.csv
 ```
 
@@ -60,16 +62,14 @@ ahasend stats bounces
 
 # Detailed bounce analysis
 ahasend stats bounces \
-  --start-date 2024-01-01 \
-  --end-date 2024-01-31 \
+  --from-time 7d \
+  --to-time 0h \
   --group-by day
 ```
 
 ### Bounce Categories
 
-- **Hard Bounces**: Permanent delivery failures
-- **Soft Bounces**: Temporary delivery issues
-- **Blocked**: Rejected by recipient server
+Use `--classification` for the server's classification breakdown and `--show-domains` to group affected recipient domains. See [bounce statistics](/api-reference/reports/get-bounce-report).
 
 ## Delivery Time Performance
 
@@ -80,7 +80,7 @@ ahasend stats delivery-time
 # Hourly breakdown
 ahasend stats delivery-time \
   --group-by hour \
-  --start-date 2024-01-15
+  --from-time 7d
 ```
 
 ## Advanced Options
@@ -91,8 +91,8 @@ ahasend stats delivery-time \
 # Filter by tags
 ahasend stats deliverability \
   --tags "campaign-summer-2024" \
-  --start-date 2024-06-01 \
-  --end-date 2024-08-31
+  --from-time 7d \
+  --to-time 0h
 ```
 
 ### Domain-Specific Stats
@@ -100,21 +100,60 @@ ahasend stats deliverability \
 ```bash
 # Stats for specific domain
 ahasend stats deliverability \
-  --domain example.com \
+  --sender-domain example.com \
   --group-by day
 ```
 
-## Common Flags
-
-- `--start-date`: Start date (YYYY-MM-DD format)
-- `--end-date`: End date (YYYY-MM-DD format)
-- `--group-by`: Time grouping (hour, day, week, month)
-- `--domain`: Filter by sending domain
-- `--tags`: Filter by message tags
-- `--output`: Output format (table, json, csv, plain)
 
 ## Next Steps
 
 - [Configure webhooks for real-time tracking](/cli/commands/webhooks)
 - [Manage suppressions](/cli/commands/suppressions)
 - [Send messages](/cli/commands/messages)
+
+## Command Flags
+
+These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `stats bounces`
+
+| Flag | Description and default |
+|---|---|
+| `--classification` | Show classification summary breakdown |
+| `--from-time string` | Start time (RFC3339 format or relative like '7d', '24h') (default "7d") |
+| `--group-by string` | Group results by: hour, day, week, month (default "day") |
+| `--raw` | Show raw data without interpretation (useful for CSV/JSON) |
+| `--recipient-domain strings` | Filter by recipient domains (can be used multiple times) |
+| `--sender-domain string` | Filter by sender domain |
+| `--show-domains` | Show top bouncing recipient domains |
+| `--show-totals` | Show summary totals (default true) |
+| `--tags string` | Filter by message tags (comma-separated) |
+| `--to-time string` | End time (RFC3339 format or relative, defaults to now) |
+| `--trends` | Show time-period focused trends (default) |
+
+### `stats deliverability`
+
+| Flag | Description and default |
+|---|---|
+| `--chart` | Show ASCII chart visualization |
+| `--from-time string` | Start time (RFC3339 format or relative like '7d', '24h') (default "7d") |
+| `--group-by string` | Group results by: hour, day, week, month (default "day") |
+| `--raw` | Show raw data without interpretation (useful for CSV/JSON) |
+| `--recipient-domain strings` | Filter by recipient domains (can be used multiple times) |
+| `--sender-domain string` | Filter by sender domain |
+| `--show-totals` | Show summary totals (default true) |
+| `--tags string` | Filter by message tags (comma-separated) |
+| `--to-time string` | End time (RFC3339 format or relative, defaults to now) |
+
+### `stats delivery-time`
+
+| Flag | Description and default |
+|---|---|
+| `--from-time string` | Start time (RFC3339 format or relative like '7d', '24h') (default "7d") |
+| `--group-by string` | Group results by: hour, day, week, month (default "day") |
+| `--raw` | Show raw data without interpretation (useful for CSV/JSON) |
+| `--recipient-domain strings` | Filter by recipient domains (can be used multiple times) |
+| `--sender-domain string` | Filter by sender domain |
+| `--show-totals` | Show summary statistics (default true) |
+| `--tags string` | Filter by message tags (comma-separated) |
+| `--to-time string` | End time (RFC3339 format or relative, defaults to now) |

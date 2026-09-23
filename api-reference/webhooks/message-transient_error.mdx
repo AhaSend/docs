@@ -3,3 +3,4 @@ title: "Message Deferred Webhook"
 sidebarTitle: "Deferred"
 openapi: "/webhooks.yaml webhook message.transient_error"
 ---
+This event concerns the message delivery retry window, which ends at the message's expiry. It is separate from [webhook delivery retries](/api-reference/webhooks/retry-policy). See [message scheduling](/send-api/send-email#validation-requirements).

@@ -5,15 +5,20 @@ description: "Deploy email-sending apps to Vercel with the AhaSend SDK, environm
 keywords: ["vercel deploy email app", "vercel transactional email", "vercel serverless functions email", "ahasend vercel", "nextjs vercel email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 The AhaSend SDK runs in [Vercel Functions](https://vercel.com/docs/functions).
 This guide covers deployment; for complete application handlers, see the
 [Next.js](/guides/nextjs) and [Express](/guides/express) guides.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - A [Vercel account](https://vercel.com) and a project to deploy
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) permitted to send from that domain, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) permitted to send from that domain, and your account ID
 
 ## Install the SDK
 
@@ -40,9 +45,9 @@ bun add @ahasend/sdk
 ## Choose a Runtime
 
 Use Vercel's default server runtime; no runtime setting is required for the SDK.
-Vercel recommends migrating from the Edge runtime to Node.js, and Next.js 16.3
-and later no longer accept `runtime = 'edge'` at all. If an older route still
-uses the Edge runtime, the SDK works there too using the runtime's Web APIs.
+The SDK also supports Web APIs in edge runtimes. Check your installed Next.js
+version's [runtime documentation](https://nextjs.org/docs/app/api-reference/edge)
+before changing a route's runtime.
 
 <Warning>
   The runtime choice does not change the security boundary. Import the SDK only
@@ -199,6 +204,8 @@ vercel dev
 
 If you deliberately use `vercel env pull .env.local` instead, ensure
 `.env.local` is ignored by version control and never commit it.
+
+As of September 2026, [Vercel documents a 4.5 MB request and response limit](https://vercel.com/docs/functions/limitations). Check that limit before accepting inbound route events with attachments; the host can reject a request before your verifier runs.
 
 ## Webhooks on Vercel
 

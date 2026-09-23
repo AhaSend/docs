@@ -6,7 +6,13 @@ keywords: ["cursor ai send email integration", "cursor ai email", "add email to 
 icon: "i-cursor"
 ---
 
+import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 Cursor Project Rules are MDC files under `.cursor/rules/`. Mark an AhaSend rule as always applied and Cursor includes it as context for every Agent (Chat) request, reducing the chance that the model reaches for a package that has never been published.
+
+<SendGuideRules />
 
 ## Prerequisites
 
@@ -45,74 +51,16 @@ bun add @ahasend/sdk
 
 Cursor reads Project Rules from `.mdc` files in a `.cursor/rules/` directory; the older single `.cursorrules` file is deprecated. Create an **Always** rule that pins down the facts the model is most likely to get wrong:
 
-```markdown .cursor/rules/ahasend-email.mdc
+Use this frontmatter, followed by the shared rules below:
+
+```yaml
 ---
-description: Safe server-side transactional email with the official AhaSend SDK
-globs:
+description: AhaSend email integration rules
 alwaysApply: true
 ---
-
-# AhaSend email
-
-When this project sends email, use the official AhaSend Node.js SDK.
-
-- Package: `@ahasend/sdk` on npm. Do not invent a
-  different package name and do not hand-roll fetch calls to the REST API.
-- Server-side only. Keep this module out of browser bundles. The constructor refuses
-  browsers and browser service workers by default, but that is only a
-  backstop and does not make exposing a bearer key safe.
-- Construct the client ONCE at module scope, never per request:
-  `new AhaSendClient({ apiKey, accountId })`.
-- Never build a general-purpose send endpoint. Recipients, subject, and body
-  come from server-side state that the authenticated caller already owns,
-  never from untrusted request input. Any request that triggers a send must
-  be authenticated, authorized for that exact recipient, validated against a
-  body-size limit, and rate limited per account.
-- Send with `client.messages.send({ from, recipients, subject,
-  html_content, text_content })`. Body fields are snake_case. `from` is
-  `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
-  1 to 100 entries, and each recipient gets a separate message.
-- The response is multi-status (HTTP 202). `result.data` has one entry per
-  recipient, and a recipient can come back `status: "error"` with a null
-  `id` while the promise still resolves. Check every entry, never just
-  `result.data[0]`.
-- Errors are typed. Catch `AhaSendAPIError` and `AhaSendRateLimitError`
-  from `@ahasend/sdk`, and match on `err.status` or `err.code`, never on
-  message text.
-- Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`,
-  against the RAW request bytes, never a re-serialized parsed body. Any JSON
-  body parser on that route breaks verification. `parse()` and `verify()` are
-  async: `await verifier.parse(headers, rawBody)`. Prefer the Express, Fastify
-  and Next.js adapters, which await internally and read the body under a size
-  cap; a hand-rolled route must impose that cap itself.
-- Webhooks can be redelivered. After verification, atomically commit the
-  `webhook-id` and durable work in the same transaction. Acknowledge a
-  duplicate ID without running or enqueuing its work again.
-- Read `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and
-  `AHASEND_WEBHOOK_SECRET` from environment variables. Pass the webhook
-  secret exactly as the dashboard shows it, including the `aha-whsec-`
-  prefix. Never hardcode or commit these values or expose them to a browser.
-- For work that can be retried outside one SDK call, persist the exact send
-  payload with the job and pass a stable `idempotencyKey` derived from that
-  job. Reuse a key only with the exact same payload: keys are scoped per
-  account and matched against the request method, path, and body, so a key
-  reused with a different body is rejected with 422, not replayed. Matching
-  never covers which credential authenticated, so a dedicated sandbox
-  credential leaves the body unchanged — namespace keys by environment, or a
-  stored sandbox result can be replayed for a live send. Stored message outcomes
-  expire after 24 hours, so reconcile rather than assuming a later retry is
-  deduplicated. Do not detach an email promise from a request; enqueue durable
-  work and send from a worker.
-- Log only aggregate counts, appropriate opaque IDs, HTTP status, SDK error
-  code, and request ID. Never log addresses, message content, secrets,
-  idempotency keys, request/response/event/error objects, `err.message`, or
-  `err.body`.
-- For safe testing, set `sandbox: true` in the send body. Valid
-  `sandbox_result` values are "deliver", "bounce", "defer", "fail", and
-  "suppress".
-- Other languages: Go uses github.com/AhaSend/ahasend-go. There is no
-  Python SDK yet, so Python code calls the REST API directly.
 ```
+
+<AiEmailRules />
 
 The rule is now included in model context for every Agent request. It does not reach Tab completion or Inline Edit (Cmd/Ctrl+K), so write the sending code through Agent rather than an inline edit, where none of this grounding applies. Rules guide model behavior rather than enforcing it, so confirm that **ahasend-email** is listed under Customize → Rules and review the resulting code against it.
 
@@ -149,13 +97,14 @@ import { ahasend } from "../lib/ahasend.js";
 
 const result = await ahasend.messages.send(
   {
+    sandbox: true,
     from: { email: "hello@yourdomain.com", name: "Your App" },
     recipients: [{ email: job.payload.email, name: job.payload.name }],
     subject: "Welcome aboard",
     html_content: "<p>Thanks for signing up.</p>",
     text_content: "Thanks for signing up.",
   },
-  { idempotencyKey: `welcome-${job.id}` },
+  { idempotencyKey: `sandbox-welcome-${job.id}` },
 );
 
 const rejected = result.data.filter((r) => r.status === "error");
@@ -216,7 +165,7 @@ Ask Cursor to "add an integration test that sends in sandbox mode and asserts ev
     Common causes are a missing or malformed API key, a non-UUID account ID, or construction in a browser-like runtime. If Cursor put the client in a client component, move the send to a server route. The constructor check is only a backstop; keeping credentials out of browser bundles is what protects them.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError in the agent's test run">
-    The API key is missing, malformed, or revoked. Check that your `.env` is loaded in the terminal Cursor is using (`node --env-file=.env`), and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` or domain-scoped send permission.
+    The API key is missing, malformed, or revoked. Check that your `.env` is loaded in the terminal Cursor is using (`node --env-file=.env`), and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:all` or domain-scoped send permission.
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard, and see [the quickstart](/quickstart) if you haven't added one yet.

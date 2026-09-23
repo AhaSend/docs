@@ -8,9 +8,11 @@ icon: user-shield
 
 The `auth` command manages authentication credentials and profiles for the AhaSend CLI.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Overview
 
-```bash
+```text
 ahasend auth [subcommand] [flags]
 ```
 
@@ -44,12 +46,6 @@ ahasend auth login \
   --profile production
 ```
 
-### Flags
-
-- `--api-key`: Your AhaSend API key
-- `--account-id`: Your AhaSend Account ID
-- `--profile`: Profile name (default: "default")
-- `--api-url`: Custom API URL (default: https://api.ahasend.com)
 
 ## Status
 
@@ -59,21 +55,7 @@ Check current authentication status and available profiles:
 ahasend auth status
 ```
 
-Output:
-```
-Authentication Status
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Current Profile: production
-Account: ACME Corporation
-Account ID: acc_1234567890abcdef
-API URL: https://api.ahasend.com
-
-Available Profiles:
-  ✓ production (current)
-  - staging
-  - development
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+The output shows the active profile, account ID, API URL, and available profiles.
 
 JSON output for scripting:
 ```bash
@@ -97,11 +79,12 @@ ahasend auth status
 Remove authentication credentials:
 
 ```bash
-# Remove current profile with confirmation
-ahasend auth logout
-
-# Skip confirmation
-ahasend auth logout --yes
+# Remove the named test profile without a confirmation prompt
+ahasend auth login --profile docs-logout-test
+ahasend auth logout docs-logout-test
+# Re-create and remove the test profile
+ahasend auth login --profile docs-logout-test
+ahasend auth logout docs-logout-test
 ```
 
 ## Profile Management
@@ -125,7 +108,7 @@ ahasend auth login --profile development
 
 ```bash
 # Use specific profile for a command
-ahasend messages send --profile staging \
+ahasend messages send --sandbox --profile staging \
   --from test@staging.com \
   --to dev@example.com \
   --subject "Test" \
@@ -140,10 +123,40 @@ ahasend auth status
 - Credentials are stored in `~/.ahasend/config.yaml`
 - File permissions are set to 600 (read/write for owner only)
 - Never commit credentials to version control
-- Use environment variables for CI/CD
+- In CI, pass secrets through `--api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID"`; the CLI does not read credential environment variables automatically
 
 ## Next Steps
 
 - [Configure the CLI](/cli/configuration)
 - [Send your first email](/cli/quickstart)
 - [Manage domains](/cli/commands/domains)
+
+## Command Flags
+
+These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `auth login`
+
+| Flag | Description and default |
+|---|---|
+| `--account-id string` | AhaSend Account ID |
+| `--api-key string` | AhaSend API key (not recommended, use interactive prompt) |
+| `--api-url string` | AhaSend API URL (default "https://api.ahasend.com") |
+| `--profile string` | Profile name to save credentials under |
+
+### `auth logout`
+
+| Flag | Description and default |
+|---|---|
+| `--all` | Logout from all profiles |
+
+### `auth status`
+
+| Flag | Description and default |
+|---|---|
+| `--all` | Show status for all profiles |
+| `--profile string` | Show status for specific profile |
+
+### `auth switch`
+
+This command has no command-specific flags. See [global flags](/cli/configuration#global-flags).

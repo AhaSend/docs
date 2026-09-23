@@ -53,8 +53,12 @@ This functionality enables you to:
 </Steps>
 
 <Note>
-**MX Record Requirement:** Message routing requires your domain's MX records to point to AhaSend. Without proper MX configuration, AhaSend cannot receive emails sent to your domain.
+**MX Record Requirement:** Message routing requires your domain's [MX records from your domain details](/domains) to point to AhaSend. Without proper MX configuration, AhaSend cannot receive emails sent to your domain.
 </Note>
+
+## Delivery Limits
+
+AhaSend makes 12 attempts over about 11 hours, including the first attempt. Each attempt times out after 5 seconds. After more than 100 consecutive failed attempts, the route is disabled and account users are emailed. See [route retry policy](/api-reference/routes/retry-policy) and [security](/api-reference/routes/security).
 
 ## Prerequisites
 
@@ -64,12 +68,12 @@ Before setting up message routing, ensure your domain is properly configured:
   <Accordion title="Domain Setup" icon="globe">
     **Required Configuration:**
     - Domain must be added and verified in your AhaSend account
-    - MX records must point to AhaSend's mail servers
+    - [MX records from your domain details](/domains) must point to AhaSend's mail servers
     - DNS propagation should be complete (may take up to 48 hours)
 
     **Verification Steps:**
     1. Check your domain status in the AhaSend dashboard
-    2. Verify MX records are correctly configured
+    2. Verify [MX records from your domain details](/domains) are correctly configured
     3. Test email delivery to ensure routing works
   </Accordion>
 
@@ -78,9 +82,9 @@ Before setting up message routing, ensure your domain is properly configured:
     - Accept HTTP POST requests
     - Respond with 2xx status codes (200-299) for successful processing
     - Handle JSON payloads up to several MB (if attachments enabled)
-    - Process requests within 10 seconds to avoid timeouts
+    - Process requests within 5 seconds to avoid timeouts
 
-    **Optional Features:**
+    **Required Handling:**
     - Verify webhook signatures for security
     - Implement idempotency using webhook-id headers
     - Handle duplicate or retry requests gracefully
@@ -175,7 +179,7 @@ Configure message routes in your AhaSend dashboard to start processing inbound e
     3. **Copy and store** the secret securely for signature verification
 
     <Note>
-    **Save Your Secret:** The route secret is shown only once. Store it securely in your application's configuration for webhook signature verification.
+    **Save Your Secret:** Copy the route secret from the route details page. Store it securely in your application's configuration for webhook signature verification.
     </Note>
   </Step>
 </Steps>
@@ -206,7 +210,7 @@ Verify your message routing integration works correctly:
 
   <Step title="Send Real Emails" icon="envelope">
     **Test with Actual Email Delivery:**
-    1. Ensure your domain's MX records point to AhaSend
+    1. Ensure your domain's [MX records from your domain details](/domains) point to AhaSend
     2. Send an email to your configured address pattern
     3. Verify your endpoint receives the routing request
     4. Check the email content and metadata are correct
@@ -221,7 +225,9 @@ Verify your message routing integration works correctly:
 
 Message routing follows the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks) for secure payload delivery:
 
-### Security Headers
+`webhook-id` is the delivery ID used for deduplication. The payload's `webhook_id` or `route_id` identifies the configured endpoint, not the delivery.
+
+## Security Headers
 
 Every routing request includes the same security headers as webhooks:
 
@@ -253,11 +259,30 @@ Use Standard Webhooks libraries to verify routing request authenticity:
 ```javascript Node.js
 import { Webhook } from 'standardwebhooks';
 
+async function readLimitedBody(request) {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > 30_000_000) { await reader.cancel(); return null; }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
+  return body;
+}
+
 const webhook = new Webhook(process.env.ROUTE_SECRET, { format: 'raw' });
 
 // In your routing handler
-export async function handleInboundEmail(request) {
-  const payload = await request.text();
+export async function handleInboundEmail(request, processInboundEmail) {
+  const payload = await readLimitedBody(request);
+  if (payload === null) return new Response(null, { status: 413 });
   const headers = {
     'webhook-id': request.headers.get('webhook-id'),
     'webhook-timestamp': request.headers.get('webhook-timestamp'),
@@ -265,13 +290,12 @@ export async function handleInboundEmail(request) {
   };
 
   try {
-    const routingEvent = webhook.verify(payload, headers);
-    // Process verified inbound email
-    console.log('From:', routingEvent.data.from);
-    console.log('Subject:', routingEvent.data.subject);
+    const routingEvent = webhook.verify(new TextDecoder('utf-8', { fatal: true }).decode(payload), headers);
+    // Process only verified inbound email; keep addresses and content out of logs.
 
-    // Create support ticket, process reply, etc.
-    await processInboundEmail(routingEvent.data);
+    if (routingEvent.type !== "message.routing") return new Response(null, { status: 204 });
+    // Commit durable, deduplicated work before acknowledging the request.
+    await processInboundEmail(routingEvent.data, headers["webhook-id"]);
 
     return new Response('OK', { status: 200 });
   } catch (error) {
@@ -280,27 +304,50 @@ export async function handleInboundEmail(request) {
 }
 ```
 
+The Python example expects a framework request with a raw `body` attribute. Configure a 30,000,000-byte request limit in that framework or its front proxy before it buffers the body. Supply the application processing callback used below.
+
 ```python Python
+import base64
+import binascii
+
+def supported_signatures(header):
+    # Skip unsupported or malformed entries before the library decodes them.
+    supported = []
+    for entry in (header or "").split():
+        version, separator, encoded = entry.partition(",")
+        if version != "v1" or not separator:
+            continue
+        try:
+            signature = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError):
+            continue
+        if len(signature) == 32:
+            supported.append(entry)
+    return " ".join(supported)
+
 from standardwebhooks.webhooks import Webhook
 import os
 
-webhook = Webhook(os.environ['ROUTE_SECRET'])
+webhook = Webhook(os.environ['ROUTE_SECRET'].encode('utf-8'))
 
-def handle_inbound_email(request):
+def handle_inbound_email(request, process_inbound_email):
     headers = {
         'webhook-id': request.headers.get('webhook-id'),
         'webhook-timestamp': request.headers.get('webhook-timestamp'),
-        'webhook-signature': request.headers.get('webhook-signature')
+        'webhook-signature': supported_signatures(request.headers.get('webhook-signature'))
     }
 
     try:
         payload = request.body
+        if len(payload) > 30_000_000:
+            return {'error': 'Request too large'}, 413
         routing_event = webhook.verify(payload, headers)
 
         # Process verified inbound email
+        if routing_event.get('type') != 'message.routing':
+            return {'status': 'ignored'}, 204
         email_data = routing_event['data']
-        print(f"From: {email_data['from']}")
-        print(f"Subject: {email_data['subject']}")
+        # Keep addresses and message content out of logs.
 
         # Create support ticket, process reply, etc.
         process_inbound_email(email_data)
@@ -322,13 +369,18 @@ import (
 )
 
 func handleInboundEmail(w http.ResponseWriter, r *http.Request) {
-    webhook, err := standardwebhooks.NewWebhookRaw(os.Getenv("ROUTE_SECRET"))
+    webhook, err := standardwebhooks.NewWebhookRaw([]byte(os.Getenv("ROUTE_SECRET")))
     if err != nil {
         http.Error(w, "Invalid route secret", 500)
         return
     }
 
-    payload, _ := io.ReadAll(r.Body)
+    r.Body = http.MaxBytesReader(w, r.Body, 30_000_000)
+    payload, err := io.ReadAll(r.Body)
+    if err != nil {
+        http.Error(w, "Cannot read webhook body", 413)
+        return
+    }
     headers := r.Header
 
     if err := webhook.Verify(payload, headers); err != nil {
@@ -348,31 +400,29 @@ func handleInboundEmail(w http.ResponseWriter, r *http.Request) {
 
 ```php PHP
 <?php
-use StandardWebhooks\Webhook;
-
-$webhook = Webhook::fromRaw($_ENV['ROUTE_SECRET']);
-
-function handleInboundEmail($request) {
-    $payload = $request->getBody();
-    $headers = $request->getHeaders();
-
-    try {
-        $routingEvent = $webhook->verify($payload, $headers);
-        $emailData = $routingEvent['data'];
-
-        // Process verified inbound email
-        error_log("From: " . $emailData['from']);
-        error_log("Subject: " . $emailData['subject']);
-
-        // Create support ticket, process reply, etc.
-        processInboundEmail($emailData);
-
-        return response('OK', 200);
-    } catch (Exception $e) {
-        return response('Invalid signature', 400);
-    }
+// PHP handler: read the exact body, with a limit, before parsing JSON.
+$body = file_get_contents('php://input', false, null, 0, 30_000_001);
+$secret = getenv('ROUTE_SECRET');
+$id = $_SERVER['HTTP_WEBHOOK_ID'] ?? '';
+$timestamp = $_SERVER['HTTP_WEBHOOK_TIMESTAMP'] ?? '';
+$signatures = $_SERVER['HTTP_WEBHOOK_SIGNATURE'] ?? '';
+if ($body === false || strlen($body) > 30_000_000) { http_response_code(413); exit; }
+if (!$secret) { http_response_code(500); exit; }
+if (!$id || !ctype_digit($timestamp) || abs(time() - (int)$timestamp) > 300) {
+    http_response_code(400); exit;
 }
-?>
+$expected = base64_encode(hash_hmac('sha256', "$id.$timestamp.$body", $secret, true));
+$valid = false;
+foreach (explode(' ', $signatures) as $candidate) {
+    $parts = explode(',', $candidate, 2);
+    if (count($parts) === 2 && $parts[0] === 'v1' && hash_equals($expected, $parts[1])) $valid = true;
+}
+if (!$valid) { http_response_code(400); exit; }
+try { $event = json_decode($body, true, 512, JSON_THROW_ON_ERROR); }
+catch (JsonException $e) { http_response_code(400); exit; }
+// Verification-only example: add an atomic durable handoff before business side effects.
+// Unknown event types are valid signed deliveries too.
+http_response_code(204);
 ```
 </CodeGroup>
 
@@ -387,6 +437,7 @@ All message routing requests follow the Standard Webhooks payload format:
 ```json
 {
   "type": "message.routing",
+  "route_id": "11111111-1111-4111-8111-111111111111",
   "timestamp": "2024-05-07T10:41:45.026792973Z",
   "data": {
     // Inbound email data
@@ -399,6 +450,7 @@ All message routing requests follow the Standard Webhooks payload format:
 ```json
 {
   "type": "message.routing",
+  "route_id": "11111111-1111-4111-8111-111111111111",
   "timestamp": "2024-05-07T10:41:45.026792973Z",
   "data": {
     "id": "route-msg-12345",
@@ -421,6 +473,7 @@ All message routing requests follow the Standard Webhooks payload format:
     "attachments": [
       {
         "filename": "screenshot.png",
+        "disposition": "attachment",
         "content_type": "image/png",
         "content_id": "attachment_001",
         "data": "base64-encoded-image-data"
@@ -467,12 +520,12 @@ All message routing requests follow the Standard Webhooks payload format:
 
   <Accordion title="Spam and Security" icon="shield">
     **Content Analysis:**
-    - `spam_score` - Spam likelihood (0-10+, higher = more likely spam)
+    - `spam_score` - Spam score; higher values indicate more likely spam
     - `bounce` - Whether this is a bounce/delivery failure message
     - `auto_submitted` - Indicates automated emails (out-of-office, etc.)
 
     <Warning>
-    **Spam Filtering:** Emails with `spam_score` 5-10 should be treated with suspicion. Scores over 10 are likely spam.
+    Choose a spam-score threshold for your application and review it against real messages. The example threshold is not a delivery guarantee.
     </Warning>
   </Accordion>
 
@@ -483,6 +536,8 @@ All message routing requests follow the Standard Webhooks payload format:
     - `cc` - CC recipients (comma-separated)
   </Accordion>
 </AccordionGroup>
+
+The workflow functions below use application-owned callbacks such as `createSupportTicket`, `findConversationByMessageId`, and `enqueueOnce`. Provide those functions from your ticketing, database, or job-queue code. Only invoke them after signature verification.
 
 ## Common Use Cases
 
@@ -587,13 +642,13 @@ All message routing requests follow the Standard Webhooks payload format:
 
     **Example Error Handling:**
     ```javascript
-    try {
-      await processEmail(emailData);
-      return { status: 200 };
-    } catch (error) {
-      console.error('Email processing failed:', error);
-      // Still return 200 to prevent retries if email is malformed
-      return { status: 200, message: 'Processing failed' };
+    export async function acceptEmail(emailData, enqueueDurableWork) {
+      try {
+        await enqueueDurableWork(emailData);
+        return { status: 202 };
+      } catch {
+        return { status: 503 }; // Let AhaSend retry a failed durable handoff.
+      }
     }
     ```
   </Accordion>
@@ -608,8 +663,9 @@ All message routing requests follow the Standard Webhooks payload format:
 
     **Spam Filtering Example:**
     ```javascript
-    if (emailData.spam_score > 10) {
-      return { status: 200, message: 'Spam filtered' };
+    export function shouldProcessEmail(emailData, threshold = 10) {
+      // This threshold is your application's policy, not an AhaSend limit.
+      return emailData.spam_score <= threshold;
     }
     ```
   </Accordion>
@@ -617,18 +673,17 @@ All message routing requests follow the Standard Webhooks payload format:
   <Accordion title="Performance Optimization" icon="rocket">
     **Optimizing Route Performance:**
     - Process emails asynchronously when possible
-    - Return 200 OK quickly, then process in background
+    - Commit a durable job before returning 2xx; process the job separately
     - Monitor endpoint response times and success rates
     - Implement proper logging and metrics
     - Scale endpoints based on email volume
 
     **Async Processing Pattern:**
     ```javascript
-    // Acknowledge receipt immediately
-    response.status(200).send('OK');
-
-    // Process asynchronously
-    processEmailAsync(emailData);
+    export async function queueEmail(emailData, response, enqueueOnce, webhookId) {
+      await enqueueOnce(webhookId, emailData);
+      response.status(202).send('Accepted');
+    }
     ```
   </Accordion>
 </AccordionGroup>
@@ -638,7 +693,7 @@ All message routing requests follow the Standard Webhooks payload format:
 <AccordionGroup>
   <Accordion title="Emails Not Being Routed" icon="question">
     **Check Route Configuration:**
-    - Verify MX records point to AhaSend servers
+    - Verify [MX records from your domain details](/domains) point to AhaSend servers
     - Confirm recipient pattern matches the email address
     - Check route is enabled and not disabled due to failures
     - Test with "Send Test Event" feature
@@ -650,7 +705,7 @@ All message routing requests follow the Standard Webhooks payload format:
     ```
 
     **Common Issues:**
-    - MX records not updated or propagated
+    - [MX records from your domain details](/domains) not updated or propagated
     - Typos in recipient patterns
     - Route disabled due to endpoint failures
   </Accordion>
@@ -684,17 +739,15 @@ All message routing requests follow the Standard Webhooks payload format:
 
     **Debug Steps:**
     ```javascript
-    console.log('Route Secret:', process.env.ROUTE_SECRET);
     console.log('Webhook ID:', headers['webhook-id']);
     console.log('Timestamp:', headers['webhook-timestamp']);
-    console.log('Signature:', headers['webhook-signature']);
     console.log('Payload Length:', payload.length);
     ```
   </Accordion>
 
   <Accordion title="Route Disabled" icon="ban">
     **Automatic Route Disabling:**
-    - AhaSend disables routes after 100 consecutive failures
+    - AhaSend disables routes after more than 100 consecutive failed attempts
     - You'll receive an email notification when this happens
     - Fix underlying endpoint issues before re-enabling
 
@@ -719,7 +772,7 @@ All message routing requests follow the Standard Webhooks payload format:
   </Card>
 
   <Card title="Domain Setup" icon="globe" href="/domains">
-    Configure domains and MX records for routing
+    Configure domains and [MX records from your domain details](/domains) for routing
   </Card>
 
   <Card title="API Reference" icon="code" href="/api-reference/routes">

@@ -11,3 +11,4 @@ The main difference between the response of this API and the response of the
 a single message including the original, raw email `content` (if available),
 while the message objects returned in the List Messages API do not include
 the email `content`.
+Message `content` and `content_parsed` are absent when message-data retention has expired or was set to 0. See [retention](/retention).

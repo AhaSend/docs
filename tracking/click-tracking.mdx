@@ -7,6 +7,8 @@ icon: "arrow-pointer"
 
 Click tracking allows you to monitor when recipients click links in your emails by automatically rewriting URLs to redirect through AhaSend's tracking servers. This feature provides valuable insights into email engagement and recipient behavior.
 
+Click tracking is off by default. Enable it in account settings or override it per message. Tracked URLs use the AhaSend tracking domain unless you configure a [custom tracking CNAME](/domains).
+
 ## How Click Tracking Works
 
 Click tracking works by automatically rewriting all eligible links in your HTML emails to redirect through AhaSend's tracking servers. When a recipient clicks a tracked link, they're briefly redirected through AhaSend's servers before being sent to the original destination, allowing the click to be recorded.
@@ -42,7 +44,6 @@ Click tracking works by automatically rewriting all eligible links in your HTML 
     **Common causes of untracked clicks:**
     - Links missing `http://` or `https://` protocol
     - Malformed HTML anchor tags
-    - Links embedded in custom template variables
     - Plain text emails (tracking requires HTML)
     - Links with `data-as-no-track` attribute
 
@@ -55,7 +56,6 @@ Click tracking works by automatically rewriting all eligible links in your HTML 
     - `<a href="www.example.com">Link</a>` (missing protocol)
     - `<a href= "https://example.com">Link</a>` (space before quote)
     - `<a href = "https://example.com">Link</a>` (spaces around =)
-    - `<a href="{{ url_variable }}">Link</a>` (custom variable only)
   </Accordion>
 
   <Accordion title="Email Client Variations" icon="devices">
@@ -101,7 +101,6 @@ Click tracking has significant privacy implications that you should consider:
 
   <Accordion title="Opt-out Considerations" icon="shield">
     **Recipients can avoid tracking by:**
-    - Disabling JavaScript in their browser
     - Using privacy-focused browsers or extensions
     - Reading emails in plain text mode
     - Manually copying/pasting URLs instead of clicking

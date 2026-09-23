@@ -5,14 +5,19 @@ description: "Send transactional email from AWS Lambda with the AhaSend Node.js 
 keywords: ["aws lambda send email", "lambda transactional email", "nodejs email api lambda", "ahasend aws lambda", "api gateway webhook email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 The one hard requirement is the runtime: the function must be on `nodejs22.x` or newer. Everything after that is ordinary Lambda work, and the handler below covers both API Gateway and Function URL event shapes.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - An AWS account and a deployment tool of your choice (console, SAM, CDK, Terraform)
 - A Lambda function using the current Node.js runtime
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with either `messages:send:all` or a least-privilege domain scope such as `messages:send:{yourdomain.com}` matching the domain in `from.email` (the curly braces are part of the [scope](/api-reference/scopes) string), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with a domain scope such as `messages:send:{yourdomain.com}` matching the domain in `from.email` (the curly braces are part of the [scope](/api-reference/scopes) string), and your account ID
 
 ## Install the SDK
 
@@ -142,13 +147,14 @@ export const handler = async (
   try {
     const result = await ahasend.messages.send(
       {
+        sandbox: true,
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email, name }],
         subject: "Welcome to Your App!",
         html_content: "<h1>Welcome aboard</h1>",
         text_content: "Welcome aboard",
       },
-      { idempotencyKey: `welcome-${eventId}` },
+      { idempotencyKey: `sandbox-welcome-${eventId}` },
     );
 
     const rejected = result.data.filter((r) => r.status === "error");
@@ -275,6 +281,7 @@ export const handler = async () => {
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email: "you@example.com" }],
         subject: "Hello from Lambda",
+        sandbox: true,
         html_content: "<strong>It works!</strong>",
         text_content: "It works!",
       }),

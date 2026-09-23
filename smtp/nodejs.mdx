@@ -338,6 +338,10 @@ sendSandboxEmail();
 const nodemailer = require('nodemailer');
 require('dotenv').config(); // npm install dotenv
 
+for (const name of ['SMTP_USERNAME', 'SMTP_PASSWORD', 'FROM_EMAIL']) {
+    if (!process.env[name]) throw new Error(`${name} is required`);
+}
+
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'send.ahasend.com',
     port: parseInt(process.env.SMTP_PORT) || 587,
@@ -348,15 +352,8 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Validate required environment variables
-if (!process.env.SMTP_USERNAME || !process.env.SMTP_PASSWORD) {
-    console.error('Missing required environment variables');
-    console.error('Set: SMTP_USERNAME, SMTP_PASSWORD');
-    process.exit(1);
-}
-
 const mailOptions = {
-    from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
+    from: { name: process.env.FROM_NAME || "Your Company", address: process.env.FROM_EMAIL },
     to: 'user@example.com',
     subject: 'Environment Test',
     text: 'This email uses environment variables for configuration.'
@@ -370,7 +367,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 });
 ```
 
-```bash .env configuration
+```ini .env configuration
 # SMTP Configuration
 SMTP_HOST=send.ahasend.com
 SMTP_PORT=587

@@ -6,7 +6,13 @@ keywords: ["windsurf ide email integration", "windsurf cascade email", "windsurf
 icon: "wind"
 ---
 
+import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 Brief Cascade well and it will wire up email correctly, then you brief it again from scratch on the next project. Windsurf's Rules and Workflows files turn that briefing into something you replay instead.
+
+<SendGuideRules />
 
 ## Prerequisites
 
@@ -52,56 +58,18 @@ bun add @ahasend/sdk
 
 Give Cascade an authoritative project Rule instead of relying on generated code to reconstruct the integration from general context. Cascade can also search documentation, but a Rule keeps the critical constraints available inside the repository.
 
-Workspace Rules are Markdown files with an activation mode, discovered under `.devin/rules/` in your workspace — the preferred location in current Windsurf builds, with the older `.windsurf/rules/` still read as a fallback. Create a model-decision rule so Cascade loads the full instructions when its description matches an email task:
+[Current Windsurf/Devin Desktop docs](https://docs.devin.ai/desktop/cascade/memories) confirm that Workspace Rules are Markdown files with an activation mode, discovered under `.devin/rules/` in your workspace — the preferred location in current Windsurf builds, with the older `.windsurf/rules/` still read as a fallback. Create a model-decision rule so Cascade loads the full instructions when its description matches an email task:
 
-```markdown .devin/rules/ahasend-email.md
+Use this frontmatter, followed by the shared rules below:
+
+```yaml
 ---
 trigger: model_decision
-description: Apply the project's AhaSend transactional email and webhook safety rules
+description: AhaSend email integration rules
 ---
-
-# AhaSend email
-
-When this project sends email, use the official AhaSend Node.js SDK.
-
-- Package: `@ahasend/sdk` on npm. Do not invent a
-  package name and do not hand-roll fetch calls to the REST API.
-- Server-side only. Never import the SDK or expose credentials in browser
-  code. The constructor's browser check is defense in depth; it cannot
-  undo a credential that a bundler has already exposed.
-- Never build a route whose caller picks the recipients, subject, or body.
-  Derive the recipient from the authenticated session or a server-side
-  record, require authentication and authorization on anything that
-  triggers mail, validate the input, bound the request body size, and
-  rate-limit per account. An unauthenticated send endpoint is an open
-  mail relay on your verified domain.
-- Construct the client ONCE at module scope, never per request:
-  `new AhaSendClient({ apiKey, accountId })`.
-- Send with `client.messages.send({ from, recipients, subject,
-  html_content, text_content })`. Body fields are snake_case. `from` is
-  `{ email, name? }`; `recipients` is an array of `{ email, name? }`,
-  1 to 100 entries, and each recipient gets a separate message.
-- The response is multi-status (HTTP 202). `result.data` has one entry per
-  recipient, and a recipient can come back `status: "error"` with a null
-  `id` while the promise resolves. Check every entry, not just the first.
-- Errors are typed. Catch `AhaSendAPIError` and `AhaSendRateLimitError`
-  from `@ahasend/sdk`, and match on `err.status` or `err.code`, never on
-  message text.
-- Verify webhooks with `WebhookVerifier` from `@ahasend/sdk/webhooks`.
-  Signature checks need the RAW request body. `parse()` and `verify()`
-  are async: `await verifier.parse(headers, rawBody)`. Use a framework
-  adapter when available and cap the raw body read with the adapter's
-  `maxBodyBytes`. Atomically deduplicate `webhook-id` with the durable
-  work or outbox record before returning success.
-- Read `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and the fail-closed
-  `AHASEND_DELIVERY_MODE` (`sandbox` or `live`) from the environment.
-  Never hardcode, print, or commit credentials.
-- Derive idempotency keys from a stable server-side business-event ID.
-  Prefix the key with delivery mode so sandbox and live requests cannot
-  collide. Reuse a key only for the exact same request payload.
-- Mock the API boundary by default. Run a real sandbox request only with
-  explicit approval and a dedicated Sandbox-mode credential.
 ```
+
+<AiEmailRules />
 
 To start from a draft, point Cascade at AhaSend's machine-readable doc index at `https://ahasend.com/docs/llms.txt`, ask it to write the rule from those pages, then check the result against the list above.
 

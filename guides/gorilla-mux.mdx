@@ -5,9 +5,14 @@ description: "Send transactional email from a gorilla/mux (Go) app with the AhaS
 keywords: ["gorilla mux send email", "golang transactional email gorilla mux", "gorilla mux email api", "ahasend go sdk", "gorilla mux webhook email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [gorilla/mux](https://github.com/gorilla/mux) routes plain `net/http` handlers, so AhaSend's webhook verifier accepts the `*http.Request` your handler receives. Middleware registered with `Router.Use` runs in registration order and must leave the signed webhook body untouched.
 
-gorilla/mux is stable but no longer actively developed: v1.8.1 (October 2023) is still the current release. Nothing below depends on new router features, and the same handlers port to `net/http.ServeMux` or another router unchanged.
+The examples use gorilla/mux v1.8.1. The same `net/http` handlers can also be mounted on `http.ServeMux` or another router.
+
+<SendGuideRules />
 
 ## Prerequisites
 
@@ -17,6 +22,7 @@ gorilla/mux is stable but no longer actively developed: v1.8.1 (October 2023) is
 ## Install the SDK
 
 ```bash
+go mod init example.com/ahasend-mux
 go get github.com/AhaSend/ahasend-go
 go get github.com/gorilla/mux
 go get github.com/google/uuid
@@ -54,6 +60,7 @@ import (
 	"time"
 
 	"github.com/AhaSend/ahasend-go/api"
+	"github.com/AhaSend/ahasend-go/webhooks"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
@@ -94,6 +101,10 @@ func main() {
 
 	r := mux.NewRouter()
 	r.Handle("/api/welcome", requireWelcomeToken(http.HandlerFunc(sendWelcome))).Methods(http.MethodPost)
+	// Demo store only: replace with durable storage before adding side effects.
+	if err := registerAhaSendWebhook(r, &memoryWebhookStore{events: make(map[string]webhooks.WebhookEvent)}); err != nil {
+		log.Fatal(err)
+	}
 
 	server := &http.Server{
 		Addr:              ":8080",
@@ -286,6 +297,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/AhaSend/ahasend-go/webhooks"
 	"github.com/gorilla/mux"
@@ -297,6 +309,20 @@ type webhookStore interface {
 	// EnqueueOnce atomically commits webhookID and durable work for event.
 	// It returns false if that ID was already committed.
 	EnqueueOnce(ctx context.Context, webhookID string, event webhooks.WebhookEvent) (bool, error)
+}
+
+// Local demo only: data is lost on restart and is not shared across replicas.
+type memoryWebhookStore struct {
+	mu sync.Mutex
+	events map[string]webhooks.WebhookEvent
+}
+
+func (s *memoryWebhookStore) EnqueueOnce(ctx context.Context, id string, event webhooks.WebhookEvent) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.events[id]; exists { return false, nil }
+	s.events[id] = event
+	return true, nil
 }
 
 func newAhaSendWebhookHandler(secret string, store webhookStore) (http.Handler, error) {
@@ -354,11 +380,11 @@ func registerAhaSendWebhook(r *mux.Router, store webhookStore) error {
 }
 ```
 
-Call `registerAhaSendWebhook` during startup with your durable store. Do not start the server if registration returns an error.
+`main.go` registers the route before starting the server. The included memory store is only for local testing: it loses data on restart, grows without cleanup, and cannot coordinate replicas. Replace it with a durable store before adding side effects. Startup stops if registration fails.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-`maxWebhookBodyBytes` bounds one request, not the process, and it is sized for inbound `route.message` deliveries, which embed the received email's attachments. Lower it if this endpoint only receives message, suppression, and domain events — the body is buffered and copied again to build the signed string before the signature is checked, so the cap sets how much memory an unauthenticated caller can make each in-flight request hold.
+`maxWebhookBodyBytes` bounds one request, not the process, and it is sized for inbound `message.routing` deliveries, which embed the received email's attachments. Lower it if this endpoint only receives message, suppression, and domain events — the body is buffered and copied again to build the signed string before the signature is checked, so the cap sets how much memory an unauthenticated caller can make each in-flight request hold.
 
 `EnqueueOnce` must atomically store the verified `webhook-id` and durable work/outbox record, retaining the ID for at least the delivery and retry horizon. A duplicate receives `2xx` without running the work again, while a storage failure receives `5xx` so it can be retried. Process queued work idempotently outside the request; an untracked goroutine can be lost when the process exits. Apply request-rate and concurrency limits at the reverse proxy, and never log the raw body, signature, whole event/error, subjects, addresses, or message content.
 

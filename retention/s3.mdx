@@ -55,7 +55,7 @@ Before enabling S3 archiving, ensure you meet these prerequisites:
     - **Amazon AWS S3** - The original and most feature-complete option
     - **Backblaze B2** - Cost-effective alternative with S3-compatible API
     - **DigitalOcean Spaces** - Developer-friendly with predictable pricing
-    - **Wasabi** - High-performance storage with unlimited egress
+    - **Wasabi** - S3-compatible object storage
     - **MinIO** - Self-hosted S3-compatible storage solution
 
     **Required Credentials:**
@@ -91,7 +91,7 @@ Configure S3 archiving in your AhaSend account settings:
     **Security:** Use dedicated credentials with minimal permissions (write only).
     </Warning>
     <Info>
-    **Google Cloud Storage:** Replacing objects requires both write and delete permissions.
+    Grant only the object permissions required by your selected S3-compatible provider.
     </Info>
   </Step>
 
@@ -110,7 +110,7 @@ Configure S3 archiving in your AhaSend account settings:
   <Step title="Verify Setup" icon="check">
     **Confirm archiving is working:**
     1. **Send a test email** through AhaSend
-    2. **Wait for processing** (typically within hours)
+    2. **Wait for asynchronous processing**; this page does not promise an archive completion time
     3. **Check your S3 bucket** for archived files
     4. **Verify file structure** matches expected format
   </Step>
@@ -234,7 +234,7 @@ AhaSend saves two types of files for each message:
 
     **Benefits:**
     - Cost-effective storage pricing
-    - Free egress for the first 1GB per day
+    - Check the provider's current storage and transfer terms
     - S3-compatible API
   </Accordion>
 
@@ -319,12 +319,12 @@ AhaSend saves two types of files for each message:
     - **Retention disabled:** Message data retention must be enabled
     - **Insufficient retention period:** Minimum 1-day retention required
     - **S3 configuration errors:** Check endpoint, credentials, and bucket name
-    - **Processing delays:** Archives typically appear within hours, not immediately
+    - **Processing delays:** Archiving runs asynchronously; files may not appear immediately
 
     **Verification Steps:**
     1. Check message data retention settings
     2. Verify S3 configuration in account settings
-    3. Review AhaSend logs for archiving errors
+    3. Check the archive bucket and account notifications. If a file is missing, contact support with the message ID; do not send storage credentials
     4. Test with a new email to confirm setup
   </Accordion>
 
@@ -338,10 +338,10 @@ AhaSend saves two types of files for each message:
     **File Retrieval Examples:**
     ```bash
     # Download specific message (standard email)
-    aws s3 cp s3://your-bucket/john_AT_example.com/2024-01-15/msg_abc123.eml ./
+    aws s3 cp "s3://your-bucket/john_AT_example.com/<YYYY-MM-DD>/<MESSAGE_ID>/<MESSAGE_ID>.eml" ./
 
     # Download message with + character in email
-    aws s3 cp s3://your-bucket/user_PLUS_tag_AT_example.com/2024-01-15/msg_def456.eml ./
+    aws s3 cp "s3://your-bucket/user_PLUS_tag_AT_example.com/<YYYY-MM-DD>/<MESSAGE_ID>/<MESSAGE_ID>.eml" ./
 
     # List all messages for a recipient
     aws s3 ls s3://your-bucket/john_AT_example.com/ --recursive

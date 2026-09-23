@@ -1,0 +1,30 @@
+```markdown
+## AhaSend rules for AI coding agents
+
+- Use @ahasend/sdk on the server (Node.js 22+, Deno, Bun, or a supported edge runtime).
+- Create a send-only API Key v2 under Credentials → Add, scoped to messages:send:{your-domain}.
+  Use messages:send:all only for sending from many domains. Management calls need a separate
+  full key from Account Settings → API Keys with the needed scopes.
+- Never put API keys in browser code, logs, prompts, or source control. Use server secrets.
+- Use AhaSendClient with apiKey and accountId, then await client.messages.send(request, options).
+  The v2 path is POST /v2/accounts/{account_id}/messages. from is an object, recipients is an array,
+  and content fields are text_content and html_content. Use Create Conversation for CC/BCC.
+- Authenticate send routes and take recipients and business-event IDs from trusted server data.
+  Add request-size and rate limits. Await sending or commit a durable job before returning success.
+- Require AHASEND_DELIVERY_MODE to be sandbox or live; reject missing or other values.
+  Use a sandbox-mode credential for agent tests. Never decide delivery mode from NODE_ENV.
+- Set sandbox from that explicit mode. Prefix stable business-event idempotency keys with the mode.
+  Reuse a key only with the same request. Ordinary results last 24 hours; 5xx may re-execute.
+- Inspect every result.data item: queued and scheduled were accepted; error was rejected and has
+  a null id. Return a non-2xx result or fail the job when any recipient is rejected.
+- Verify webhooks with @ahasend/sdk/webhooks before parsing or acting on untrusted data.
+  Await verification. Use the exact raw body and the literal UTF-8 bytes of the full secret,
+  prefix included; never base64-decode it. Bound the body to 30,000,000 bytes before reading it.
+- Return 2xx for verified unknown events. Commit webhook-id and durable work atomically,
+  acknowledge committed duplicates, and retry storage failures. The default clock tolerance
+  is five minutes. Never log payloads, recipient addresses, signatures, secrets, or idempotency keys.
+- Use a verified sender domain. Schedule the first attempt in the future and within 7 days.
+  Encode binary attachment bytes as base64 yourself before setting base64: true.
+- Check the API and SDK docs instead of inventing packages, fields, event names, or flags.
+  Docs index: https://ahasend.com/docs/llms.txt
+```

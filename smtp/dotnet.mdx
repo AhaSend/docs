@@ -166,11 +166,13 @@ Install-Package MailKit
 dotnet add package MailKit
 ```
 
+Use the exact version installed by `dotnet add package MailKit` in your project file:
+
 ```xml PackageReference
-<PackageReference Include="MailKit" Version="4.3.0" />
+<PackageReference Include="MailKit" Version="YOUR_INSTALLED_VERSION" />
 ```
 
-```bash Package Manager UI
+```text Package Manager UI
 Search for "MailKit" by Jeffrey Stedfast in NuGet Package Manager
 ```
 

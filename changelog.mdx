@@ -61,7 +61,7 @@ description: "New releases and improvements"
 
 - **CSV Contact Import**: You can now fill a contact list by uploading a CSV file — from the Contacts page, from an individual list, or directly in the Create List dialog so a new list is created and populated in one step. Contacts that already exist are updated and added to the list; new ones are created. Recognized columns are email, first name, last name, status, and any of your custom contact attributes.
 - **Background Imports with Progress and Email Notification**: Files above roughly 500KB or 5,000 rows are processed in the background. The Contacts and list pages show a live progress banner with a Cancel button, and you receive an email when the import finishes reporting how many contacts were imported, how many joined the list, and how many rows were skipped. If an import fails, the email explains why whenever the cause is something you can fix — such as a malformed row and its line number, a missing email column, or an empty file — and re-uploading the same file is always safe.
-- **Higher Hourly Sending Limits, Graduated by Plan**: Pro accounts now start at 1,000 messages per hour and step up to 5,000 and then 10,000 as you build your sending reputation and history with AhaSend; Max accounts start at 2,000 and step up to 20,000 and then 100,000 per hour. Legacy metered plans keep their existing 500 → 1,000 → 2,000 curve. Higher rate limits are possible after a manual review and approval, please [contact us](mailto:support@ahasend.com) if your sending patterns require higher rate limits.
+- **Higher Hourly Sending Limits, Graduated by Plan**: Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. See [current limits](/facts). Higher rate limits are possible after a manual review and approval, please [contact us](mailto:support@ahasend.com) if your sending patterns require higher rate limits.
 - **Per-Service Cookie Controls**: "Manage preferences" now lets you allow or refuse individual services rather than only broad categories — PostHog analytics and UTM attribution under Analytics, Trackdesk affiliate tracking under Marketing. Refusing a category or service now actively deletes the cookies belonging to it, and withdrawing consent takes effect immediately in every open tab.
 
 #### Changes
@@ -235,7 +235,7 @@ description: "New releases and improvements"
 - DMARC checking recovers more gracefully from transient DNS failures, preserving the previously known state instead of marking the domain invalid.
 - The dashboard adapts better to light and dark color modes.
 - Checkout and payment form initialization is more reliable.
-- Established accounts (verified, or 30+ days old with significant volume) can now disable message data retention, in addition to approved accounts.
+- Zero message-data retention is available within the plan limits and needs AhaSend approval. See [retention settings](/retention).
 
 #### Bug Fixes
 

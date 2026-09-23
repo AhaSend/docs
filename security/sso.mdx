@@ -15,6 +15,8 @@ Allow your team members to log in using your organization's existing identity pr
 **Account Owner Access:** Only the account owner can configure SSO and bypass it when necessary. Team members must use SSO once enabled.
 </Info>
 
+AhaSend SSO uses OpenID Connect (OIDC); SAML is not supported. Register `https://dash.ahasend.com/user/sso/oidc/callback` as the redirect URI in your identity provider.
+
 ## Configuration
 
 Configure SSO in your account settings as the account owner:
@@ -35,7 +37,7 @@ Configure SSO in your account settings as the account owner:
     - **Domain:** Comma-separated email domains (e.g., `yourcompany.com`)
     - **Issuer URL:** Base URL from your IdP (e.g., `https://iam.company.com`)
     - **Client ID:** Provided by your identity provider
-    - **Client Secret:** Provided by your identity provider
+    - **Client Secret:** Required for the Client Credentials configuration; not required for PKCE. For PKCE, select `S256` as the PKCE method
 
     **Optional Settings:**
     - **Requested Scopes:** Space-separated scopes (defaults: `openid email profile`)
@@ -81,7 +83,7 @@ Once OpenID Connect SSO is activated:
   </Card>
 
   <Card title="Google Workspace" icon="google">
-    **Google Cloud Identity**
+    **Google Workspace identity provider**
 
     Integrated with Gmail and Google services
   </Card>

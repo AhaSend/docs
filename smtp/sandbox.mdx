@@ -145,7 +145,9 @@ Content-Type: text/plain
 This email will be processed in sandbox mode.
 ```
 
-### API Header Method
+### API v1 Header Method
+
+This is the legacy API v1 payload shape. For v2, use the top-level `sandbox: true` and `sandbox_result` fields shown in [API sandbox mode](/send-api/sandbox).
 
 Include the header in your API request's `content.headers`:
 
@@ -239,8 +241,9 @@ Sandbox mode is perfect for testing webhook integrations:
 
 <AccordionGroup>
   <Accordion title="Webhook Events Still Fire" icon="webhook">
-    - All webhook events are triggered normally in sandbox mode
-    - Test delivery confirmations, bounces, opens, and clicks
+    - Delivery outcome webhooks are triggered in sandbox mode; opens and clicks need an actual recipient interaction and are not simulated
+    - Test delivery confirmations, deferrals, and bounces
+    - Use [CLI webhook triggers](/cli/webhook-testing) to test open and click handlers with synthetic events
     - Verify your webhook endpoint receives correct payloads
     - Delivery, deferral, and bounce webhooks include a representative `delivery_attempt` object
 
@@ -311,7 +314,7 @@ Sandbox mode is perfect for testing webhook integrations:
 
   <Accordion title="Simulated Outcomes Not Working" icon="vial">
     **Common issues:**
-    - `AhaSend-Sandbox-Result` header must be used with sandbox mode
+    - `AhaSend-Sandbox` accepts `true` or `1`; use the result header with sandbox mode. See [special header behavior](/smtp/special-headers).
     - Check header value spelling (`deliver`, `bounce`, `defer`, `fail`, `suppress`)
     - Ensure both sandbox and result headers are properly formatted
     - Verify your webhook handler processes different event types

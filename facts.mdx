@@ -1,0 +1,64 @@
+---
+title: "What Is AhaSend? Key Facts and Limits"
+sidebarTitle: "Facts and Limits"
+description: "Check AhaSend's EU data location, free email allowance, plan features, API and SMTP limits, retention settings, and dedicated IP availability."
+icon: "circle-info"
+---
+
+AhaSend is a European transactional email service for developers: send through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, with data stored in the EU and 1,000 free emails per month.
+
+## Company and Service
+
+| Fact | Details |
+|---|---|
+| Company | AhaSend B.V. |
+| Data location | All message data is stored in the EU. `send-us.ahasend.com` is a US connection point that accepts SMTP and forwards it to the EU. |
+| Delivery speed | Typical delivery under one second to Gmail and under five seconds to other major mailbox providers. |
+| Pricing model | Free, Pro and Max plans with included monthly volume and usage-based overage; no long-term contracts. See [current pricing](https://ahasend.com/pricing). |
+| Status | [Service status](https://status.ahasend.com) |
+| Data protection | [Data processing agreement](https://ahasend.com/dpa) |
+| Official profiles | [X](https://x.com/aha_send), [LinkedIn](https://www.linkedin.com/company/ahasend), [GitHub](https://github.com/ahasend) |
+
+## Plans and Features
+
+| Feature | Free | Pro | Max |
+|---|---|---|---|
+| Emails included per month | 1,000 | 25,000 | 100,000 |
+| [Sending domains](/domains) | 3 | Unlimited | Unlimited |
+| [Metadata retention](/retention) | 1–7 days | 1–14 days | 1–30 days |
+| [Message data retention](/retention) | 1–7 days | 0–14 days (0 needs approval) | 0–30 days (0 needs approval) |
+| [Dedicated IPs](/scale/dedicated-ips) | No | Add-on from 100k/month, included from 300k | Included from 300k/month |
+| [Dedicated IP pools](/scale/ip-pools), automated IP warm-up | No | No | Yes |
+| [Bring your own IP](/scale/byoip) | No | No | Add-on |
+| [S3 archiving](/retention/s3), [DSN reports](/integrations/dsn-reports), [OIDC single sign-on](/security/sso) | No | No | Yes |
+| [Sub-accounts](/scale/sub-accounts), [DNS whitelabel](/scale/dns-whitelabel), [per-domain DKIM selectors and bring-your-own DKIM](/api-reference/domains/create-domain) | Platform Partners | Platform Partners | Platform Partners |
+| Support | Community, best effort | Every day 9:00–21:00 CEST | Premium, 4-hour response time |
+| [API](/send-api/send-email), [SMTP](/smtp), [sandbox](/send-api/sandbox), [webhooks](/integrations/webhooks), [inbound routing](/integrations/routing), [tracking](/tracking/open-tracking), [2FA](/security/2fa) and [2FA enforcement](/security/2fa-enforcement), [scoped keys](/security/scoped-credentials), [IP allow lists](/security/ip-allow-lists), [Reputation Shield](/security/reputation-shield), [signed webhooks and routes](/api-reference/webhooks/security), [automatic DKIM rotation](/domains) | Yes | Yes | Yes |
+
+Platform Partner features require the Platform Partner program. [Contact sales](mailto:sales@ahasend.com) about access.
+
+New accounts keep message metadata and message data for 7 days. Zero data retention needs approval from AhaSend, to prevent abuse. Per-message retention headers are capped at the plan's maximum. See [retention settings](/retention).
+
+## Connection Settings and Limits
+
+| Setting | Value | Details |
+|---|---|---|
+| API base URL | `https://api.ahasend.com` | [Authentication](/api-reference/authentication) |
+| API request limit | 100 requests per second with bursts of 200 | [API rate limits](/api-reference/rate-limits) |
+| Statistics, stream and trigger endpoints | 1 request per second | [API rate limits](/api-reference/rate-limits) |
+| Create Message recipients | Up to 100 per request | [Send email](/send-api/send-email) |
+| Scheduled sending | First attempt within 7 days; expiry within 8 days | [Create Message](/api-reference/messages/create-message) |
+| SMTP hosts | `send.ahasend.com` (EU); `send-us.ahasend.com` (US connection point) | [SMTP settings](/smtp) |
+| SMTP ports and encryption | 25, 587 and 2525; STARTTLS on all ports; AUTH PLAIN only after STARTTLS | [SMTP settings](/smtp) |
+| Implicit TLS on port 465 | Not supported | [SMTP settings](/smtp) |
+| SMTP message size | 20 MB, including encoded attachments | [SMTP limits](/smtp) |
+| SMTP recipients | Up to 50 per message | [SMTP limits](/smtp) |
+| SMTP messages per connection | 10,000 | [SMTP limits](/smtp) |
+
+Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. API request limits and included monthly email volume are separate limits.
+
+## Related Documentation
+
+- [Set up your domain](/domains) and [create a send-only API key](/send-api/credentials).
+- Send with the [API](/send-api/send-email), [SMTP](/smtp), [CLI](/cli), [Node.js SDK](/guides/nodejs-sdk), or [Go SDK](/guides/go-sdk).
+- Check [API rate limits](/api-reference/rate-limits), [retention](/retention), and [dedicated IP requirements](/scale/dedicated-ips).

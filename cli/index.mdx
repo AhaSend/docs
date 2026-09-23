@@ -42,18 +42,17 @@ The AhaSend CLI provides several advantages:
 
 ## Quick Example
 
-Send your first email in just a few commands:
+First [add a sending domain and configure its DNS records](/cli/quickstart#step-2-add-a-sending-domain). Replace `example.com` below with that verified domain, then send a sandbox email:
 
 ```bash
 # Authenticate with your API key
 ahasend auth login
 
-# Add and verify a domain
-ahasend domains create example.com
+# Check your domain's verification status
 ahasend domains verify example.com
 
 # Send an email
-ahasend messages send \
+ahasend messages send --sandbox \
   --from noreply@example.com \
   --to user@recipient.com \
   --subject "Hello from AhaSend" \
@@ -91,7 +90,7 @@ ahasend messages send \
 
 The CLI is distributed as a single binary with no external dependencies:
 
-- **Linux**: x86_64, ARM64
+- **Linux**: x86_64 prebuilt; ARM64 via `go install` or a source build
 - **macOS**: Intel and Apple Silicon
 - **Windows**: x86_64
 
@@ -104,6 +103,11 @@ The CLI seamlessly integrates with all AhaSend services:
 - **Webhooks**: Real-time event processing
 - **Routes**: Inbound email handling
 - **Suppressions**: List management
+
+## More Command Groups
+
+- [Contacts](/cli/commands/contacts): create, update, list, get, delete, and batch-import account contacts (development build; see the page for availability).
+- [Sub-accounts](/cli/commands/subaccounts): manage child accounts, usage, suspension, and their API keys.
 
 ## Next Steps
 

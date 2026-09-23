@@ -11,6 +11,16 @@ Send emails programmatically using AhaSend's powerful API v2 create-message endp
 **API v2 Features:** This guide covers the advanced API v2 create-message endpoint, which provides enhanced features like template substitutions, bulk sending, scheduled delivery, and comprehensive webhook support.
 </Info>
 
+## Limits
+
+| Setting | Limit |
+|---|---|
+| Recipients per request | 100 |
+| API requests | 100 per second, with bursts of 200; see [rate limits](/api-reference/rate-limits) |
+| Scheduled first attempt | In the future, within 7 days |
+| Scheduled expiry | After the first attempt, within 8 days |
+| Retention | [Plan-specific ranges](/retention); new-account default 7 days |
+
 ## Quick Start
 
 Here's a simple example to send your first email using the API:
@@ -21,7 +31,8 @@ curl --request POST \
   --header 'Authorization: Bearer YOUR_API_KEY' \
   --header 'Content-Type: application/json' \
   --data '{
-    "from": {
+    "sandbox": true,
+  "from": {
       "email": "hello@yourdomain.com",
       "name": "Your Company"
     },
@@ -32,7 +43,7 @@ curl --request POST \
       }
     ],
     "subject": "Welcome to our platform!",
-    "text_content": "Thanks for signing up. We're excited to have you!"
+    "text_content": "Thanks for signing up. We are excited to have you!"
   }'
 ```
 
@@ -49,7 +60,7 @@ All API requests require authentication using your API v2 key:
   </Accordion>
 
   <Accordion title="Account ID" icon="id-card">
-    Replace `{account_id}` in the URL with your actual account ID. The API Key must be created within this account.
+    Replace `{account_id}` in the URL with your actual account ID. Find the account ID in the dashboard account settings. Use a send-only key from **Credentials → Add → API Key v2** with `messages:send:{your-domain}`. Use `messages:send:all` when sending from many domains.
     ```
     https://api.ahasend.com/v2/accounts/{account_id}/messages
     ```
@@ -66,6 +77,7 @@ All API requests require authentication using your API v2 key:
 
 ```json Plain Text Email
 {
+  "sandbox": true,
   "from": {
     "email": "hello@yourdomain.com",
     "name": "Your Company"
@@ -77,12 +89,13 @@ All API requests require authentication using your API v2 key:
     }
   ],
   "subject": "Welcome to our platform!",
-  "text_content": "Thanks for signing up. We're excited to have you!"
+  "text_content": "Thanks for signing up. We are excited to have you!"
 }
 ```
 
 ```json HTML Email
 {
+  "sandbox": true,
   "from": {
     "email": "hello@yourdomain.com",
     "name": "Your Company"
@@ -101,6 +114,7 @@ All API requests require authentication using your API v2 key:
 
 ```json With Template Variables
 {
+  "sandbox": true,
   "from": {
     "email": "hello@yourdomain.com",
     "name": "Your Company"
@@ -131,8 +145,11 @@ All API requests require authentication using your API v2 key:
 
 <CodeGroup>
 
+Per-recipient `substitutions` override the global `substitutions` for that recipient.
+
 ```json Bulk Email Sending
 {
+  "sandbox": true,
   "from": {
     "email": "newsletter@yourdomain.com",
     "name": "Your Newsletter"
@@ -140,15 +157,18 @@ All API requests require authentication using your API v2 key:
   "recipients": [
     {
       "email": "user1@example.com",
-      "name": "Alice Smith"
+      "name": "Alice Smith",
+      "substitutions": {"name": "Alice"}
     },
     {
       "email": "user2@example.com",
-      "name": "Bob Johnson"
+      "name": "Bob Johnson",
+      "substitutions": {"name": "Bob"}
     },
     {
       "email": "user3@example.com",
-      "name": "Carol Wilson"
+      "name": "Carol Wilson",
+      "substitutions": {"name": "Carol"}
     }
   ],
   "subject": "Monthly Newsletter - {{month}}",
@@ -163,6 +183,7 @@ All API requests require authentication using your API v2 key:
 
 ```json Scheduled Email
 {
+  "sandbox": true,
   "from": {
     "email": "reminders@yourdomain.com",
     "name": "Reminder Service"
@@ -180,14 +201,15 @@ All API requests require authentication using your API v2 key:
     "time": "2:00 PM"
   },
   "schedule": {
-    "first_attempt": "2024-12-24T18:00:00Z",
-    "expires": "2024-12-25T18:00:00Z"
+    "first_attempt": "<RFC3339 first attempt within the next 7 days>",
+    "expires": "<RFC3339 expiry after first attempt, within 8 days>"
   }
 }
 ```
 
 ```json Transactional Email with Retention
 {
+  "sandbox": true,
   "from": {
     "email": "orders@yourdomain.com",
     "name": "Your Store"
@@ -240,7 +262,7 @@ All API requests require authentication using your API v2 key:
 
 The API returns a response with information about each message created:
 
-### Successful Response (200)
+### Successful Response (202)
 
 ```json
 {
@@ -248,20 +270,20 @@ The API returns a response with information about each message created:
   "data": [
     {
       "object": "message",
-      "id": "3f8e2b1a-7c4d-4e2a-9b1e-2f3a4b5c6d7e",
+      "id": "<3f8e2b1a-7c4d-4e2a-9b1e-2f3a4b5c6d7e@yourdomain.com>",
       "recipient": {
         "email": "user@example.com",
         "name": "John Doe",
-        "substitution_data": {
+        "substitutions": {
           "first_name": "John",
           "company": "Your Company"
         }
       },
-      "status": "queued",
+      "status": "scheduled",
       "error": null,
       "schedule": {
-        "first_attempt": "2024-01-15T10:30:00Z",
-        "expires": "2024-01-16T10:30:00Z"
+        "first_attempt": "<RFC3339 first attempt within the next 7 days>",
+        "expires": "<RFC3339 expiry after first attempt, within 8 days>"
       }
     }
   ]
@@ -274,11 +296,11 @@ The API returns a response with information about each message created:
   <Accordion title="Message Status" icon="info">
     - **`queued`** - Message accepted and queued for delivery
     - **`scheduled`** - Message scheduled for future delivery
-    - **`failed`** - Message failed validation or processing
+    - **`error`** - Message failed validation or processing; `id` is `null`
   </Accordion>
 
   <Accordion title="Message ID" icon="fingerprint">
-    Unique identifier for tracking the message through webhooks and logs
+    Unique identifier for tracking the message through webhooks and logs. It is `null` when the message was not sent.
   </Accordion>
 
   <Accordion title="Schedule Information" icon="calendar">
@@ -288,53 +310,26 @@ The API returns a response with information about each message created:
 
 ## Error Handling
 
-Handle different HTTP status codes appropriately:
+HTTP `202` means the request was accepted for processing. Inspect every item's `status`; a rejected recipient has `status: "error"` and `id: null` even if the HTTP request succeeded.
 
-<AccordionGroup>
-  <Accordion title="400 - Bad Request" icon="xmark">
-    **Common causes:**
-    - Missing required fields (`from`, `recipients`, `subject`)
-    - Invalid email addresses
-    - Missing `text_content` or `html_content`
-    - Invalid retention values (outside 1-30 days range)
+| HTTP status | Meaning |
+|---|---|
+| 400 | Invalid JSON or request fields |
+| 401 | Missing or invalid credentials |
+| 403 | Scope, account, or IP allow list prevents access |
+| 404 | Account or resource was not found |
+| 409 | Another request with this idempotency key is still running |
+| 422 | This idempotency key was used with a different method, path or body |
+| 429 | Account API request limit exceeded |
+| 500 | Server error; retry with the same idempotency key |
 
-    **Example error response:**
-    ```json
-    {
-      "error": {
-        "type": "validation_error",
-        "message": "Either text_content or html_content is required"
-      }
-    }
-    ```
-  </Accordion>
+Error responses have a human-readable `message` field. Its text can change; do not parse it as a machine error code.
 
-  <Accordion title="401 - Unauthorized" icon="lock">
-    **Common causes:**
-    - Missing or invalid API key
-    - Malformed Authorization header
+```json
+{"message": "invalid request body"}
+```
 
-    **Solution:**
-    ```bash
-    --header 'Authorization: Bearer YOUR_VALID_API_KEY'
-    ```
-  </Accordion>
-
-  <Accordion title="403 - Forbidden" icon="shield-xmark">
-    **Common causes:**
-    - Sender domain not verified
-    - API key doesn't have permission for the account
-    - Account suspended or over limits
-
-    **Solution:** Verify domain in dashboard and check account status
-  </Accordion>
-
-  <Accordion title="409 - Conflict" icon="triangle-exclamation">
-    **Idempotency key conflict**
-    - Request with same idempotency key already processed
-    - Returns original response for duplicate requests
-  </Accordion>
-</AccordionGroup>
+A completed duplicate request returns its original status and body with `Idempotent-Replayed: true`. See [idempotency](/api-reference/idempotency) and [error handling](/api-reference/errors).
 
 ## Validation Requirements
 
@@ -354,14 +349,15 @@ Based on the [API documentation](/api-reference/messages/create-message), ensure
   </Accordion>
 
   <Accordion title="Retention Settings" icon="clock">
-    - `retention.metadata` must be between 1 and 30 days
-    - `retention.data` must be between 0 and 30 days
-    - Use 0 for immediate content deletion after processing
+    - Values must be within your [plan's retention range](/retention)
+    - New accounts default to 7 days for metadata and message data
+    - Zero message-data retention needs approval from AhaSend
   </Accordion>
 
   <Accordion title="Scheduling Format" icon="calendar">
     - Schedule times must be in RFC3339 format
-    - Example: `"2024-12-25T10:30:00Z"`
+    - `first_attempt` must be in the future and within 7 days of the request
+    - `expires` must be after `first_attempt` and within 8 days of the request
     - Times should be in UTC timezone
   </Accordion>
 </AccordionGroup>
@@ -374,7 +370,7 @@ Based on the [API documentation](/api-reference/messages/create-message), ensure
     ```bash
     --header 'Idempotency-Key: unique-request-id-12345'
     ```
-    Keys expire after 24 hours and ensure duplicate requests return the same response.
+    Stored send results expire after 24 hours. The same key and exact request replay a stored result; a 5xx can allow re-execution. See [idempotency](/api-reference/idempotency).
   </Accordion>
 
   <Accordion title="Template Variables" icon="code">

@@ -5,13 +5,18 @@ description: "Send transactional email from Azure Functions in Go using custom h
 keywords: ["azure functions go send email", "golang transactional email azure functions", "azure functions custom handler go", "ahasend go sdk", "azure functions email api"]
 ---
 
-This guide runs Go as an Azure Functions **custom handler**: a small HTTP server the Functions host forwards requests to. Ordinary `net/http` code works, including the SDK's `verifier.ParseRequest`. Azure also has first-class Go support in public preview, which Microsoft recommends for new Go function apps — but during preview it runs only on the Flex Consumption plan, whereas custom handlers are supported across every Azure Functions hosting option.
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
+This guide runs Go as an Azure Functions **custom handler**: a small HTTP server the Functions host forwards requests to. Ordinary `net/http` code works, including the SDK's `verifier.ParseRequest`. As of September 2026, Microsoft documents first-class Go support as a public preview and recommends it for new Go function apps. Check the [Azure custom-handler documentation](https://learn.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers) and its linked Go preview requirements before choosing a hosting plan.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Go installed
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
 - A Linux/x64 Azure Function App configured for a custom handler (select .NET as the runtime stack when creating it), the [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) (`func`), and the Azure CLI (`az`)
 
 ## Project Layout
@@ -107,7 +112,7 @@ go get github.com/google/uuid
 }
 ```
 
-The webhook endpoint is `anonymous` because the HMAC signature, not a function key, is what authenticates a delivery — the verifier rejects anything it can't attribute to your secret. You can add a key on top by switching this function to `authLevel: "function"` and registering the webhook URL with `?code=<function-key>` appended, but then rotating that key silently breaks deliveries, and AhaSend disables a webhook after 100 consecutive failures.
+The webhook endpoint is `anonymous` because the HMAC signature, not a function key, is what authenticates a delivery — the verifier rejects anything it can't attribute to your secret. You can add a key on top by switching this function to `authLevel: "function"` and registering the webhook URL with `?code=<function-key>` appended, but then rotating that key silently breaks deliveries, and AhaSend disables a webhook after more than 100 consecutive failed attempts.
 
 </Step>
 </Steps>
@@ -240,6 +245,7 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := requests.CreateMessageRequest{
+		Sandbox: ahasend.Bool(true),
 		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
 		Recipients:  []common.Recipient{{Email: in.Email, Name: ahasend.String(in.Name)}},
 		Subject:     "Welcome to Your App!",
@@ -310,7 +316,7 @@ import (
 
 // Delivery-status payloads are a few KB. Keep the cap tight: this endpoint is
 // anonymous, and the body is buffered before the signature can be checked.
-const maxWebhookBodyBytes = 1 << 20
+const maxWebhookBodyBytes = 30_000_000
 
 func handleAhaSendWebhook(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxWebhookBodyBytes)
@@ -327,7 +333,7 @@ func handleAhaSendWebhook(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, webhooks.ErrUnknownEventType):
 			// The signature was verified before the type was classified, so this
 			// is a genuine event this SDK version doesn't know yet. Acknowledge
-			// it: AhaSend disables a webhook after 100 consecutive failures.
+			// it: AhaSend disables a webhook after more than 100 consecutive failed attempts.
 			w.WriteHeader(http.StatusOK)
 		default:
 			w.WriteHeader(http.StatusBadRequest)

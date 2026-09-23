@@ -6,11 +6,18 @@ keywords: ["ahasend node sdk", "nodejs transactional email sdk", "@ahasend/sdk",
 icon: "node-js"
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) is the official Node.js and TypeScript SDK for AhaSend. Typed models, retries that carry an idempotency key, and a separate webhooks entry point that verifies signatures for you.
 
 This page is the SDK reference. To wire it into a specific framework, pick a guide from the sidebar.
 
+<SendGuideRules />
+
 ## Install
+
+The SDK is v0.x; pin an exact version in production. The examples were checked with `@ahasend/sdk` 0.2.1 (Node.js 22+).
 
 <CodeGroup>
 
@@ -160,7 +167,7 @@ Match on `error.code` or `error.status`, never on message text. Logs, metrics, t
 The SDK retries only when the generated operation profile marks the call safe, idempotent, or protected by an idempotency key. For an eligible call it retries `408`, `429`, `5xx`, network failures, timeouts, and an idempotency-in-progress `409` carrying the required replay and retry headers. Caller cancellation and other `4xx` responses are terminal. Create operations declared idempotent receive an automatically generated UUID `Idempotency-Key`, which is reused across the logical call's internal retries.
 
 <Note>
-  Stored non-secret outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. The two API-key create operations are the exception: their replay carries the same one-time `secret_key` for only 5 minutes, so persist that value the moment it arrives. Server errors are not stored, so the same key can execute again after a `5xx`. Pass your own `idempotencyKey` derived from a stable business identifier when your application may retry later, reuse it only with the exact same payload, and reconcile an uncertain result before another send when duplicates are unacceptable.
+  Stored responses replay for 24 hours, covering 2xx and deterministic 4xx responses. The two API-key create operations are the exception: their replay carries the same one-time `secret_key` for only 5 minutes, so persist that value the moment it arrives. Server errors are not stored, so the same key can execute again after a `5xx`. Pass your own `idempotencyKey` derived from a stable business identifier when your application may retry later, reuse it only with the exact same payload, and reconcile an uncertain result before another send when duplicates are unacceptable.
 </Note>
 
 Local rate pacing is separate and off by default. Turn it on with `rateLimit: { enabled: true }`.
@@ -191,7 +198,7 @@ for await (const message of ahasend.messages.iterate({ status: "Delivered" })) {
 
 ## Webhooks
 
-`@ahasend/sdk/webhooks` is a separate entry point holding the Standard Webhooks HMAC-SHA256 verifier, typed parsers for all 11 event types, and adapters for Express, Fastify, and Next.js. It does not pull in the API client.
+`@ahasend/sdk/webhooks` is a separate entry point holding the Standard Webhooks HMAC-SHA256 verifier, typed parsers for webhook and inbound route event types, and adapters for Express, Fastify, and Next.js. It does not pull in the API client.
 
 ```ts
 import {

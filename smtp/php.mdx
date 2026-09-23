@@ -35,7 +35,7 @@ Before you begin, ensure you have:
 
 ## Connection Settings
 
-Use these settings for all Go SMTP configurations with AhaSend:
+Use these settings for all PHP SMTP configurations with AhaSend:
 
 <CardGroup cols={2}>
   <Card title="Primary Server" icon="server">
@@ -154,6 +154,8 @@ try {
 ### PHPMailer with Special Headers
 
 Add AhaSend's special headers for tracking, sandbox mode, and more:
+
+The next block continues the basic PHPMailer example and uses its imports.
 
 ```php PHPMailer with Headers
 <?php
@@ -283,7 +285,7 @@ MAIL_HOST=send.ahasend.com
 MAIL_PORT=587
 MAIL_USERNAME=YOUR_SMTP_USERNAME
 MAIL_PASSWORD=YOUR_SMTP_PASSWORD
-MAIL_ENCRYPTION=tls
+MAIL_SCHEME=smtp
 MAIL_FROM_ADDRESS=hello@yourdomain.com
 MAIL_FROM_NAME="Your App Name"
 ```
@@ -358,6 +360,8 @@ echo 'Email sent with tracking enabled!';
 ## Testing with Sandbox Mode
 
 Use sandbox mode to test your PHP email integration safely:
+
+The next block continues the basic PHPMailer example and uses its imports.
 
 ```php Sandbox Testing Examples
 <?php

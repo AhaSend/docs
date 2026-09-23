@@ -7,7 +7,7 @@ icon: "book-open"
 
 # Welcome to AhaSend
 
-AhaSend is a **developer-first transactional email service** built for modern applications. We provide blazing fast email delivery through our own infrastructure, with simple REST APIs and reliable SMTP relays.
+AhaSend is a European transactional email service for developers: send through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, with data stored in the EU and 1,000 free emails per month. See [key facts and limits](/facts).
 
 <Info>
 **New to AhaSend?** Start with our [Quickstart Guide](/quickstart) to send your first email in under 5 minutes, or [create your free account](https://dash.ahasend.com/user/register) to get 1,000 free emails per month.
@@ -23,12 +23,12 @@ AhaSend is a **developer-first transactional email service** built for modern ap
 
 
 ### ⚡ **Blazing Fast Delivery**
-- Below **2 seconds** delivery time to Gmail (99th percentile)
+- Typical delivery under one second to Gmail and under five seconds to other major mailbox providers.
 - **Independent**: Our own infrastructure, not a reseller of other services.
-- **Reliable**: Delivering tens of millions of emails every month.
+- See [service status](https://status.ahasend.com) for current availability.
 
 ### 💰 **Fair & Transparent Pricing**
-- **[Pay as You Go](https://ahasend.com/pricing)**: Pay exactly for what you send - no hidden fees
+- Free, Pro and Max plans with included monthly volume and usage-based overage; no long-term contracts. See [pricing](https://ahasend.com/pricing).
 - **[Free dedicated IPs](/scale/dedicated-ips)** for high-volume senders (300k+ emails/month)
 
 ### 🛡️ **Enterprise-Ready Security**
@@ -36,7 +36,7 @@ AhaSend is a **developer-first transactional email service** built for modern ap
 - **[Scoped API credentials](/api-reference/scopes)** with granular permissions
 - **[IP allow lists](/security/ip-allow-lists)** to lock API keys to your own infrastructure
 - **[Customizable data retention policies](/retention)**
-    - From zero to 30 days [retention in our database](/retention).
+    - [Retention ranges depend on your plan](/retention): message data 0–30 days, metadata 1–30 days. Zero data retention needs approval.
     - [Indefinite retention](/retention/s3) of data, metadata and delivery log on your own S3.
 - **[GDPR compliant](https://ahasend.com/dpa)**
 
@@ -60,13 +60,13 @@ Get started quickly with your preferred technology stack:
 
 <CardGroup cols={3}>
   <Card title="Node.js" icon="node-js" href="/smtp/nodejs">
-    Integrate with Express, Next.js, or any Node.js application
+    Send email from Node.js with Nodemailer
   </Card>
   <Card title="Python" icon="python" href="/smtp/python">
-    Django, Flask, FastAPI - we've got you covered
+    Send email with Python's smtplib and STARTTLS
   </Card>
   <Card title="PHP" icon="php" href="/smtp/php">
-    Laravel, Symfony, WordPress, and vanilla PHP examples
+    Send email with PHPMailer or Laravel via SMTP
   </Card>
   <Card title="Go" icon="golang" href="/smtp/golang">
     Lightweight integration for Go applications
@@ -115,7 +115,7 @@ Get started quickly with your preferred technology stack:
 </CardGroup>
 
 <Tip>
-**Pro Tip:** All code examples in this documentation are tested and ready to use. Just replace the placeholder values with your actual API keys and domains.
+Replace placeholder values with your API keys and verified domain. Use [sandbox mode](/send-api/sandbox) while testing.
 </Tip>
 
 ## What's Next?

@@ -8,9 +8,11 @@ icon: ban
 
 Manage email suppressions (bounces, complaints, unsubscribes).
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Overview
 
-```bash
+```text
 ahasend suppressions [subcommand] [flags]
 ```
 
@@ -51,26 +53,18 @@ ahasend suppressions list --output json
 ahasend suppressions list --limit 100
 ```
 
-### List Flags
-
-| Flag | Description |
-|------|-------------|
-| `--email` | Email address to search for (optional) |
-| `--domain` | Filter by specific domain |
-| `--limit` | Maximum number of suppressions to return (default 50) |
-| `--cursor` | Pagination cursor for continued results |
 
 ## Create Suppression
 
 ```bash
 # Create manual suppression
-ahasend suppressions create user@example.com --reason unsubscribe
+ahasend suppressions create user@example.com --reason unsubscribe --expires 30d
 
 # Create bounce suppression
-ahasend suppressions create user@example.com --type bounce
+ahasend suppressions create user@example.com --reason "Manual bounce test" --expires 30d
 
 # Create complaint suppression
-ahasend suppressions create user@example.com --type complaint
+ahasend suppressions create user@example.com --reason "Manual complaint test" --expires 30d
 ```
 
 ## Check Suppression
@@ -82,7 +76,8 @@ ahasend suppressions check user@example.com
 ## Delete Suppression
 
 ```bash
-ahasend suppressions delete user@example.com
+ahasend suppressions create docs-delete-test@example.com --reason "Docs deletion test" --expires 1d
+ahasend suppressions delete docs-delete-test@example.com
 ```
 
 ## Wipe Suppressions
@@ -91,10 +86,12 @@ Remove all suppressions (use with caution):
 
 ```bash
 # Wipe all suppressions
-ahasend suppressions wipe --confirm
+ahasend suppressions create docs-wipe-test@example.com --domain docs-test.example.com --reason "Docs wipe test" --expires 1d
+ahasend suppressions wipe --force --domain "docs-test.example.com"
 
 # Wipe specific type
-ahasend suppressions wipe --type bounce --confirm
+ahasend suppressions create docs-wipe-test@example.com --domain docs-test.example.com --reason "Docs wipe test" --expires 1d
+ahasend suppressions wipe --domain "docs-test.example.com" --force
 ```
 
 <Warning>
@@ -105,3 +102,44 @@ This action is irreversible and will remove all specified suppressions.
 
 - [Send messages](/cli/commands/messages)
 - [View statistics](/cli/commands/stats)
+
+## Command Flags
+
+These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `suppressions check`
+
+| Flag | Description and default |
+|---|---|
+| `--domain string` | Check suppression for specific domain only |
+
+### `suppressions create`
+
+| Flag | Description and default |
+|---|---|
+| `--domain string` | Domain for domain-specific suppression (optional) |
+| `--expires string` | Expiration time (e.g., '30d', '`RFC3339_TIMESTAMP`') [required] |
+| `--reason string` | Suppression reason (up to 255 characters) |
+
+### `suppressions delete`
+
+| Flag | Description and default |
+|---|---|
+| `--domain string` | Domain for domain-specific suppression removal (optional) |
+| `--force` | Skip confirmation prompt |
+
+### `suppressions list`
+
+| Flag | Description and default |
+|---|---|
+| `--cursor string` | Pagination cursor for continued results |
+| `--domain string` | Filter by specific domain |
+| `--email string` | Email address to search for (optional) |
+| `--limit int32` | Maximum number of suppressions to return (default 50) |
+
+### `suppressions wipe`
+
+| Flag | Description and default |
+|---|---|
+| `--domain string` | Domain to wipe suppressions for |
+| `--force` | Skip all confirmation prompts (DANGEROUS) |

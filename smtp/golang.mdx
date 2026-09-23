@@ -64,6 +64,7 @@ Go's standard library provides basic SMTP functionality through the `net/smtp` p
 package main
 
 import (
+    "time"
     "fmt"
     "net/smtp"
 )
@@ -86,7 +87,10 @@ func main() {
     subject := "Welcome to our platform!"
     body := "Thanks for signing up. We're excited to have you!"
 
-    msg := []byte(fmt.Sprintf("To: %s\r\n"+
+    msg := []byte(fmt.Sprintf("MIME-Version: 1.0\r\n"+
+        "From: hello@yourdomain.com\r\n"+
+        "To: %s\r\n"+
+        "Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
         "Subject: %s\r\n"+
         "\r\n"+
         "%s\r\n", to[0], subject, body))
@@ -106,6 +110,7 @@ func main() {
 package main
 
 import (
+    "time"
     "fmt"
     "net/smtp"
 )
@@ -121,7 +126,9 @@ func main() {
     to := []string{"user@example.com"}
 
     // HTML message with proper headers
-    msg := []byte("To: user@example.com\r\n" +
+    msg := []byte("From: hello@yourdomain.com\r\n" +
+        "To: user@example.com\r\n" +
+        "Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
         "Subject: Welcome to our platform!\r\n" +
         "MIME-Version: 1.0\r\n" +
         "Content-Type: text/html; charset=UTF-8\r\n" +
@@ -146,6 +153,7 @@ func main() {
 package main
 
 import (
+    "time"
     "fmt"
     "net/smtp"
 )
@@ -161,6 +169,7 @@ func main() {
     // Message with AhaSend special headers
     msg := []byte("From: " + from + "\r\n" +
         "To: user@example.com\r\n" +
+        "Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
         "Subject: Welcome Newsletter\r\n" +
         "ahasend-track-opens: true\r\n" +
         "ahasend-track-clicks: true\r\n" +
@@ -472,7 +481,7 @@ func sendEmailWithRetry(host string, port int, username, password, from, to, sub
         fmt.Printf("Attempt %d failed: %v\n", attempt, err)
 
         if attempt < maxRetries {
-            // Exponential backoff
+            // Linear backoff
             delay := time.Duration(attempt) * time.Second
             fmt.Printf("Retrying in %v...\n", delay)
             time.Sleep(delay)
@@ -558,6 +567,7 @@ Use sandbox mode to test your Go email integration safely:
 package main
 
 import (
+    "time"
     "fmt"
     "net/smtp"
 )
@@ -571,8 +581,11 @@ func main() {
     to := []string{"test@example.com"}
 
     // Sandbox message with simulated outcome
-    msg := []byte("To: test@example.com\r\n" +
+    msg := []byte("From: hello@yourdomain.com\r\n" +
+        "To: test@example.com\r\n" +
+        "Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
         "Subject: Sandbox Test\r\n" +
+        "MIME-Version: 1.0\r\n" +
         "AhaSend-Sandbox: true\r\n" +
         "AhaSend-Sandbox-Result: deliver\r\n" +
         "\r\n" +

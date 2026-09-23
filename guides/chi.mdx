@@ -5,18 +5,25 @@ description: "Send transactional email from a chi (Go) app with the AhaSend emai
 keywords: ["chi send email", "golang transactional email chi", "chi router email api", "ahasend go sdk", "chi webhook email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [chi](https://github.com/go-chi/chi) handlers are plain `net/http`, so the SDK and its webhook verifier work without an adapter.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Go installed
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
 
 ## Install the SDK
 
 ```bash
+go mod init example.com/ahasend-chi
 go get github.com/AhaSend/ahasend-go
+go get github.com/google/uuid
 go get github.com/go-chi/chi/v5
 ```
 
@@ -283,7 +290,7 @@ Return 2xx promptly after durable work has been accepted. Do slow processing in 
 - **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
 - **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
 - **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
-- **Rate limits**: sending at volume? Tune the client with `ahasendClient.SetSendMessageRateLimit(500, 1000)`.
+- **Rate limits**: keep each client at or below [100 requests per second with a 200 burst](/api-reference/rate-limits), and coordinate the total across all processes.
 - **Other frameworks**: the same SDK patterns work in [Gin](/guides/gin), [Echo](/guides/echo), and [gorilla/mux](/guides/gorilla-mux).
 - **Attachments**: every entry needs `Data`, `ContentType`, and `FileName`. For binary files such as PDFs, encode the bytes with `base64.StdEncoding.EncodeToString(data)`, use that string as `Data`, and set `Base64: true`. The flag tells AhaSend how to decode `Data`; it does not perform the encoding.
 
@@ -293,7 +300,7 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
 
 <AccordionGroup>
   <Accordion title="401 from the API">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
   <Accordion title="Webhook verification always fails">
     Something consumed the request body before `ParseRequest` ran. Check `r.Use(...)` chains and any middleware mounted on a parent router for body readers. `middleware.Logger` and `middleware.Recoverer` are fine; anything that buffers or dumps the body is not. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.

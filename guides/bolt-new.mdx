@@ -6,7 +6,21 @@ keywords: ["bolt.new email integration", "bolt.new send email", "bolt.new ahasen
 icon: "bolt"
 ---
 
+import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [Bolt.new](https://bolt.new) develops your app in a browser-based WebContainer. A WebContainer runs inside the browser tab, so it is not a safe place for an AhaSend API key: code there can make network requests, but it cannot keep the key from someone who can inspect or edit the project. Put the send in a Bolt or Supabase server function, or in a separately deployed Node backend.
+
+<SendGuideRules />
+
+## AhaSend Rules for AI Coding Agents
+
+Add this shared block to your project instructions:
+
+<AiEmailRules />
+
+This example pins `@supabase/server` to 1.4.1. Its [withSupabase helper](https://supabase.github.io/server/functions/index.withSupabase.html) passes the authenticated Supabase client and user claims to the handler.
 
 ## Prerequisites
 
@@ -76,7 +90,7 @@ The function it generates should look close to this. Create the client once at m
 
 ```ts supabase/functions/send-receipt/index.ts
 import { AhaSendAPIError, AhaSendClient, isAhaSendError } from "npm:@ahasend/sdk";
-import { withSupabase } from "npm:@supabase/server";
+import { withSupabase } from "npm:@supabase/server@1.4.1";
 
 function requireEnv(name: string): string {
   const value = Deno.env.get(name);

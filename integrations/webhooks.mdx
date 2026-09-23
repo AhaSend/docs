@@ -53,45 +53,27 @@ This enables you to:
 </Steps>
 
 <Note>
-**Delivery Guarantee:** AhaSend retries failed webhook deliveries up to 6 times over 16+ minutes. Only HTTP status codes 200-299 are considered successful.
+**Delivery Guarantee:** AhaSend makes 6 attempts over about 16 minutes, including the first attempt. Only HTTP status codes 200-299 are considered successful.
 </Note>
 
 ## Available Webhook Events
 
 AhaSend supports webhooks for various event types. You can choose which events to receive when configuring your webhook:
 
-<AccordionGroup>
-  <Accordion title="Message Events" icon="envelope">
-    Track the complete lifecycle of your outbound emails:
+| Event type | When it fires | Payload |
+|---|---|---|
+| `message.reception` | Message accepted | [Reference](/api-reference/webhooks/message-reception) |
+| `message.delivered` | Recipient server accepts delivery | [Reference](/api-reference/webhooks/message-delivered) |
+| `message.transient_error` | Temporary delivery failure | [Reference](/api-reference/webhooks/message-transient_error) |
+| `message.failed` | Delivery fails | [Reference](/api-reference/webhooks/message-failed) |
+| `message.bounced` | Permanent SMTP rejection or later bounce | [Reference](/api-reference/webhooks/message-bounced) |
+| `message.suppressed` | Suppression prevents sending | [Reference](/api-reference/webhooks/message-suppressed) |
+| `message.opened` | Tracking image requested | [Reference](/api-reference/webhooks/message-opened) |
+| `message.clicked` | Tracked link requested | [Reference](/api-reference/webhooks/message-clicked) |
+| `suppression.created` | Suppression added | [Reference](/api-reference/webhooks/suppression-created) |
+| `domain.dns_error` | Domain DNS problem detected | [Reference](/api-reference/webhooks/domain-dns_error) |
 
-    - **Message Reception** - Email received and queued for delivery
-    - **Message Delivered** - Email successfully delivered to recipient's server
-    - **Message Deferred** - Temporary delivery delay (will retry)
-    - **Message Failed** - Message exhausted its delivery retries
-    - **Message Bounced** - Permanent SMTP rejection or later bounce notification
-    - **Message Suppressed** - Email blocked due to suppression list
-    - **Message Opened** - Recipient opened the email (requires tracking enabled)
-    - **Message Clicked** - Recipient clicked a tracked link (requires tracking enabled)
-  </Accordion>
-
-  <Accordion title="Suppression Events" icon="ban">
-    Monitor when email addresses are automatically suppressed:
-
-    - **Suppression Created** - New suppression added due to delivery issues
-
-    Suppressions automatically expire after 30 days and prevent future delivery attempts to problematic email addresses.
-  </Accordion>
-
-  <Accordion title="Domain Events" icon="globe">
-    Receive alerts about domain configuration issues:
-
-    - **DNS Error Detected** - Problems with SPF, DKIM, or DMARC records
-
-    After DNS errors, email sending will be rejected until configuration is fixed.
-  </Accordion>
-
-
-</AccordionGroup>
+See [suppression durations](/api-reference/webhooks#suppression-duration) and [domain verification](/domains) for their rules. Inbound routes use the separate [`message.routing` event](/api-reference/routes/route-message).
 
 ## Understanding Message Lifecycle
 
@@ -124,7 +106,7 @@ Reception → Delivered → [Opened] → [Clicked]
     Reception → Deferred → Deferred → ... → Delivered
     ```
 
-    Temporary issues (full mailbox, server problems) cause deferrals. AhaSend retries up to 7 times within 24 hours.
+    Temporary issues (full mailbox, server problems) cause deferrals. Message delivery retries continue until the message's expiry time. This is separate from [webhook delivery retries](/api-reference/webhooks/retry-policy).
   </Accordion>
 
   <Accordion title="Soft Bounce with Final Failure" icon="triangle-exclamation">
@@ -222,12 +204,12 @@ Verify your webhook integration works correctly before going live:
   <Step title="Verify Response Handling" icon="clipboard-check">
     Ensure your endpoint:
     - **Returns 2xx status codes** for successful processing
-    - **Processes requests quickly** (under 10 seconds)
+    - **Processes requests quickly** (under 5 seconds)
     - **Handles duplicate events** gracefully using webhook-id
     - **Validates webhook signatures** for security
 
     <Warning>
-    **Timeout Considerations:** Webhook requests timeout after 10 seconds. Perform heavy processing asynchronously.
+    **Timeout Considerations:** Webhook requests timeout after 5 seconds. Perform heavy processing asynchronously.
     </Warning>
   </Step>
 </Steps>
@@ -236,7 +218,9 @@ Verify your webhook integration works correctly before going live:
 
 AhaSend follows the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks) for secure webhook delivery:
 
-### Security Headers
+`webhook-id` is the delivery ID used for deduplication. The payload's `webhook_id` or `route_id` identifies the configured endpoint, not the delivery.
+
+## Security Headers
 
 Every webhook request includes security headers:
 
@@ -268,11 +252,30 @@ Use Standard Webhooks libraries for easy verification:
 ```javascript Node.js
 import { Webhook } from 'standardwebhooks';
 
+async function readLimitedBody(request) {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > 30_000_000) { await reader.cancel(); return null; }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
+  return body;
+}
+
 const webhook = new Webhook(process.env.WEBHOOK_SECRET, { format: 'raw' });
 
 // In your webhook handler
 export async function handleWebhook(request) {
-  const payload = await request.text();
+  const payload = await readLimitedBody(request);
+  if (payload === null) return new Response(null, { status: 413 });
   const headers = {
     'webhook-id': request.headers.get('webhook-id'),
     'webhook-timestamp': request.headers.get('webhook-timestamp'),
@@ -280,9 +283,9 @@ export async function handleWebhook(request) {
   };
 
   try {
-    const event = webhook.verify(payload, headers);
+    const event = webhook.verify(new TextDecoder('utf-8', { fatal: true }).decode(payload), headers);
     // Process verified event
-    console.log('Event:', event.type, event.data);
+    console.log('Verified event:', event.type); // Includes unknown signed event types.
     return new Response('OK', { status: 200 });
   } catch (error) {
     return new Response('Invalid signature', { status: 400 });
@@ -290,25 +293,47 @@ export async function handleWebhook(request) {
 }
 ```
 
+The Python example expects a framework request with a raw `body` attribute. Configure a 30,000,000-byte request limit in that framework or its front proxy before it buffers the body. Supply the application processing callback used below.
+
 ```python Python
+import base64
+import binascii
+
+def supported_signatures(header):
+    # Skip unsupported or malformed entries before the library decodes them.
+    supported = []
+    for entry in (header or "").split():
+        version, separator, encoded = entry.partition(",")
+        if version != "v1" or not separator:
+            continue
+        try:
+            signature = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError):
+            continue
+        if len(signature) == 32:
+            supported.append(entry)
+    return " ".join(supported)
+
 from standardwebhooks.webhooks import Webhook
 import os
 
-webhook = Webhook(os.environ['WEBHOOK_SECRET'])
+webhook = Webhook(os.environ['WEBHOOK_SECRET'].encode('utf-8'))
 
 def handle_webhook(request):
     headers = {
         'webhook-id': request.headers.get('webhook-id'),
         'webhook-timestamp': request.headers.get('webhook-timestamp'),
-        'webhook-signature': request.headers.get('webhook-signature')
+        'webhook-signature': supported_signatures(request.headers.get('webhook-signature'))
     }
 
     try:
         payload = request.body
+        if len(payload) > 30_000_000:
+            return {'error': 'Request too large'}, 413
         event = webhook.verify(payload, headers)
 
         # Process verified event
-        print(f"Event: {event['type']}, Data: {event['data']}")
+        print(f"Verified event: {event['type']}")
         return {'status': 'success'}, 200
     except Exception as e:
         return {'error': 'Invalid signature'}, 400
@@ -326,13 +351,18 @@ import (
 )
 
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
-    webhook, err := standardwebhooks.NewWebhookRaw(os.Getenv("WEBHOOK_SECRET"))
+    webhook, err := standardwebhooks.NewWebhookRaw([]byte(os.Getenv("WEBHOOK_SECRET")))
     if err != nil {
         http.Error(w, "Invalid webhook secret", 500)
         return
     }
 
-    payload, _ := io.ReadAll(r.Body)
+    r.Body = http.MaxBytesReader(w, r.Body, 30_000_000)
+    payload, err := io.ReadAll(r.Body)
+    if err != nil {
+        http.Error(w, "Cannot read webhook body", 413)
+        return
+    }
     headers := r.Header
 
     if err := webhook.Verify(payload, headers); err != nil {
@@ -348,25 +378,29 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 ```php PHP
 <?php
-use StandardWebhooks\Webhook;
-
-$webhook = Webhook::fromRaw($_ENV['WEBHOOK_SECRET']);
-
-function handleWebhook($request) {
-    $payload = $request->getBody();
-    $headers = $request->getHeaders();
-
-    try {
-        $event = $webhook->verify($payload, $headers);
-
-        // Process verified event
-        error_log("Event: " . $event['type']);
-        return response('OK', 200);
-    } catch (Exception $e) {
-        return response('Invalid signature', 400);
-    }
+// PHP handler: read the exact body, with a limit, before parsing JSON.
+$body = file_get_contents('php://input', false, null, 0, 30_000_001);
+$secret = getenv('WEBHOOK_SECRET');
+$id = $_SERVER['HTTP_WEBHOOK_ID'] ?? '';
+$timestamp = $_SERVER['HTTP_WEBHOOK_TIMESTAMP'] ?? '';
+$signatures = $_SERVER['HTTP_WEBHOOK_SIGNATURE'] ?? '';
+if ($body === false || strlen($body) > 30_000_000) { http_response_code(413); exit; }
+if (!$secret) { http_response_code(500); exit; }
+if (!$id || !ctype_digit($timestamp) || abs(time() - (int)$timestamp) > 300) {
+    http_response_code(400); exit;
 }
-?>
+$expected = base64_encode(hash_hmac('sha256', "$id.$timestamp.$body", $secret, true));
+$valid = false;
+foreach (explode(' ', $signatures) as $candidate) {
+    $parts = explode(',', $candidate, 2);
+    if (count($parts) === 2 && $parts[0] === 'v1' && hash_equals($expected, $parts[1])) $valid = true;
+}
+if (!$valid) { http_response_code(400); exit; }
+try { $event = json_decode($body, true, 512, JSON_THROW_ON_ERROR); }
+catch (JsonException $e) { http_response_code(400); exit; }
+// Verification-only example: add an atomic durable handoff before business side effects.
+// Unknown event types are valid signed deliveries too.
+http_response_code(204);
 ```
 </CodeGroup>
 
@@ -472,7 +506,7 @@ events or fixtures you control.
     **Handle Retries Gracefully:**
     - Use `webhook-id` as an idempotency key to prevent duplicate processing
     - Store processed webhook IDs to detect and skip duplicates
-    - Return 2xx status codes quickly (under 10 seconds)
+    - Return 2xx status codes quickly (under 5 seconds)
 
     **Process Asynchronously:**
     - Acknowledge receipt immediately with 200 OK
@@ -576,7 +610,7 @@ events or fixtures you control.
 
   <Accordion title="Webhook Disabled" icon="ban">
     **Automatic Disabling:**
-    - AhaSend disables webhooks after 100 consecutive failures
+    - AhaSend disables webhooks after more than 100 consecutive failed attempts
     - You'll receive an email notification when this happens
     - Fix underlying issues before re-enabling
 

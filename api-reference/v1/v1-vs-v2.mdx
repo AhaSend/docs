@@ -147,8 +147,8 @@ API v2 is the recommended choice for all new integrations. It includes everythin
       "tracking": { "open": true, "click": true },
       "retention": { "metadata": 30, "data": 7 },
       "schedule": {
-        "first_attempt": "2026-03-11T10:00:00Z",
-        "expires": "2026-03-12T10:00:00Z"
+        "first_attempt": "<RFC3339 time within the next 7 days>",
+        "expires": "<RFC3339 expiry within the next 8 days>"
       }
     }
     ```
@@ -279,3 +279,5 @@ API v1 only sends emails. API v2 provides a complete management API:
     Complete API v2 documentation
   </Card>
 </CardGroup>
+
+For the v2 URL, copy the account UUID from **Account Settings → API Keys** or use `ahasend auth status`. See [account ID and authentication](/api-reference/authentication). Scheduled first attempts must be in the future and within 7 days; expiry must be in the future and within 8 days.

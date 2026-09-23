@@ -9,11 +9,13 @@ AhaSend uses API keys to authenticate requests. Your API keys carry many privile
 
 All API requests must be made over HTTPS. Calls made over plain HTTP will fail. API requests without authentication will also fail.
 
+The API base URL is `https://api.ahasend.com`. Find your account ID in the dashboard account settings. Message-list examples below need a full API key with `messages:read:{your-domain}` or `messages:read:all`.
+
 ## API Key Format
 
 AhaSend API keys follow this format:
 
-```
+```text
 aha-sk-64-CHARACTER-RANDOM-STRING
 ```
 
@@ -23,8 +25,10 @@ aha-sk-64-CHARACTER-RANDOM-STRING
 
 ## Obtaining Your API Key
 
+For management tasks, create a full API key as follows. For send-only applications, use **Credentials → Add → API Key v2** instead; see [send-only API keys](/send-api/credentials).
+
 1. Log in to your AhaSend dashboard
-2. Navigate to [API Keys](https://dash.ahasend.com/account/-/settings/api-keys)
+2. Open **Account Settings → API Keys** at [API Keys](https://dash.ahasend.com/account/-/settings/api-keys)
 3. Click "Create API Key"
 4. Select the appropriate [scopes](/api-reference/scopes) for your use case
 5. Copy and securely store your new API key
@@ -44,13 +48,13 @@ Authentication to the API is performed via HTTP Bearer Authentication. Provide y
 <CodeGroup>
 
 ```bash cURL
-curl https://api.ahasend.com/v2/messages \
+curl https://api.ahasend.com/v2/accounts/YOUR_ACCOUNT_ID/messages \
   -H "Authorization: Bearer aha-sk-your-api-key-here" \
   -H "Content-Type: application/json"
 ```
 
 ```javascript Node.js
-const response = await fetch('https://api.ahasend.com/v2/messages', {
+const response = await fetch('https://api.ahasend.com/v2/accounts/YOUR_ACCOUNT_ID/messages', {
   method: 'GET',
   headers: {
     'Authorization': 'Bearer aha-sk-your-api-key-here',
@@ -67,7 +71,7 @@ headers = {
     'Content-Type': 'application/json'
 }
 
-response = requests.get('https://api.ahasend.com/v2/messages', headers=headers)
+response = requests.get('https://api.ahasend.com/v2/accounts/YOUR_ACCOUNT_ID/messages', headers=headers)
 ```
 
 ```php PHP
@@ -78,7 +82,7 @@ $headers = [
 ];
 
 $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, 'https://api.ahasend.com/v2/messages');
+curl_setopt($ch, CURLOPT_URL, 'https://api.ahasend.com/v2/accounts/YOUR_ACCOUNT_ID/messages');
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 $response = curl_exec($ch);
@@ -90,7 +94,7 @@ curl_close($ch);
 require 'net/http'
 require 'uri'
 
-uri = URI('https://api.ahasend.com/v2/messages')
+uri = URI('https://api.ahasend.com/v2/accounts/YOUR_ACCOUNT_ID/messages')
 http = Net::HTTP.new(uri.host, uri.port)
 http.use_ssl = true
 
@@ -110,7 +114,7 @@ import (
 
 func main() {
     client := &http.Client{}
-    req, _ := http.NewRequest("GET", "https://api.ahasend.com/v2/messages", nil)
+    req, _ := http.NewRequest("GET", "https://api.ahasend.com/v2/accounts/YOUR_ACCOUNT_ID/messages", nil)
     req.Header.Add("Authorization", "Bearer aha-sk-your-api-key-here")
     req.Header.Add("Content-Type", "application/json")
 
@@ -148,8 +152,8 @@ Store your API key as an environment variable:
 export AHASEND_API_KEY="aha-sk-your-api-key-here"
 ```
 
-```bash Windows
-set AHASEND_API_KEY=aha-sk-your-api-key-here
+```powershell Windows
+$env:AHASEND_API_KEY="aha-sk-your-api-key-here"
 ```
 
 ```javascript Node.js

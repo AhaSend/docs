@@ -6,7 +6,9 @@ icon: gear
 
 # Configuration
 
-The AhaSend CLI stores configuration in `~/.ahasend/config.yaml` and can be overridden with environment variables or command-line flags.
+The AhaSend CLI stores configuration in `~/.ahasend/config.yaml` and reads credentials from profiles or explicit command-line flags.
+
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
 
 ## Configuration File
 
@@ -16,24 +18,32 @@ The configuration file is automatically created when you authenticate and contai
 default_profile: production
 profiles:
   production:
-    api_key: "ak_prod_..."
-    account_id: "acc_1234567890"
+    api_key: "YOUR_API_KEY"
+    account_id: "YOUR_ACCOUNT_ID"
     api_url: "https://api.ahasend.com"
 preferences:
-  output_format: table
+  output_format: plain
   color_output: true
 ```
 
-## Environment Variables
+### CI Credentials
 
-For automation or CI/CD, use environment variables:
+The CLI reads no environment variables for credentials. It authenticates through `ahasend auth login` profiles, `--profile`, or `--api-key` with `--account-id`. In CI, store secrets as environment variables and pass them explicitly through flags:
 
 ```bash
-# Authentication
-export AHASEND_API_KEY="your-api-key"
-export AHASEND_ACCOUNT_ID="your-account-id"
-export AHASEND_PROFILE="staging"
+ahasend --api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID" ping
 ```
+
+## Output Formats
+
+| Format | Use |
+|---|---|
+| `plain` | Default readable text |
+| `table` | Table view |
+| `json` | Structured output for scripts |
+| `csv` | Export rows for a spreadsheet |
+
+The current CLI's printer reads `--output`, whose default is `plain`; `preferences.output_format` does not override it. Pass the flag for each command. Credentials are plaintext in `~/.ahasend/config.yaml` (Windows: `%USERPROFILE%\.ahasend\config.yaml`); protect this file.
 
 ## Global Flags
 
@@ -46,7 +56,7 @@ Available for all commands:
 --profile string      # Profile to use (overrides default)
 
 # Output
---output string       # Output format: table, json, plain (default: plain)
+--output string       # Output format: table, json, plain, csv (default: plain)
 --no-color            # Disable colored output
 
 # Logging

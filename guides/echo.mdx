@@ -5,18 +5,25 @@ description: "Send transactional email from an Echo (Go) app with the AhaSend em
 keywords: ["echo send email", "golang transactional email echo", "echo email api", "ahasend go sdk", "echo webhook email"]
 ---
 
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+
 [Echo](https://echo.labstack.com) exposes the underlying request through `c.Request()`, which can be passed directly to `verifier.ParseRequest`.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Go 1.25 or newer, which Echo v5 requires
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) scoped to `messages:send:{your-domain}`, matching the domain in `From.Email`, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) scoped to `messages:send:{your-domain}`, matching the domain in `From.Email`, and your account ID
 
 ## Install the SDK
 
 ```bash
+go mod init example.com/ahasend-echo
 go get github.com/AhaSend/ahasend-go
+go get github.com/google/uuid
 go get github.com/labstack/echo/v5
 ```
 
@@ -122,7 +129,7 @@ func main() {
 		middleware.BodyLimit(16*1024),
 		sendRateLimiter(),
 	)
-	e.POST("/webhooks/ahasend", handleAhaSendWebhook, middleware.BodyLimit(1_000_000))
+	e.POST("/webhooks/ahasend", handleAhaSendWebhook, middleware.BodyLimit(30_000_000))
 	if err := e.Start(":8080"); err != nil {
 		log.Fatalf("Echo stopped: %v", err)
 	}
@@ -279,11 +286,12 @@ func handleAhaSendWebhook(c *echo.Context) error {
 			return c.NoContent(http.StatusRequestEntityTooLarge)
 		}
 		switch {
+		case errors.Is(err, webhooks.ErrUnknownEventType):
+			return c.NoContent(http.StatusNoContent)
 		case errors.Is(err, webhooks.ErrMissingHeaders),
 			errors.Is(err, webhooks.ErrInvalidSignature),
 			errors.Is(err, webhooks.ErrExpiredTimestamp),
-			errors.Is(err, webhooks.ErrInvalidPayload),
-			errors.Is(err, webhooks.ErrUnknownEventType):
+			errors.Is(err, webhooks.ErrInvalidPayload):
 			return c.NoContent(http.StatusBadRequest)
 		default:
 			return c.NoContent(http.StatusInternalServerError)
@@ -316,7 +324,7 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
 
 <AccordionGroup>
   <Accordion title="401 from the API">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
   <Accordion title="Webhook verification always fails">
     Ensure nothing called `c.Bind` or otherwise consumed the body before `ParseRequest`. `BodyLimit` is compatible and should stay on the route; `BodyDump` restores the body but should be skipped because its callback receives the sensitive event payload. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
