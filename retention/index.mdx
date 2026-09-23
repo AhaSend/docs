@@ -35,6 +35,10 @@ Understanding the difference between data and metadata helps you set appropriate
     - Full message payload
 
     **Retention:** 0-30 days (can be completely disabled)
+
+    <Warning>
+    **Message routing needs message data.** Inbound emails are delivered to your route endpoint from stored message data. With message data retention set to 0, inbound emails are discarded on arrival and routes have nothing to deliver. Keep message data retention at 1 day or more on any account that uses [message routing](/integrations/routing).
+    </Warning>
   </Accordion>
 </AccordionGroup>
 
@@ -55,7 +59,7 @@ Configure default retention periods for your entire account:
     - **Message Data:** 0-30 days (default: 30 days)
 
     <Warning>
-    **Minimum Requirements:** Message metadata requires at least 1 day retention for delivery tracking. Message data can be set to 0 days for immediate deletion.
+    **Minimum Requirements:** Message metadata requires at least 1 day retention for delivery tracking. Message data can be set to 0 days for immediate deletion, unless you use message routing: routes deliver inbound emails from stored message data and stop working at 0 days.
     </Warning>
   </Step>
 
