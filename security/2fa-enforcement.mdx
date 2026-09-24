@@ -1,11 +1,14 @@
 ---
-title: "2FA Enforcement"
+title: "Require 2FA for All Team Members"
 sidebarTitle: "2FA Enforcement"
-description: "Require all team members to enable two-factor authentication before accessing your AhaSend account"
+description: "As the AhaSend account owner, require every team member to set up two-factor authentication before they can open the dashboard, and see what they experience."
 icon: "shield-exclamation"
 ---
 
-Enforce Two-Factor Authentication (2FA) for all team members accessing your AhaSend account. When enabled, every user must set up 2FA on their individual profile before they can access your account dashboard or features.
+
+As an AhaSend account owner, you can require two-factor authentication for every team member; this guide explains how to enable enforcement.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Info>
 **Account Owner Only:** Only the account owner can enable 2FA enforcement. This setting affects all team members and requires careful planning.
@@ -60,6 +63,8 @@ Once your personal 2FA is active, enable enforcement for your team:
   </Step>
 </Steps>
 
+Enforcement includes the account owner. When OIDC SSO is enabled for the account, enforce MFA at your identity provider; AhaSend skips its own profile-2FA gate for that SSO account. See [SSO configuration](/security/sso).
+
 ## What Happens to Team Members
 
 When 2FA enforcement is enabled, team members experience the following:
@@ -104,7 +109,7 @@ Mandatory 2FA provides critical security benefits for team accounts:
 
   <Accordion title="Compliance Requirements" icon="scale-balanced">
     **Meet security standards:**
-    - Required for many industry regulations
+    - Helps enforce your team's account-access policy
     - Demonstrates security best practices to auditors
     - Reduces liability from security incidents
   </Accordion>
@@ -127,3 +132,8 @@ Mandatory 2FA provides critical security benefits for team accounts:
     - Share best practices for recovery code storage
   </Accordion>
 </AccordionGroup>
+
+## Related Guides
+
+- [Account quickstart](/quickstart), [Set up 2FA first](/security/2fa), [Team members API](/api-reference/accounts/get-account-members).
+- [Plans and limits](/facts).

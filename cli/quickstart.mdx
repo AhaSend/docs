@@ -1,12 +1,13 @@
 ---
-title: Quick Start
-description: Get started with the AhaSend CLI in minutes
+title: "CLI Quickstart: Send Email from the Terminal"
+description: "Send your first email from the command line with the AhaSend CLI: log in with your API key, add and verify a domain, test in sandbox mode, then send for real."
 icon: play
+sidebarTitle: "Quickstart"
 ---
 
-# Quick Start
-
 This guide will help you send your first email using the AhaSend CLI in just a few minutes.
+
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
 
 ## Prerequisites
 
@@ -31,7 +32,7 @@ You'll be prompted to enter:
 - A profile name (default: "default")
 
 <Tip>
-Your credentials are securely stored in `~/.ahasend/config.yaml` for future use.
+Your credentials are stored in `~/.ahasend/config.yaml` for future use.
 </Tip>
 
 Alternatively, provide credentials directly:
@@ -68,7 +69,7 @@ ahasend domains get example.com
 ```
 
 <Note>
-DNS propagation can take up to 24 hours, but typically completes within minutes.
+Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
 </Note>
 
 ## Step 3: Send Your First Email
@@ -76,7 +77,7 @@ DNS propagation can take up to 24 hours, but typically completes within minutes.
 ### Simple Text Email
 
 ```bash
-ahasend messages send \
+ahasend messages send --sandbox \
   --from noreply@example.com \
   --to recipient@email.com \
   --subject "Hello from AhaSend CLI" \
@@ -86,7 +87,7 @@ ahasend messages send \
 ### HTML Email
 
 ```bash
-ahasend messages send \
+ahasend messages send --sandbox \
   --from noreply@example.com \
   --to recipient@email.com \
   --subject "Welcome to AhaSend" \
@@ -96,7 +97,7 @@ ahasend messages send \
 ### Email with Both HTML and Text
 
 ```bash
-ahasend messages send \
+ahasend messages send --sandbox \
   --from noreply@example.com \
   --to recipient@email.com \
   --subject "Welcome" \
@@ -177,7 +178,7 @@ Create a template file (`welcome.html`):
 ### Send Batch Emails
 
 ```bash
-ahasend messages send \
+ahasend messages send --sandbox \
   --from welcome@example.com \
   --recipients recipients.csv \
   --subject "Welcome to {{company}}" \
@@ -202,8 +203,8 @@ ahasend stats deliverability
 
 # View statistics for a date range
 ahasend stats deliverability \
-  --start-date 2024-01-01 \
-  --end-date 2024-01-31
+  --from-time 7d \
+  --to-time 0h
 ```
 
 ### List Recent Messages
@@ -221,7 +222,7 @@ ahasend messages list --status delivered
 ### Using Different Output Formats
 
 ```bash
-# Default table format
+# Default plain output
 ahasend domains list
 
 # JSON format for automation
@@ -239,7 +240,7 @@ ahasend auth login --profile production
 ahasend auth login --profile staging
 
 # Use specific profile for commands
-ahasend messages send --profile staging \
+ahasend messages send --sandbox --profile staging \
   --from test@staging.example.com \
   --to dev@example.com \
   --subject "Staging Test" \
@@ -252,7 +253,7 @@ ahasend auth switch production
 ### Adding Attachments
 
 ```bash
-ahasend messages send \
+ahasend messages send --sandbox \
   --from noreply@example.com \
   --to customer@example.com \
   --subject "Your Invoice" \
@@ -265,12 +266,12 @@ ahasend messages send \
 
 ```bash
 # Schedule for a specific time
-ahasend messages send \
+ahasend messages send --sandbox \
   --from reminder@example.com \
   --to user@example.com \
   --subject "Reminder: Meeting Tomorrow" \
   --text "Don't forget about our meeting at 2 PM." \
-  --schedule "2024-12-25T10:00:00Z"
+  --schedule "<RFC3339 time within the next 7 days>"
 ```
 
 ## What's Next?
@@ -301,7 +302,7 @@ If you need help at any point:
 ahasend --help
 
 # Command-specific help
-ahasend messages send --help
+ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com --help --text "Docs test"
 
 # Check current status
 ahasend auth status
@@ -312,3 +313,10 @@ For additional support:
 - [GitHub Issues](https://github.com/AhaSend/ahasend-cli/issues)
 - [API Documentation](/api-reference)
 - Email: support@ahasend.com
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
+- [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).
+- [Domain setup](/domains), [Sandbox behavior](/send-api/sandbox).

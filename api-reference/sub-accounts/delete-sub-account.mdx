@@ -1,9 +1,19 @@
 ---
-title: "Delete Sub Account"
-sidebarTitle: "Delete Sub Account"
+title: "Delete a Sub-Account via the API"
+sidebarTitle: "Delete Sub-Account"
 openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/sub-accounts/{sub_account_id}"
+description: "Soft-delete an AhaSend sub-account. It leaves list results, but usage from the current billing period is still billed to the parent account."
 ---
 
+
+The AhaSend API soft-deletes a sub-account under the parent account.
+
 <Info>
-  **Platform Partner feature:** Sub Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
+  **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sub-account setup](/scale/sub-accounts).
+- [Sub-account API rules](/api-reference/sub-accounts/overview), [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).

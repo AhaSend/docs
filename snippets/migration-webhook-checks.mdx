@@ -1,0 +1,1 @@
+Create a separate AhaSend webhook configuration and replace the old verification code with [AhaSend signature checks](/api-reference/webhooks/security). Parse AhaSend's payload shape, deduplicate by its delivery header, and acknowledge verified unknown event types with 2xx. Do not reuse the old provider's signing secret, retry assumptions or event IDs.

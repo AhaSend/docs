@@ -1,0 +1,197 @@
+---
+title: "ahasend subaccounts: Manage Sub-Accounts"
+sidebarTitle: "Sub-Accounts"
+description: "Create and manage AhaSend sub-accounts with the CLI, check pooled usage, suspend test accounts, and issue or revoke their scoped API keys."
+icon: "building"
+---
+
+AhaSend CLI sub-account commands let Platform Partners manage child accounts and their API keys from a parent account.
+
+<Note>
+Sub-account creation is currently blocked by a CLI/API mismatch: the CLI requires a full website URL, while the API requires a bare domain. Wait for a compatible CLI/API release before running the create-first workflow below. The remaining management commands work with an existing sub-account; you can create one through the [API](/api-reference/sub-accounts/create-sub-account).
+</Note>
+
+## Prerequisites
+
+Use a [full parent-account API key](/api-reference/authentication) with the matching [sub-account scopes](/api-reference/scopes). Sub-accounts are available to [Platform Partners](/scale/sub-accounts); [contact sales](mailto:sales@ahasend.com) about access. The shell examples need Bash and jq.
+
+## Create and Manage a Test Sub-Account
+
+After the creation issue above is fixed, save the following three examples in one Bash script. The script stops if creation fails, and only updates or deletes the test account it creates.
+
+```bash
+set -euo pipefail
+TEST_SUBACCOUNT_ID=$(ahasend subaccounts create --name "Docs test" --website https://example.com --monthly-credit 100 --output json | jq -er '.id')
+ahasend subaccounts list
+ahasend subaccounts get "$TEST_SUBACCOUNT_ID"
+ahasend subaccounts update "$TEST_SUBACCOUNT_ID" --name "Docs updated test"
+ahasend subaccounts suspend "$TEST_SUBACCOUNT_ID" --reason "Docs suspension test" --force
+ahasend subaccounts unsuspend "$TEST_SUBACCOUNT_ID"
+ahasend subaccounts usage
+```
+
+Usage `allocated_cost` is a proportional share of the parent's pooled invoice, not standalone pricing. A monthly credit of 0 means no cap.
+
+## Manage a Test Sub-Account API Key
+
+Continue with the sub-account created above. Store the one-time `secret_key` securely if an application needs it; this test keeps only the key ID.
+
+```bash
+TEST_KEY_ID=$(ahasend subaccounts api-keys create "$TEST_SUBACCOUNT_ID" --label "Docs test key" --scope accounts:read --output json | jq -er '.id')
+ahasend subaccounts api-keys list "$TEST_SUBACCOUNT_ID"
+ahasend subaccounts api-keys get "$TEST_SUBACCOUNT_ID" "$TEST_KEY_ID"
+ahasend subaccounts api-keys update "$TEST_SUBACCOUNT_ID" "$TEST_KEY_ID" --label "Docs updated key"
+ahasend subaccounts api-keys delete "$TEST_SUBACCOUNT_ID" "$TEST_KEY_ID" --force
+```
+
+## Delete the Test Sub-Account
+
+After the preceding create-first workflow, remove only its test account:
+
+```bash
+ahasend subaccounts delete "$TEST_SUBACCOUNT_ID" --force
+```
+
+Deletion removes the sub-account from list results. Current billing-period usage still belongs to the parent invoice.
+
+## Commands and Flags
+
+### `subaccounts api-keys create`
+
+```text
+ahasend subaccounts api-keys create <sub-account-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--idempotency-key string` | Idempotency key for safe retries (auto-generated if not provided) |
+| `--label string` | Label for the API key (required) |
+| `--scope strings` | Scopes to grant (required, can be used multiple times) |
+
+### `subaccounts api-keys delete`
+
+```text
+ahasend subaccounts api-keys delete <sub-account-id> <key-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt |
+
+### `subaccounts api-keys get`
+
+```text
+ahasend subaccounts api-keys get <sub-account-id> <key-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `subaccounts api-keys list`
+
+```text
+ahasend subaccounts api-keys list <sub-account-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--cursor string` | Pagination cursor for next page |
+| `--limit int32` | Maximum number of API keys to return |
+
+### `subaccounts api-keys update`
+
+```text
+ahasend subaccounts api-keys update <sub-account-id> <key-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--label string` | New label for the API key |
+| `--scope strings` | New scopes to grant (replaces existing scopes) |
+
+### `subaccounts create`
+
+```text
+ahasend subaccounts create [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--idempotency-key string` | Idempotency key for safe retries (auto-generated if not provided) |
+| `--monthly-credit int` | Monthly credit allocation (0-1000000000) |
+| `--name string` | Sub-account name (required) |
+| `--website string` | Sub-account website (required) |
+
+### `subaccounts delete`
+
+```text
+ahasend subaccounts delete <sub-account-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt |
+
+### `subaccounts get`
+
+```text
+ahasend subaccounts get <sub-account-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `subaccounts list`
+
+```text
+ahasend subaccounts list [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--cursor string` | Pagination cursor for next page |
+| `--limit int32` | Maximum number of sub-accounts to return |
+
+### `subaccounts suspend`
+
+```text
+ahasend subaccounts suspend <sub-account-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt |
+| `--reason string` | Reason for the suspension (required) |
+
+### `subaccounts unsuspend`
+
+```text
+ahasend subaccounts unsuspend <sub-account-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `subaccounts update`
+
+```text
+ahasend subaccounts update <sub-account-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--monthly-credit int` | New monthly credit allocation (0-1000000000) |
+| `--name string` | New sub-account name |
+| `--website string` | New sub-account website |
+
+### `subaccounts usage`
+
+```text
+ahasend subaccounts usage [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Sub-account setup](/scale/sub-accounts).
+- [Sub-account API rules](/api-reference/sub-accounts/overview), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key), [CLI configuration and output](/cli/configuration).
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

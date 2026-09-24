@@ -1,11 +1,14 @@
 ---
-title: "Sending emails in C#"
+title: "Send Email in C# via SMTP (MailKit)"
 sidebarTitle: "C# / .NET"
-description: "Learn how to send emails using AhaSend SMTP with C# and .NET, featuring MailKit for reliable SMTP integration"
+description: "Send email from C# and .NET through AhaSend's SMTP relay with MailKit, and why System.Net.Mail SmtpClient fails AUTH over STARTTLS. HTML, attachments, headers."
 icon: "microsoft"
 ---
 
-# Sending Emails with SMTP in C# / .NET
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
 
 Send emails through AhaSend's SMTP servers using C# and .NET with the powerful MailKit library. This guide covers why you should avoid `System.Net.Mail` and use MailKit instead for reliable email delivery.
 
@@ -14,6 +17,8 @@ Send emails through AhaSend's SMTP servers using C# and .NET with the powerful M
 </Warning>
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -25,11 +30,6 @@ Before you begin, ensure you have:
     - Basic knowledge of C# programming
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 
   <Accordion title="Project Dependencies" icon="code-fork">
     - **MailKit** NuGet package (recommended)
@@ -38,9 +38,6 @@ Before you begin, ensure you have:
   </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Why MailKit Over System.Net.Mail?
 
@@ -63,24 +60,9 @@ AhaSend works with any SMTP-compatible library, but for C#/.NET applications, we
 
 ## Connection Settings
 
-Use these settings for all C#/.NET SMTP configurations with AhaSend:
+<SmtpSettings />
 
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-</CardGroup>
-
-## ❌ Why System.Net.Mail Fails
+## Why System.Net.Mail Fails
 
 The built-in `System.Net.Mail.SmtpClient` in .NET has fundamental issues with STARTTLS authentication that make it incompatible with AhaSend.
 
@@ -148,7 +130,7 @@ You can confirm this authentication failure by capturing SMTP traffic with tools
 **Know a Workaround?** If you've found a way to make `System.Net.Mail` work reliably with AhaSend's AUTH PLAIN over STARTTLS, please [contact our support team](mailto:support@ahasend.com). We'd be happy to update this guide with your solution!
 </Info>
 
-## ✅ Use MailKit (Recommended)
+## Use MailKit (Recommended)
 
 MailKit is a modern, actively maintained .NET library that correctly handles SMTP authentication with AhaSend. It properly negotiates authentication mechanisms like `PLAIN` and `LOGIN` over `STARTTLS`.
 
@@ -166,11 +148,13 @@ Install-Package MailKit
 dotnet add package MailKit
 ```
 
+Use the exact version installed by `dotnet add package MailKit` in your project file:
+
 ```xml PackageReference
-<PackageReference Include="MailKit" Version="4.3.0" />
+<PackageReference Include="MailKit" Version="YOUR_INSTALLED_VERSION" />
 ```
 
-```bash Package Manager UI
+```text Package Manager UI
 Search for "MailKit" by Jeffrey Stedfast in NuGet Package Manager
 ```
 
@@ -393,8 +377,8 @@ class Program
                 message.Headers.Add("ahasend-track-opens", "true");
                 message.Headers.Add("ahasend-track-clicks", "true");
                 message.Headers.Add("ahasend-tags", "product-update,newsletter,csharp");
-                message.Headers.Add("ahasend-message-retention", "30");
-                message.Headers.Add("ahasend-message-data-retention", "7");
+                message.Headers.Add("AhaSend-Metadata-Retention", "30");
+                message.Headers.Add("AhaSend-Data-Retention", "7");
 
                 var builder = new BodyBuilder();
                 builder.TextBody = "Check out our latest features at https://yourdomain.com/features";
@@ -744,3 +728,5 @@ class Program
 <Tip>
 **Pro Tip:** Always use MailKit instead of System.Net.Mail for AhaSend integration. Configure your SMTP settings through dependency injection, implement proper error handling with retry logic, and start with sandbox mode during development. Use async patterns for better performance in web applications.
 </Tip>
+
+<SmtpRelated />

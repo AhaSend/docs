@@ -1,5 +1,29 @@
 ---
-title: "Suppression Created Webhook"
-sidebarTitle: "Created"
+title: "suppression.created Webhook Event"
+sidebarTitle: "Suppression Created"
 openapi: "/webhooks.yaml webhook suppression.created"
+description: "The suppression.created webhook fires when AhaSend adds an address to your suppression list, for example after hard bounces. Includes reason and expiry."
 ---
+
+
+AhaSend sends this event when a suppression is created for an email address.
+
+**Why suppressions are created**:
+- Multiple hard bounces from the same email address
+- Repeated soft bounces over time
+- Manual suppression through the API or dashboard
+
+**Auto-expiration**: Suppression duration depends on the cause: most bounces last 30 days, temporary delivery failures 7 days, messages that expire after repeated attempts 15 days, and spam complaints are effectively permanent. Suppressions created through the API use the required `expires_at` value.
+
+**Impact**: Future emails to this address will be automatically suppressed until the suppression expires or is manually removed.
+
+**When it's sent**: When a new suppression is added to your account.
+
+Suppression duration depends on its cause, rather than a single fixed expiry. See [suppression durations](/bounces#suppression-duration).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Suppression durations](/bounces#suppression-duration).

@@ -1,5 +1,23 @@
 ---
-title: "Delete Suppression"
+title: "Remove a Suppression via the API"
 sidebarTitle: "Delete Suppression"
 openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/suppressions"
+description: "Remove an email address from your AhaSend suppression list through the API so you can send to it again, for one sending domain or all your domains."
 ---
+
+
+The AhaSend API deletes suppressions for an email address.
+
+**Query Parameters:**
+- `email`: Required email address to delete from suppression list
+- `domain`: Optional domain filter to delete suppressions for specific domain only
+
+<Warning>
+Only remove a suppression when you know the address is valid again. Removing a hard-bounce or complaint suppression can harm your sending reputation.
+</Warning>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Suppression list API](/api-reference/suppressions/get-suppressions).
+- [Suppression CLI](/cli/commands/suppressions), [Suppression durations](/bounces#suppression-duration), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

@@ -1,0 +1,81 @@
+---
+title: "Send Email from Google Cloud Functions (Python)"
+sidebarTitle: "Google Functions (Python)"
+description: "Send email from Google Cloud Run functions in Python through AhaSend, with a protected HTTP function, local sandbox tests and clear failure responses."
+---
+
+import GuideRelated from "/snippets/guide-related.mdx";
+import QuickSend from "/snippets/quick-send-python.mdx";
+import CloudSend from "/snippets/cloud-python-send.mdx";
+
+AhaSend lets you send transactional email from Google Cloud Run functions in Python through the HTTP API; this guide adds a protected function and runs it locally.
+
+Cloud Run functions is the current name for the service previously called Cloud Functions.
+
+## Prerequisites
+
+Use a [verified sending domain](/domains), your account ID, and a domain-scoped [send-only API v2 key](/send-api/credentials). Use [sandbox mode](/send-api/sandbox) for every test. Management tasks need a separate [full API key](/api-reference/authentication).
+
+Use Python 3.13 and the [Python Functions Framework](https://github.com/GoogleCloudPlatform/functions-framework-python). You can complete the local test without a Google Cloud account.
+
+## Install the Dependencies
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install functions-framework
+python -m pip freeze > requirements.txt
+```
+
+<QuickSend />
+
+<CloudSend />
+
+## Create the HTTP Function
+
+Save this as `main.py`:
+
+```python main.py
+import functions_framework
+from send_email import send_email
+
+@functions_framework.http
+def send_email_http(request):
+    if request.method != "POST":
+        return {"error": "Use POST"}, 405
+    if len(request.get_data()) > 16384:
+        return {"error": "Request too large"}, 413
+    if not request.is_json:
+        return {"error": "Use application/json"}, 415
+    body = request.get_json(silent=True)
+    if body is None:
+        return {"error": "Invalid JSON"}, 400
+    status, result = send_email(body, request.headers.get("authorization", ""))
+    return result, status
+```
+
+## Run with the Functions Framework
+
+If port 8080 is busy, set `PORT` to an unused local port in both shells. The commands below default to 8080.
+
+Export the shared code's environment variables, activate `.venv`, then start the function:
+
+```bash
+functions-framework --target=send_email_http --port="${PORT:-8080}"
+```
+
+In another shell with `SEND_TOKEN` set, run:
+
+```bash
+curl --fail-with-body "http://localhost:${PORT:-8080}"   -H "Authorization: Bearer $SEND_TOKEN" -H 'Content-Type: application/json'   -d '{"event_id":"local-google-python-001"}'
+```
+
+Expect HTTP 202 with acceptance statuses. A wrong token returns 401, invalid input returns 400 and a failed upstream request returns 502. Use a new event ID for each new test and keep the original one when retrying the same job.
+
+## Prepare the Hosted Function
+
+Deploy with the Python 3.13 runtime and entry point `send_email_http`. Include `main.py`, `send_email.py` and `requirements.txt`. Follow [Google's function deployment steps](https://cloud.google.com/run/docs/deploy-functions), load credentials with [Secret Manager](https://cloud.google.com/run/docs/configuring/services/secrets), and restrict invokers with IAM. With both IAM and the application bearer token enabled, send the Google identity token in `X-Serverless-Authorization` and the app token in `Authorization`; see [service authentication](https://cloud.google.com/run/docs/authenticating/service-to-service).
+
+Use [delivery webhooks](/integrations/webhooks) to learn the final result. Also see [Google functions in Node.js](/guides/google-cloud-functions-nodejs), [Go](/guides/google-cloud-functions) and [Python SMTP](/smtp/python).
+
+<GuideRelated />

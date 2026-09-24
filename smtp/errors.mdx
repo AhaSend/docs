@@ -1,0 +1,52 @@
+---
+title: "SMTP Error Codes and Delivery Fixes"
+sidebarTitle: "SMTP Errors"
+description: "Read SMTP error codes from AhaSend and recipient servers, including 550 5.1.1, authentication failures, temporary deferrals and sender-domain problems."
+---
+
+AhaSend SMTP errors tell you whether a connection, submission or recipient delivery failed; this reference helps you read the full reply and choose the next step.
+
+## Where Did the Error Occur?
+
+An error during your application's connection to AhaSend is a submission problem. A reply recorded later in a delivery attempt came from the destination mail system. Fix the component that produced the reply: changing your SMTP password will not repair a nonexistent recipient mailbox.
+
+The three-digit SMTP reply gives a broad result. An enhanced code such as `5.1.1` adds detail. A `4xx` reply is generally temporary; a `5xx` reply is generally permanent for that attempt. Read the accompanying text and sender or recipient address. The [SMTP standard](https://www.rfc-editor.org/rfc/rfc5321.html) and [enhanced status code registry](https://www.iana.org/assignments/smtp-enhanced-status-codes/smtp-enhanced-status-codes.xhtml) define these classes.
+
+## What Do Common Codes Mean?
+
+These are common SMTP meanings, not a promise that every server emits identical text.
+
+| Reply or enhanced code | Meaning | Next step |
+|---|---|---|
+| `220` | Server is ready | Continue the SMTP exchange |
+| `235` | Authentication succeeded | Submit the message |
+| `250` after message data | That server accepted the message | Track delivery separately; do not immediately resend |
+| `421` | Service unavailable or closing the connection | Retry later with a bounded delay after checking service status |
+| `450`, `451`, `452` | Temporary mailbox, processing or resource problem | Read the text and let the delivery queue retry |
+| `530` | Authentication or a required security step is missing | Enable STARTTLS, then authenticate as the reply requires |
+| `535` / `5.7.8` | Authentication credentials are invalid | Check the SMTP username and password, not an API key |
+| `550 5.1.1` | Destination mailbox address does not exist | Correct the address; do not repeatedly retry it |
+| `5.2.2` | Mailbox is full | Follow the accompanying 4xx or 5xx reply and provider text |
+| `552` / `5.3.4` | Message exceeds a size limit | Reduce content or attachments and check the stated limit |
+| `5.7.1` | Delivery refused for a security or policy reason | Inspect authentication, content, sender reputation and the server's text |
+| `5.7.26` | Multiple authentication checks failed | Check SPF, DKIM and DMARC alignment |
+
+## Why Does AhaSend Return a 556 Domain Error?
+
+An AhaSend submission reply such as `556 Invalid account or domain` or a reply saying the From domain is not allowed means the account, sender domain or credential's domain access needs checking. Confirm that the From address uses a verified domain allowed by that credential. For a newly added or verified domain, use the refresh timing on [domain setup](/domains#troubleshooting).
+
+Do not infer that every `556` from every recipient server has this AhaSend-specific meaning. Keep the exact reply when reporting a problem.
+
+## Why Does Port 465 Fail?
+
+AhaSend does not support implicit TLS on port 465. Use STARTTLS on a supported port and authenticate after TLS, as described in [SMTP settings](/smtp). Do not disable certificate validation to get past a connection error. If your host blocks outbound SMTP, check its network policy or use the [HTTPS API](/send-api/send-email).
+
+## Should I Retry a Failed Send?
+
+Let AhaSend handle recipient delivery attempts after it accepts a message. A temporary delivery event is not a request for your app to send another copy. If the connection drops before you receive the final submission reply, the outcome can be uncertain; check the message log before retrying. SMTP has no equivalent of the REST API's [idempotency key](/api-reference/idempotency).
+
+## Related Guides
+
+- [SMTP credentials](/smtp/credentials), [SMTP hosts, ports and limits](/smtp), [domain setup](/domains) and [email authentication](/email-authentication).
+- [Bounces and suppression durations](/bounces), [message logs API](/api-reference/messages/get-messages), [SMTP CLI](/smtp/cli) and [Node.js SMTP](/smtp/nodejs).
+- [REST API errors](/api-reference/errors), [Node.js SDK](/guides/nodejs-sdk) and [troubleshooting](/troubleshooting).

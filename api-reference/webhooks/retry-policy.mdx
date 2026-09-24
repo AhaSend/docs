@@ -1,20 +1,53 @@
 ---
-title: "Webhook Delivery Retry Policy"
+title: "Webhook and Route Retry Policy"
 sidebarTitle: "Retry Policy"
-description: ""
+description: "Check AhaSend webhook and route retry schedules, attempt limits, five-second timeouts, duplicate deliveries, and how to re-enable a failed endpoint."
 icon: "repeat"
 ---
-A webhook delivery is considered successful as long as your webhook endpoint returns `2xx` HTTP status codes.
 
-Failed webhooks are retried **6 times over 16+ minutes**.
+AhaSend retries failed webhook and inbound route deliveries: webhooks get 6 attempts over about 16 minutes, and routes get 12 attempts over about 11 hours. Attempt counts include the first attempt.
 
-The retry policy uses an exponential backoff based on how many times the webhook has errored.
-A randomized ±10% jitter is applied to prevent stampeding errors from all retrying at the same time.
+Signed webhooks and routes are available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-```
-time to next attempt: unsuccessful attempts ^ 4 + rand(±10%)
-```
+## What Counts as a Failed Attempt?
 
-<Warning>
-After 100 consecutive failures, the webhook is automatically disabled, and all account members will be notified via email.
-</Warning>
+Any 2xx response is successful. Any non-2xx response, timeout or connection error is a failure. Each attempt times out after 5 seconds.
+
+## When Does AhaSend Retry?
+
+The delay before each retry is (failures so far)^4 seconds, ±10%. Times in this table exclude that jitter and the time spent making requests.
+
+| Attempt | Delay before attempt (seconds) | Total waiting time (seconds) | Webhooks | Routes |
+|---|---|---|---|---|
+| 1 | 0 | 0 | Yes | Yes |
+| 2 | 1 | 1 | Yes | Yes |
+| 3 | 16 | 17 | Yes | Yes |
+| 4 | 81 | 98 | Yes | Yes |
+| 5 | 256 | 354 | Yes | Yes |
+| 6 | 625 | 979 | Yes | Yes |
+| 7 | 1,296 | 2,275 | Finished | Yes |
+| 8 | 2,401 | 4,676 | Finished | Yes |
+| 9 | 4,096 | 8,772 | Finished | Yes |
+| 10 | 6,561 | 15,333 | Finished | Yes |
+| 11 | 10,000 | 25,333 | Finished | Yes |
+| 12 | 14,641 | 39,974 | Finished | Yes |
+
+## How Do I Re-enable a Disabled Endpoint?
+
+After more than 100 consecutive failed attempts, the webhook or route is disabled and account users are emailed. Correct the endpoint, then [update the webhook](/api-reference/webhooks/update-webhook) or [update the route](/api-reference/routes/update-route) with `enabled: true` to turn it back on.
+
+Redirects are followed, but 301, 302 and 303 turn the POST into a GET without a body, so point the endpoint at its final URL.
+
+Verify [signatures](/api-reference/webhooks/security) before processing events. Acknowledge verified unknown event types with a 2xx response so new event types do not cause repeated failures.
+
+## How Do I Handle Duplicate Deliveries?
+
+Verify the signature, then use `webhook-id` to identify a delivery across retries. Commit that ID and the durable work it protects together, so a retry cannot repeat a side effect or lose work. Return 2xx for an already-processed delivery.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+
+- For inbound email: [routing setup](/integrations/routing), [route payload](/api-reference/routes/route-message) and [CLI route testing](/cli/route-testing).

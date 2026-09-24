@@ -1,17 +1,26 @@
 ---
-title: "How to Send Email with ElysiaJS"
+title: "How to Send Email with ElysiaJS (Bun)"
 sidebarTitle: "ElysiaJS"
-description: "Send transactional email from an ElysiaJS app on Bun in under 5 minutes with the AhaSend SDK, plus signed webhook verification."
+description: "Send transactional email from an ElysiaJS app on Bun with the AhaSend SDK: a typed t.Object send route, auth in onRequest, and verified signed webhooks."
 keywords: ["elysiajs send email", "elysia transactional email", "bun email api elysia", "ahasend elysia", "elysia webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-bun.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to use AhaSend to send transactional email from ElysiaJS in Bun, keep credentials on the server, and test a sandbox send.
+
 [ElysiaJS](https://elysiajs.com) runs on Bun, which is one of the runtimes the SDK officially supports. Elysia has no dedicated adapter, so the webhook route calls the generic `WebhookVerifier` on the raw request body.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Bun installed
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{your-domain}` scope (`messages:send:all` for sending from many domains), and your account ID
 
 ## Install the SDK
 
@@ -34,6 +43,8 @@ yarn add @ahasend/sdk elysia
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -65,11 +76,18 @@ Elysia validates and types the body for you when you attach a `t.Object` schema:
 
 ```ts src/index.ts
 import { Elysia, t } from "elysia";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { AhaSendAPIError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend";
 
 const welcomeEndpointToken = process.env.WELCOME_ENDPOINT_TOKEN;
 if (!welcomeEndpointToken) throw new Error("WELCOME_ENDPOINT_TOKEN is required");
+
+const expectedTokenHash = createHash("sha256").update(welcomeEndpointToken).digest();
+function isAuthorized(header: string | null) {
+  const provided = header?.startsWith("Bearer ") ? header.slice(7) : "";
+  return provided !== "" && timingSafeEqual(createHash("sha256").update(provided).digest(), expectedTokenHash);
+}
 
 const WELCOME_PATH = "/api/welcome";
 
@@ -78,7 +96,7 @@ const app = new Elysia({
 })
   .onRequest(({ request, set }) => {
     if (new URL(request.url).pathname !== WELCOME_PATH) return;
-    if (request.headers.get("authorization") !== `Bearer ${welcomeEndpointToken}`) {
+    if (!isAuthorized(request.headers.get("authorization"))) {
       set.status = 401;
       return { error: "Unauthorized" };
     }
@@ -102,11 +120,13 @@ const app = new Elysia({
           subject: "Welcome to Your App!",
           html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
           text_content: "Welcome aboard! We're glad you're here.",
-        });
+          sandbox: true,
+        }, { idempotencyKey: `sandbox-welcome-${body.eventId}` });
 
         const rejected = result.data.filter((r) => r.status === "error");
         if (rejected.length > 0) console.warn(`${rejected.length} recipient(s) rejected`);
 
+        set.status = rejected.length ? 422 : 202;
         return { statuses: result.data.map((r) => r.status) }; // ["queued"]
       } catch (err) {
         if (err instanceof AhaSendAPIError) {
@@ -121,6 +141,7 @@ const app = new Elysia({
       body: t.Object({
         email: t.String({ format: "email" }),
         name: t.Optional(t.String()),
+        eventId: t.String({ pattern: "^[A-Za-z0-9._:-]{1,200}$" }),
       }),
     },
   );
@@ -222,7 +243,7 @@ app
 
 `verifier.parse()` accepts the Fetch `Headers` object from `request.headers` directly, and it is asynchronous, so await it. Keep `parse: "none"`, and keep the webhook route free of plugins or hooks that consume `request.body` before the handler.
 
-Narrow the catch to `AhaSendWebhookVerificationError` and rethrow anything else. A rejected signature answers 400, while a bug of your own reaches `onError` and becomes a logged 500 that AhaSend retries. Failed deliveries are retried 6 times over 16+ minutes, and a webhook is disabled automatically after 100 consecutive failures, so reporting your own bugs as bad signatures quietly spends that budget.
+Narrow the catch to `AhaSendWebhookVerificationError` and rethrow anything else. A rejected signature answers 400, while a bug of your own reaches `onError` and becomes a logged 500 that AhaSend retries. Failed deliveries are delivered with 6 attempts over about 16 minutes, and a webhook is disabled automatically after more than 100 consecutive failed attempts, so reporting your own bugs as bad signatures quietly spends that budget.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
@@ -232,13 +253,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour. The first attempt must be in the future and within seven days of the request.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Attachments**: for binary files such as PDFs, base64-encode the bytes yourself, use the encoded string as `data`, and set `base64: true`. The flag tells AhaSend how to decode `data`; it does not perform the encoding.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Prefer a plain server or a different router? See the [Bun](/guides/bun) and [Hono](/guides/hono) guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -256,3 +271,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Pref
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

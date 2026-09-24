@@ -1,16 +1,17 @@
 ---
-title: SMTP
-description: Manage SMTP credentials for sending emails through AhaSend's SMTP service
+title: "ahasend smtp: SMTP Credentials and Test Sends"
+description: "Create, list, and delete AhaSend SMTP relay credentials from the CLI, and send test emails through send.ahasend.com on port 587 to verify your setup."
 icon: server
+sidebarTitle: "smtp"
 ---
-
-# SMTP Command
 
 Manage SMTP credentials for sending emails through AhaSend's SMTP service.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Overview
 
-```bash
+```text
 ahasend smtp [subcommand] [flags]
 ```
 
@@ -27,7 +28,7 @@ Use SMTP credentials to:
 - Send emails from email clients (Outlook, Thunderbird, etc.)
 - Integrate with applications that only support SMTP
 - Use AhaSend from programming languages without SDK support
-- Send transactional emails from servers or IoT devices
+- Send transactional emails from servers that support STARTTLS and AUTH PLAIN
 
 ## List SMTP Credentials
 
@@ -57,23 +58,27 @@ ahasend smtp create \
 ## Get SMTP Details
 
 ```bash
-ahasend smtp get smtp_1234567890abcdef
+ahasend smtp get YOUR_RESOURCE_ID
 ```
 
 ## Delete SMTP Credential
 
 ```bash
-ahasend smtp delete smtp_1234567890abcdef
+TEST_ID=$(ahasend smtp create --name "Docs deletion test" --sandbox --non-interactive --output json | jq -er '.id')
+ahasend smtp delete "$TEST_ID"
 ```
 
 ## Send via SMTP
 
 Send email using SMTP protocol for testing:
 
+Set `SMTP_USERNAME` and `SMTP_PASSWORD` in your shell from the values returned when you created the sandbox credential. The CLI cannot retrieve an existing credential's password from its ID; pass both values explicitly.
+
 ```bash
 # Basic SMTP send
-ahasend smtp send \
-  --credential-id smtp_1234567890abcdef \
+ahasend smtp send --sandbox \
+  --username "$SMTP_USERNAME" \
+  --password "$SMTP_PASSWORD" \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "SMTP Test" \
@@ -82,9 +87,13 @@ ahasend smtp send \
 # Test SMTP connection
 ahasend smtp send \
   --test \
+  --username "$SMTP_USERNAME" \
+  --password "$SMTP_PASSWORD" \
   --server send.ahasend.com:587 \
   --from sender@example.com \
-  --to recipient@example.com
+  --to recipient@example.com \
+  --subject "Connection test" \
+  --text "This message is built but not sent"
 ```
 
 Each SMTP credential provides:
@@ -97,3 +106,67 @@ Each SMTP credential provides:
 
 - [Send messages via API](/cli/commands/messages)
 - [Manage API keys](/cli/commands/apikeys)
+
+## Command Flags
+
+These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `smtp create`
+
+| Flag | Description and default |
+|---|---|
+| `--domains strings` | Allowed domains for scoped credentials (comma-separated) |
+| `--name string` | Credential name (required) |
+| `--non-interactive` | Disable interactive prompts |
+| `--sandbox` | Create as sandbox credential for testing |
+| `--scope string` | Credential scope (global or scoped) (default "global") |
+
+### `smtp delete`
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt |
+
+### `smtp get`
+
+This command has no command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `smtp list`
+
+| Flag | Description and default |
+|---|---|
+| `--cursor string` | Pagination cursor for continued results |
+| `--limit int32` | Maximum number of credentials to return (1-100) (default 50) |
+
+### `smtp send`
+
+| Flag | Description and default |
+|---|---|
+| `--attach strings` | File attachments (can be used multiple times) |
+| `--bcc strings` | BCC recipients |
+| `--cc strings` | CC recipients |
+| `--credential-id string` | Use specific SMTP credential by ID |
+| `--from string` | From email address |
+| `--header strings` | Custom headers (format: 'Name: value') |
+| `--html string` | HTML content |
+| `--html-file string` | Read HTML content from file |
+| `--password string` | SMTP password |
+| `--sandbox` | Send in sandbox mode |
+| `--sandbox-result string` | Sandbox result simulation: deliver, bounce, defer, fail, or suppress (only used with --sandbox) (default "deliver") |
+| `--server string` | SMTP server address (default "send.ahasend.com:587") |
+| `--subject string` | Email subject |
+| `--tags strings` | Message tags |
+| `--test` | Test SMTP connection and message building (don't send email) |
+| `--text string` | Plain text content |
+| `--text-file string` | Read text content from file |
+| `--to strings` | Recipient email addresses (can be used multiple times) |
+| `--track-clicks` | Enable click tracking |
+| `--track-opens` | Enable open tracking |
+| `--username string` | SMTP username (uses credential from account if not provided) |
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [SMTP credential setup](/smtp/credentials).
+- [SMTP credential API](/api-reference/smtp-credentials/create-smtp-credential), [SMTP settings](/smtp), [CLI configuration and output](/cli/configuration).
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Domain setup](/domains).
+- [Sandbox behavior](/send-api/sandbox), [Tracking setup](/tracking/open-tracking).

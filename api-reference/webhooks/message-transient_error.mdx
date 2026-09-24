@@ -1,5 +1,25 @@
 ---
-title: "Message Deferred Webhook"
+title: "message.transient_error (Deferred) Webhook Event"
 sidebarTitle: "Deferred"
 openapi: "/webhooks.yaml webhook message.transient_error"
+description: "The message.transient_error webhook fires when AhaSend defers an email after a temporary (soft bounce) failure and will retry delivery. Payload and causes."
 ---
+
+
+AhaSend sends this event when an email delivery is delayed due to a temporary issue with the receiving mail server.
+
+This is a temporary failure (soft bounce). AhaSend will retry delivery according to its retry policy. Common causes include:
+- Recipient's mailbox is full
+- Temporary server issues
+- Rate limiting by the recipient's server
+
+**When it's sent**: When a temporary delivery failure occurs.
+
+This event concerns the message delivery retry window, which ends at the message's expiry. It is separate from [webhook delivery retries](/api-reference/webhooks/retry-policy). See [message scheduling](/send-api/send-email#validation-requirements).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

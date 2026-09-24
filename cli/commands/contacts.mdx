@@ -1,0 +1,137 @@
+---
+title: "ahasend contacts: Manage Account Contacts"
+sidebarTitle: "Contacts"
+description: "Create, read, update, delete, and batch-import AhaSend account contacts with the CLI, including status, unsubscribe choices, and custom attributes."
+icon: "address-book"
+---
+
+AhaSend CLI contact commands manage account-global contacts by email address or UUID.
+
+<Note>
+Contacts support is still in development and has not been deployed to the API. These commands exist in the development CLI build `7a47882`, but not in the published v0.2.0 binary. Wait for both API support and a [CLI release](https://github.com/AhaSend/ahasend-cli/releases) containing contacts before using these examples.
+</Note>
+
+## Prerequisites
+
+[Authenticate with a full API key](/cli/authentication). Contact tasks need `contacts:read`, `contacts:write`, or `contacts:delete`, according to the action. Attribute keys must already exist in the dashboard. Creating a contact does not subscribe it to a list.
+
+## Create, Read and Update
+
+Choose a fresh test address, then run these commands in order:
+
+```bash
+ahasend contacts create docs-contact-test@example.com --first-name Pat --last-name Example --status enabled
+ahasend contacts list --limit 10
+ahasend contacts get docs-contact-test@example.com
+ahasend contacts update docs-contact-test@example.com --unsubscribed=true
+```
+
+`update` sends only fields you supply. Set an attribute's value to `null` to remove that value; use `--attributes` with a JSON object. Status values are `enabled`, `disabled`, and `blocked`.
+
+## Batch Import
+
+Save this as `contacts.json`. Use fresh test addresses for each run.
+
+```json contacts.json
+{"data":[{"email":"docs-batch-test@example.com","first_name":"Pat"}]}
+```
+
+```bash
+ahasend contacts batch --file contacts.json --idempotency-key docs-contact-import-UNIQUE_RUN_ID
+```
+
+## Delete a Test Contact
+
+The example creates the contact it deletes. Use a fresh address for the fixture.
+
+```bash
+ahasend contacts create docs-contact-delete-test@example.com --first-name Test
+ahasend contacts delete docs-contact-delete-test@example.com --force
+```
+
+## Commands and Flags
+
+### `contacts batch`
+
+```text
+ahasend contacts batch --file <JSON> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--file string` | JSON file containing `{"data":[...]}` (required) |
+| `--idempotency-key string` | Idempotency key for safe retries |
+
+### `contacts create`
+
+```text
+ahasend contacts create <email> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--attributes string` | Contact attributes as a JSON object |
+| `--first-name string` | Contact first name |
+| `--idempotency-key string` | Idempotency key for safe retries |
+| `--last-name string` | Contact last name |
+| `--status string` | Contact status (enabled, disabled, blocked) |
+| `--status-reason string` | Reason for the contact status |
+| `--unsubscribed` | Whether the contact is globally unsubscribed |
+
+### `contacts delete`
+
+```text
+ahasend contacts delete <id-or-email> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt |
+
+### `contacts get`
+
+```text
+ahasend contacts get <id-or-email> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `contacts list`
+
+```text
+ahasend contacts list [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Cursor for the next page |
+| `--before string` | Cursor for the previous page |
+| `--email string` | Filter by normalized exact email address |
+| `--from-time string` | Include contacts created at or after this RFC3339 time |
+| `--limit int32` | Maximum number of contacts to return (1-100; default 100) |
+| `--status string` | Filter by status (enabled, disabled, blocked) |
+| `--subscribed string` | Filter by subscription state (true, false) |
+| `--to-time string` | Include contacts created at or before this RFC3339 time |
+
+### `contacts update`
+
+```text
+ahasend contacts update <id-or-email> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--attributes string` | Contact attributes as a JSON object |
+| `--email string` | New email address |
+| `--first-name string` | Contact first name |
+| `--last-name string` | Contact last name |
+| `--status string` | Contact status (enabled, disabled, blocked) |
+| `--status-reason string` | Reason for the contact status |
+| `--unsubscribed` | Whether the contact is globally unsubscribed |
+
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
+- [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

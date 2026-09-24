@@ -1,11 +1,13 @@
 ---
-title: "Special Email Headers"
+title: "SMTP Headers for Tracking, Tags and Sandbox"
 sidebarTitle: "Special Headers"
-description: "Customize AhaSend's behavior with special email headers for tracking, sandbox mode, retention, and message tagging"
+description: "Reference for AhaSend custom SMTP headers for open and click tracking, tags, retention and sandbox mode, with accepted values and limits."
 icon: "heading"
 ---
 
 AhaSend supports special email headers that allow you to override default settings and customize email behavior on a per-message basis. These headers give you fine-grained control over tracking, testing, data retention, and message organization without changing your account-wide settings.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Info>
 **Header Usage:** All AhaSend special headers are removed before email delivery and are never visible to recipients. They're used only to control AhaSend's processing behavior.
@@ -36,7 +38,9 @@ Control email tracking behavior on a per-message basis, overriding your account-
 **Privacy Considerations:** Email tracking has privacy implications. Many email clients block remote content loading, and some providers prefetch content, which can lead to inaccurate tracking results.
 </Warning>
 
-### Open Tracking Header
+Header names are case-insensitive. This page uses `AhaSend-` casing for readability.
+
+## Open Tracking Header
 **Header:** `ahasend-track-opens`<br />
 **Values:** `true` | `false`<br />
 **Purpose:** Enable or disable open tracking for individual emails
@@ -137,6 +141,8 @@ Content-Type: text/plain
 This email will simulate a bounce for testing error handling.
 ```
 
+Header names are case-insensitive. See the [SMTP language examples](/smtp) for setting them in your library.
+
 ## Retention Headers
 
 Customize data retention policies for individual emails, overriding your account defaults.
@@ -149,7 +155,7 @@ AhaSend provides two types of retention control for different aspects of your em
 <AccordionGroup>
   <Accordion title="Message Metadata & Delivery Log Retention" icon="chart-line">
     **Header:** `ahasend-metadata-retention`<br />
-    **Values:** 1-30 days<br />
+    **Values:** 1 day to your [plan's maximum](/retention)<br />
     **Purpose:** Control how long metadata and delivery logs are retained
 
     Includes delivery status, timestamps, recipient information, and tracking data.
@@ -157,7 +163,7 @@ AhaSend provides two types of retention control for different aspects of your em
 
   <Accordion title="Message Data Retention" icon="envelope">
     **Header:** `ahasend-data-retention`<br />
-    **Values:** 0-30 days<br />
+    **Values:** Within your [plan's range](/retention); 0 needs approval<br />
     **Purpose:** Control how long the actual email content is retained
 
     Includes email body, attachments, and complete message content. Set to 0 for immediate deletion after processing.
@@ -279,8 +285,8 @@ Content-Type: text/html
   </Accordion>
 
   <Accordion title="Data Management Headers" icon="database">
-    - `ahasend-metadata-retention`: Number (1-30) - Metadata & delivery log retention in days
-    - `ahasend-data-retention`: Number (0-30) - Email content retention in days
+    - `ahasend-metadata-retention`: Integer within your plan's range - metadata and delivery log retention in days
+    - `ahasend-data-retention`: Integer within your plan's range - email content retention in days; 0 needs approval
     - `ahasend-tags`: Comma-separated list - Message tags (max 10 tags, 64 chars each)
   </Accordion>
 </AccordionGroup>
@@ -300,3 +306,10 @@ Content-Type: text/html
     🗸 Sandbox headers work with any credential type
   </Card>
 </CardGroup>
+
+## Related Guides
+
+- [Domain setup](/domains), [SMTP credentials](/smtp/credentials), [SMTP settings](/smtp).
+- [Sandbox mode](/send-api/sandbox), [Retention](/retention), [API sending](/send-api/send-email).
+- [SMTP CLI](/cli/commands/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [Plans and limits](/facts), [Tracking setup](/tracking/open-tracking), [Suppression durations](/bounces#suppression-duration).

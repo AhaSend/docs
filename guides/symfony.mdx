@@ -1,0 +1,87 @@
+---
+title: "How to Send Email with Symfony Mailer"
+sidebarTitle: "Symfony"
+description: "Send email with Symfony Mailer and the AhaSend SMTP bridge: install the package, require STARTTLS, test in sandbox mode and handle transport failures."
+---
+
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpRelated from "/snippets/smtp-related.mdx";
+
+AhaSend works with Symfony Mailer's SMTP bridge; this guide installs it, sends a sandbox email and adds a production sending script.
+
+<SmtpPrerequisites />
+
+Use PHP 8.4.1 or newer and Composer for the Symfony 8.1 packages below. The [AhaSend bridge](https://symfony.com/packages/aha-send-mailer) is a real Symfony package. In the tested 8.1 release, its API transport uses legacy API v1; this guide uses SMTP. Do not put a v2 API key in that release's API transport.
+
+## Install the Mailer
+
+```bash
+composer require symfony/mailer:^8.1 symfony/aha-send-mailer:^8.1
+```
+
+Set `SMTP_USERNAME`, `SMTP_PASSWORD` to a sandbox SMTP credential and `AHASEND_FROM` to your verified sender. Save `quick-send.php`:
+
+```php quick-send.php
+<?php
+require __DIR__.'/vendor/autoload.php';
+use Symfony\Component\Mailer\Bridge\AhaSend\Transport\AhaSendSmtpTransport;
+use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mime\Email;
+$transport = new AhaSendSmtpTransport(getenv('SMTP_USERNAME'), getenv('SMTP_PASSWORD'));
+$transport->setRequireTls(true);
+$email = (new Email())->from(getenv('AHASEND_FROM'))->to('recipient@example.com')
+    ->subject('Symfony sandbox test')->text('Hello from AhaSend');
+(new Mailer($transport))->send($email);
+echo "Accepted by SMTP\n";
+```
+
+Run `php quick-send.php`. A transport failure raises an exception and exits with an error.
+
+## Use the Symfony Recipe in Your App
+
+In an existing Symfony app using Flex, run the install command above to add Mailer and its configuration recipe. Set `MAILER_DSN` in the server's secret store to the following value, replacing and URL-encoding the username and password. For local work, put this setting in `.env.local`, excluded from Git. Symfony loads that file when the application starts.
+
+```dotenv
+MAILER_DSN=smtp://SMTP_USERNAME:SMTP_PASSWORD@send.ahasend.com:587?require_tls=true
+```
+
+This recipe uses Symfony's built-in SMTP transport so `require_tls=true` enforces STARTTLS. The 8.1 AhaSend bridge does not read that DSN option; the short bridge example above calls `setRequireTls(true)` directly. Keep the recipe's `framework.mailer.dsn` setting connected to `%env(MAILER_DSN)%`.
+
+From the Symfony project root, run the following with the sandbox credential still configured. Replace `sender@YOUR_DOMAIN` with your verified sender. This command boots the app and reads `.env.local`; it bypasses Messenger to test the configured transport.
+
+```bash
+php bin/console mailer:test recipient@example.com --from=sender@YOUR_DOMAIN
+```
+
+A successful command exits with status 0; check the AhaSend sandbox log too. Inject `MailerInterface` into your application's mail service to use this configuration. The [Symfony Mailer guide](https://symfony.com/doc/current/mailer.html) explains the recipe and Messenger delivery. See the [SMTP reference](/smtp) for connection settings and TLS requirements.
+
+## Handle Failures Before Going Live
+
+For a standalone worker, save this as `send.php`. Before running it, export `MAILER_DSN`, `AHASEND_FROM` and `AHASEND_TO` in its process environment; use the SMTP DSN above and `AHASEND_TO=recipient@example.com` while testing. This script loads Composer only: it does not boot Symfony or read `.env.local`. Keep using `bin/console mailer:test` for the Symfony app configuration.
+
+```php send.php
+<?php
+require __DIR__.'/vendor/autoload.php';
+use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mailer\Transport;
+use Symfony\Component\Mime\Email;
+try {
+    foreach (['MAILER_DSN', 'AHASEND_FROM', 'AHASEND_TO'] as $name) {
+        if (!getenv($name)) throw new RuntimeException('Missing configuration');
+    }
+    $transport = Transport::fromDsn(getenv('MAILER_DSN'));
+    $transport->setRequireTls(true);
+    $transport->getStream()->setTimeout(10);
+    $email = (new Email())->from(getenv('AHASEND_FROM'))->to(getenv('AHASEND_TO'))
+        ->subject('Your account is ready')->text('Welcome to your account.');
+    (new Mailer($transport))->send($email);
+    echo "Accepted by SMTP\n";
+} catch (Throwable $error) {
+    fwrite(STDERR, "Email failed; inspect the job and SMTP settings.\n");
+    exit(1);
+}
+```
+
+Run `php send.php`. Check [delivery events](/integrations/webhooks) after SMTP acceptance. For an application worker, save the job ID and outcome, choose the recipient on the server, and keep email out of a public unauthenticated route. SMTP has no API idempotency key: a lost reply after submission can mean the message was accepted, so review an uncertain outcome before resending. When using the bridge directly in another worker, apply the same TLS requirement and timeout to its transport.
+
+<SmtpRelated />

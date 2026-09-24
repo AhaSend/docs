@@ -1,5 +1,22 @@
 ---
-title: "Message Reception Webhook"
+title: "message.reception Webhook Event"
 sidebarTitle: "Reception"
 openapi: "/webhooks.yaml webhook message.reception"
+description: "The message.reception webhook fires when AhaSend accepts and queues an email. It is the first event in a message's lifecycle. See the payload and fields."
 ---
+
+
+AhaSend sends this event when an email has been received and queued.
+This is always the first event in a message's lifecycle. The message has been accepted by AhaSend and is queued for delivery to the recipient's mail server.
+
+**When it's sent**: Immediately after AhaSend receives and queues an email for delivery.
+<Note>
+  This webhook is called for both inbound and outbound emails.
+</Note>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

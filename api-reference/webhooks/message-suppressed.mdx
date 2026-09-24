@@ -1,5 +1,20 @@
 ---
-title: "Message Suppressed Webhook"
+title: "message.suppressed Webhook Event"
 sidebarTitle: "Suppressed"
 openapi: "/webhooks.yaml webhook message.suppressed"
+description: "The message.suppressed webhook fires when AhaSend skips delivery because the recipient is on your suppression list. Payload fields and example."
 ---
+
+
+AhaSend sends this event when no delivery attempt was made because the recipient is suppressed.
+
+The email was not sent because the recipient email address is on your suppression list. This prevents sending to addresses that have previously bounced or been marked as problematic.
+
+**When it's sent**: When an email is submitted for a suppressed recipient.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Suppression durations](/bounces#suppression-duration).

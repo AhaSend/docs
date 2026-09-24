@@ -1,131 +1,47 @@
 ---
-title: "SMTP Server Information"
+title: "SMTP Relay Settings: Host, Ports, TLS, Limits"
 sidebarTitle: "Server Information"
-description: "Complete guide to AhaSend SMTP servers, connection settings, limits, and response codes"
+description: "AhaSend SMTP relay settings: send.ahasend.com and send-us.ahasend.com, ports 25/587/2525 with STARTTLS, PLAIN auth, message limits and SMTP error codes."
 icon: "server"
 ---
 
-AhaSend provides high-performance SMTP relay servers for sending transactional emails. Our SMTP infrastructure supports standard protocols and offers reliable email delivery with comprehensive error handling.
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
+
+AhaSend SMTP relay settings are listed here: server hosts, STARTTLS ports, authentication, message limits and response codes.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Info>
 **New to SMTP?** Check out our [SMTP credentials guide](/smtp/credentials) to get started, or try our [HTTP API](/send-api/send-email) for a more modern approach.
 </Info>
 
-## Server Endpoints
+## Which SMTP Settings Should I Use?
 
-AhaSend operates SMTP servers in multiple regions for optimal performance:
+Use `send.ahasend.com` for the EU connection or `send-us.ahasend.com` for the US connection point. Both accept the same credentials and ports.
 
-<CardGroup cols={2}>
-  <Card title="European Server" icon="earth-europe">
-    **Hostname:** `send.ahasend.com`<br />
-    **Location:** Germany (Primary)<br />
-    **Best for:** European and global traffic
-  </Card>
-  <Card title="US Server" icon="earth-americas">
-    **Hostname:** `send-us.ahasend.com`<br />
-    **Location:** Oregon, USA<br />
-    **Best for:** North American traffic
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
-<Tip>
-**Server selection:** Choose the server closest to your application for best performance. Both servers offer identical functionality and delivery capabilities.
-</Tip>
+## Does AhaSend Support Port 465?
 
-## Connection Settings
+No. AhaSend supports STARTTLS on ports 25, 587 and 2525. It does not support implicit TLS on port 465. Create an [SMTP credential](/smtp/credentials), then connect, start TLS and authenticate with AUTH PLAIN.
 
-### Supported Ports & Encryption
+## What Are the SMTP Limits?
 
-All AhaSend SMTP servers support the following configurations:
+| Limit | Value | What to do |
+|---|---|---|
+| Recipients per message | 50 | Split larger sends into separate messages, or use the [API](/send-api/send-email). |
+| Message size | 20 MB, including headers, body and encoded attachments | Allow for base64 size growth when adding attachments. |
+| Messages per connection | 10,000 | Close and reopen the connection after reaching the limit; queued mail is unaffected. |
+| Idle timeout | 1 minute without new data | Reconnect after an idle or interrupted connection. |
 
-```
-Servers: send.ahasend.com | send-us.ahasend.com
-Ports: 25, 587, 2525
-Encryption: STARTTLS (required)
-Authentication: PLAIN (required)
-```
+The recipient limit applies to consecutive `RCPT TO` commands in one SMTP transaction. The connection limit applies to consecutive `MAIL FROM` commands; extra commands receive a transient failure. The timeout also applies to slow transmission during `DATA`.
 
-<Warning>
-**SMTPS not supported:** AhaSend does not support implicit SSL/TLS (SMTPS) on port 465. Use STARTTLS on ports 25, 587, or 2525 instead.
-</Warning>
+Base64 increases attachment size by about one third, so a 15 MB file uses about 20 MB before headers and message content are added.
 
-### Authentication Requirements
+Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. See [facts and limits](/facts).
 
-- **Authentication Method:** PLAIN authentication over STARTTLS
-- **Username:** Your SMTP username from the dashboard
-- **Password:** Your SMTP password from the dashboard
-- **STARTTLS:** Required for all connections
-
-<Note>
-**Get SMTP credentials:** Create SMTP credentials in your [AhaSend Dashboard](https://dash.ahasend.com) in the "Credentials" page or via the [API](/api-reference/smtp-credentials/create-smtp-credential).
-</Note>
-
-## Connection Limits & Specifications
-
-Understanding AhaSend's SMTP limits helps you optimize your email sending:
-
-<AccordionGroup>
-  <Accordion title="Recipients Per Message" icon="users">
-    **Limit:** 50 recipients maximum per message
-
-    This is the maximum number of consecutive `RCPT TO` commands that can be issued for a single SMTP transaction.
-
-    ```
-    MAIL FROM: <sender@yourdomain.com>
-    RCPT TO: <user1@example.com>
-    RCPT TO: <user2@example.com>
-    ... (up to 50 recipients)
-    DATA
-    ```
-
-    <Tip>
-    For bulk sending to more recipients, send multiple separate messages or use our [HTTP API](/send-api/send-email) with batch operations.
-    </Tip>
-  </Accordion>
-
-  <Accordion title="Message Size Limit" icon="file-zipper">
-    **Limit:** 20 MB maximum per message
-
-    Messages exceeding this size will be rejected with an error code. This includes:
-    - Email headers
-    - Message body (text and HTML)
-    - All attachments (base64 encoded)
-
-    <Warning>
-    Remember that attachments are base64 encoded, increasing their size by approximately 33%. A 15MB file becomes ~20MB when encoded.
-    </Warning>
-  </Accordion>
-
-  <Accordion title="Messages Per Connection" icon="envelopes-bulk">
-    **Limit:** 10,000 messages maximum per connection
-
-    This is the maximum number of consecutive `MAIL FROM` commands that can be issued for a single SMTP connection.
-
-    When this limit is reached:
-    - Additional `MAIL FROM` commands return transient failures
-    - You should close and reopen the connection
-    - Existing queued messages are not affected
-
-    <Note>
-    Most SMTP libraries handle connection pooling automatically, but you may need to configure this for high-volume applications.
-    </Note>
-  </Accordion>
-
-  <Accordion title="Connection Timeout" icon="clock">
-    **Timeout:** 1 minute of inactivity
-
-    Connections are automatically closed if there's no new data within 60 seconds. This applies to:
-    - Idle connections between commands
-    - Slow data transmission during `DATA` command
-    - Unresponsive clients
-
-    <Tip>
-    Keep connections active or implement proper reconnection logic in your application to handle timeouts gracefully.
-    </Tip>
-  </Accordion>
-</AccordionGroup>
-
-## SMTP Response Codes
+## What Do SMTP Response Codes Mean?
 
 AhaSend returns standard SMTP response codes with specific meanings:
 
@@ -141,7 +57,7 @@ AhaSend returns standard SMTP response codes with specific meanings:
 |------|-------------|-----------------|
 | `421` | **Service Unavailable** - This error could be returned as a result of **disconnecting idle connections** (idle too long), **Load shedding** (server is overwhelmed and cannot accept new connections), or temporary internal errors | Retry with exponential backoff |
 | `451` | **Internal server error** - Temporary server issue | Retry the request |
-| `500` | **Invalid credentials** - Authentication failed | Check username/password |
+| `535 5.7.8` | **Invalid credentials** - Authentication failed | Check username/password |
 | `521` | **Account disabled** - Account suspended or out of credits | Check account status in dashboard |
 | `552` | **Invalid message format** - Malformed email content | Validate email structure and headers |
 | `553` | **Email rejected** - Recipient domain is toxic, temporary, or has typos | Verify recipient domain |
@@ -151,7 +67,7 @@ AhaSend returns standard SMTP response codes with specific meanings:
 **553 email Rejection:** This response is only returned if you enable [Recipient Shields](/security/reputation-shield) in your [Account Settings](https://dash.ahasend.com/account/-/settings).
 </Warning>
 
-## Special Headers
+## How Do I Set Per-message Options?
 
 AhaSend supports special email headers that modify system behavior:
 
@@ -163,7 +79,7 @@ AhaSend supports special email headers that modify system behavior:
 
 ### Basic SMTP Configuration
 
-```
+```text
 Host: send.ahasend.com
 Port: 587
 Security: STARTTLS
@@ -249,3 +165,10 @@ Authentication: PLAIN
 <Info>
 **Prefer HTTP API?** While SMTP is great for compatibility, our [HTTP API](/send-api/send-email) offers better performance, features, and error handling for modern applications.
 </Info>
+
+## Related Guides
+
+- [Domain setup](/domains), [SMTP credentials](/smtp/credentials), [Special headers](/smtp/special-headers).
+- [Sandbox mode](/send-api/sandbox), [Retention](/retention), [API sending](/send-api/send-email).
+- [SMTP CLI](/cli/commands/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [Plans and limits](/facts), [Tracking setup](/tracking/open-tracking).

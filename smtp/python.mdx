@@ -1,35 +1,32 @@
 ---
-title: "Sending emails in Python"
+title: "Send Email in Python via SMTP (smtplib)"
 sidebarTitle: "Python"
-description: "Learn how to send emails using AhaSend SMTP with Python's built-in smtplib and email modules"
+description: "Send email from Python with smtplib and AhaSend's SMTP relay: STARTTLS on port 587, HTML and plain-text messages, attachments, custom headers and sandbox tests."
 icon: "python"
 ---
 
-# Sending Emails with SMTP in Python
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
 
 Send emails through AhaSend's SMTP servers using Python's built-in [smtplib](https://docs.python.org/3/library/smtplib.html) and [email](https://docs.python.org/3/library/email.html) modules. This guide covers everything from basic setup to advanced features like HTML content, attachments, and custom headers.
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
 <AccordionGroup>
   <Accordion title="System Requirements" icon="server">
     - **Python installed** on your system ([Download Python](https://python.org/downloads/))
-    - Python 3.6 or higher (recommended)
+    - a supported Python 3 release (recommended)
     - Basic knowledge of Python programming
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Built-in Modules
 
@@ -52,22 +49,7 @@ Python's standard library includes everything you need for SMTP:
 
 ## Connection Settings
 
-Use these settings for all Python SMTP configurations with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## Basic Email Examples
 
@@ -99,11 +81,11 @@ def send_plain_text_email():
 
     # Connect to the SMTP server and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()  # Secure the connection
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()  # Secure the connection
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Email sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -151,11 +133,11 @@ def send_html_email():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("HTML email sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -215,11 +197,11 @@ def send_email_with_attachment():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Email with attachment sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -269,11 +251,11 @@ def send_sandbox_email():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Sandbox email sent successfully!")
     except Exception as e:
         print(f"Failed to send sandbox email: {e}")
@@ -323,11 +305,11 @@ def send_sandbox_bounce_test():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Sandbox bounce test sent - check webhooks!")
     except Exception as e:
         print(f"Failed to send sandbox email: {e}")
@@ -361,8 +343,8 @@ def send_email_with_special_headers():
     msg['ahasend-track-opens'] = 'true'
     msg['ahasend-track-clicks'] = 'true'
     msg['ahasend-tags'] = 'product-update,newsletter,python'
-    msg['ahasend-message-retention'] = '30'
-    msg['ahasend-message-data-retention'] = '7'
+    msg['AhaSend-Metadata-Retention'] = '30'
+    msg['AhaSend-Data-Retention'] = '7'
 
     # Set content
     msg.set_content("Check out our latest features at https://yourdomain.com/features")
@@ -381,11 +363,11 @@ def send_email_with_special_headers():
 
     # Connect and send
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Email sent with special headers!")
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -433,11 +415,11 @@ def send_email_with_env_vars():
 
     # Send email
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
         print("Email sent using environment variables!")
         return True
     except Exception as e:
@@ -466,3 +448,6 @@ if __name__ == "__main__":
   </Card>
 </CardGroup>
 
+For framework setup, use [Django](/guides/django) or [Flask](/guides/flask). Python API guides cover [AWS Lambda](/guides/aws-lambda-python), [Azure Functions](/guides/azure-functions-python) and [Cloud Run functions](/guides/google-cloud-functions-python).
+
+<SmtpRelated />

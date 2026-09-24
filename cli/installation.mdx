@@ -1,18 +1,23 @@
 ---
-title: Installation
-description: Install the AhaSend CLI on your system
+title: "Install the AhaSend CLI (macOS, Linux, Windows)"
+description: "Install the AhaSend CLI on macOS, Linux, or Windows from a prebuilt binary, with go install, or from source, then enable shell completion and verify it works."
 icon: download
+sidebarTitle: "Installation"
 ---
-
-# Installation
 
 The AhaSend CLI can be installed through multiple methods. Choose the one that best fits your system and workflow.
 
 ## System Requirements
 
-- **Go Version**: 1.21 or higher (for building from source)
+- **Go Version**: 1.26.1 or later (for building from source)
 - **Operating Systems**: Linux, macOS, Windows
-- **Architecture**: x86_64, ARM64
+| Platform | Prebuilt architectures |
+|---|---|
+| macOS | x86_64 and ARM64 |
+| Linux | x86_64 |
+| Windows | x86_64 |
+
+Linux and Windows ARM64 require `go install` or a source build.
 
 ## Installation Methods
 
@@ -65,7 +70,7 @@ ren ahasend-windows-amd64.exe ahasend.exe
 
 5. Verify the installation:
 ```bash
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -73,11 +78,11 @@ ahasend --version
 
 ### Build from Source
 
-For the latest features or to contribute to development, build from source.
+Build the public source to contribute or target another supported platform. Contacts require a later CLI release; the supplied local development build includes them, but public v0.2.0 and its current public source do not.
 
 #### Prerequisites
 
-- Go 1.21 or higher
+- Go 1.26.1 or later
 - Make (optional but recommended)
 - Git
 
@@ -95,13 +100,13 @@ cd ahasend-cli
 make build
 
 # Or using Go directly
-go build -o ahasend ./cmd/ahasend
+go build -o bin/ahasend .
 ```
 
 3. Install to your PATH:
 ```bash
 # Using Make
-sudo make install
+sudo cp bin/ahasend /usr/local/bin/ahasend
 
 # Or manually
 sudo cp ./bin/ahasend /usr/local/bin/
@@ -109,7 +114,7 @@ sudo cp ./bin/ahasend /usr/local/bin/
 
 4. Verify the installation:
 ```bash
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -120,10 +125,16 @@ ahasend --version
 If you have Go installed, you can use `go install`:
 
 ```bash
-go install github.com/AhaSend/ahasend-cli/cmd/ahasend@latest
+go install github.com/AhaSend/ahasend-cli@latest
 ```
 
-This will install the CLI to your `$GOPATH/bin` directory. Make sure it's in your PATH:
+This installs a binary named `ahasend-cli` into `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset. Rename it to `ahasend` to use the commands in these docs. With the default Go bin directory:
+
+```bash
+mv "$(go env GOPATH)/bin/ahasend-cli" "$(go env GOPATH)/bin/ahasend"
+```
+
+Make sure that directory is in your PATH:
 
 ```bash
 export PATH=$PATH:$(go env GOPATH)/bin
@@ -131,6 +142,16 @@ export PATH=$PATH:$(go env GOPATH)/bin
 
 </Tab>
 </Tabs>
+
+## Verify the Download
+
+Download the binary and `checksums.txt` from the same [release](https://github.com/AhaSend/ahasend-cli/releases). On Linux, verify the binary before installing it:
+
+```bash
+sha256sum --ignore-missing --check checksums.txt
+```
+
+On macOS, use `shasum -a 256 ahasend-darwin-arm64` (or the Intel filename) and compare its result to the matching line in `checksums.txt`. The releases page lists the current version.
 
 ## Platform-Specific Instructions
 
@@ -148,7 +169,7 @@ chmod +x ahasend-linux-amd64
 sudo mv ahasend-linux-amd64 /usr/local/bin/ahasend
 
 # Verify
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -163,7 +184,7 @@ chmod +x ahasend-linux-amd64
 sudo mv ahasend-linux-amd64 /usr/local/bin/ahasend
 
 # Verify
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -183,7 +204,7 @@ echo 'export PATH=$PATH:~/.local/bin' >> ~/.bashrc
 source ~/.bashrc
 
 # Verify
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -203,7 +224,7 @@ chmod +x ahasend-darwin-amd64
 sudo mv ahasend-darwin-amd64 /usr/local/bin/ahasend
 
 # Verify
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -218,7 +239,7 @@ chmod +x ahasend-darwin-arm64
 sudo mv ahasend-darwin-arm64 /usr/local/bin/ahasend
 
 # Verify
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -243,11 +264,11 @@ New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\AhaSend"
 # Move the executable
 Move-Item -Path ".\ahasend.exe" -Destination "$env:LOCALAPPDATA\AhaSend\ahasend.exe"
 
-# Add to PATH (requires admin privileges)
+# Add to PATH (User scope; no admin rights needed)
 [Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:LOCALAPPDATA\AhaSend", [EnvironmentVariableTarget]::User)
 
 # Verify (open new PowerShell window)
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -267,7 +288,7 @@ move ahasend-windows-amd64.exe "%LOCALAPPDATA%\AhaSend\ahasend.exe"
 :: Add %LOCALAPPDATA%\AhaSend to your PATH
 
 :: Verify (open new command prompt)
-ahasend --version
+ahasend --help
 ```
 
 </Tab>
@@ -283,9 +304,11 @@ The CLI supports shell completion for bash, zsh, fish, and PowerShell.
 **Linux:**
 ```bash
 # Install system-wide (requires sudo)
-sudo ahasend completion bash > /etc/bash_completion.d/ahasend
+sudo mkdir -p /etc/bash_completion.d
+ahasend completion bash | sudo tee /etc/bash_completion.d/ahasend > /dev/null
 
 # Or install for current user
+mkdir -p ~/.bash_completion.d
 ahasend completion bash > ~/.bash_completion.d/ahasend
 echo "source ~/.bash_completion.d/ahasend" >> ~/.bashrc
 source ~/.bashrc
@@ -306,8 +329,11 @@ exec bash
 
 **Linux:**
 ```bash
-# Generate completion script
-ahasend completion zsh > "${fpath[1]}/_ahasend"
+# Install completion for your user
+mkdir -p ~/.zsh/completions
+ahasend completion zsh > ~/.zsh/completions/_ahasend
+echo 'fpath=(~/.zsh/completions $fpath)' >> ~/.zshrc
+echo 'autoload -Uz compinit && compinit' >> ~/.zshrc
 
 # Reload shell
 exec zsh
@@ -327,6 +353,7 @@ exec zsh
 
 ```bash
 # Generate completion script (works on Linux and macOS)
+mkdir -p ~/.config/fish/completions
 ahasend completion fish > ~/.config/fish/completions/ahasend.fish
 
 # Reload shell
@@ -355,9 +382,6 @@ Add-Content $PROFILE "& $(Get-Location)\ahasend.ps1"
 After installation, verify that the CLI is working correctly:
 
 ```bash
-# Check version
-ahasend --version
-
 # View help
 ahasend --help
 
@@ -381,14 +405,16 @@ Download and replace the existing binary with the latest version from the [relea
 cd ahasend-cli
 git pull origin main
 make clean build
-sudo make install
+sudo cp bin/ahasend /usr/local/bin/ahasend
 ```
 
 </Tab>
 <Tab title="Go Install">
 
 ```bash
-go install github.com/AhaSend/ahasend-cli/cmd/ahasend@latest
+go install github.com/AhaSend/ahasend-cli@latest
+mv "$(go env GOPATH)/bin/ahasend-cli" "$(go env GOPATH)/bin/ahasend"
+"$(go env GOPATH)/bin/ahasend" --help
 ```
 
 </Tab>
@@ -463,3 +489,9 @@ Once installed, you're ready to:
 1. [Set up authentication](/cli/authentication)
 2. [Start with the quick start guide](/cli/quickstart)
 3. [Explore available commands](/cli/commands/messages)
+
+## Related Guides
+
+- [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email), [SMTP settings](/smtp).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [CLI configuration and output](/cli/configuration).
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

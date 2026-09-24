@@ -1,11 +1,14 @@
 ---
-title: "OpenID Connect SSO"
+title: "Single Sign-On (SSO) with OpenID Connect"
 sidebarTitle: "Single Sign-On"
-description: "Enable team login through your organization's identity provider with OpenID Connect SSO"
+description: "Set up OpenID Connect single sign-on for your AhaSend team with Microsoft Entra ID, Google Workspace, Okta, Authentik or Zitadel. Available on the Max plan."
 icon: "key-skeleton"
 ---
 
-Allow your team members to log in using your organization's existing identity provider such as Microsoft Entra ID (Azure AD), Google Workspace, Okta, Authentik, or Zitadel.
+
+AhaSend single sign-on lets your team log in through an OpenID Connect identity provider; this guide walks through its setup.
+
+Available on Max. See [plans and features](/facts#plans-and-features).
 
 <Tip>
 **Max plan Feature:** OpenID Connect SSO is available exclusively on the [Max plan](https://ahasend.com/pricing).
@@ -14,6 +17,8 @@ Allow your team members to log in using your organization's existing identity pr
 <Info>
 **Account Owner Access:** Only the account owner can configure SSO and bypass it when necessary. Team members must use SSO once enabled.
 </Info>
+
+AhaSend SSO uses OpenID Connect (OIDC); SAML is not supported. Register `https://dash.ahasend.com/user/sso/oidc/callback` as the redirect URI in your identity provider.
 
 ## Configuration
 
@@ -35,7 +40,7 @@ Configure SSO in your account settings as the account owner:
     - **Domain:** Comma-separated email domains (e.g., `yourcompany.com`)
     - **Issuer URL:** Base URL from your IdP (e.g., `https://iam.company.com`)
     - **Client ID:** Provided by your identity provider
-    - **Client Secret:** Provided by your identity provider
+    - **Client Secret:** Required for the Client Credentials configuration; not required for PKCE. For PKCE, select `S256` as the PKCE method
 
     **Optional Settings:**
     - **Requested Scopes:** Space-separated scopes (defaults: `openid email profile`)
@@ -81,7 +86,7 @@ Once OpenID Connect SSO is activated:
   </Card>
 
   <Card title="Google Workspace" icon="google">
-    **Google Cloud Identity**
+    **Google Workspace identity provider**
 
     Integrated with Gmail and Google services
   </Card>
@@ -125,3 +130,8 @@ Once OpenID Connect SSO is activated:
     - **Test** JWKS URI returns valid JSON
   </Accordion>
 </AccordionGroup>
+
+## Related Guides
+
+- [Account quickstart](/quickstart), [Two-factor authentication](/security/2fa), [Require team 2FA](/security/2fa-enforcement).
+- [Plans and limits](/facts).

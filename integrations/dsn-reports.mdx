@@ -1,11 +1,14 @@
 ---
-title: "Delivery Status Notification Reports"
+title: "Delivery Status Notification (DSN) Reports"
 sidebarTitle: "DSN Reports"
-description: "Generate RFC 3464 formatted bounce reports for enterprise compliance and monitoring"
+description: "Have AhaSend email RFC 3464 Delivery Status Notification reports for bounced messages to an address you choose. Available on the Max plan."
 icon: "file-medical"
 ---
 
-Automatically generate and send RFC 3464 formatted Delivery Status Notification (DSN) reports for bounced emails to designated recipients. This enterprise feature provides standardized bounce reporting for compliance, monitoring, and integration with email management systems.
+
+AhaSend DSN reports send bounce details to your chosen email address in RFC 3464 format; this guide shows how to configure them.
+
+Available on Max. See [plans and features](/facts#plans-and-features).
 
 <Tip>
 **Max Plan Feature:** DSN Reports are available exclusively on the [Max plan](https://ahasend.com/pricing).
@@ -47,8 +50,7 @@ Configure DSN reports through your account settings with optional domain-level o
   <Step title="Configure Domain Overrides (Optional)" icon="globe">
     **Set domain-specific DSN recipients:**
     1. **Go to** your **[Domains](https://dash.ahasend.com/account/-/settings/domains)** page
-    2. **Click** on the domain you want to override the DSN recipient for.
-    4. **Click** the **Settings** button for the desired domain
+    2. **Open** the domain and click **Settings**
     3. **Enter** DSN recipient address for this domain
     4. **Save** domain settings
 
@@ -205,13 +207,9 @@ DSN reports follow RFC 3464 specifications for standardized processing:
   </Accordion>
 </AccordionGroup>
 
-## Related Documentation
 
-<CardGroup cols={2}>
-  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">
-    Real-time notifications for all email events including bounces
-  </Card>
-  <Card title="Suppression Management" icon="ban" href="/api-reference/suppressions/get-suppressions">
-    Automatically handle bounces and maintain sender reputation
-  </Card>
-</CardGroup>
+## Related Guides
+
+- [Account quickstart](/quickstart), [Domain setup](/domains), [Bounce webhook](/api-reference/webhooks/message-bounced).
+- [Webhook setup](/integrations/webhooks), [Plans and limits](/facts), [Tracking setup](/tracking/open-tracking).
+- [Suppression durations](/bounces#suppression-duration).

@@ -1,5 +1,27 @@
 ---
-title: "Message Opened Webhook"
+title: "message.opened Webhook Event"
 sidebarTitle: "Opened"
 openapi: "/webhooks.yaml webhook message.opened"
+description: "The message.opened webhook fires when a recipient loads the AhaSend tracking pixel. Requires open tracking and HTML. Includes is_bot, user agent and IP."
 ---
+
+
+AhaSend sends this event when the recipient opens your email.
+
+**Requirements**:
+- Open tracking must be enabled for your account or this specific email
+- The email must contain HTML content
+- The recipient's email client must load images
+
+**Additional Data**: This webhook includes user agent and IP address information for analytics.
+
+**Bot Detection**: The `is_bot` field indicates whether the open was detected as automated (email security scanners, etc.).
+
+**When it's sent**: When the tracking pixel in the email is loaded.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Tracking setup](/tracking/open-tracking).

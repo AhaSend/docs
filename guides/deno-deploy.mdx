@@ -1,17 +1,26 @@
 ---
-title: "How to Send Email with Deno Deploy"
+title: "How to Send Email with Deno and Deno Deploy"
 sidebarTitle: "Deno Deploy"
-description: "Send transactional email on Deno Deploy in minutes with the AhaSend SDK via npm specifiers, plus signed webhook handling, no build step required."
+description: "Send transactional email from Deno and Deno Deploy with the AhaSend SDK via npm specifiers: a Deno.serve send route, Deploy secrets, and verified webhooks."
 keywords: ["deno deploy send email", "deno transactional email", "deno email api", "ahasend deno", "deno deploy webhooks"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-deno.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from Deno and Deno Deploy with AhaSend, keep credentials on the server, and test a sandbox send.
+
 Deno Deploy can run npm packages without a Node build step, so you can use the AhaSend SDK directly from a Deno application.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Deno installed locally, and a [Deno Deploy](https://console.deno.com) organization and application
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) scoped to `messages:send:{your-domain}`, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) scoped to `messages:send:{your-domain}`, and your account ID
 - For webhook side effects, a database operation that can atomically commit a unique `webhook-id` and durable work
 
 ## Import the SDK
@@ -22,6 +31,8 @@ Add the SDK to your Deno project:
 deno add npm:@ahasend/sdk
 ```
 
+<QuickSend />
+
 This writes the dependency to `deno.json`. Commit both `deno.json` and `deno.lock`, then import the saved bare specifier:
 
 ```ts
@@ -30,7 +41,7 @@ import { AhaSendClient } from "@ahasend/sdk";
 
 ## Configure Environment Variables
 
-On Deno Deploy, add the variables to the application under **Settings → Environment Variables** and mark all three as **Secrets**. Attach live credentials only to the Production context. If preview revisions need email tests, give the Development context separate domain-scoped sandbox credentials and a separate webhook secret; do not expose production credentials to code from development branches.
+On Deno Deploy, add the variables to the application under **Settings → Environment Variables** and mark the API key and webhook secret as **Secrets** (the account ID is not a secret). Attach live credentials only to the Production context. If preview revisions need email tests, give the Development context separate domain-scoped sandbox credentials and a separate webhook secret; do not expose production credentials to code from development branches.
 
 ```bash
 AHASEND_API_KEY=aha-sk-...
@@ -64,6 +75,8 @@ The same `Deno.serve` handler API runs locally and on Deno Deploy, although thei
 ```ts main.ts
 import { AhaSendAPIError, isAhaSendError } from "@ahasend/sdk";
 import { ahasend } from "./lib/ahasend.ts";
+import { handleAhaSendWebhook } from "./webhook.ts";
+// Application-owned: implement signup lookup and authorization before using real mail.
 import { requireAuthenticatedSignup } from "./lib/auth.ts";
 
 Deno.serve(async (req) => {
@@ -76,13 +89,14 @@ Deno.serve(async (req) => {
     try {
       const result = await ahasend.messages.send(
         {
+          sandbox: true,
           from: { email: "hello@yourdomain.com", name: "Your App" },
           recipients: [{ email: user.email, name: user.name }],
           subject: "Welcome to Your App!",
           html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
           text_content: "Welcome aboard! We're glad you're here.",
         },
-        { idempotencyKey: `welcome-${user.signupId}` },
+        { idempotencyKey: `sandbox-welcome-${user.signupId}` },
       );
 
       const rejected = result.data.filter((r) => r.status === "error");
@@ -105,6 +119,9 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
+    return handleAhaSendWebhook(req);
+  }
   return new Response("Not found", { status: 404 });
 });
 ```
@@ -115,20 +132,21 @@ A 202 is **multi-status**: `result.data` carries one entry per recipient, and an
 
 The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. Reuse a stable `idempotencyKey` only for the exact same request payload. Stored message results expire after 24 hours, so reconcile an uncertain operation rather than assuming a later retry is deduplicated.
 
-Add `sandbox: true` to the send request to validate it without delivering anything. Sandbox and live sends share one idempotency namespace per account, and `sandbox` is part of the request body, so flipping it while reusing a key raises `AhaSendIdempotencyMismatchError` instead of sending.
+The send example uses `sandbox: true` to validate the request without delivering anything. Sandbox and live sends share one idempotency namespace per account, and `sandbox` is part of the request body, so flipping it while reusing a key raises `AhaSendIdempotencyMismatchError` instead of sending.
 
 ## Handle Webhooks
 
 The webhooks module lives on its own subpath, so importing it doesn't pull in the API client. `verifier.parse()` accepts Fetch `Headers` and raw bytes and must be awaited. Bound the request while reading its stream, then pass those exact bytes rather than parsing and re-serializing JSON.
 
-Size that bound to the events you subscribe to. Delivery-status events are a few kilobytes, but an inbound `message.routing` event embeds base64 attachment data and is routinely much larger. Rejecting an oversized delivery with a 413 counts as a failed delivery, and [100 consecutive failures disable the webhook](/api-reference/webhooks/retry-policy), so raise `MAX_WEBHOOK_BODY_BYTES` toward the SDK's 30,000,000-byte verification ceiling if you route inbound mail.
+The example uses the SDK's 30,000,000-byte ceiling, including for inbound `message.routing` events with attachments. Keep the proxy limit in step and cap concurrent requests. A 413 counts as a failed attempt; [more than 100 consecutive failed attempts disable the webhook](/api-reference/webhooks/retry-policy).
 
-```ts main.ts
-import { AhaSendWebhookVerificationError, WebhookVerifier } from "@ahasend/sdk/webhooks";
+```ts webhook.ts
+import { AhaSendWebhookVerificationError, WebhookVerifier, isKnownWebhookEvent } from "@ahasend/sdk/webhooks";
+// Application-owned: provide atomic durable storage as described below.
 import { webhookDeliveries } from "./lib/webhook-store.ts";
 
 const verifier = new WebhookVerifier(Deno.env.get("AHASEND_WEBHOOK_SECRET")!);
-const MAX_WEBHOOK_BODY_BYTES = 1_000_000;
+const MAX_WEBHOOK_BODY_BYTES = 30_000_000;
 
 class WebhookBodyTooLargeError extends Error {}
 
@@ -162,8 +180,7 @@ async function readRawBody(req: Request): Promise<Uint8Array> {
   return body;
 }
 
-// inside the Deno.serve handler:
-if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
+export async function handleAhaSendWebhook(req: Request): Promise<Response> {
   let event;
   try {
     event = await verifier.parse(req.headers, await readRawBody(req));
@@ -177,6 +194,7 @@ if (req.method === "POST" && url.pathname === "/webhooks/ahasend") {
     return new Response(null, { status: 500 });
   }
 
+  if (!isKnownWebhookEvent(event)) return new Response(null, { status: 204 });
   const webhookId = req.headers.get("webhook-id");
   if (!webhookId) return new Response(null, { status: 400 });
 
@@ -206,13 +224,7 @@ deno deploy --org your-org --app your-app --prod
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by an hour; the first attempt must be in the future and within 7 days.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()`, reuse it only for the exact same payload, and account for the 24-hour result-retention window.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Running on another modern runtime? Review both the runtime compatibility inventory and the SDK security policy before production; the [Bun](/guides/bun) and [Cloudflare Workers](/guides/cloudflare-workers) guides cover their platform-specific setup.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -230,3 +242,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Runn
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

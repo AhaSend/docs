@@ -1,0 +1,51 @@
+---
+title: "Email API Key Security Best Practices"
+sidebarTitle: "Security Overview"
+description: "Protect AhaSend email credentials with scoped keys, two-factor login, IP allow lists and verified webhooks, and follow the steps for a leaked API key."
+---
+
+AhaSend security controls help you protect account access, sending credentials and incoming webhooks; this guide shows how to use them and what to do if a key leaks.
+
+## Which Controls Should I Use?
+
+| Need | Control | Setup |
+|---|---|---|
+| Keep a stolen password from being enough | Two-factor authentication | [Enable 2FA](/security/2fa) and [require it for the team](/security/2fa-enforcement) |
+| Give an app only the sending access it needs | Domain-scoped send-only credentials | [Create a sending key](/send-api/credentials) and [scope rules](/security/scoped-credentials) |
+| Limit where a credential can be used | IP allow lists, when your server has stable outbound addresses | [IP restrictions](/security/ip-allow-lists) |
+| Centralize team sign-in | OIDC single sign-on | [SSO setup](/security/sso) |
+| Detect forged event requests | Webhook and route signature checks | [Verify signatures](/api-reference/webhooks/security) |
+| Reduce abuse from unexpected sending | Reputation Shield and monitoring | [Reputation Shield](/security/reputation-shield) |
+
+Check [plan availability](/facts#plans-and-features) before choosing a control. SSO availability differs from the basic credential and signing controls.
+
+## How Should I Store an Email API Key?
+
+Keep it in your server's secret store and load it at runtime. Never put a sending key in browser JavaScript, mobile bundles, public repositories, AI prompts or screenshots. Keep development, staging and production credentials separate. Use a sandbox credential for tests and a domain-scoped sending key for an app that only sends.
+
+Management jobs need a separate full key with only the necessary [scopes](/api-reference/scopes). Do not give an email form permission to create credentials or delete suppressions. Avoid logging authorization headers, full SMTP connection strings or raw upstream errors that may include private data.
+
+## What Should I Do If an API Key Leaks?
+
+1. **Identify and revoke the exposed credential.** Use the matching credentials page or [API-key deletion endpoint](/api-reference/api-keys/delete-api-key). If it is an SMTP credential, use [SMTP credential revocation](/api-reference/smtp-credentials/delete-smtp-credential). Do not wait for a code cleanup while unauthorized use can continue.
+2. **Stop affected jobs if needed.** Disable the vulnerable send path while you restore a valid credential. Record which apps used the key so you do not leave an old worker running.
+3. **Create a replacement with less access where possible.** Use a separate domain-scoped [send-only key](/send-api/credentials) for each sending app. A job that manages resources needs a correctly scoped [full key](/api-reference/authentication).
+4. **Update the secret store and restart consumers.** Check worker processes, scheduled tasks and deployed functions, not only the web server. Verify a sandbox test before restoring the affected send path.
+5. **Review activity from the possible exposure time.** Check [message logs](/api-reference/messages/get-messages), usage and the resources the key could change. Look for unfamiliar credentials, webhooks or routes if it had those management scopes. Preserve sanitized evidence and ask support about unexpected activity.
+6. **Remove the exposure and prevent a repeat.** Remove the key from current files and build artifacts, arrange repository-history cleanup when needed, and fix the logging or configuration mistake. Removing a key from a file does not revoke it; the old secret must stay revoked.
+
+If the account login was also exposed, reset it, review account members, and enable or require 2FA. If a webhook signing secret leaked, replace the affected endpoint configuration and update the verifier using the [webhook security guidance](/api-reference/webhooks/security). Do not publish the secret in a support request.
+
+## How Do I Rotate a Key Without an Incident?
+
+Create a replacement, update the application secret, verify the application's sandbox path, then revoke the old key after confirming all consumers have switched. Keep the overlap short and record who owns each credential. The leaked-key procedure above prioritizes revocation because the old credential is already exposed.
+
+## How Do I Secure a Send Endpoint?
+
+Authenticate the caller, check that they may trigger the specific message, and choose the recipient and template on your server. Limit request volume and save the business event before sending so retries can use a stable [idempotency key](/api-reference/idempotency). A send-only key does not stop someone abusing an open email endpoint in your application.
+
+## Related Guides
+
+- [Domain setup](/domains), [send-only credentials](/send-api/credentials), [full-key authentication](/api-reference/authentication) and [scopes](/api-reference/scopes).
+- [SMTP credentials](/smtp/credentials), [REST API](/send-api/send-email), [CLI authentication](/cli/authentication), [Node.js SDK](/guides/nodejs-sdk) and [Go SDK](/guides/go-sdk).
+- [Signed webhooks](/api-reference/webhooks/security), [retention](/retention), [plans and features](/facts), [security overview](https://ahasend.com/security) and [data processing agreement](https://ahasend.com/dpa).

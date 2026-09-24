@@ -1,10 +1,13 @@
 ---
-title: "Send Email (APIv1 - Legacy)"
+title: "Send Email with API v1 (Legacy)"
 sidebarTitle: "Send Email (Legacy)"
-description: "Legacy API v1 for sending emails - simple and straightforward"
+description: "Reference for the legacy AhaSend API v1 POST /v1/email/send endpoint using the X-Api-Key header. API v1 is in maintenance mode; use API v2 for new integrations."
 icon: "paper-plane"
 openapi: "/openapi-v1.yaml POST /v1/email/send"
 ---
+
+
+The AhaSend legacy v1 API sends email to up to 100 recipients per request; this reference documents the existing v1 request format.
 
 <Warning>
 **API v1 is in maintenance mode.** We recommend using [API v2](/api-reference/messages/create-message) for new integrations as it offers better features, error handling, and will receive ongoing updates.
@@ -16,3 +19,9 @@ Get your API key from the [Credentials](https://dash.ahasend.com/account/-/trans
 
 API v1 provides a simple way to send emails through AhaSend. It's designed for straightforward email sending without the advanced features available in v2.
 
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
+- [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

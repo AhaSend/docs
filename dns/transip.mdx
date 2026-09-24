@@ -1,0 +1,34 @@
+---
+title: "TransIP DNS: SPF, DKIM and DMARC"
+sidebarTitle: "TransIP"
+description: "Add AhaSend SPF, DKIM and DMARC records in TransIP: find the DNS form, enter the right names and values, then verify your sending domain."
+---
+
+import DnsPrerequisites from "/snippets/dns-prerequisites.mdx";
+import DnsChecks from "/snippets/dns-check-records.mdx";
+import DnsRelated from "/snippets/dns-related.mdx";
+
+AhaSend verifies domains hosted at TransIP when you publish the SPF, DKIM and DMARC records from your domain page; this guide shows where to enter them.
+
+<DnsPrerequisites />
+
+## Open the DNS Form
+
+Select **Domein** in the control panel, select your domain, then open **DNS instellingen → DNS**. Choose the type from AhaSend and fill in **Naam**, **Type** and **Waarde**. These steps follow [TransIP's DNS guide](https://transip.nl/knowledgebase/407-een-cname-record-instellen/).
+
+If the editable list is hidden, switch off **TransIP instellingen** to manage DNS records yourself. Review the existing records before saving. Naam contains only the prefix; TransIP adds the zone name. Use the complete AhaSend hostname as the CNAME destination.
+
+## Add SPF, DKIM and DMARC
+
+For a zone named `example.com`, use this name mapping. The examples show a common managed-DKIM setup; your dashboard's names and targets take precedence.
+
+| AhaSend record | Type | Name in the provider form | Value |
+|---|---|---|---|
+| SPF for `example.com` | TXT | `@` | SPF value shown by AhaSend, merged into any existing SPF record |
+| `managed._domainkey.example.com` | CNAME | `managed._domainkey` | First DKIM target from your domain page |
+| `managed2._domainkey.example.com` | CNAME | `managed2._domainkey` | Second DKIM target from your domain page |
+| `_dmarc.example.com` | TXT | `_dmarc` | Your reviewed DMARC policy |
+
+<DnsChecks />
+
+<DnsRelated />

@@ -1,5 +1,19 @@
 ---
-title: "Add Account Member"
-sidebarTitle: "Create Account Member"
+title: "Add an Account Member via the API"
+sidebarTitle: "Add Account Member"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/members"
+description: "Invite a teammate to your AhaSend account via API and assign a role: Administrator, Developer, Analyst or Billing Manager."
 ---
+
+
+The AhaSend API adds a new member to the account.
+
+**Validation Requirements:**
+- `email` must be a valid email address
+- `role` must be one of: Administrator, Developer, Analyst, Billing Manager
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Account settings API](/api-reference/accounts/update-account).
+- [Team members API](/api-reference/accounts/get-account-members), [Retention rules](/retention), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).

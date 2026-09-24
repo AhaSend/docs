@@ -5,14 +5,23 @@ description: "Send transactional email from SvelteKit server endpoints with the 
 keywords: ["sveltekit send email", "sveltekit transactional email", "sveltekit server endpoint email", "ahasend sveltekit", "sveltekit webhook verification"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from SvelteKit with AhaSend, keep credentials on the server, and test a sandbox send.
+
 Keep your AhaSend credentials in SvelteKit's private environment modules and
 send email only from server endpoints or server form actions.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - A SvelteKit project
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{yourdomain.com}` scope for that domain (or `messages:send:all`), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{yourdomain.com}` scope for that domain (or `messages:send:all`), and your account ID
 
 ## Install the SDK
 
@@ -35,6 +44,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -218,13 +229,14 @@ export const POST: RequestHandler = async ({ request }) => {
   try {
     const result = await ahasend().messages.send(
       {
+        sandbox: true,
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email: input.email, name: input.name }],
         subject: "Welcome to Your App!",
         html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
         text_content: "Welcome aboard! We're glad you're here.",
       },
-      { idempotencyKey: `welcome:${input.eventId}` },
+      { idempotencyKey: `sandbox-welcome:${input.eventId}` },
     );
 
     const rejectedCount = result.data.filter((entry) => entry.status === "error").length;
@@ -308,7 +320,7 @@ export const POST: RequestHandler = ({ request }) => {
       }
       return new Response(null, { status: 200 });
     },
-    { maxBodyBytes: 1_000_000 },
+    { maxBodyBytes: 30_000_000 },
   );
 
   return route(request);
@@ -352,16 +364,7 @@ it at `https://your-app.com/api/webhooks/ahasend`, and configure its secret as
 
 ## Going Further
 
-- **Deployment**: choose a server-capable SvelteKit adapter and configure all private environment variables in its deployment platform. A static build cannot run these endpoints.
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60_000).toISOString() }` to defer delivery.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`; binary data must be base64 encoded.
-
-See the [API reference](/api-reference) for every
-endpoint the SDK exposes. The same server-side pattern works in the other
-meta-frameworks: see the [Next.js](/guides/nextjs) and [Nuxt](/guides/nuxt)
-guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -394,3 +397,5 @@ guides.
     `messages:send:all`.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

@@ -1,8 +1,14 @@
 ---
-title: "Get Message"
+title: "Get a Message by ID via the API"
 sidebarTitle: "Get Message"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/messages/{message_id}"
+description: "Retrieve a single email sent through AhaSend by message ID, including its delivery status and the raw email content when your retention settings keep it."
 ---
+
+
+The AhaSend API returns the complete message by its ID, including raw content and parsed content structure.
+Access requires `messages:read:all` or a read role matching the
+message's sender domain.
 
 Returns a message by its ID.
 
@@ -11,3 +17,11 @@ The main difference between the response of this API and the response of the
 a single message including the original, raw email `content` (if available),
 while the message objects returned in the List Messages API do not include
 the email `content`.
+Message `content` and `content_parsed` are absent when message-data retention has expired or was set to 0. See [retention](/retention).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sending guide](/send-api/send-email).
+- [Message CLI](/cli/commands/messages), [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk).
+- [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Retention rules](/retention).

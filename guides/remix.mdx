@@ -1,19 +1,28 @@
 ---
-title: "How to Send Email with Remix"
-sidebarTitle: "Remix"
-description: "Send transactional email from React Router framework actions and resource routes with the AhaSend SDK, including bounded, replay-safe webhook handling."
+title: "How to Send Email with Remix and React Router"
+sidebarTitle: "Remix / React Router"
+description: "Send transactional email from Remix and React Router 7 framework-mode actions with the AhaSend SDK, and verify AhaSend webhooks in a resource route."
 keywords: ["remix send email", "remix transactional email", "remix resource route email", "ahasend remix", "remix webhook action"]
 ---
+
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from Remix and React Router Framework Mode with AhaSend, keep credentials on the server, and test a sandbox send.
 
 Remix has merged into React Router, so this guide uses [React Router Framework Mode](https://reactrouter.com/start/framework/installation) — the direct continuation of the Remix server, loaders, and actions. If your project is still on Remix v2, work through the [upgrade guide](https://reactrouter.com/upgrading/remix) first: the `app/routes.ts` and `./+types/*` APIs below do not exist there.
 
 Email sends belong in server `action` functions, while inbound AhaSend webhooks use a resource route. Keep the SDK client and credentials in server-only modules.
 
+<SendGuideRules />
+
 ## Prerequisites
 
 - A React Router Framework Mode project deployed to a Node server with server rendering enabled
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{yourdomain.com}` scope for your sending domain, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{yourdomain.com}` scope for your sending domain, and your account ID
 
 ## Install the SDK
 
@@ -36,6 +45,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -69,6 +80,8 @@ export default [
   route("webhooks/ahasend", "./routes/webhooks-ahasend.ts"),
 ] satisfies RouteConfig;
 ```
+
+Before using the action, implement `emailSendRateLimit.take({ request, recipient }): Promise<boolean>` in `app/lib/email-send-rate-limit.server.ts`. It must identify the authenticated caller and enforce a per-user send limit. The webhook route also imports `webhookDeliveries.enqueueOnce(id, event): Promise<boolean>` from `app/lib/webhook-deliveries.server.ts`: atomically store the delivery ID and durable work, returning false for a duplicate. These two modules belong to your application.
 
 ## Send an Email from an Action
 
@@ -129,6 +142,7 @@ export async function action({ request }: Route.ActionArgs) {
 
   try {
     const result = await ahasend.messages.send({
+      sandbox: true,
       from: { email: "hello@yourdomain.com", name: "Your App" },
       recipients: [{ email, name }],
       subject: "Welcome to Your App!",
@@ -190,7 +204,7 @@ A 202 is a **multi-status** response: `result.data` holds one entry per recipien
 
 The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. When a duplicate would be expensive, pass a stable key from the committed business operation as the second argument: `ahasend.messages.send(message, { idempotencyKey: "welcome-" + signup.id })`. Do not derive it from an arbitrary retry attempt.
 
-Add `sandbox: true` to the send request to validate it without delivering anything.
+The example sets `sandbox: true` on the send request to validate it without delivering anything.
 
 ## Handle Webhooks
 
@@ -205,7 +219,7 @@ if (!webhookSecret) throw new Error("AHASEND_WEBHOOK_SECRET is required");
 export const verifier = new WebhookVerifier(webhookSecret);
 ```
 
-Then handle webhooks in a resource route. Signature verification needs the exact raw bytes, and the body must be bounded while it is read so concurrent requests cannot allocate unbounded memory. This example uses a 1 MB application limit; configure the same or a lower limit at your reverse proxy and cap concurrent requests.
+Then handle webhooks in a resource route. Signature verification needs the exact raw bytes, and the body must be bounded while it is read so concurrent requests cannot allocate unbounded memory. This example uses a 30,000,000-byte application limit; configure the same or a lower limit at your reverse proxy and cap concurrent requests.
 
 ```ts app/routes/webhooks-ahasend.ts
 import type { Route } from "./+types/webhooks-ahasend";
@@ -213,7 +227,7 @@ import { AhaSendWebhookVerificationError } from "@ahasend/sdk/webhooks";
 import { verifier } from "~/lib/ahasend-webhooks.server";
 import { webhookDeliveries } from "~/lib/webhook-deliveries.server";
 
-const MAX_BODY_BYTES = 1_000_000;
+const MAX_BODY_BYTES = 30_000_000;
 
 class BodyTooLargeError extends Error {}
 
@@ -291,13 +305,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Deployment**: deploy the server build to a Node host and inject the three `AHASEND_*` variables through that host's secret storage. A static-only deployment cannot run server actions or receive webhooks.
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule.first_attempt` to a future RFC 3339 timestamp within seven days of the request.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. The same server-side pattern works in the other full-stack frameworks: see the [Next.js](/guides/nextjs) and [SvelteKit](/guides/sveltekit) guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -312,6 +320,8 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. The 
     The body passed to `verifier.parse()` must be the exact bytes AhaSend sent. Do not call `request.json()`, `request.text()`, or another body reader first, because a request body can only be read once. Also confirm `AHASEND_WEBHOOK_SECRET` includes the `aha-whsec-` prefix.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the server environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the server environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

@@ -1,9 +1,12 @@
 ---
-title: "Rate limits"
-sidebarTitle: "Rate limits"
-description: "Understanding AhaSend API rate limiting policies and best practices"
+title: "API Rate Limits and 429 Handling"
+sidebarTitle: "Rate Limits"
+description: "AhaSend API v2 allows 100 requests/second per account (burst 200); statistics endpoints allow 1/second. Learn what a 429 response looks like and how to retry."
 icon: "gauge-high"
 ---
+
+
+AhaSend API rate limits apply per account; this reference lists request limits, explains HTTP 429, and shows how to retry.
 
 ## Overview
 
@@ -32,7 +35,8 @@ Most API endpoints are subject to the following rate limits:
   </Card>
 </CardGroup>
 
-**Affected Endpoints:**
+**Affected Endpoints:** all other v2 endpoints, including `/v2/ping`, account members, sub-accounts and sub-account usage.
+
 - `/v2/accounts/*` - Account management
 - `/v2/accounts/{account_id}/api-keys/*` - API key management
 - `/v2/accounts/{account_id}/domains/*` - Domain management
@@ -42,9 +46,9 @@ Most API endpoints are subject to the following rate limits:
 - `/v2/accounts/{account_id}/webhooks/*` - Webhook management
 - `/v2/accounts/{account_id}/smtp-credentials/*` - SMTP credential management
 
-### Statistics API Endpoints
+### Statistics, Stream and Trigger Endpoints
 
-Statistics endpoints have more restrictive rate limits due to their resource-intensive nature:
+Statistics, webhook and route stream, and test-trigger endpoints have a separate limit of 1 request per second:
 
 <CardGroup cols={2}>
   <Card title="Request Rate" icon="chart-line">
@@ -77,7 +81,7 @@ When you exceed the rate limit, the API returns a `429 Too Many Requests` status
 </CodeGroup>
 
 <Info>
-The rate limit window uses a sliding window algorithm that resets every second, allowing for smooth request distribution.
+Requests share the account limit. Spread requests over time; a new second does not reset a fixed request counter. Do not depend on `Retry-After` or `X-RateLimit-*` headers for rate-limit responses.
 </Info>
 
 ## Best Practices
@@ -160,6 +164,10 @@ Statistics endpoints have very restrictive rate limits (1 request per second). P
 - Implementing request queuing for multiple statistics calls
 </Warning>
 
+## Sending Limits
+
+Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. These are separate from API request rates and the Free plan's 1,000 included emails per month. See [plans and limits](/facts).
+
 ## Contact Support
 
 If your application requires higher rate limits due to legitimate high-volume usage patterns, please contact our support team to discuss custom rate limit arrangements.
@@ -167,3 +175,10 @@ If your application requires higher rate limits due to legitimate high-volume us
 <Card title="Need Higher Limits?" icon="envelope">
 Reach out to our [support team](mailto:support@ahasend.com) if you need increased rate limits for your production application.
 </Card>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
+- [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors).
+- [Suppression durations](/bounces#suppression-duration).

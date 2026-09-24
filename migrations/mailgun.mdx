@@ -1,0 +1,70 @@
+---
+title: "Migrate from Mailgun"
+sidebarTitle: "From Mailgun"
+description: "Migrate from Mailgun to AhaSend with API field and SMTP setting maps, webhook event changes, suppression import steps and a gradual traffic switch."
+---
+
+import MigrationWebhookChecks from "/snippets/migration-webhook-checks.mdx";
+
+import MigrationSmtpSettings from "/snippets/migration-smtp-settings.mdx";
+
+import MigrationApiResult from "/snippets/migration-api-result.mdx";
+
+import MigrationPrepare from "/snippets/migration-prepare.mdx";
+
+import ImportSuppressions from "/snippets/migration-suppression-import.mdx";
+import MigrationCutover from "/snippets/migration-cutover.mdx";
+
+AhaSend migration from Mailgun means changing your send call or SMTP settings, mapping delivery events and carrying blocked recipients across before moving traffic.
+
+<MigrationPrepare />
+
+## Map the API Fields
+
+Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message) with [v2 authentication](/api-reference/authentication). This is a field mapping from [Mailgun's send API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/messages/post-v3--domain-name--messages), not a drop-in change of base URL.
+
+| Mailgun field | AhaSend v2 field or change |
+|---|---|
+| `from` string | `from` object with `email` and optional `name` |
+| `to` strings | `recipients[]` address objects |
+| `subject`, `text`, `html` | `subject`, `text_content`, `html_content` |
+| `h:Reply-To` | `reply_to` address object |
+| `o:tag` | `tags` array |
+| `recipient-variables` | Adapt to `recipients[].substitutions`; review template syntax |
+| `attachment` multipart data | JSON `attachments[]` with `file_name`, `content_type`, `data` and appropriate `base64` |
+| `o:deliverytime` | `schedule.first_attempt` as RFC3339 within AhaSend's schedule window |
+| `o:testmode` | `sandbox: true` |
+| `cc`, `bcc` | [Create Conversation](/api-reference/messages/create-conversation) for visible To/CC and hidden BCC |
+
+<MigrationApiResult />
+
+## Replace the SMTP Settings
+
+Replace your Mailgun region's SMTP host and domain SMTP credentials with AhaSend's host and a new AhaSend SMTP credential. Do not reuse a Mailgun API key or domain password. Review region-specific source settings in [Mailgun's SMTP guide](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages/send-smtp).
+
+<MigrationSmtpSettings />
+
+## Map Events by Meaning
+
+These are the closest matching outcomes, not identical payloads or a guaranteed one-to-one event sequence. Keep the provider name with each saved message ID while both systems are active. See [Mailgun's event documentation](https://documentation.mailgun.com/docs/mailgun/user-manual/events/event-types) and the [AhaSend event list](/api-reference/webhooks).
+
+| Mailgun event | AhaSend event or application handling |
+|---|---|
+| `accepted` | `message.reception` |
+| `delivered` | `message.delivered` |
+| `failed` with temporary severity | `message.transient_error` |
+| `failed` with permanent severity | `message.bounced`, `message.failed` or `message.suppressed`, depending on the cause |
+| `opened` / `clicked` | `message.opened` / `message.clicked` when tracking is enabled |
+| `complained` | `suppression.created` with the complaint reason |
+| `unsubscribed` | Preserve the unsubscribe in your application and the appropriate suppression |
+| `rejected` | Check send-response errors and final failure events; there is no exact event-name replacement |
+
+<MigrationWebhookChecks />
+
+## Export the Old Recipient Blocks
+
+Export bounces, complaints and unsubscribes for every Mailgun sending domain you are moving. Preserve Mailgun unsubscribe tags or list scopes in your app, then decide which blocks should apply to a whole AhaSend sending domain. Use the list operations in Mailgun's [Bounces API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/bounces), [Complaints API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/complaints) and [Unsubscribe API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/unsubscribe). Follow pagination rather than assuming the first page contains the full list.
+
+<ImportSuppressions />
+
+<MigrationCutover />

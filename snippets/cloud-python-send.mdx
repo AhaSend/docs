@@ -1,0 +1,45 @@
+## Add the Shared Sending Code
+
+Save this as `send_email.py` beside the function file. It uses Python's standard library, so this example needs no SDK package. Set `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, `AHASEND_FROM`, `AHASEND_TO` and `SEND_TOKEN` in the runtime environment. Use a long random `SEND_TOKEN` for requests from your trusted server. For the first run set `AHASEND_TO=recipient@example.com` and `AHASEND_DELIVERY_MODE=sandbox`; keep a sandbox credential in place while testing. Set `live` only when ready to deliver to your own approved recipients.
+
+```python send_email.py
+import hmac, json, os, re, urllib.error, urllib.request
+
+def send_email(body, authorization):
+    token = os.environ.get("SEND_TOKEN", "")
+    if not token:
+        return 500, {"error": "Missing server configuration"}
+    if not hmac.compare_digest(authorization.encode(), ("Bearer " + token).encode()):
+        return 401, {"error": "Unauthorized"}
+    event_id = body.get("event_id") if isinstance(body, dict) else None
+    if not isinstance(event_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", event_id):
+        return 400, {"error": "event_id must be 8-64 letters, digits, _ or -"}
+    mode = os.environ.get("AHASEND_DELIVERY_MODE", "sandbox")
+    required = ("AHASEND_API_KEY", "AHASEND_ACCOUNT_ID", "AHASEND_FROM", "AHASEND_TO")
+    if mode not in ("sandbox", "live") or any(not os.environ.get(k) for k in required):
+        return 500, {"error": "Missing or invalid server configuration"}
+    payload = {
+        "from": {"email": os.environ["AHASEND_FROM"]},
+        "recipients": [{"email": os.environ["AHASEND_TO"]}],
+        "subject": "Welcome",
+        "text_content": "Your account is ready.",
+        "sandbox": mode == "sandbox",
+    }
+    url = f"https://api.ahasend.com/v2/accounts/{os.environ['AHASEND_ACCOUNT_ID']}/messages"
+    request = urllib.request.Request(url, json.dumps(payload).encode(), headers={
+        "Authorization": f"Bearer {os.environ['AHASEND_API_KEY']}",
+        "Content-Type": "application/json",
+        "Idempotency-Key": f"{mode}-welcome-{event_id}",
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            result = json.load(response)
+        statuses = [item["status"] for item in result["data"]]
+        if not statuses or any(s not in ("queued", "scheduled") for s in statuses):
+            return 422, {"error": "A recipient was rejected"}
+        return 202, {"statuses": statuses}
+    except (urllib.error.URLError, TimeoutError, ValueError, KeyError, TypeError):
+        return 502, {"error": "Email request failed"}
+```
+
+Only your server chooses the sender, recipient and message body. Look up a user's verified address from your database before adapting this to a real signup flow. Keep that saved message unchanged when retrying an `event_id`; a new business event needs a new ID. See [idempotency](/api-reference/idempotency) for time limits and uncertain outcomes. Record an internal event ID on failures without logging API keys or message bodies. Add request limits at the hosting layer.

@@ -1,11 +1,16 @@
 ---
-title: "Quickstart"
+title: "Quickstart: Send Your First Email"
 sidebarTitle: "Quickstart"
-description: "Send your first email in under 5 minutes with AhaSend"
+description: "Send your first email with AhaSend: verify a domain, create an API key or SMTP credential, then send with cURL, Node.js, Python, PHP or Go."
 icon: "rocket"
 ---
 
-Get up and running with AhaSend in under 5 minutes. This guide will walk you through sending your first email using either our REST API or SMTP relay.
+import EmailHelpGuides from "/snippets/email-help-guides.mdx";
+
+import OfficialSdks from "/snippets/official-sdks.mdx";
+
+
+Send your first email with AhaSend by verifying a domain, creating a credential, and calling the REST API or connecting to the SMTP relay.
 
 <Info>
 **Before you start:** You'll need an AhaSend account. [Sign up for free](https://dash.ahasend.com/user/register) to get 1,000 emails per month at no cost.
@@ -26,7 +31,7 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
     3. **Wait for verification** (usually takes a few minutes)
 
     <Info>
-    **Need help with domain setup?** Check out our detailed [domain configuration guide](/domains) for step-by-step instructions for all major DNS providers.
+    **Need help with domain setup?** Check out our detailed [domain configuration guide](/domains) for the required DNS records and links to DNS provider help.
     </Info>
 
     <Warning>
@@ -57,7 +62,7 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
     Create the appropriate credentials for your chosen method:
 
     **For HTTP API:**
-    - Go to **API Keys** in your dashboard
+    - Go to **Credentials → Add** in your dashboard and choose **API Key v2** for a send-only key (or use a full API v2 key with a send scope from **Account Settings → API Keys**)
     - Click "Create API Key"
     - Copy and securely store your API key
 
@@ -89,12 +94,17 @@ Get up and running with AhaSend in under 5 minutes. This guide will walk you thr
 
 ---
 
-## HTTP API
 
-Send emails using our modern HTTP API. Perfect for web applications and microservices.
+<OfficialSdks />
+
+<a id="http-api" />
+
+## How Do I Send Through the HTTP API?
+
+Call `POST https://api.ahasend.com/v2/accounts/{account_id}/messages` with your API key and a sender on your verified domain. See [API authentication](/api-reference/authentication) for the header and [sending limits](/send-api/send-email#limits) before adding recipients.
 
 <Info>
-**API Version Note:** These examples use our latest API v2, which provides the most powerful features including advanced tracking, bulk sending, and better error handling. For simpler use cases, you can also use our [API v1](/api-reference/v1).
+**API Version Note:** These examples use our latest API v2, which provides the most powerful features including advanced tracking, bulk sending, and better error handling. Existing v1 integrations can use the [legacy API v1 reference](/api-reference/v1); use v2 for new integrations.
 </Info>
 
 ### Basic Email
@@ -197,6 +207,7 @@ send_email()
 ```php PHP
 <?php
 $email = [
+    'sandbox' => true,
     'from' => [
         'name' => 'My App',
         'email' => 'hello@yourdomain.com'
@@ -223,7 +234,7 @@ $options = [
 $context = stream_context_create($options);
 $response = file_get_contents('https://api.ahasend.com/v2/accounts/{account_id}/messages', false, $context);
 
-var_export($response, true);
+echo $response;
 ?>
 ```
 
@@ -297,13 +308,15 @@ func main() {
 
 ---
 
-## SMTP Relay
+<a id="smtp-relay" />
+
+## How Do I Send Through SMTP?
 
 Use our SMTP servers with any email library. Great for existing applications or when you need SMTP compatibility.
 
 ### SMTP Settings
 
-```
+```text
 Host: send.ahasend.com
 Ports: 25, 587, 2525 (all support STARTTLS)
 Authentication: Required
@@ -322,10 +335,10 @@ Password: Your SMTP password (from dashboard)
 ```javascript Node.js (Nodemailer)
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   host: 'send.ahasend.com',
   port: 587,
-  secure: false, // true for 465, false for other ports
+  secure: false,
   auth: {
     user: 'YOUR_SMTP_USERNAME',
     pass: 'YOUR_SMTP_PASSWORD'
@@ -460,12 +473,14 @@ Now that you've sent your first email, here's what to do next:
   <Card title="Send with API" icon="code" href="/api-reference/messages/create-message">
     **Advanced API features** like templates, attachments, and bulk sending
   </Card>
-  <Card title="Sandbox SMTP" icon="flask" href="/smtp/sandbox">
+  <Card title="Sandbox SMTP" icon="flask" href="/send-api/sandbox">
     **Test safely** with sandbox mode to avoid sending emails to real recipients
   </Card>
 </CardGroup>
 
-## Troubleshooting
+<a id="troubleshooting" />
+
+## Why Did My First Send Fail?
 
 Having issues? Here are the most common problems:
 
@@ -477,10 +492,10 @@ Having issues? Here are the most common problems:
   </Accordion>
 
   <Accordion title="Domain Still Not Verified">
-    - DNS changes can take up to 24 hours to propagate
+    - Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
     - Double-check that you added all required DNS records exactly as shown
     - Use a DNS checker tool to verify your records are live
-    - Contact support if verification fails after 24 hours
+    - Contact support if verification fails after 48 hours
   </Accordion>
 
   <Accordion title="SMTP Authentication Failed">
@@ -493,10 +508,19 @@ Having issues? Here are the most common problems:
     - Check your dashboard message logs for delivery status
     - Verify the recipient email address is correct
     - Check the recipient's spam folder
-    - Make sure you're not hitting rate limits (1,000 emails/month on free plan)
+    - Make sure you're not hitting monthly allowance (the Free plan includes 1,000 emails/month); see [API rate limits](/api-reference/rate-limits) for request limits
   </Accordion>
 </AccordionGroup>
 
 <Info>
 **Need more help?** Email our engineering team at [support@ahasend.com](mailto:support@ahasend.com) - we typically respond within a few hours!
 </Info>
+
+<EmailHelpGuides />
+
+## Related Guides
+
+- [Domain setup](/domains), [Send-only API keys](/send-api/credentials), [Sending guide](/send-api/send-email).
+- [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart), [SDK and framework guides](/guides).
+- [Plans and limits](/facts), [Product releases](/changelog), [Tracking setup](/tracking/open-tracking).
+- [Sandbox behavior](/send-api/sandbox).

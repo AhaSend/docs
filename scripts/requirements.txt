@@ -1,0 +1,4 @@
+PyYAML==6.0.3
+tree-sitter==0.25.2
+tree-sitter-bash==0.25.1
+jsonschema==4.26.0

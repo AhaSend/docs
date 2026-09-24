@@ -1,9 +1,14 @@
 ---
-title: "Sending emails in PHP"
+title: "Send Email in PHP via SMTP (PHPMailer, Laravel)"
 sidebarTitle: "PHP"
-description: "Learn how to send emails using AhaSend SMTP with PHP, including PHPMailer, Symfony Mailer, and Laravel configuration"
+description: "Send email from PHP through the AhaSend SMTP relay with PHPMailer, Symfony Mailer or Laravel: STARTTLS settings, attachments and sandbox tests."
 icon: "php"
 ---
+
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
 
 Send emails through AhaSend's SMTP servers using PHP with popular libraries like PHPMailer and Symfony Mailer. This guide covers everything from basic setup to advanced features like attachments and HTML content.
 
@@ -12,6 +17,8 @@ Send emails through AhaSend's SMTP servers using PHP with popular libraries like
 </Warning>
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -22,35 +29,12 @@ Before you begin, ensure you have:
     - Basic knowledge of PHP and command line usage
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Connection Settings
 
-Use these settings for all Go SMTP configurations with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`
-    **Ports:** 587 (recommended), 25, 2525
-    **Security:** STARTTLS
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`
-    **Ports:** 587 (recommended), 25, 2525
-    **Security:** STARTTLS
-    **Authentication:** Required
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## PHPMailer Integration
 
@@ -154,6 +138,8 @@ try {
 ### PHPMailer with Special Headers
 
 Add AhaSend's special headers for tracking, sandbox mode, and more:
+
+The next block continues the basic PHPMailer example and uses its imports.
 
 ```php PHPMailer with Headers
 <?php
@@ -283,7 +269,7 @@ MAIL_HOST=send.ahasend.com
 MAIL_PORT=587
 MAIL_USERNAME=YOUR_SMTP_USERNAME
 MAIL_PASSWORD=YOUR_SMTP_PASSWORD
-MAIL_ENCRYPTION=tls
+MAIL_SCHEME=smtp
 MAIL_FROM_ADDRESS=hello@yourdomain.com
 MAIL_FROM_NAME="Your App Name"
 ```
@@ -359,6 +345,8 @@ echo 'Email sent with tracking enabled!';
 
 Use sandbox mode to test your PHP email integration safely:
 
+The next block continues the basic PHPMailer example and uses its imports.
+
 ```php Sandbox Testing Examples
 <?php
 // PHPMailer sandbox
@@ -429,3 +417,7 @@ $message->getHeaders()
 <Tip>
 **Pro Tip:** Start with sandbox mode when developing, use environment variables for credentials, and always provide both HTML and plain text versions of your emails for better compatibility.
 </Tip>
+
+For framework setup, use [Symfony](/guides/symfony) or [Laravel](/guides/laravel). Existing HTTP API integrations have their own [WordPress plugin](/guides/wordpress) and [Drupal module](/guides/drupal) guides.
+
+<SmtpRelated />

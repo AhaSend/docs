@@ -1,0 +1,35 @@
+---
+title: "DNS Provider Setup Guides"
+sidebarTitle: "DNS Providers"
+description: "Find AhaSend DNS setup steps for Cloudflare, GoDaddy, Route 53 and other providers, with SPF, DKIM and DMARC names, values and verification tips."
+---
+
+AhaSend's DNS provider guides show where to publish your sending domain's authentication records and how to check the result.
+
+## Choose Your DNS Provider
+
+Choose the provider that hosts your domain's nameservers. It may differ from the company where you bought the domain or host your website.
+
+- [Cloudflare](/dns/cloudflare)
+- [GoDaddy](/dns/godaddy)
+- [Namecheap](/dns/namecheap)
+- [Amazon Route 53](/dns/route-53)
+- [Hetzner](/dns/hetzner)
+- [IONOS](/dns/ionos)
+- [STRATO](/dns/strato)
+- [TransIP](/dns/transip)
+- [OVHcloud](/dns/ovh)
+- [Squarespace](/dns/squarespace)
+- [Vercel](/dns/vercel)
+
+## What Do I Need Before Editing DNS?
+
+First [add your sending domain](/domains) in AhaSend. Copy the records from that domain's page, because managed DKIM targets and optional subdomains can differ. Keep a copy of existing DNS and preserve your mailbox MX records. Update existing SPF and DMARC policies rather than publishing duplicates.
+
+After saving the records, click **Check DNS** in AhaSend. See the [domain setup page](/domains) for verification timing and required records.
+
+## Related Guides
+
+- [Domain setup](/domains), [SPF, DKIM and DMARC explained](/email-authentication) and [troubleshooting](/troubleshooting).
+- [API credentials](/send-api/credentials), [REST API](/send-api/send-email), [SMTP](/smtp), [Node.js SDK](/guides/nodejs-sdk) and [domain CLI](/cli/commands/domains).
+- [Deliverability](/deliverability) and [DNS check API](/api-reference/domains/check-dns).

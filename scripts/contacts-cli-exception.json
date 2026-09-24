@@ -1,0 +1,143 @@
+{
+  "source": {
+    "kind": "contacts-development-exception",
+    "commit": "7a47882b56f766ce0cf9a82c447d9319664d5ef4",
+    "vcs_modified": true,
+    "repository": "https://github.com/AhaSend/ahasend-cli",
+    "version_output": "AhaSend CLI dev\nBuild Time: 2026-09-23_11:51:25\nGit Commit: 7a47882",
+    "binary_sha256": "d4b8334522535b19aca7592b39e2e49c8bf9a355a45df796fc49511bac5cff53",
+    "reason": "Contacts API and CLI release checks are deferred. Remove this exception when a compatible CLI release ships."
+  },
+  "commands": {
+    "contacts": {
+      "flags": {
+        "--help": false,
+        "-h": false,
+        "--account-id": true,
+        "--api-key": true,
+        "--debug": false,
+        "--no-color": false,
+        "--output": true,
+        "--profile": true,
+        "--verbose": false
+      },
+      "children": [
+        "batch",
+        "create",
+        "delete",
+        "get",
+        "list",
+        "update"
+      ]
+    },
+    "contacts batch": {
+      "flags": {
+        "--file": true,
+        "--help": false,
+        "-h": false,
+        "--idempotency-key": true,
+        "--account-id": true,
+        "--api-key": true,
+        "--debug": false,
+        "--no-color": false,
+        "--output": true,
+        "--profile": true,
+        "--verbose": false
+      },
+      "children": []
+    },
+    "contacts create": {
+      "flags": {
+        "--attributes": true,
+        "--first-name": true,
+        "--help": false,
+        "-h": false,
+        "--idempotency-key": true,
+        "--last-name": true,
+        "--status": true,
+        "--status-reason": true,
+        "--unsubscribed": false,
+        "--account-id": true,
+        "--api-key": true,
+        "--debug": false,
+        "--no-color": false,
+        "--output": true,
+        "--profile": true,
+        "--verbose": false
+      },
+      "children": []
+    },
+    "contacts delete": {
+      "flags": {
+        "--force": false,
+        "--help": false,
+        "-h": false,
+        "--account-id": true,
+        "--api-key": true,
+        "--debug": false,
+        "--no-color": false,
+        "--output": true,
+        "--profile": true,
+        "--verbose": false
+      },
+      "children": []
+    },
+    "contacts get": {
+      "flags": {
+        "--help": false,
+        "-h": false,
+        "--account-id": true,
+        "--api-key": true,
+        "--debug": false,
+        "--no-color": false,
+        "--output": true,
+        "--profile": true,
+        "--verbose": false
+      },
+      "children": []
+    },
+    "contacts list": {
+      "flags": {
+        "--after": true,
+        "--before": true,
+        "--email": true,
+        "--from-time": true,
+        "--help": false,
+        "-h": false,
+        "--limit": true,
+        "--status": true,
+        "--subscribed": true,
+        "--to-time": true,
+        "--account-id": true,
+        "--api-key": true,
+        "--debug": false,
+        "--no-color": false,
+        "--output": true,
+        "--profile": true,
+        "--verbose": false
+      },
+      "children": []
+    },
+    "contacts update": {
+      "flags": {
+        "--attributes": true,
+        "--email": true,
+        "--first-name": true,
+        "--help": false,
+        "-h": false,
+        "--last-name": true,
+        "--status": true,
+        "--status-reason": true,
+        "--unsubscribed": false,
+        "--account-id": true,
+        "--api-key": true,
+        "--debug": false,
+        "--no-color": false,
+        "--output": true,
+        "--profile": true,
+        "--verbose": false
+      },
+      "children": []
+    }
+  }
+}

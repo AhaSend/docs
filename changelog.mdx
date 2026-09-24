@@ -1,17 +1,25 @@
 ---
-title: "Product Updates"
-description: "New releases and improvements"
+title: "Changelog: Product and API Updates"
+description: "Monthly AhaSend release notes: new API v2 endpoints, official SDKs, webhook payload changes, SMTP and deliverability improvements, breaking changes and fixes."
+sidebarTitle: "Changelog"
 ---
-<Update label="August 2026">
-#### New Features
 
-- **Official TypeScript / JavaScript SDK**: [`@ahasend/sdk`](https://github.com/AhaSend/ahasend-ts) is now available on npm (`npm install @ahasend/sdk`). It covers the full API v2: messages, domains, API keys, webhooks, statistics, suppressions, inbound routes, SMTP credentials, account members and sub-accounts, with TypeScript types included, automatic idempotency keys on create calls, retries, rate-limit handling and pagination helpers. A separate `@ahasend/sdk/webhooks` entry point verifies webhook signatures and parses all event types, with adapters for Express, Fastify and Next.js. It runs on Node.js 22+, Deno, Bun, Cloudflare Workers and Vercel Edge. It is a server-side SDK and is still v0.x, so pin an exact version in production.
-- **Delivery Attempt Details in Webhooks**: `message.delivered`, `message.bounced` and `message.transient_error` webhooks now include a `delivery_attempt` object with the SMTP result behind the event: `smtp_code`, `enhanced_status_code`, the receiving server's `response`, a plain-English `description`, the bounce `classification`, and the SMTP `command` stage. The field is additive and is left out of events that are not the result of a delivery attempt. Test webhooks and sandbox sends include a representative sample, so you can build against the real payload shape.
+
+The AhaSend changelog lists product releases, API changes and fixes by month, with links to the affected features.
+
+## August 2026
+
+<Update label="August 2026">
+
+### August 2026: New Features
+
+- **[Official TypeScript / JavaScript SDK](/guides/nodejs-sdk)**: [`@ahasend/sdk`](https://github.com/AhaSend/ahasend-ts) is now available on npm (`npm install @ahasend/sdk`). It covers the full API v2: messages, domains, API keys, webhooks, statistics, suppressions, inbound routes, SMTP credentials, account members and sub-accounts, with TypeScript types included, automatic idempotency keys on create calls, retries, rate-limit handling and pagination helpers. A separate `@ahasend/sdk/webhooks` entry point verifies webhook signatures and parses all event types, with adapters for Express, Fastify and Next.js. It runs on Node.js 22+, Deno, Bun, Cloudflare Workers and Vercel Edge. It is a server-side SDK and is still v0.x, so pin an exact version in production.
+- **[Delivery Attempt Details in Webhooks](/api-reference/webhooks/message-bounced)**: `message.delivered`, `message.bounced` and `message.transient_error` webhooks now include a `delivery_attempt` object with the SMTP result behind the event: `smtp_code`, `enhanced_status_code`, the receiving server's `response`, a plain-English `description`, the bounce `classification`, and the SMTP `command` stage. The field is additive and is left out of events that are not the result of a delivery attempt. Test webhooks and sandbox sends include a representative sample, so you can build against the real payload shape.
 - **See Why a Message Is Still Waiting**: The message details page now explains why an outbound message has not been attempted yet: that it is scheduled for a specific time (shown in your timezone), that your account has reached its sending rate limit, that deliveries to the recipient's mailbox provider are temporarily paused, or that deliveries are being paced.
 - **Find Messages That Were Ever Deferred**: A new "Has deferred attempts" filter on the Messages page finds messages that hit a temporary delivery failure at any point, even if they were delivered afterwards.
 - **Readable Delivery Diagnostics**: When a delivery problem happens on our side of the connection, the delivery attempts on the message details page, campaign bounce messages and the campaign recipient export now show a clear sentence instead of raw mail-server internals. For example "DNS lookup for the recipient domain gmail.con failed: NXDOMAIN (the domain does not exist)" or "The destination mail server did not respond to MAIL FROM within 10s". Responses from recipient mail servers are still shown exactly as received. Applies to newly logged attempts.
 
-#### Changes
+### August 2026: Changes
 
 - **Outbound messages waiting for their first attempt now show as "Queued"** in the dashboard instead of "Received". Inbound messages still show "Received". API responses and webhooks are unchanged.
 - **The Messages status filter now offers "Queued" and "Received (inbound)"** in place of the single "Received" option, and the separate Direction filter has been removed. Saved links that filter on `status=Received` now return inbound messages only; use `status=Queued` for outbound.
@@ -23,7 +31,7 @@ description: "New releases and improvements"
 - **Suppressions created from mailbox-provider spam complaints now use the reason `FBL Complaint Report`** instead of `FBL Abuse Report`, in the dashboard, the API `reason` field and the `suppression.created` webhook. Existing suppressions keep their original text, so integrations matching on the exact string should accept both.
 - **The (somewhat broken) Re-check DNS button was removed from the domain list.** DNS checks are run from each domain's own page.
 
-#### Improvements
+### August 2026: Improvements
 
 - **SPF validation now follows nested `include:` chains and `redirect=`**, so domains that authorize AhaSend through an intermediate SPF record are correctly recognized as configured.
 - **SPF status is steadier during DNS trouble.** A temporary failure looking up your own domain no longer flips SPF to unconfigured, and an outage at a third-party SPF provider can no longer freeze a stale status.
@@ -34,7 +42,7 @@ description: "New releases and improvements"
 - **The API v2 list messages endpoint now accepts `Opened` and `Clicked`** as `status` filter values. They were previously rejected as invalid.
 - **The Lists page loads faster and more reliably for large audiences.** Subscriber counts for filtered lists are now calculated far more efficiently.
 
-#### Bug Fixes
+### August 2026: Bug Fixes
 
 - **Fixed click webhooks for campaign emails never being delivered.** `message.clicked` events for campaign sends were dropped; only clicks in transactional emails produced webhooks. They are now delivered.
 - **Fixed transactional `message.clicked` webhooks always reporting `is_bot: false` and an empty `user_agent`.** Both now carry the real values recorded at click time.
@@ -56,15 +64,19 @@ description: "New releases and improvements"
 - **Fixed a rare condition where an open or click on a campaign whose sending domain had been deleted could briefly interrupt open and click tracking.**
 - **Fixed the account settings descriptions for rejecting mistyped and temporary-mail recipient domains** to quote the exact `553` error text those features return.
 </Update>
+
+## July 2026
+
 <Update label="July 2026">
-#### New Features
+
+### July 2026: New Features
 
 - **CSV Contact Import**: You can now fill a contact list by uploading a CSV file — from the Contacts page, from an individual list, or directly in the Create List dialog so a new list is created and populated in one step. Contacts that already exist are updated and added to the list; new ones are created. Recognized columns are email, first name, last name, status, and any of your custom contact attributes.
 - **Background Imports with Progress and Email Notification**: Files above roughly 500KB or 5,000 rows are processed in the background. The Contacts and list pages show a live progress banner with a Cancel button, and you receive an email when the import finishes reporting how many contacts were imported, how many joined the list, and how many rows were skipped. If an import fails, the email explains why whenever the cause is something you can fix — such as a malformed row and its line number, a missing email column, or an empty file — and re-uploading the same file is always safe.
-- **Higher Hourly Sending Limits, Graduated by Plan**: Pro accounts now start at 1,000 messages per hour and step up to 5,000 and then 10,000 as you build your sending reputation and history with AhaSend; Max accounts start at 2,000 and step up to 20,000 and then 100,000 per hour. Legacy metered plans keep their existing 500 → 1,000 → 2,000 curve. Higher rate limits are possible after a manual review and approval, please [contact us](mailto:support@ahasend.com) if your sending patterns require higher rate limits.
+- **Higher Hourly Sending Limits, Graduated by Plan**: Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. See [current limits](/facts). Higher rate limits are possible after a manual review and approval, please [contact us](mailto:support@ahasend.com) if your sending patterns require higher rate limits.
 - **Per-Service Cookie Controls**: "Manage preferences" now lets you allow or refuse individual services rather than only broad categories — PostHog analytics and UTM attribution under Analytics, Trackdesk affiliate tracking under Marketing. Refusing a category or service now actively deletes the cookies belonging to it, and withdrawing consent takes effect immediately in every open tab.
 
-#### Changes
+### July 2026: Changes
 
 - **Contact email addresses are now case-insensitive.** Two spellings of the same address are now the same contact everywhere — on import, when adding a contact, in search, and in list segments. Existing contacts that differed only by capitalization have been merged into one, keeping the most restrictive state (unsubscribes, suppressions, and invalid-address verdicts always survive) and preserving names, custom attributes, list memberships, and engagement history. Previously, re-adding an address with different capitalization created a second contact that could bypass the original's unsubscribe.
 - **Saved list segments with email rules were updated.** Segments filtering on an email address with "equals" or "does not equal" have had their values lowercased so they keep matching. "Contains", "begins with", and "ends with" rules were left exactly as you wrote them; they already ignore capitalization.
@@ -76,7 +88,7 @@ description: "New releases and improvements"
 - **The account suspension email now names the affected account** and its account ID, and links directly to it in the dashboard — useful if you manage sub-accounts and receive notifications for more than one account.
 - **The inbound routes page now shows MX setup guidance**: Routing is not possible unless your (sub)domain's primary MX record is pointing to AhaSend. The dashboard now has an improved setup guide on the routes page telling you to do so before you can setup routes.
 
-#### Improvements
+### July 2026: Improvements
 
 - **Accounts approved for marketing are no longer penalized for sending marketing.** Our automated content review previously treated all marketing content as a policy violation and scored it at maximum regardless of whether the account was permitted to send it. That decision now respects your account's marketing setting.
 - **Imports never re-subscribe anyone.** Contacts who have unsubscribed globally are not added to the target list, and existing list memberships — including unsubscribed ones — are left as they are. Rows with an invalid email address are skipped and reported rather than imported.
@@ -84,7 +96,7 @@ description: "New releases and improvements"
 - **Images in marketing campaigns load faster on repeat views.** Cached campaign images now tell recipients' email clients that they can be kept for 24 hours, matching what images already got on first load.
 - **Links inside notification emails are now visibly styled as links** instead of blending into the body text. This covers account suspended, credit limit warnings, domain DNS problems, and disabled webhook, routing, and S3 integration notices.
 
-#### Bug Fixes
+### July 2026: Bug Fixes
 
 - **Late and retried delivery events now report what actually happened instead of repeating the last known status.** Our mail server can retry an event notification for up to 24 hours. A retried reception, temporary failure, or bounce arriving after a message was already delivered previously re-sent a duplicate `on_delivered`; it now sends the event that actually occurred. A retried non-delivery event on a message you had already opened or clicked used to produce no webhook and now reports itself. A retried delivery event on an already-opened message still sends nothing, and an expired message still produces exactly one `on_transient_error` and one `on_failed`. Payload shapes are unchanged and no new event types were added.
 - **Contact Imports no longer overwrite data you didn't include.** A CSV that omits a column, or leaves a cell blank, now leaves the existing first name, last name, and custom attributes untouched, and custom attributes are merged rather than replaced. Previously an email-only CSV would erase names and attributes on every contact it touched.
@@ -105,15 +117,18 @@ description: "New releases and improvements"
 - **Fixed changing your account email address**: entering a different capitalization of your current address is now recognized as no change, and confirming a change to an address another user already holds now shows a clear error instead of appearing to succeed.
 </Update>
 
-<Update label="June 2026">
-#### New Features
+## June 2026
 
-- **Sub-Accounts**: Platform Partner and reseller accounts can now create and manage sub-accounts under a single parent, from both the dashboard and the v2 API. Each sub-account is a full account — its own domains, sending, webhooks, routes, and members — that is billed through the parent, with usage pooled onto the parent's invoice and a proportional per-sub cost breakdown available in the dashboard and API.
+<Update label="June 2026">
+
+### June 2026: New Features
+
+- **[Sub-Accounts](/scale/sub-accounts)**: Platform Partner and reseller accounts can now create and manage sub-accounts under a single parent, from both the dashboard and the v2 API. Each sub-account is a full account — its own domains, sending, webhooks, routes, and members — that is billed through the parent, with usage pooled onto the parent's invoice and a proportional per-sub cost breakdown available in the dashboard and API.
 - **API-Only Sub-Account Provisioning**: Partners can provision a new sub-account and mint its first working API key entirely over the API, with no dashboard step. The new key belongs to the sub-account, and its secret is returned only once (or on an exact idempotent retry within five minutes).
 - **API Key IP Allow Lists**: Each v2 API key can now be restricted to a set of IPv4/IPv6 addresses or CIDR ranges. When a key has a non-empty allow list, any request made with it from an IP that isn't on the list is rejected on every endpoint, regardless of the key's permissions. An empty list means no restriction, so existing keys are unaffected. Up to 100 entries per key; the "allow everything" ranges are rejected.
 - **Per-Domain DKIM Selectors**: Platform Partner accounts can now set a custom DKIM selector for each sending domain — in the dashboard and via the v2 API — instead of only an account-wide selector, so the same domain can be authenticated across multiple senders without collisions. The selector can be changed while the domain's DKIM is unverified and locks once verified (contact support to unlock).
 
-#### Changes
+### June 2026: Changes
 
 - **API key responses now include an `ip_allow_list` field.** The [list](/api-reference/api-keys/get-api-keys), [get](/api-reference/api-keys/get-api-key), [create](/api-reference/api-keys/create-api-key), and [update](/api-reference/api-keys/update-api-key) API-key endpoints always return the key's allow list (an empty array when the key has no restriction).
 - **Changing a key's IP allow list in the dashboard now requires confirming it's you.** Saving an allow-list change prompts for a current two-factor code (or a recovery code) if you have two-factor enabled, otherwise your account password; the confirmation is remembered for five minutes. Dashboard management works from any IP and is never blocked by a key's own allow list.
@@ -124,16 +139,16 @@ description: "New releases and improvements"
 - **Suspended accounts can no longer manage sending domains** To prevent abuse, while an account is suspended, adding, editing, deleting, or re-checking DNS for a domain is blocked with a message to contact support.
 - **The billing page now shows emails sent "in the current billing cycle"** for customers on a paid subscription, instead of "in the past 30 days."
 - **Custom Subdomains on Self-Managed DNS**: Domains that use your own self-published DNS can now customize their tracking, return-path, subscription, and media subdomains, matching what was already available for managed-DNS domains. Each subdomain is editable until its DNS record is verified, then locks.
-- **Golang SDK**: The [AhaSend Go SDK](https://github.com/AhaSend/ahasend-go) now supports Sub-Account features and API key IP allow lists.
-- **CLI**: The [AhaSend CLI](https://github.com/AhaSend/ahasend-cli) now supports the Sub-Account management features.
+- **Golang SDK**: The [AhaSend Go SDK](/guides/go-sdk) now supports Sub-Account features and API key IP allow lists.
+- **CLI**: The [AhaSend CLI](/cli) now supports the Sub-Account management features.
 
-#### Improvements
+### June 2026: Improvements
 
 - **Safer API retries.** Retrying a request while the original is still processing now returns a clear "conflict" response with retry guidance, and reusing the same idempotency key on a different endpoint, resource, or payload is rejected instead of replaying the wrong response — so retries no longer risk creating duplicate resources.
 - **Self-lockout protection on API-key allow lists.** If you use a key to set its own IP allow list to a value that excludes the IP you're calling from, the change is rejected and nothing is saved. You can still change it from the dashboard, from an already-allowed IP, or with a different key.
 - **Sub-account and API-key updates reject empty or no-change requests** with a clear error and leave omitted fields untouched; the website field is optional when updating a sub-account.
 
-#### Bug Fixes
+### June 2026: Bug Fixes
 
 - Fixed legacy plan customers being unable to upgrade to the Pro or Max plan; these upgrades now complete correctly.
 - Fixed plan upgrades failing for cards that require extra verification; the upgrade now goes through against your saved card without a failed authentication prompt.
@@ -142,26 +157,30 @@ description: "New releases and improvements"
 - Fixed the profile account switcher so deleted accounts no longer appear and can no longer break the page.
 
 </Update>
+
+## May 2026
+
 <Update label="May 2026">
-#### New Features
+
+### May 2026: New Features
 
 - **Duplicate a Campaign**: You can now duplicate an existing marketing campaign in one action. The copy includes the design, sender settings, subject, preview text, tags, and recipient lists, and opens as a new editable draft — delivery history and statistics are not carried over.
 - **Automatic Tax on Subscriptions**: New paid subscriptions now have applicable sales tax or VAT automatically calculated and added to your invoices based on your billing location.
 
-#### Changes
+### May 2026: Changes
 
 - **Transactional sends are limited to 100 recipients per request.** The v1 send API now enforces a maximum of 100 recipients per call and rejects empty recipient lists with a validation error, matching the documented v2 limit.
 - **Each recipient gets a unique Message-ID.** When you send to multiple recipients via the v1 send API without supplying your own Message-ID, every recipient now receives an individually generated, unique Message-ID instead of a shared one, making each message separately trackable. Supplying your own Message-ID works as before.
 - **Higher domain limits for enterprise and reseller accounts.** Enterprise and Platform Partner accounts can now add up to 10,000 sending domains.
 
-#### Improvements
+### May 2026: Improvements
 
 - **Cost estimates now reflect your subscription's currency.** The estimated-amount figure on the billing page is calculated using EUR or GBP pricing for EUR/GBP subscribers, instead of dollar-based rates.
 - **Fewer false-positive account suspensions.** Automated bounce-rate protection now measures your actual bounce rate over the trailing 30 days and only acts once you've accumulated a meaningful number of bounces, so low-volume accounts are no longer suspended over a handful of bounces. Reviewed accounts that are reinstated are judged only on their activity going forward.
 - **Clearer error when adding a duplicate contact.** Adding a contact whose email already exists now shows a specific "a contact with this email address already exists" message instead of a generic failure.
 - **Better partial-failure reporting on multi-recipient sends.** When some recipients in a send fail, the API response now clearly reports which recipients failed and why, rather than failing the entire request opaquely.
 
-#### Bug Fixes
+### May 2026: Bug Fixes
 
 - Fixed credit purchases that could silently fail to complete; credit top-ups are now provisioned reliably.
 - Fixed plan upgrades occasionally resolving to the wrong plan when an invoice contained proration credits.
@@ -175,8 +194,11 @@ description: "New releases and improvements"
 
 </Update>
 
+## April 2026
+
 <Update label="April 2026">
-#### New Features
+
+### April 2026: New Features
 
 - **Multi-Currency Billing**: New paid subscriptions are now billed in EUR, GBP, or USD depending on your location. The same applies when upgrading or switching between Pro and Max plans. Your default currency is captured when your account is verified, and prices on the onboarding and dashboard billing pages — both plan base prices and per-1k-email overage rates — are now shown in your local currency with the correct symbol (€9 / £8 / $10 for the Pro plan, etc.). You can override the auto-detected currency with a `currency` cookie.
 - **Custom Subdomains on Domain Creation**: The API v2 [create-domain endpoint](/api-reference/domains/create-domain) now accepts `tracking_subdomain`, `return_path_subdomain`, `subscription_subdomain`, `media_subdomain`, and `dkim_rotation_interval_days` so domains can be set up with custom subdomains in a single API call.
@@ -185,12 +207,12 @@ description: "New releases and improvements"
 - **BYODKIM Compatibility**: Platform Partner accounts can now [create domains](/api-reference/domains/create-domain) with 1024-bit BYODKIM keys when needed for legacy compatibility. 2048-bit keys remain recommended.
 - **Work Email Required at Signup**: To reduce abuse, new account sign-ups must now use a work email address. Free, personal, and temporary email providers are no longer accepted at registration.
 
-#### Changes
+### April 2026: Changes
 
 - **Email addresses are normalized on messages and suppressions** (lowercased and trimmed of surrounding whitespace) on write and on lookup, making suppression checks robust to casing and whitespace variations.
 - **API v2 message scheduling validation is stricter:** [Create Message API](/api-reference/messages/create-message) scheduled expiration must be in the future and within the documented limit.
 
-#### Improvements
+### April 2026: Improvements
 
 - **Better API v2 error responses.** `403 Forbidden` (not `401`) is returned for insufficient scopes; `400` (not `404`/`412`) for invalid sender domains or DNS-invalid domains on send; clearer errors for invalid suppression domains, invalid webhook boolean filters, and message-status enum mismatches.
 - **Idempotent create endpoints document the `422` response** that is returned when an idempotency key is reused with a different payload.
@@ -199,7 +221,7 @@ description: "New releases and improvements"
 - **Account billing pages now keep customer currency consistent** when viewing existing subscriptions or switching plans.
 - **Plan cards now show localized overage prices** instead of hardcoded USD amounts.
 
-#### Bug fixes
+### April 2026: Bug fixes
 
 - **Domain names are normalized everywhere.** Domain names submitted to the API, the dashboard, or as part of an API key scope are now lowercased, trimmed, and stripped of any trailing dot, so equivalent names are no longer treated as different.
 - Dashboard links in campaign review, DNS, route, and webhook notification emails now point directly to the correct pages.
@@ -210,16 +232,19 @@ description: "New releases and improvements"
 
 </Update>
 
+## March 2026
+
 <Update label="March 2026">
-#### New Features
+
+### March 2026: New Features
 
 - **Managed DNS & DKIM Rotation Setup**: Sending-domain setup now supports our new native managed DNS flow. Managed domains get two DKIM CNAME records: one required for sending and a second recommended record that lets AhaSend rotate DKIM keys later without asking for another DNS change.
 - **Contact Detail Pages**: You can now view and edit individual contacts directly from the dashboard, including custom attributes, list memberships, engagement statistics, campaign delivery history, and activity logs. Drill-down pages for opens, clicks, and campaigns are available for detailed analysis.
-- **Message Tag Filtering**: Messages can now be filtered by tags in both the [API](/api-reference/messages/list-messages) and the [dashboard](https://dash.ahasend.com/account/-/transactional/messages), making it easier to find specific transactional messages.
+- **Message Tag Filtering**: Messages can now be filtered by tags in both the [API](/api-reference/messages/get-messages) and the [dashboard](https://dash.ahasend.com/account/-/transactional/messages), making it easier to find specific transactional messages.
 - **Email Proxy Detection**: Open and click tracking now correctly identifies email proxies from Gmail, Yahoo, Apple Mail Privacy Protection, Superhuman, and Fastmail, giving you more accurate engagement metrics. Apple MPP detection uses IP range verification rather than user agent matching alone.
 - **Delivery Analytics**: Messages now track egress pool, egress source, and mailbox provider (Gmail, Yahoo, Outlook, etc.), with pre-aggregated statistics tables for future per-provider delivery reporting.
 
-#### Changes
+### March 2026: Changes
 
 - Contact imports now update existing contacts' names and attributes instead of silently skipping duplicates.
 - Default message data retention for new accounts is now 7 days (previously 30).
@@ -228,16 +253,16 @@ description: "New releases and improvements"
 - The onboarding DNS setup page has a wider layout that is easier to read on all screen sizes.
 - Invoices issued prior to March 15, 2026 are noted as unavailable in the dashboard billing page, with a link to support for older invoices.
 
-#### Improvements
+### March 2026: Improvements
 
 - DNS validation now tries multiple fallback nameservers (Cloudflare, Level3, Google, OpenDNS) before marking a domain as broken, reducing false alarms from temporary resolver issues.
 - DNS validation now follows CNAME chains, so domains using intermediate CNAME records (e.g., through a CDN or DNS proxy) validate correctly.
 - DMARC checking recovers more gracefully from transient DNS failures, preserving the previously known state instead of marking the domain invalid.
 - The dashboard adapts better to light and dark color modes.
 - Checkout and payment form initialization is more reliable.
-- Established accounts (verified, or 30+ days old with significant volume) can now disable message data retention, in addition to approved accounts.
+- Zero message-data retention is available within the plan limits and needs AhaSend approval. See [retention settings](/retention).
 
-#### Bug Fixes
+### March 2026: Bug Fixes
 
 - Fixed character encoding corruption (mojibake) in campaign emails when HTML entities such as non-breaking spaces were converted to UTF-8 by the tracking system.
 - Fixed single-part campaign emails not receiving click or open tracking.
@@ -246,21 +271,25 @@ description: "New releases and improvements"
 - Fixed text selection being unreadable in code blocks on the dashboard.
 - Fixed checkout validation requiring company name and VAT ID together for Singapore customers, where VAT is not applicable.
 </Update>
+
+## February 2026
+
 <Update label="February 2026">
-#### New Features
+
+### February 2026: New Features
 
 - **Campaign Content Spam Check**: Campaign validation now includes an AI-based content review step using our own in-house, self-hosted, fine-tuned LLM model in addition to recipient-list checks. This helps catch campaigns that look like spam, phishing, or cold outreach before they are sent.
 - **Campaign Review Notifications**: You now get email notifications when a campaign review is pending, approved, or rejected.
 - **Campaign Review Improvements**: Manual campaign approvals are more flexible. Approved campaigns can either continue as scheduled or be returned to draft, and reviewed campaigns can be approved with bounce-rate evaluation skipped when appropriate.
 
-#### Changes
+### February 2026: Changes
 
 - Campaign validation now gives clearer review outcomes, with more specific reasons when a campaign is held for manual review.
 - Campaign reports are easier to use on smaller screens thanks to improved responsive tables.
 - Campaign report charts render more reliably.
 - The admin side of campaign and domain review tooling was expanded significantly, which should lead to faster and more consistent review handling by our support team.
 
-#### Improvements
+### February 2026: Improvements
 
 - Campaign sending is more reliable when subscriber status changes after scheduling. Recipients who become invalid or disabled before send time are now excluded automatically instead of causing avoidable failures.
 - Campaign scheduling and initialization logic was hardened to reduce the chance of duplicate or inconsistent background jobs.
@@ -269,7 +298,7 @@ description: "New releases and improvements"
 - Domain risk analysis is more reliable thanks to improved domain-registration lookup logic and better handling of rate limits and timeouts.
 - Message IDs generated by[Send Message APIv2](/api-reference/messages/create-message), [Send Conversational Message APIv2](/api-reference/messages/create-conversation) and [Create Message APIv1](/api-reference/v1) are now generated using UUIDv7, improving consistency, ordering and performance for generated IDs.
 
-#### Bug Fixes
+### February 2026: Bug Fixes
 
 - Fixed API v2 [conversational sending](/api-reference/messages/create-conversation) not properly respecting API-key sandbox mode.
 - Fixed API v2 [GetMessage](/api-reference/messages/get-message) returning `500` errors in cases where `404` was correct.
@@ -280,12 +309,16 @@ description: "New releases and improvements"
 - Fixed checkout/account details validation so company name and VAT can be entered independently.
 - Improved Stripe webhook handling to prevent errors in some edge cases.
 </Update>
+
+## January 2026
+
 <Update label="January 2026">
-#### Security
+
+### January 2026: Security
 
 - Improved session security with automatic session refresh after login and password reset.
 
-#### New Features
+### January 2026: New Features
 
 - **Contact List Validation**: Automatically validate your contact lists before sending campaigns. The system checks email syntax, MX records, and uses external verification services to identify invalid or risky addresses. Campaigns with high bounce risk are flagged for review before sending.
 - **Campaign Cancellation & Rescheduling**: Cancel scheduled campaigns or validation in progress, and reschedule campaigns with a new send time.
@@ -293,20 +326,20 @@ description: "New releases and improvements"
 - Added delete campaign option with confirmation on the campaign edit page.
 - Email notifications for campaign reviews: get notified when your campaign is pending review, approved, or requires changes.
 
-#### Changes
+### January 2026: Changes
 
 - Dashboard charts now include campaign email statistics alongside transactional emails.
 - "Deferrals" renamed to "Deferred Attempts" on the dashboard for clarity.
 - Recent messages section now labeled "Recent transactional messages" to distinguish from campaigns.
 - [Send Message API](/api-reference/messages/create-message) now automatically detects template format based on whether substitutions are provided.
 
-#### Improvements
+### January 2026: Improvements
 
 - Suppression rate calculations now include campaign recipients for more accurate metrics.
 - Campaign report page redesigned with separate views for campaigns being validated, scheduled, or paused.
 - Many improvements and bugfixes for the Email Template Designer: fixed inline images breaking on edits, added undo/redo buttons, fixed color picker positioning, and resolved image resize issues.
 
-#### Bug Fixes
+### January 2026: Bug Fixes
 
 - Fixed [API sandbox mode](/send-api/sandbox) for [Send Conversational Message API](/api-reference/messages/create-conversation) not being respected when set on credentials.
 - Fixed [Send Message API](/api-reference/messages/create-message) incorrectly changing custom email header names to lowercase.
@@ -322,7 +355,13 @@ description: "New releases and improvements"
 - Fixed dropdown menu visibility on contacts page.
 - Fixed redirect loop for users with 2FA enabled who haven't completed onboarding (only affected users who requested their accounts to be deleted without deleting their user profile).
 </Update>
+
+## December 2025
+
 <Update label="December 2025">
+
+### December 2025: Updates
+
 - Improvements and bugfixes for the Workflow Engine and Campaign Management features. [Request early access](https://ahasend.com/contact).
 - Improved dashboard reporting performance.
 - Added support for Bring Your Own DKIM keys to [Create Domain API](/api-reference/domains/create-domain) (currently only for Platform Partner accounts).
@@ -336,7 +375,13 @@ description: "New releases and improvements"
 - Improved security measures in code and infrastructure.
 - Multiple minor improvements and bugfixes.
 </Update>
+
+## November 2025
+
 <Update label="November 2025">
+
+### November 2025: Updates
+
 - Added Workflow Engine: currently in private beta and being internally used and tested for AhaSend's own user-onboarding campaigns.
 - [S3 retention](/retention/s3): Create separate files for each delivery attempt in the S3 bucket, allowing customers to use write-only credentials for archiving and using built-in S3 retention policies.
 - Added support for legacy plan customers to switch to new pricing plans.
@@ -352,7 +397,13 @@ description: "New releases and improvements"
 - Improved security measures in code and infrastructure.
 - Multiple bug fixes, improvements and optimizations.
 </Update>
+
+## October 2025
+
 <Update label="October 2025">
+
+### October 2025: Updates
+
 - New [marketing website](https://ahasend.com) with a completely new design, dark mode, better performance, and improved content
 - Implemented new [pricing plans](https://ahasend.com/pricing); existing customers remain on legacy pricing but can switch anytime
 - Added sorting feature to the Messages page in the dashboard
@@ -363,7 +414,13 @@ description: "New releases and improvements"
 - Fixed dashboard dark mode display issues
 - Fixed content handling bug in v2 Get Message API
 </Update>
+
+## September 2025
+
 <Update label="September 2025">
+
+### September 2025: Updates
+
 - Add Dark Mode to the dashboard
 - Add [Service Status Page](https://status.ahasend.com)
 - Add [Get Message](/api-reference/messages/get-message) API
@@ -378,15 +435,25 @@ description: "New releases and improvements"
 - Add new endpoint for sending [Conversation Messages](/api-reference/messages/create-conversation)
 </Update>
 
+## August 2025
+
 <Update label="August 2025">
+
+### August 2025: Updates
+
 - Add support for generating and sending RFC 3464 [DSN reports](/integrations/dsn-reports).
 - Introduce AhaSend [API v2](/api-reference)
-- Introduce [AhaSend Go SDK](https://github.com/AhaSend/ahasend-go)
-- Introduce [AhaSend CLI](https://github.com/AhaSend/ahasend-cli)
+- Introduce [AhaSend Go SDK](/guides/go-sdk)
+- Introduce [AhaSend CLI](/cli)
 - Update [documentation site](/)
 </Update>
 
+## July 2025
+
 <Update label="July 2025">
+
+### July 2025: Updates
+
 - Add option to [group route requests by Message-ID header](/integrations/routing#deduplicate-by-message-id)
 - Deploy separate infrastructure and MTA for campaigns
 - Campaign management feature (to be released - [Request early access](mailto:support@ahasend.com))
@@ -398,23 +465,38 @@ description: "New releases and improvements"
 - Improve DKIM-key check accuracy
 </Update>
 
+## June 2025
+
 <Update label="June 2025">
+
+### June 2025: Updates
+
 - Improve DNS lookup performance
 - Add PKCE support for [OIDC Single Sign On](/security/sso)
 - Add option for account-wide [2FA enforcement](/security/2fa-enforcement)
 </Update>
 
+## May 2025
+
 <Update label="May 2025">
-- Add support for [Domain-Scoped SMTP Credentials](/smtp/credentials#:~:text=Configure%20Credential%20Scope)
-- Add support for [Domain-scoped API Keys](/send-api/credentials#:~:text=Configure%20Credential%20Scope)
-- Add support for [Sandbox SMTP Credentials](/smtp/sandbox)
+
+### May 2025: Updates
+
+- Add support for [Domain-Scoped SMTP Credentials](/smtp/credentials)
+- Add support for [Domain-scoped API Keys](/send-api/credentials)
+- Add support for [Sandbox SMTP Credentials](/send-api/sandbox)
 - Add support for [Sandbox API Keys](/send-api/sandbox)
 - Add [special headers](/smtp/special-headers) to enable sandbox mode for individual messages
 - Add support for multi-domain OIDC SSO
 - Incorporate AhaSend's SPF record into the existing SPF record for customer domain when possible
 </Update>
 
+## April 2025
+
 <Update label="April 2025">
+
+### April 2025: Updates
+
 - Add [OpenID Connect SSO](/security/sso)
 - Add support for [2FA](/security/2fa)
 - Improve reseller whitelabeling options
@@ -422,12 +504,21 @@ description: "New releases and improvements"
 - Improve dashboard reports and charts
 </Update>
 
+## March 2025
+
 <Update label="March 2025">
+
+### March 2025: Updates
+
 - Improve webhook and routes performance and request throughput.
 - Improve dashboard reports and charts
 - Improve system performance and email throughput
 </Update>
 
+## Related Guides
 
-
-
+- [Start sending](/quickstart), [Domain setup](/domains), [Send-only API keys](/send-api/credentials).
+- [Sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [SDK and framework guides](/guides), [Plans and limits](/facts), [Retention rules](/retention).
+- [Tracking setup](/tracking/open-tracking), [Sandbox behavior](/send-api/sandbox), [Suppression durations](/bounces#suppression-duration).
+- [Dedicated IP availability](/scale/dedicated-ips).

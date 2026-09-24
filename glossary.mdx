@@ -1,0 +1,49 @@
+---
+title: "Transactional Email Glossary"
+sidebarTitle: "Glossary"
+description: "Understand common transactional email terms used in AhaSend, including SMTP relay, DKIM, dedicated IP, bounces, suppressions, webhooks and idempotency."
+---
+
+import EmailConceptRelated from "/snippets/email-concept-related.mdx";
+
+AhaSend's glossary explains the email terms used in these docs and links each term to its setup or reference page.
+
+## Sending and Delivery
+
+| Term | Meaning | Read more |
+|---|---|---|
+| Transactional email | A message sent because of a user's action or an account event, such as a receipt or reset | [First send](/quickstart) |
+| SMTP relay | A server that accepts email from your app and passes it toward the recipient's mail server | [SMTP settings](/smtp) |
+| Email API | An HTTP service your app calls with a message and recipients | [REST API](/send-api/send-email) |
+| Envelope sender | The SMTP sender used for delivery errors; it can differ from the visible From address | [Authentication](/email-authentication) |
+| Return-path | The address used for delivery-status messages, normally based on the envelope sender | [Domain records](/domains) |
+| MX record | A DNS record that names a domain's receiving mail servers | [Inbound routing](/integrations/routing) |
+| STARTTLS | An SMTP command that upgrades a connection to TLS encryption before authentication | [SMTP settings](/smtp) |
+| Dedicated IP | A sending IP assigned to one sender account rather than shared with other senders | [Dedicated IPs](/scale/dedicated-ips) |
+| Warm-up | Gradually increasing legitimate sending while checking receiving systems' responses | [Deliverability](/deliverability) |
+
+## Authentication and Reputation
+
+| Term | Meaning | Read more |
+|---|---|---|
+| SPF | A DNS policy describing which servers may send for the envelope sender's domain | [SPF, DKIM and DMARC](/email-authentication) |
+| DKIM | A signature that lets receivers check a message against the signing domain's public key | [Authentication](/email-authentication) |
+| DKIM selector | The name used to find the public key in DNS | [Domain records](/domains) |
+| DMARC | A policy that ties passing SPF or DKIM to the visible From domain | [Authentication](/email-authentication) |
+| Alignment | The domain match required between a passing authentication result and the From domain | [DMARC alignment](/email-authentication#what-is-dmarc-alignment) |
+| Sender reputation | Receiving systems' view of a sender based on its sending history and signals such as complaints | [Deliverability](/deliverability) |
+
+## Results and Application Events
+
+| Term | Meaning | Read more |
+|---|---|---|
+| Acceptance | AhaSend agreed to process a message; the final outcome is still pending | [Sending responses](/send-api/send-email) |
+| Delivered | The recipient server accepted the message; inbox placement is not guaranteed | [Delivery event](/api-reference/webhooks/message-delivered) |
+| Bounce | A rejected delivery or a later notice that delivery failed | [Bounce handling](/bounces) |
+| Suppression | A record that prevents sending to an address for its applicable domain scope | [Suppression rules](/bounces) |
+| Webhook | An HTTP notification from AhaSend to your app when an event occurs | [Webhook setup](/integrations/webhooks) |
+| Idempotency key | A value linking repeat API requests so a stored result can be replayed | [Limits and retry rules](/api-reference/idempotency) |
+| Sandbox | A test mode that processes a message without delivering it to the recipient | [Sandbox mode](/send-api/sandbox) |
+| Retention | How long message data or metadata is kept | [Retention settings](/retention) |
+
+<EmailConceptRelated />

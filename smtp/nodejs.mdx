@@ -1,11 +1,14 @@
 ---
-title: "Sending emails in Node.js"
+title: "Send Email in Node.js via SMTP (Nodemailer)"
 sidebarTitle: "Node.js"
-description: "Learn how to send emails using AhaSend SMTP with Node.js and Nodemailer, the most popular email library for Node.js"
+description: "Send email from Node.js with Nodemailer and the AhaSend SMTP relay: STARTTLS on port 587, HTML, attachments, env vars and sandbox testing."
 icon: "node-js"
 ---
 
-# Sending Emails with SMTP in Node.js
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
 
 Send emails through AhaSend's SMTP servers using Node.js with Nodemailer, the most popular and feature-rich email library for Node.js. This guide covers everything from basic setup to advanced features like attachments and custom headers.
 
@@ -14,6 +17,8 @@ Send emails through AhaSend's SMTP servers using Node.js with Nodemailer, the mo
 </Info>
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -24,16 +29,8 @@ Before you begin, ensure you have:
     - Basic knowledge of JavaScript and Node.js
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Installation
 
@@ -63,22 +60,7 @@ npm install --save-dev @types/nodemailer
 
 ## Connection Settings
 
-Use these settings for all Nodemailer configurations with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS (requireTLS: true)<br />
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS (requireTLS: true)<br />
-    **Authentication:** Required
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## Basic Email Examples
 
@@ -88,7 +70,7 @@ Use these settings for all Nodemailer configurations with AhaSend:
 const nodemailer = require('nodemailer');
 
 // Create transporter
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true, // Force TLS
@@ -119,7 +101,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 ```javascript HTML Email
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true,
@@ -157,7 +139,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 ```javascript With Attachments
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true,
@@ -215,7 +197,7 @@ Use sandbox mode to safely test your Node.js email integration:
 ```javascript Sandbox Test
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true,
@@ -248,7 +230,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 ```javascript Sandbox Bounce Test
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     host: 'send.ahasend.com',
     port: 587,
     requireTLS: true,
@@ -289,7 +271,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 const nodemailer = require('nodemailer');
 
 async function sendSandboxEmail() {
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
         host: 'send.ahasend.com',
         port: 587,
         requireTLS: true,
@@ -338,7 +320,11 @@ sendSandboxEmail();
 const nodemailer = require('nodemailer');
 require('dotenv').config(); // npm install dotenv
 
-const transporter = nodemailer.createTransporter({
+for (const name of ['SMTP_USERNAME', 'SMTP_PASSWORD', 'FROM_EMAIL']) {
+    if (!process.env[name]) throw new Error(`${name} is required`);
+}
+
+const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'send.ahasend.com',
     port: parseInt(process.env.SMTP_PORT) || 587,
     requireTLS: true,
@@ -348,15 +334,8 @@ const transporter = nodemailer.createTransporter({
     }
 });
 
-// Validate required environment variables
-if (!process.env.SMTP_USERNAME || !process.env.SMTP_PASSWORD) {
-    console.error('Missing required environment variables');
-    console.error('Set: SMTP_USERNAME, SMTP_PASSWORD');
-    process.exit(1);
-}
-
 const mailOptions = {
-    from: `"${process.env.FROM_NAME}" <${process.env.FROM_EMAIL}>`,
+    from: { name: process.env.FROM_NAME || "Your Company", address: process.env.FROM_EMAIL },
     to: 'user@example.com',
     subject: 'Environment Test',
     text: 'This email uses environment variables for configuration.'
@@ -370,7 +349,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 });
 ```
 
-```bash .env configuration
+```ini .env configuration
 # SMTP Configuration
 SMTP_HOST=send.ahasend.com
 SMTP_PORT=587
@@ -394,3 +373,5 @@ FROM_EMAIL=hello@yourdomain.com
     Get help from our engineering team
   </Card>
 </CardGroup>
+
+<SmtpRelated />

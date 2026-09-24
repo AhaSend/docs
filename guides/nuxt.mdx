@@ -5,13 +5,22 @@ description: "Send transactional email from Nuxt server routes with the AhaSend 
 keywords: ["nuxt send email", "nuxt transactional email", "nuxt server routes email", "ahasend nuxt", "nitro webhook verification"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from Nuxt with AhaSend, keep credentials on the server, and test a sandbox send.
+
 In [Nuxt](https://nuxt.com), declare the AhaSend credentials in the top-level, server-only section of `runtimeConfig`: anything under `runtimeConfig.public` is serialized into the client payload.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - A Nuxt project
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{your-domain}` scope (`messages:send:all` for sending from many domains), and your account ID
 
 ## Install the SDK
 
@@ -34,6 +43,8 @@ bun add @ahasend/sdk
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -64,7 +75,7 @@ NUXT_WELCOME_ROUTE_TOKEN=replace-with-a-long-random-value
 
 ## Create the Client
 
-Create the client once at module scope and reuse it across requests:
+Create the client on first use and reuse it across requests:
 
 ```ts server/utils/ahasend.ts
 import { AhaSendClient } from "@ahasend/sdk";
@@ -169,13 +180,14 @@ export default defineEventHandler(async (event) => {
   try {
     result = await useAhaSend(event).messages.send(
       {
+        sandbox: true,
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email, name }],
         subject: "Welcome to Your App!",
         html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
         text_content: "Welcome aboard! We're glad you're here.",
       },
-      { idempotencyKey: `welcome:${eventId}` },
+      { idempotencyKey: `sandbox-welcome:${eventId}` },
     );
   } catch (err) {
     if (isAhaSendError(err)) {
@@ -203,11 +215,11 @@ The `content-length` check rejects an oversized declared body, but Nitro does no
 
 Message sends draw on your account's [rate limit](/api-reference/rate-limits) of 100 requests per second with a 200-request burst, shared by every API key on the account. The SDK already retries 429 and 5xx responses with backoff and honors `Retry-After`, so bound the concurrency of whatever calls this route rather than adding a second retry loop on top of it.
 
-Add `sandbox: true` to the send request to validate it without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so sandbox is not a separate namespace: reusing `welcome:<eventId>` with `sandbox` flipped is the same key carrying a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Give sandbox sends their own key prefix.
+The send example uses `sandbox: true` to validate the request without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so sandbox is not a separate namespace: reusing `welcome:<eventId>` with `sandbox` flipped is the same key carrying a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Give sandbox sends their own key prefix.
 
 ## Handle Webhooks
 
-Signature verification needs the **exact request bytes**. `readRawBody(event, false)` returns the undecoded buffer Nitro received, which is what the HMAC covers; `readBody()` parses the JSON, and its re-serialized output can never be verified. Answer every failed check with an empty body so nothing about the failure reaches the sender:
+Signature verification needs the **exact request bytes**. The Node-server example below reads `event.node.req` directly and counts bytes before buffering them. Do not run `readBody()` or other body-reading middleware first: parsing and re-serializing JSON changes the signed bytes. Answer every failed check with an empty body so nothing about the failure reaches the sender:
 
 ```ts server/api/webhooks/ahasend.post.ts
 import {
@@ -217,7 +229,41 @@ import {
 } from "@ahasend/sdk/webhooks";
 import type { H3Event } from "h3";
 
-const MAX_WEBHOOK_BYTES = 1_000_000;
+const MAX_WEBHOOK_BYTES = 30_000_000;
+
+function readLimitedWebhookBody(event: H3Event): Promise<Buffer | null> {
+  return new Promise((resolve, reject) => {
+    const request = event.node.req;
+    const chunks: Buffer[] = [];
+    let total = 0;
+    const cleanup = () => {
+      request.off("data", onData);
+      request.off("end", onEnd);
+      request.off("error", onError);
+      request.off("aborted", onAborted);
+    };
+    const onError = (error: Error) => { cleanup(); reject(error); };
+    const onAborted = () => onError(new Error("Request aborted"));
+    const onEnd = () => { cleanup(); resolve(Buffer.concat(chunks, total)); };
+    const onData = (chunk: Buffer) => {
+      total += chunk.length;
+      if (total > MAX_WEBHOOK_BYTES) {
+        cleanup();
+        request.pause();
+        // Send 413 before closing the unread connection.
+        event.node.res.setHeader("Connection", "close");
+        event.node.res.once("finish", () => request.destroy());
+        resolve(null);
+        return;
+      }
+      chunks.push(chunk);
+    };
+    request.on("data", onData);
+    request.once("end", onEnd);
+    request.once("error", onError);
+    request.once("aborted", onAborted);
+  });
+}
 
 let verifier: WebhookVerifier | undefined;
 
@@ -243,9 +289,9 @@ export default defineEventHandler(async (event) => {
     return null;
   }
 
-  const rawBody = await readRawBody(event, false);
-  if (!rawBody || rawBody.byteLength > MAX_WEBHOOK_BYTES) {
-    setResponseStatus(event, rawBody ? 413 : 400);
+  const rawBody = await readLimitedWebhookBody(event);
+  if (rawBody === null || rawBody.byteLength === 0) {
+    setResponseStatus(event, rawBody === null ? 413 : 400);
     return null;
   }
 
@@ -277,22 +323,16 @@ Signature timestamp checks do not prevent a valid delivery from being replayed i
 
 ## Going Further
 
-- **Deployment**: use a Nuxt server deployment preset; a static-only deployment cannot run these routes. Configure every `NUXT_` secret in the deployment platform's runtime environment because a built production server does not read your local `.env` file.
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60_000).toISOString() }` to defer delivery.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. The same server-route pattern works in the other meta-frameworks too: see the [SvelteKit](/guides/sveltekit) and [Next.js](/guides/nextjs) guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="Webhook verification always returns 400">
-    Something consumed or rewrote the request body before `readRawBody` could return the exact bytes the HMAC was computed over, or the configured webhook secret does not match this dashboard endpoint. Keep body-parsing server middleware off this route, and check that no proxy in front of Nitro re-encodes the payload.
+    Something consumed or rewrote the request body before the bounded stream reader could read the exact bytes the HMAC was computed over, or the configured webhook secret does not match this dashboard endpoint. Keep body-parsing server middleware off this route, and check that no proxy in front of Nitro re-encodes the payload.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
-    The API key never reached the client. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
+    The API key never reached the AhaSend SDK client on the server. Check that `nuxt.config.ts` declares `ahasendApiKey` in `runtimeConfig` and that the env var is named exactly `NUXT_AHASEND_API_KEY`, since Nuxt only maps variables whose names match the config key. Restart the dev server after editing `.env`.
   </Accordion>
   <Accordion title="Credentials work locally but are missing after deploy">
     A built Nuxt server does not read your local `.env` file. Configure the matching `NUXT_AHASEND_*` and `NUXT_WELCOME_ROUTE_TOKEN` values in your deployment platform's runtime environment, never as `NUXT_PUBLIC_` variables.
@@ -301,3 +341,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. The 
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

@@ -1,0 +1,70 @@
+---
+title: "Migrate from Resend"
+sidebarTitle: "From Resend"
+description: "Migrate from Resend to AhaSend with API field and SMTP setting maps, webhook event changes, suppression import steps and a gradual traffic switch."
+---
+
+import MigrationWebhookChecks from "/snippets/migration-webhook-checks.mdx";
+
+import MigrationSmtpSettings from "/snippets/migration-smtp-settings.mdx";
+
+import MigrationApiResult from "/snippets/migration-api-result.mdx";
+
+import MigrationPrepare from "/snippets/migration-prepare.mdx";
+
+import ImportSuppressions from "/snippets/migration-suppression-import.mdx";
+import MigrationCutover from "/snippets/migration-cutover.mdx";
+
+AhaSend migration from Resend means changing your send call or SMTP settings, mapping delivery events and carrying blocked recipients across before moving traffic.
+
+<MigrationPrepare />
+
+## Map the API Fields
+
+Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message) with [v2 authentication](/api-reference/authentication). This is a field mapping from [Resend's send API](https://resend.com/docs/api-reference/emails/send-email), not a drop-in change of base URL.
+
+| Resend field | AhaSend v2 field or change |
+|---|---|
+| `from` string | `from` address object |
+| `to` strings | `recipients[]` address objects |
+| `subject`, `text`, `html` | `subject`, `text_content`, `html_content` |
+| `reply_to` | One `reply_to` address object; review workflows that use several addresses |
+| `headers` | `headers` string-value object |
+| `tags` name/value pairs | `tags` strings; pick a consistent representation such as `kind:receipt` |
+| React email content | Render it to HTML in your app, then send `html_content` |
+| `attachments[].filename`, `content` | `file_name`, `data`, `content_type` and `base64: true` for base64 bytes; remote paths must be fetched by your app |
+| `scheduled_at` | `schedule.first_attempt` as RFC3339 within the allowed window |
+| `cc`, `bcc` | [Create Conversation](/api-reference/messages/create-conversation) |
+
+<MigrationApiResult />
+
+## Replace the SMTP Settings
+
+Replace `smtp.resend.com`, username `resend` and its API-key password with AhaSend's host and separate SMTP credentials. Use STARTTLS instead of carrying over an implicit-TLS configuration. See [Resend's SMTP guide](https://resend.com/docs/send-with-smtp).
+
+<MigrationSmtpSettings />
+
+## Map Events by Meaning
+
+These are the closest matching outcomes, not identical payloads or a guaranteed one-to-one event sequence. Keep the provider name with each saved message ID while both systems are active. See [Resend's event documentation](https://resend.com/docs/webhooks/event-types) and the [AhaSend event list](/api-reference/webhooks).
+
+| Resend event | AhaSend event or application handling |
+|---|---|
+| `email.sent` | `message.reception` as the closest acceptance-stage event; provider pipelines differ |
+| `email.delivered` | `message.delivered` |
+| `email.delivery_delayed` | `message.transient_error` |
+| `email.bounced` | `message.bounced` |
+| `email.failed` | `message.failed` or a send-response error, depending on the stage |
+| `email.suppressed` | `message.suppressed` |
+| `email.complained` | `suppression.created` with a complaint reason |
+| `email.opened` / `email.clicked` | `message.opened` / `message.clicked` when tracking is enabled |
+
+<MigrationWebhookChecks />
+
+## Export the Old Recipient Blocks
+
+Open Resend's **Suppressions** page and choose **Download CSV**, as described in [Resend's suppression guide](https://resend.com/docs/dashboard/emails/email-suppressions). Preserve each address and its reason, including manually added blocks. Resend suppressions apply across the team’s domains: copy each required block to every AhaSend sending domain it must cover, and keep the team-wide rule in your application. Include contact unsubscribes separately: a contact preference and an email suppression are different records. Compare the export with saved bounce/complaint events and your application's opt-out records before switching.
+
+<ImportSuppressions />
+
+<MigrationCutover />

@@ -1,0 +1,51 @@
+---
+title: "Email Troubleshooting and FAQ"
+sidebarTitle: "Troubleshooting"
+description: "Fix common AhaSend email problems: domains that do not verify, messages delivered but missing, port 465 failures, API 403 errors and suppressed recipients."
+---
+
+import EmailConceptRelated from "/snippets/email-concept-related.mdx";
+
+AhaSend troubleshooting starts with the failed step: DNS verification, authentication, message acceptance or recipient delivery; this FAQ points you to the right checks.
+
+## Why Is My AhaSend Domain Not Verifying?
+
+Check that the records are saved at the provider serving your current nameservers, with the exact full names, types and values shown in AhaSend. A repeated domain suffix, proxied CNAME or duplicate SPF record can break verification. Use your [provider guide](/dns), then **Check DNS**. See [domain setup](/domains) for propagation timing and required records.
+
+## Why Does the API Return 403 Domain Not Allowed?
+
+The key must belong to the right account and allow the domain in the message's From address. Check the account ID, verified sender and [key scope](/api-reference/scopes). A domain-scoped key for `example.com` does not automatically authorize a different sending domain. Follow [send-only key setup](/send-api/credentials) and read the actual [API error message](/api-reference/errors).
+
+## Why Does SMTP Port 465 Not Work?
+
+AhaSend does not support implicit TLS on port 465. Use the STARTTLS settings on [SMTP](/smtp), then authenticate with an SMTP username and password. An API key is not an SMTP password. If the connection times out before a server greeting, check outbound network access on your host.
+
+## Why Was My Email Delivered but Not Received?
+
+Delivered means the recipient server accepted the message, not that it placed it in the inbox. Ask the recipient to check spam, quarantine, rules and forwarding. Compare the exact recipient and delivery timestamp with the [message log](/api-reference/messages/get-message). For repeated issues, examine [authentication](/email-authentication) and [sender reputation](/deliverability). A sandbox send is never delivered to a mailbox.
+
+## Why Is the Message Queued or Deferred?
+
+Queued means accepted for processing; deferred means an attempt hit a temporary problem. Check whether the message was scheduled, read delivery attempts, and look for the affected recipient provider. Let AhaSend continue its attempts rather than sending another copy. See [bounces and failures](/bounces) and [schedule rules](/send-api/send-email).
+
+## Why Was a Recipient Suppressed?
+
+A matching suppression stops the send. Look up its reason, sending domain and expiry before changing it. An unsubscribe or complaint is not fixed by deleting the record. See [suppression duration and removal guidance](/bounces).
+
+## Why Did HTTP 202 Still Include an Error?
+
+The API can accept a request while a recipient entry has `status: error`. Check every item in the response's `data` array and its error details; do not report a complete success based only on HTTP 202. See the [send response](/send-api/send-email) and [Create Message](/api-reference/messages/create-message).
+
+## Why Did a Retry Send a Duplicate?
+
+Use a stable [idempotency key](/api-reference/idempotency) with the exact same API payload and within its supported window. A timeout or server error can leave the outcome uncertain. Check your job record and message log before retrying. SMTP does not offer that API header, and a new random key on every retry cannot identify the original job.
+
+## Why Are Webhooks Missing or Failing Verification?
+
+Check that the endpoint is enabled, subscribed to the needed event and reachable at its final URL. Verify the original request bytes and full raw secret before parsing or changing the body. Do not base64-decode AhaSend secrets. See [signature verification](/api-reference/webhooks/security), [retry behavior](/api-reference/webhooks/retry-policy) and [local tests](/cli/webhook-testing).
+
+## What Should I Collect Before Asking for Help?
+
+Check the [status page](https://status.ahasend.com). Record the time and timezone, message or job ID, sender domain, affected recipient domain, response status and sanitized error text. Keep keys, SMTP passwords, signing secrets and private message content out of screenshots and tickets. Use the support route for your [plan](/facts).
+
+<EmailConceptRelated />

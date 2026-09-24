@@ -1,31 +1,23 @@
 ---
-title: "Message Routes API"
+title: "Inbound Email Routing API Overview"
 sidebarTitle: "Introduction"
-description: "Process inbound emails with configurable routing rules for support tickets, reply handling, and automated workflows"
+description: "Receive inbound email as JSON webhooks with AhaSend message routes. Match addresses or wildcards, parse replies and attachments, and POST them to your app."
 icon: "route"
 ---
 
-<Note>
-**New to message routing?** Start with our [comprehensive routing guide](/integrations/routing) to learn how to create and configure message routes in your dashboard before diving into the API details.
-</Note>
+The AhaSend Routes API lets you create, list, update and delete inbound email routes; this page links the endpoints and the received-message payload. Follow the [routing guide](/integrations/routing) for MX setup, matching rules and dashboard configuration.
 
-Message routes enable automatic processing of inbound emails sent to your AhaSend domains. When emails arrive at configured addresses, AhaSend parses the content and forwards it to your application endpoints via HTTP POST requests.
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-## Overview
+## API Operations
 
-Message routing provides intelligent inbound email handling with:
-
-- **Pattern-based routing** using exact addresses or wildcards (`*`, `ticket-*`, `*-support`)
-- **Real-time delivery** via HTTP POST to your configured endpoints
-- **Flexible processing options** for attachments, headers, and reply extraction
-- **Secure payload delivery** following the Standard Webhooks specification
-
-## Prerequisites
-
-Message routing requires:
-- Domain added and verified in AhaSend
-- MX records pointing to AhaSend mail servers
-- Endpoint accepting HTTP POST requests with 2xx responses
+| Task | Endpoint reference |
+|---|---|
+| Create a route | [Create Route](/api-reference/routes/create-route) |
+| List routes | [List Routes](/api-reference/routes/get-routes) |
+| Read one route | [Get Route](/api-reference/routes/get-route) |
+| Change settings or re-enable a route | [Update Route](/api-reference/routes/update-route) |
+| Remove a route | [Delete Route](/api-reference/routes/delete-route) |
 
 ## Payload Structure
 
@@ -34,37 +26,27 @@ All routing events use a consistent JSON structure:
 ```json
 {
   "type": "message.routing",
-  "timestamp": "2024-05-07T10:41:45.026792973Z",
+  "route_id": "11111111-1111-4111-8111-111111111111",
+  "timestamp": "<RFC3339 delivery timestamp>",
   "data": {
     "from": "sender@example.com",
     "to": "support@yourdomain.com",
     "subject": "Email subject",
     "html_body": "<p>Email content</p>",
-    "plain_body": "Email content",
-    // Additional fields based on configuration
+    "plain_body": "Email content"
   }
 }
 ```
 
-## Security Headers
+This is a shortened payload. See [the full routing schema](/api-reference/routes/route-message) for attachments, headers and reply fields.
 
-Every routing request includes security headers for verification:
+## Delivery and Verification
 
-- `webhook-id`: Unique event identifier for idempotency
-- `webhook-timestamp`: Unix timestamp when the route was triggered
-- `webhook-signature`: HMAC signature for payload verification
+The [signature reference](/api-reference/webhooks/security) covers route secrets and raw-body verification. The [retry policy](/api-reference/webhooks/retry-policy) covers timeouts, duplicate deliveries and automatic disabling.
 
-## Getting Started
+## Related Guides
 
-<CardGroup cols={2}>
-  <Card title="Create Routes" icon="plus" href="/integrations/routing">
-    Learn how to configure message routes and handle inbound emails
-  </Card>
-  <Card title="Security" icon="shield" href="/api-reference/routes/security">
-    Implement signature verification for secure route handling
-  </Card>
-  <Card title="Retry Policy" icon="arrows-rotate" href="/api-reference/routes/retry-policy">
-    Understand routing delivery guarantees and retry behavior
-  </Card>
-</CardGroup>
-
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Inbound routing setup](/integrations/routing).
+- [Route payload](/api-reference/routes/route-message), [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

@@ -1,0 +1,74 @@
+---
+title: "Email Deliverability Best Practices"
+sidebarTitle: "Deliverability"
+description: "Improve transactional email deliverability with AhaSend: sender reputation, domain and IP warm-up, separate subdomains, Gmail and Yahoo rules and opt-outs."
+---
+
+import EmailConceptRelated from "/snippets/email-concept-related.mdx";
+
+AhaSend helps you track transactional email delivery; this guide explains how to protect sender reputation, warm up sending, separate mail streams and meet mailbox-provider requirements.
+
+## What Does Delivered Mean?
+
+Delivered means the recipient's mail server accepted the message. It does not prove the message is in the inbox or that a person read it. Review [delivery events](/api-reference/webhooks/message-delivered), [bounces](/bounces) and user reports together. Open and click tracking can be affected by mailbox software and bots; it is not a complete measure of engagement.
+
+## How Do I Protect Sender Reputation?
+
+Send messages people expect from their actions, such as a requested reset or an order receipt. Verify addresses during signup, remove invalid addresses from future jobs, and keep complaints and opt-outs blocked. Use consistent From names and domains so users recognize the sender. Keep promotional content out of time-sensitive service messages when it changes what the recipient signed up for.
+
+Watch delivery failures and temporary deferrals by receiving domain. A sudden rise can show a bad import, broken authentication, an unexpected volume change or a provider-specific block. Start with the [bounce report](/api-reference/reports/get-bounce-report) and [delivery statistics](/api-reference/reports/get-deliverability-report), then read actual SMTP replies. Repair the cause before raising volume.
+
+## How Should I Warm Up a Domain or IP?
+
+Warm-up means increasing real, wanted email gradually so receiving systems see a stable sending pattern. A new domain needs care even on a shared IP; a new dedicated IP also needs its own sending history. Buying a dedicated IP does not repair an untrusted recipient list. See [dedicated IP availability](/scale/dedicated-ips) and [IP pools](/scale/ip-pools) for the product settings and plan rules.
+
+There is no fixed daily schedule that works for every sender. Base the next increase on your normal traffic and the receiving domains' responses. This is a decision schedule, not a promised volume allowance:
+
+| Step | Traffic to send | Condition before increasing |
+|---|---|---|
+| Before starting | Sandbox tests and authentication checks | Correct records, message format, suppression import and event handling |
+| First live portion | A small part of recent, expected transactional traffic | Low failure and complaint rates; no growing deferral queue |
+| Gradual increases | More of the same legitimate traffic, spread over time | Stable results at each major recipient provider |
+| Steady operation | Normal recurring traffic | Continue watching bounces, complaints and sudden changes |
+| A provider starts deferring | Hold or reduce traffic to that provider | Investigate its reply and wait for recovery before increasing |
+
+Avoid creating fake engagement or mailing old addresses just to warm an IP. Keep the previous sending path available during a migration, while ensuring each job is assigned to only one provider. The account's [sending limits](/facts) still apply.
+
+## Should Transactional Mail Use a Separate Subdomain?
+
+Use a subdomain such as `notify.example.com` for transactional mail when you need separate credentials, reporting and mail policies from newsletters or employee mail. [Add and verify that exact subdomain](/domains), then use it in the visible From address and review DMARC alignment.
+
+A separate subdomain makes operations easier to manage; it does not guarantee that reputation is fully isolated from the parent domain. Keep the main domain's mailbox MX records in place. A return-path subdomain and a visible From subdomain serve different purposes; follow the records AhaSend gives you for each.
+
+## What Do Gmail and Yahoo Require?
+
+Review these rules before launch and whenever a provider changes its guidance. This summary was checked in September 2026; the provider pages remain the source of current requirements.
+
+| Requirement | Gmail | Yahoo |
+|---|---|---|
+| Basic authentication | SPF or DKIM for all senders | SPF or DKIM for all senders |
+| Bulk authentication | SPF, DKIM and DMARC, with aligned From identity | SPF, DKIM and DMARC, with aligned From identity |
+| Infrastructure | Valid forward/reverse DNS and TLS | Valid forward/reverse DNS |
+| Spam complaints | Keep reported spam below 0.3%; aim much lower | Keep reported spam below 0.3% |
+| Marketing and subscribed mail | One-click unsubscribe plus a visible body link for bulk senders | Functioning list unsubscribe plus a visible body link for bulk senders; honor requests within two days |
+
+Gmail applies its bulk requirements to senders exceeding 5,000 daily messages to personal Gmail accounts; do not apply that number to Yahoo as though it were Yahoo's threshold. Gmail accepts `p=none` as the minimum bulk-sender DMARC policy. AhaSend's own required domain setup is on [domains](/domains). See [Gmail sender guidelines](https://support.google.com/mail/answer/81126) and [Yahoo sender best practices](https://senders.yahooinc.com/best-practices/).
+
+A password reset requested by a user is different from a newsletter. Decide whether a message is marketing or subscribed mail by its actual purpose and content; calling it transactional does not remove provider requirements.
+
+## How Do I Add One-Click Unsubscribe?
+
+For subscribed messages, implement an HTTPS endpoint that accepts the standard unsubscribe POST and saves the opt-out without requiring login, cookies or another confirmation. Use a hard-to-guess token tied to the recipient and list. Do not unsubscribe on a GET request, because link scanners may visit it.
+
+The message needs these two headers. This is a format example: replace the URL with your working endpoint and recipient token before sending.
+
+```text
+List-Unsubscribe: <https://example.com/unsubscribe/RECIPIENT_TOKEN>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+```
+
+With the [REST API](/api-reference/messages/create-message), set them in the `headers` object; with SMTP, add them as message headers. Your endpoint must accept the form body `List-Unsubscribe=One-Click`, save the preference, return success promptly and handle repeated requests safely. Also include a visible unsubscribe link in the email body. Check a received message's DKIM signature covers both unsubscribe headers, as required by [RFC 8058](https://www.rfc-editor.org/rfc/rfc8058.html).
+
+Yahoo currently accepts a mailto unsubscribe method too, while recommending POST. Using the HTTPS POST method above meets Gmail's one-click mechanism as well. Process opt-outs promptly and stop future jobs for that list. Keep durable preferences in your app; use an AhaSend [suppression](/bounces) if the address must be blocked across the relevant sending domain too. DNS subscription records alone do not implement your application's opt-out logic.
+
+<EmailConceptRelated />

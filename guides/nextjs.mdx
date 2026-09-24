@@ -1,39 +1,52 @@
 ---
-title: "How to Send Email with Next.js"
+title: "How to Send Email with Next.js (App Router)"
 sidebarTitle: "Next.js"
-description: "Send transactional email from Next.js App Router route handlers and Server Actions with the AhaSend SDK, plus verified webhooks via nextRouteHandler."
+description: "Send transactional email from Next.js App Router route handlers and Server Actions with the AhaSend SDK, keep API keys server-side, and verify webhooks."
 keywords: ["nextjs send email", "next.js transactional email", "nextjs email api route", "ahasend nextjs", "nextjs webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from Next.js with AhaSend, keep credentials on the server, and test a sandbox send.
+
 Route Handlers and Server Actions in the [Next.js](https://nextjs.org) App Router both run on the server, so the AhaSend SDK and your API key stay out of the browser bundle. This guide sends a welcome email from each of them, and receives verified AhaSend webhooks through the SDK's App Router adapter.
+
+<SendGuideRules />
 
 ## Prerequisites
 
+Use Next.js 15.1 or later for the stable [`after()` API](https://nextjs.org/blog/next-15-1).
+
 - A Next.js project using the App Router
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{yourdomain.com}` scope matching the domain in `from.email` (or `messages:send:all` to cover every domain), and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{yourdomain.com}` scope matching the domain in `from.email` (or `messages:send:all` to cover every domain), and your account ID
 
 ## Install the SDK
 
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk zod
+npm install @ahasend/sdk zod server-only
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk zod
+pnpm add @ahasend/sdk zod server-only
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk zod
+yarn add @ahasend/sdk zod server-only
 ```
 
 ```bash bun
-bun add @ahasend/sdk zod
+bun add @ahasend/sdk zod server-only
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Configure Environment Variables
 
@@ -73,11 +86,12 @@ export interface WelcomeInput {
 }
 
 export async function sendWelcomeEmail(input: WelcomeInput) {
-  const idempotencyKey = `welcome-${createHash("sha256")
+  const idempotencyKey = `sandbox-welcome-${createHash("sha256")
     .update(input.signupId)
     .digest("hex")}`;
 
   const result = await ahasend().messages.send({
+    sandbox: true,
     from: { email: "hello@yourdomain.com", name: "Your App" },
     recipients: [{ email: input.email, name: input.name }],
     subject: "Welcome to Your App!",
@@ -255,7 +269,7 @@ export async function sendWelcome() {
 }
 ```
 
-Add `sandbox: true` to the send request to validate it without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so a sandbox send is not a separate namespace: reusing `welcome-<hash>` with `sandbox` flipped is the same key with a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Prefix sandbox keys distinctly (`sandbox-welcome-…`).
+The send example uses `sandbox: true` to validate the request without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so a sandbox send is not a separate namespace: reusing `welcome-<hash>` with `sandbox` flipped is the same key with a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Prefix sandbox keys distinctly (`sandbox-welcome-…`).
 
 ## Handle Webhooks
 
@@ -277,7 +291,7 @@ function webhookReceiver() {
     new WebhookVerifier(secret),
     async () => new Response(null, { status: 204 }),
     {
-      maxBodyBytes: 1_000_000,
+      maxBodyBytes: 30_000_000,
       onError(_error, context) {
         console.error(`AhaSend webhook ${context.stage} failure`);
       },
@@ -291,26 +305,19 @@ export async function POST(request: Request) {
 }
 ```
 
-This minimal receiver verifies and acknowledges events without side effects. Timestamp verification is not replay deduplication: before adding side effects, atomically record the `webhook-id` header with durable work, acknowledge already-recorded deliveries with a 2xx response, and process the work idempotently. Do not launch untracked work after returning a response: a bare floating promise is killed when the serverless invocation ends, so hand deferred work to `after()` from `next/server`, which keeps the invocation alive until it settles. Match the one-megabyte application limit at your host or reverse proxy, configure opaque rejections, and cap concurrent webhook work.
+This minimal receiver verifies and acknowledges events without side effects. Timestamp verification is not replay deduplication: before adding side effects, atomically record the `webhook-id` header with durable work, acknowledge already-recorded deliveries with a 2xx response, and process the work idempotently. Do not launch untracked work after returning a response: a bare floating promise is killed when the serverless invocation ends, so hand deferred work to `after()` from `next/server`, which keeps the invocation alive until it settles. Match the 30,000,000-byte application limit at your host or reverse proxy, configure opaque rejections, and cap concurrent webhook work.
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix). Invalid signatures are rejected with a 400 before your handler runs.
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule: { first_attempt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }` to defer delivery by one hour.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe against your own identifiers.
-- **Deploying to Vercel?** The [Vercel guide](/guides/vercel) covers environment variable scoping, runtime choice, and webhook endpoints on Vercel Functions.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. Building a standalone API server instead? Start from the [Express guide](/guides/express).
+<GuideNextSteps />
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in `.env.local` (restart `next dev` after editing it) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys). In production, set the variable in your hosting provider's environment settings.
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in `.env.local` (restart `next dev` after editing it) and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials). In production, set the variable in your hosting provider's environment settings.
   </Accordion>
   <Accordion title="API key visible in the browser bundle">
     You prefixed the variable with `NEXT_PUBLIC_`. Rename it to `AHASEND_API_KEY`, rotate the leaked key in the dashboard, and only read it from server code (Route Handlers, Server Actions, Server Components).
@@ -319,3 +326,5 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. Buil
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

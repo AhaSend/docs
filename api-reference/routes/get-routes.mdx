@@ -1,5 +1,18 @@
 ---
-title: "List Routes"
+title: "List Inbound Email Routes via the API"
 sidebarTitle: "List Routes"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/routes"
+description: "List the inbound email routes in your AhaSend account, optionally filtered by domain. Domain-scoped API keys must pass the matching domain filter."
 ---
+
+
+The AhaSend API returns a list of routes for the account. A domain-scoped key must
+provide the matching `domain` query parameter; the global read role can
+list without that filter.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Inbound routing setup](/integrations/routing).
+- [Route payload](/api-reference/routes/route-message), [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

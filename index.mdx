@@ -1,42 +1,48 @@
 ---
-title: "Introduction"
+title: "Transactional Email API and SMTP Relay Docs"
 sidebarTitle: "Introduction"
-description: "Blazing fast transactional emails. Developer-friendly APIs and SMTP relay with fair, transparent pricing."
+description: "AhaSend developer docs: send transactional email with the REST API, SMTP relay, CLI or SDKs, verify your sending domain, and track events with webhooks."
 icon: "book-open"
 ---
 
-# Welcome to AhaSend
+import EmailHelpGuides from "/snippets/email-help-guides.mdx";
 
-AhaSend is a **developer-first transactional email service** built for modern applications. We provide blazing fast email delivery through our own infrastructure, with simple REST APIs and reliable SMTP relays.
+import OfficialSdks from "/snippets/official-sdks.mdx";
+
+
+AhaSend is a European transactional email service for developers: send through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, with data stored in the EU and 1,000 free emails per month.
 
 <Info>
 **New to AhaSend?** Start with our [Quickstart Guide](/quickstart) to send your first email in under 5 minutes, or [create your free account](https://dash.ahasend.com/user/register) to get 1,000 free emails per month.
 </Info>
 
+
+<OfficialSdks />
+
 ## Why Choose AhaSend?
 
-### 🚀 **Built for Developers**
+### Built for Developers
 - **[Clean, intuitive REST APIs](/api-reference)** and [SMTP relay](/smtp)
 - **[Powerful CLI tool](/cli)** for development, testing, and automation
-- **Sandbox Mode** for [SMTP](/smtp/sandbox) and [API](/send-api/sandbox) testing and development
+- **Sandbox Mode** for [SMTP](/send-api/sandbox) and [API](/send-api/sandbox) testing and development
 - **[Engineering-led support](mailto:support@ahasend.com)** from real developers, not chatbots
 
 
-### ⚡ **Blazing Fast Delivery**
-- Below **2 seconds** delivery time to Gmail (99th percentile)
+### Blazing Fast Delivery
+- Typical delivery under one second to Gmail and under five seconds to other major mailbox providers.
 - **Independent**: Our own infrastructure, not a reseller of other services.
-- **Reliable**: Delivering tens of millions of emails every month.
+- See [service status](https://status.ahasend.com) for current availability.
 
-### 💰 **Fair & Transparent Pricing**
-- **[Pay as You Go](https://ahasend.com/pricing)**: Pay exactly for what you send - no hidden fees
+### Fair & Transparent Pricing
+- Free, Pro and Max plans with included monthly volume and usage-based overage; no long-term contracts. See [pricing](https://ahasend.com/pricing).
 - **[Free dedicated IPs](/scale/dedicated-ips)** for high-volume senders (300k+ emails/month)
 
-### 🛡️ **Enterprise-Ready Security**
+### Enterprise-Ready Security
 - **[SSO](/security/sso)** with OpenID Connect (OIDC)
 - **[Scoped API credentials](/api-reference/scopes)** with granular permissions
 - **[IP allow lists](/security/ip-allow-lists)** to lock API keys to your own infrastructure
 - **[Customizable data retention policies](/retention)**
-    - From zero to 30 days [retention in our database](/retention).
+    - [Retention ranges depend on your plan](/retention): message data 0–30 days, metadata 1–30 days. Zero data retention needs approval.
     - [Indefinite retention](/retention/s3) of data, metadata and delivery log on your own S3.
 - **[GDPR compliant](https://ahasend.com/dpa)**
 
@@ -56,52 +62,28 @@ AhaSend is a **developer-first transactional email service** built for modern ap
 
 ## Popular Integration Guides
 
-Get started quickly with your preferred technology stack:
-
 <CardGroup cols={3}>
-  <Card title="Node.js" icon="node-js" href="/smtp/nodejs">
-    Integrate with Express, Next.js, or any Node.js application
-  </Card>
-  <Card title="Python" icon="python" href="/smtp/python">
-    Django, Flask, FastAPI - we've got you covered
-  </Card>
-  <Card title="PHP" icon="php" href="/smtp/php">
-    Laravel, Symfony, WordPress, and vanilla PHP examples
-  </Card>
-  <Card title="Go" icon="golang" href="/smtp/golang">
-    Lightweight integration for Go applications
-  </Card>
-  <Card title="Ruby" icon="gem" href="/smtp/ruby">
-    Rails and Ruby applications made simple
-  </Card>
-  <Card title="Command Line" icon="terminal" href="/smtp/cli">
-    Send emails directly from your terminal or scripts
-  </Card>
+  <Card title="Next.js" icon="layer-group" href="/guides/nextjs">Send from server routes and actions.</Card>
+  <Card title="Express" icon="node-js" href="/guides/express">Add a protected send route and verified webhooks.</Card>
+  <Card title="Hono" icon="server" href="/guides/hono">Send email from a Hono server.</Card>
+  <Card title="Go with Gin" icon="golang" href="/guides/gin">Use the Go SDK in your Gin handlers.</Card>
+  <Card title="Django" icon="python" href="/guides/django">Send from Django through SMTP with STARTTLS.</Card>
+  <Card title="Laravel" icon="php" href="/guides/laravel">Configure Laravel’s SMTP mailer.</Card>
+  <Card title="WordPress" icon="wordpress" href="/guides/wordpress">Set up the existing email API plugin.</Card>
+  <Card title="Drupal" icon="drupal" href="/guides/drupal">Configure the module and Mail System.</Card>
+  <Card title="Symfony" icon="php" href="/guides/symfony">Use the SMTP bridge and Flex recipe.</Card>
 </CardGroup>
+
+Browse [all framework, platform and AI-tool guides](/guides).
 
 ## Core Features
 
-<AccordionGroup>
-  <Accordion title="Email Tracking" icon="chart-line">
-    Track email opens and link clicks with detailed analytics. See exactly how your users engage with your emails.
-    [Learn more about tracking →](/tracking/open-tracking)
-  </Accordion>
-
-  <Accordion title="Webhooks" icon="webhook">
-    Real-time notifications for all email events - delivery, bounces, opens, clicks, and more.
-    [Explore webhooks →](/webhooks)
-  </Accordion>
-
-  <Accordion title="Email Routing" icon="route">
-    Forward incoming emails to your application with our email routing feature.
-    [Set up routing →](/routing)
-  </Accordion>
-
-  <Accordion title="Suppression Management" icon="shield-xmark">
-    Automatically handle bounces, complaints, and unsubscribes to maintain your sender reputation.
-    [Manage suppressions →](/api-reference/suppressions/get-suppressions)
-  </Accordion>
-</AccordionGroup>
+<CardGroup cols={2}>
+  <Card title="Email Tracking" icon="chart-line" href="/tracking/open-tracking">Record open and click events.</Card>
+  <Card title="Webhooks" icon="webhook" href="/integrations/webhooks">Receive delivery, bounce and engagement events.</Card>
+  <Card title="Inbound Routing" icon="route" href="/integrations/routing">Forward parsed incoming email to your application.</Card>
+  <Card title="Suppressions" icon="shield-xmark" href="/bounces">Understand bounces, blocked recipients and suppression expiry.</Card>
+</CardGroup>
 
 ## Need Help?
 
@@ -115,7 +97,7 @@ Get started quickly with your preferred technology stack:
 </CardGroup>
 
 <Tip>
-**Pro Tip:** All code examples in this documentation are tested and ready to use. Just replace the placeholder values with your actual API keys and domains.
+Replace placeholder values with your API keys and verified domain. Use [sandbox mode](/send-api/sandbox) while testing.
 </Tip>
 
 ## What's Next?
@@ -123,6 +105,16 @@ Get started quickly with your preferred technology stack:
 1. **[Create your account](https://dash.ahasend.com/user/register)** and get 1,000 free emails
 2. **[Set up your domain](/domains)**, authorizing AhaSend to send emails on your behalf
 3. Use our **[APIs](/send-api/send-email)** or **[SMTP](/smtp)** to send your first email
-4. **[Configure webhooks](/webhooks)** to track email events in real-time
+4. **[Configure webhooks](/integrations/webhooks)** to track email events in real-time
 
 Ready to start sending emails that actually reach the inbox? Let's get you set up! 🚀
+
+<EmailHelpGuides />
+
+## Related Guides
+
+- [Start sending](/quickstart), [Domain setup](/domains), [Send-only API keys](/send-api/credentials).
+- [Sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [SDK and framework guides](/guides), [Plans and limits](/facts), [Product releases](/changelog).
+- [Retention rules](/retention), [Tracking setup](/tracking/open-tracking), [Sandbox behavior](/send-api/sandbox).
+- [Suppression durations](/bounces#suppression-duration), [Dedicated IP availability](/scale/dedicated-ips).

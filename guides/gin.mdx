@@ -1,17 +1,26 @@
 ---
 title: "How to Send Email with Gin (Go)"
 sidebarTitle: "Gin"
-description: "Send transactional email from a Gin (Go) app with the AhaSend email API: client setup, send handlers, and HMAC-verified delivery webhooks."
+description: "Send transactional email from a Gin (Go) app with the AhaSend Go SDK: a BasicAuth-protected send route, typed error handling, and verified webhooks."
 keywords: ["gin send email", "golang transactional email gin", "gin email api", "ahasend go sdk", "gin webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-go.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to use AhaSend to send transactional email from Gin in Go, keep credentials on the server, and test a sandbox send.
+
 A [Gin](https://gin-gonic.com) handler wraps a standard `*http.Request` inside `*gin.Context`, so unwrap it: `c.Request` for `verifier.ParseRequest`. Body-binding or body-logging middleware must not read the webhook body first; Gin's built-in request logger does not read it.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Go 1.25 or newer, which Gin 1.12 requires
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the domain-scoped `messages:send:{yourdomain.com}` permission, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the domain-scoped `messages:send:{yourdomain.com}` permission, and your account ID
 
 ## Install the SDK
 
@@ -20,6 +29,8 @@ go get github.com/AhaSend/ahasend-go
 go get github.com/gin-gonic/gin
 go get github.com/google/uuid
 ```
+
+<QuickSend />
 
 `google/uuid` is a transitive dependency of the SDK, but the account ID is a `uuid.UUID`, so your own code imports it directly and it needs its own `go get`.
 
@@ -61,6 +72,7 @@ import (
 var (
 	ahasendClient *api.APIClient
 	accountID     uuid.UUID
+	verifier      *webhooks.WebhookVerifier
 )
 
 func main() {
@@ -189,6 +201,7 @@ func sendWelcome(c *gin.Context) {
 	}
 
 	message := requests.CreateMessageRequest{
+		Sandbox: ahasend.Bool(true),
 		From:        common.SenderAddress{Email: "hello@yourdomain.com", Name: ahasend.String("Your App")},
 		Recipients:  []common.Recipient{recipient},
 		Subject:     "Welcome to Your App!",
@@ -197,7 +210,7 @@ func sendWelcome(c *gin.Context) {
 	}
 
 	digest := sha256.Sum256([]byte(in.SignupID))
-	idempotencyKey := "welcome-" + hex.EncodeToString(digest[:])
+	idempotencyKey := "sandbox-welcome-" + hex.EncodeToString(digest[:])
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 25*time.Second)
 	defer cancel()
 	response, _, err := ahasendClient.MessagesAPI.CreateMessage(
@@ -286,9 +299,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var verifier *webhooks.WebhookVerifier
-
-const maxWebhookBodyBytes int64 = 1 << 20
+const maxWebhookBodyBytes int64 = 30_000_000
 
 func handleAhaSendWebhook(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWebhookBodyBytes)
@@ -318,20 +329,13 @@ This minimal receiver deliberately verifies and acknowledges without performing 
 
 ## Going Further
 
-- **Templating**: set `Substitutions: map[string]interface{}{"first_name": "Jane"}` and use `{{ first_name }}` in the subject or body.
-- **Batch sends**: `Recipients` accepts up to 100 entries; each gets a separate message.
-- **Tags**: set `Tags: []string{"welcome"}` to filter messages in list and statistics queries. Webhooks are scoped by domain, not by tag, and message events do not carry the tags.
-- **Rate limits**: when sending at volume, tune `SetSendMessageRateLimit(requestsPerSecond, burstCapacity)` to stay within your account's limits.
-- **Other frameworks**: the same SDK patterns work in [chi](/guides/chi), [Echo](/guides/echo), and [Fiber](/guides/fiber).
-- **Attachments**: add `Attachments` with `Data`, `ContentType`, `ContentDisposition: "attachment"`, and `FileName`. Set `Base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every service the SDK exposes (`DomainsAPI`, `SuppressionsAPI`, `StatisticsAPI`, and more).
+<GuideNextSteps />
 
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="401 from the API">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is set in the process environment and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
   <Accordion title="Webhook verification always fails">
     Something consumed the request body before `ParseRequest` ran. Check for logging or body-buffering middleware on the webhook route. Also confirm the secret matches the dashboard exactly, including the `aha-whsec-` prefix.
@@ -340,3 +344,5 @@ See the [API reference](/api-reference) for every service the SDK exposes (`Doma
     The `From` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

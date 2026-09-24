@@ -1,17 +1,18 @@
 ---
-title: "Roadmap"
-description: "Where AhaSend is headed, from active work to future ideas."
+title: "Product Roadmap"
+description: "See what AhaSend has recently shipped, is building now and plans next for its transactional email API, SMTP relay, webhooks, sub-accounts and dashboard."
+sidebarTitle: "Roadmap"
 ---
 
-Follow our progress from active work to future ideas. Timelines may shift as we
-learn and iterate.
+
+The AhaSend roadmap shows active work, planned improvements and shipped features, with links to the available documentation.
 
 <p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 31 August 2026</p>
 
 <div className="rm">
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-shipped">Recently shipped (7)</h2>
+      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (7)</h2>
     </div>
 
     <div className="rm-list">
@@ -19,7 +20,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Prettify dashboard errors <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/api-reference/errors">Prettify dashboard errors</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Cleaner error messages across the dashboard, a clearer alert while a mailbox provider is asking us to slow down, and "Received" renamed to "Queued".</p>
         </div>
       </div>
@@ -28,7 +29,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">JavaScript SDK <span className="rm-tag is-new">New feature</span></p>
+          <p className="rm-title"><a href="/guides/nodejs-sdk">JavaScript SDK</a> <span className="rm-tag is-new">New feature</span></p>
           <p>An official JavaScript and TypeScript client for the AhaSend API, installable from NPM.</p>
         </div>
       </div>
@@ -37,7 +38,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Filter messages by deferred attempts <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/api-reference/messages/get-messages">Filter messages by deferred attempts</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Filter the message log down to messages that had deferred delivery attempts.</p>
         </div>
       </div>
@@ -46,7 +47,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Cumulative message status <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/api-reference/messages/get-message">Cumulative message status</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Message status that reflects the full delivery history at a glance.</p>
         </div>
       </div>
@@ -55,7 +56,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Integration guides <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/guides">Integration guides</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>30 new guides covering popular frameworks, languages and automation tools.</p>
         </div>
       </div>
@@ -64,7 +65,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">SPF <code>redirect:</code> and <code>include:</code> support <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/domains">SPF <code>redirect:</code> and <code>include:</code> support</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Domain verification now follows SPF redirect and include tags.</p>
         </div>
       </div>
@@ -73,7 +74,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Inbound routing between AhaSend domains <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p className="rm-title"><a href="/integrations/routing">Inbound routing between AhaSend domains</a> <span className="rm-tag is-bugfix">Bug fix</span></p>
           <p>Fixed inbound delivery when both the sending and receiving domain are registered on AhaSend.</p>
         </div>
       </div>
@@ -82,7 +83,7 @@ learn and iterate.
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-active">Active (1)</h2>
+      <h2 className="rm-badge is-active" id="active">Active (1)</h2>
     </div>
 
     <div className="rm-list">
@@ -99,7 +100,7 @@ learn and iterate.
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-planned">Planned (29)</h2>
+      <h2 className="rm-badge is-planned" id="planned">Planned (29)</h2>
     </div>
 
     <div className="rm-list">
@@ -180,7 +181,7 @@ learn and iterate.
 
         <div>
           <p className="rm-title">Account level notifications <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Webhook and email notifications for account events, including sub account status changes and rate limits being hit.</p>
+          <p>Webhook and email notifications for account events, including sub-account status changes and rate limits being hit.</p>
         </div>
       </div>
 
@@ -315,7 +316,7 @@ learn and iterate.
 
         <div>
           <p className="rm-title">Link branding <span className="rm-tag is-new">New feature</span></p>
-          <p>Whitelabel tracking and link domains, available as a Pro add-on.</p>
+          <p>Further link-branding controls are planned. Custom tracking subdomains are already available; see <a href="/domains">domain setup</a>.</p>
         </div>
       </div>
 
@@ -376,9 +377,9 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Sub Accounts</p>
+          <p className="rm-title"><a href="/scale/sub-accounts">Sub-Accounts</a></p>
           <p>Isolated sending environments so you can separate clients, brands or stages, each with its own domains, credentials and sending reputation.</p>
-          <span className="rm-date">Q3 2026</span>
+          <span className="rm-date">Q2 2026</span>
         </div>
       </div>
 
@@ -386,7 +387,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Delivery-attempt details in webhook payloads <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/api-reference/webhooks/message-bounced">Delivery-attempt details in webhook payloads</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Delivered, deferred and bounced message webhooks include the SMTP outcome and bounce classification, so you can act on bounces without opening the dashboard. Supported in the TypeScript and Go SDKs.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
@@ -396,7 +397,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Same domain on multiple accounts <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/domains">Same domain on multiple accounts</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Fixed a verification issue when the same domain is verified on more than one account.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
@@ -406,7 +407,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Whitelabel-aware MX guidance <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/scale/dns-whitelabel">Whitelabel-aware MX guidance</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Inbound routing instructions now account for whitelabeled MX hostnames.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
@@ -416,7 +417,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Message Routing visibility <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/integrations/routing">Message Routing visibility</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Incoming Routes are easier to discover, with clear guidance to point your domain's MX record to mx.ahasend.com.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
@@ -426,7 +427,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Bulk list management</p>
+          <p className="rm-title"><a href="/changelog">Bulk list management</a></p>
           <p>Add contacts to lists in bulk and edit existing lists.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
@@ -436,7 +437,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Routed message attachments fix</p>
+          <p className="rm-title"><a href="/api-reference/routes/route-message">Routed message attachments fix</a></p>
           <p>Fixed attachment handling for routed messages, with SDK and documentation updates.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
@@ -446,8 +447,8 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Improve Sub Account Delivery Tier assignment <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Better delivery tier assignment for sub accounts, aligned with the parent account.</p>
+          <p className="rm-title"><a href="/scale/sub-accounts">Improve Sub-Account Delivery Tier assignment</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Better delivery tier assignment for sub-accounts, aligned with the parent account.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
@@ -456,7 +457,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Higher default rate limits <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/facts">Higher default rate limits</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Increased default sending rate limits, with higher ceilings on Pro and Max plans.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
@@ -466,7 +467,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Domain management locked while suspended <span className="rm-tag is-improvement">Improvement</span></p>
+          <p className="rm-title"><a href="/api-reference/domains/update-domain">Domain management locked while suspended</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Domain management is disabled while an account is suspended.</p>
           <span className="rm-date">Q3 2026</span>
         </div>
@@ -476,7 +477,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">IP allow list for API keys</p>
+          <p className="rm-title"><a href="/security/ip-allow-lists">IP allow list for API keys</a></p>
           <p>Restrict API key usage to specific IP addresses, managed from the dashboard.</p>
           <span className="rm-date">Q2 2026</span>
         </div>
@@ -486,7 +487,7 @@ learn and iterate.
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Domain-level DKIM selector</p>
+          <p className="rm-title"><a href="/api-reference/domains/create-domain">Domain-level DKIM selector</a></p>
           <p>Choose a custom DKIM selector for each of your domains.</p>
           <span className="rm-date">Q2 2026</span>
         </div>
@@ -500,3 +501,10 @@ learn and iterate.
     <a href="mailto:support@ahasend.com"> Send us a feature request</a>.
   </p>
 </div>
+
+## Related Guides
+
+- [Start sending](/quickstart), [Domain setup](/domains), [Send-only API keys](/send-api/credentials).
+- [Sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [SDK and framework guides](/guides), [Plans and limits](/facts), [Product releases](/changelog).
+- [Tracking setup](/tracking/open-tracking), [Sandbox behavior](/send-api/sandbox), [Suppression durations](/bounces#suppression-duration).

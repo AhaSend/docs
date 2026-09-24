@@ -1,11 +1,14 @@
 ---
-title: "Introduction"
+title: "Email API Reference (v2)"
 sidebarTitle: "Introduction"
-description: "Get started with AhaSend's powerful email delivery API. Send transactional emails, manage domains, and track delivery analytics."
+description: "AhaSend's REST API for transactional email: send messages, manage domains, webhooks, routes, and suppressions at api.ahasend.com/v2 with Bearer API keys."
 icon: "book"
 ---
 
-AhaSend provides a powerful, reliable email delivery API designed for developers who need to send transactional emails at scale. Our RESTful API makes it easy to integrate email functionality into your applications with just a few lines of code.
+import OfficialSdks from "/snippets/official-sdks.mdx";
+
+
+The AhaSend API reference covers sending messages and managing domains, credentials, webhooks and routes, with endpoint parameters and response formats.
 
 This API reference documentation covers all available endpoints, parameters, and responses. For implementation guides and examples, check out our usage documentation.
 
@@ -16,16 +19,19 @@ For SMTP integration, please see
   </Card>
 </CardGroup>
 
+
+<OfficialSdks />
+
 ## Features
 
-- **Full-featured API with Idempotency**: Complete REST API with built-in idempotency support for safe retries
-- **Reliable Delivery**: 99.9% uptime with redundant infrastructure
-- **Global Scale**: Send millions of emails with low latency worldwide
-- **Real-time Analytics**: Track opens, clicks, bounces, and deliverability
-- **Advanced Routing**: Intelligent routing and failover mechanisms
-- **Webhook Support**: Real-time event notifications for all email activity
-- **Domain Management**: Easy setup and verification of sending domains
-- **Suppression Lists**: Automated bounce and complaint handling
+- [Messages](/api-reference/messages/create-message): send transactional email, schedule it, and inspect delivery results.
+- [Domains](/api-reference/domains/create-domain): add domains and check their DNS records.
+- [Webhooks](/api-reference/webhooks): receive signed delivery events.
+- [Routes](/api-reference/routes): receive inbound email at an HTTP endpoint.
+- [Suppressions](/api-reference/suppressions/get-suppressions): manage addresses blocked from sending.
+- [Reports](/api-reference/reports/get-deliverability-report): query delivery statistics.
+- [Sub-accounts](/api-reference/sub-accounts/overview): manage tenant accounts as a Platform Partner.
+- [Idempotency](/api-reference/idempotency): replay stored results on the operations that support it.
 
 ## Getting Started
 
@@ -64,3 +70,9 @@ Need help getting started? We're here to assist:
 
 Ready to start sending emails? Check out our [Quick Start Guide](/quickstart) or explore our [Authentication](/api-reference/authentication) documentation.
 
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
+- [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [Idempotency rules](/api-reference/idempotency).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits), [Suppression durations](/bounces#suppression-duration).

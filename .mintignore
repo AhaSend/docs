@@ -1,0 +1,5 @@
+# Internal planning and contributor instructions are not site pages.
+/plans/
+/CLAUDE.md
+/AGENTS.md
+/README.md

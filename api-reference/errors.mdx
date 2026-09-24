@@ -1,8 +1,12 @@
 ---
-title: 'Error Handling'
-description: 'Understanding error responses in the AhaSend API'
+title: "API Error Codes and Error Responses"
+description: "Reference for AhaSend API v2 HTTP status codes (400, 401, 403, 404, 409, 422, 429, 500), the JSON error format, example messages, and how to fix each one."
 icon: "triangle-exclamation"
+sidebarTitle: "Errors"
 ---
+
+
+AhaSend API errors use an HTTP status and a JSON message; this reference explains status codes and how your application should handle them.
 
 ## Error Response Format
 
@@ -14,7 +18,7 @@ All API errors return a consistent JSON structure with an HTTP status code and a
 }
 ```
 
-The `message` field provides detailed information about the nature of the error, helping you understand what went wrong and how to fix it.
+The `message` field is human-readable text, not a stable error code. Use the HTTP status and the operation's contract for program logic.
 
 ## HTTP Status Codes
 
@@ -24,6 +28,7 @@ The AhaSend API uses standard HTTP status codes to indicate the success or failu
 
 - **200 OK** - Request succeeded
 - **201 Created** - Resource created successfully
+- **202 Accepted** - Message accepted for processing; inspect each recipient's status
 
 ### 4xx Client Errors
 
@@ -93,7 +98,7 @@ This typically occurs when your API key doesn't have the required scopes for the
 </Tip>
 
 **Common causes:**
-- API key lacks required scopes (e.g., trying to delete domains without `domains:delete` scope)
+- API key lacks required scopes (e.g., trying to delete domains without `domains:delete:all` or `domains:delete:{domain}` scope)
 - Attempting to access resources outside your API key's domain restrictions
 - Insufficient permissions for specific operations
 
@@ -137,6 +142,7 @@ The request conflicts with the current state of the resource.
 **Common causes:**
 - **Idempotency conflicts**: Another request with the same idempotency key is already in progress
 - **Resource conflicts**: Trying to create a resource that already exists (e.g., duplicate domain)
+- **IP allow list conflicts**: Updating your own key would exclude the caller's current IP
 
 ```json
 {
@@ -150,27 +156,21 @@ The request conflicts with the current state of the resource.
 }
 ```
 
-#### 412 Precondition Failed
+#### 422 Unprocessable Entity
 
-Returned for failed idempotency conditions.
-
-```json
-{
-  "message": "The original request with this idempotency key failed and cannot be retried"
-}
-```
+The same idempotency key was used with a different method, resolved path, or request body. Use a new key for a new request, or retry the original request unchanged. See [idempotency](/api-reference/idempotency).
 
 #### 429 Too Many Requests
 
 You've exceeded the API rate limits.
 
 <Tip>
-When you receive this error, wait before making additional requests. Check the response headers for rate limit information.
+When you receive this error, wait before making additional requests. Use exponential backoff with jitter. See [API rate limits](/api-reference/rate-limits); rate-limit headers are not a documented contract.
 </Tip>
 
 ```json
 {
-  "message": "Rate limit exceeded"
+  "message": "Too many requests, rate limited."
 }
 ```
 
@@ -256,7 +256,7 @@ When your API key doesn't have sufficient permissions:
 
 ### Error Handling
 - Always check the HTTP status code first
-- Parse the `message` field for detailed error information
+- Show the `message` field to people; do not branch on its text, which can change
 - Implement appropriate retry logic for 5xx errors
 - Respect rate limits when receiving 429 responses
 
@@ -270,3 +270,10 @@ When your API key doesn't have sufficient permissions:
 <Note>
 Error messages are designed to be descriptive and actionable. They provide specific guidance on what needs to be corrected in your request.
 </Note>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
+- [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [Idempotency rules](/api-reference/idempotency).
+- [API rate limits](/api-reference/rate-limits).

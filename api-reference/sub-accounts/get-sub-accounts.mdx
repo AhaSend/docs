@@ -1,9 +1,19 @@
 ---
-title: "List Sub Accounts"
-sidebarTitle: "List Sub Accounts"
+title: "List Sub-Accounts via the API"
+sidebarTitle: "List Sub-Accounts"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/sub-accounts"
+description: "List all active AhaSend sub-accounts under a parent account with cursor pagination. Soft-deleted sub-accounts are excluded from the results."
 ---
 
+
+The AhaSend API returns a cursor-paginated list of sub-accounts under the parent account. Soft-deleted sub-accounts are not included; usage billed for sub-accounts deleted during the current period is reported by the usage endpoint's `removed_sub_accounts` aggregate.
+
 <Info>
-  **Platform Partner feature:** Sub Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
+  **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
 </Info>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sub-account setup](/scale/sub-accounts).
+- [Sub-account API rules](/api-reference/sub-accounts/overview), [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).

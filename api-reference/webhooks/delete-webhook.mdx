@@ -1,5 +1,17 @@
 ---
-title: "Delete Webhook"
+title: "Delete a Webhook via the API"
 sidebarTitle: "Delete Webhook"
 openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/webhooks/{webhook_id}"
+description: "Delete an AhaSend webhook with the API to stop event deliveries to its endpoint. Requires a delete role for the webhook's domains or the global role."
 ---
+
+
+The AhaSend API deletes a webhook. Access requires the global delete role or a delete
+role matching at least one associated domain.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

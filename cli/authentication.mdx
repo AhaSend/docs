@@ -1,16 +1,17 @@
 ---
-title: Authentication
-description: Manage API credentials and authentication profiles
+title: "CLI Authentication: API Keys and Profiles"
+description: "Log in to the AhaSend CLI with your API key and account ID, manage separate profiles for production and staging, and pass credentials safely in CI/CD."
 icon: key
+sidebarTitle: "Authentication"
 ---
-
-# Authentication
 
 The AhaSend CLI uses profile-based authentication to manage your API credentials and support multiple environments.
 
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+
 ## Getting Started
 
-You'll need your API Key and Account ID from the [AhaSend dashboard](https://dash.ahasend.com).
+Create a full API key under **Account Settings → API Keys**, with the scopes needed by your commands, and copy the account ID from account settings. See [API authentication](/api-reference/authentication).
 
 ### Interactive Login
 
@@ -29,13 +30,12 @@ ahasend auth login \
   --profile production
 ```
 
-### Environment Variables
+### CI Credentials
 
-For automation or CI/CD:
+The CLI reads no environment variables for credentials. It authenticates through `ahasend auth login` profiles, `--profile`, or `--api-key` with `--account-id`. In CI, store secrets as environment variables and pass them explicitly through flags:
 
 ```bash
-export AHASEND_API_KEY="your-api-key"
-export AHASEND_ACCOUNT_ID="your-account-id"
+ahasend --api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID" ping
 ```
 
 ## Profiles
@@ -56,10 +56,10 @@ ahasend auth login --profile staging
 ahasend auth switch production
 
 # Use profile for single command
-ahasend messages send --profile staging \
+ahasend messages send --sandbox --profile staging \
   --from test@staging.example.com \
   --to dev@example.com \
-  --subject "Test"
+  --subject "Test" --text "Docs test"
 ```
 
 ### Check Status
@@ -71,12 +71,13 @@ ahasend auth status
 ### Remove Profile
 
 ```bash
-ahasend auth logout
+ahasend auth login --profile docs-logout-test
+ahasend auth logout docs-logout-test
 ```
 
 ## Configuration
 
-Credentials are stored in `~/.ahasend/config.yaml` with secure file permissions.
+Credentials are stored as plaintext in `~/.ahasend/config.yaml`. Protect this file and keep it out of source control.
 
 <Warning>
 Keep your API keys secure. Never commit credentials to version control.
@@ -96,3 +97,10 @@ ahasend auth status
 - [Send your first email](/cli/quickstart)
 - [Manage domains](/cli/commands/domains)
 - [Configure webhooks](/cli/commands/webhooks)
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [REST sending guide](/send-api/send-email), [SMTP settings](/smtp).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [CLI configuration and output](/cli/configuration).
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Domain setup](/domains).
+- [Sandbox behavior](/send-api/sandbox).

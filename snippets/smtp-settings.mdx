@@ -1,0 +1,11 @@
+| Setting | Value |
+|---|---|
+| EU host | `send.ahasend.com` |
+| US connection point | `send-us.ahasend.com`; accepts SMTP and forwards it to the EU |
+| Ports | 25, 587 and 2525 |
+| Encryption | STARTTLS required on every supported port |
+| Authentication | AUTH PLAIN only after STARTTLS |
+| Username and password | Your SMTP credential, not an API key |
+| Port 465 | Implicit TLS is not supported |
+
+All message data is stored in the EU. See [SMTP limits](/smtp#what-are-the-smtp-limits).

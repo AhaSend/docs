@@ -1,11 +1,14 @@
 ---
-title: "Sending emails in Go"
+title: "Send Email in Go via SMTP (net/smtp, gomail)"
 sidebarTitle: "Go"
-description: "Learn how to send emails using AhaSend SMTP with Go, including net/smtp standard library and gomail.v2 package"
+description: "Send email from Go through AhaSend's SMTP relay using net/smtp or gomail: STARTTLS on port 587, HTML, attachments, custom headers, retries and sandbox testing."
 icon: "golang"
 ---
 
-# Sending Emails with SMTP in Go
+import SmtpRelated from "/snippets/smtp-related.mdx";
+import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
+import SmtpSettings from "/snippets/smtp-settings.mdx";
+
 
 Send emails through AhaSend's SMTP servers using Go with the standard library `net/smtp` package or the more feature-rich `gomail.v2` library. This guide covers everything from basic setup to advanced features like attachments and custom headers.
 
@@ -14,6 +17,8 @@ Send emails through AhaSend's SMTP servers using Go with the standard library `n
 </Info>
 
 ## Prerequisites
+
+<SmtpPrerequisites />
 
 Before you begin, ensure you have:
 
@@ -24,35 +29,12 @@ Before you begin, ensure you have:
     - Go modules enabled (Go 1.11+)
   </Accordion>
 
-  <Accordion title="AhaSend Setup" icon="envelope">
-    - **Domain verified** in your AhaSend account
-    - **SMTP credentials** created (username and password)
-    - Access to your AhaSend dashboard for credential management
-  </Accordion>
 </AccordionGroup>
 
-<Info>
-**Need SMTP Credentials?** If you haven't created SMTP credentials yet, check out our [SMTP Credentials guide](/smtp/credentials) for step-by-step instructions.
-</Info>
 
 ## Connection Settings
 
-Use these settings for all Go SMTP configurations with AhaSend:
-
-<CardGroup cols={2}>
-  <Card title="Primary Server" icon="server">
-    **Host:** `send.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-  <Card title="US Server" icon="flag-usa">
-    **Host:** `send-us.ahasend.com`<br />
-    **Ports:** 587 (recommended), 25, 2525<br />
-    **Security:** STARTTLS<br />
-    **Authentication:** Required
-  </Card>
-</CardGroup>
+<SmtpSettings />
 
 ## Using net/smtp (Standard Library)
 
@@ -64,6 +46,7 @@ Go's standard library provides basic SMTP functionality through the `net/smtp` p
 package main
 
 import (
+    "time"
     "fmt"
     "net/smtp"
 )
@@ -86,7 +69,10 @@ func main() {
     subject := "Welcome to our platform!"
     body := "Thanks for signing up. We're excited to have you!"
 
-    msg := []byte(fmt.Sprintf("To: %s\r\n"+
+    msg := []byte(fmt.Sprintf("MIME-Version: 1.0\r\n"+
+        "From: hello@yourdomain.com\r\n"+
+        "To: %s\r\n"+
+        "Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
         "Subject: %s\r\n"+
         "\r\n"+
         "%s\r\n", to[0], subject, body))
@@ -106,6 +92,7 @@ func main() {
 package main
 
 import (
+    "time"
     "fmt"
     "net/smtp"
 )
@@ -121,7 +108,9 @@ func main() {
     to := []string{"user@example.com"}
 
     // HTML message with proper headers
-    msg := []byte("To: user@example.com\r\n" +
+    msg := []byte("From: hello@yourdomain.com\r\n" +
+        "To: user@example.com\r\n" +
+        "Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
         "Subject: Welcome to our platform!\r\n" +
         "MIME-Version: 1.0\r\n" +
         "Content-Type: text/html; charset=UTF-8\r\n" +
@@ -146,6 +135,7 @@ func main() {
 package main
 
 import (
+    "time"
     "fmt"
     "net/smtp"
 )
@@ -159,12 +149,14 @@ func main() {
     to := []string{"user@example.com"}
 
     // Message with AhaSend special headers
-    msg := []byte("To: user@example.com\r\n" +
+    msg := []byte("From: " + from + "\r\n" +
+        "To: user@example.com\r\n" +
+        "Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
         "Subject: Welcome Newsletter\r\n" +
         "ahasend-track-opens: true\r\n" +
         "ahasend-track-clicks: true\r\n" +
         "ahasend-tags: welcome,newsletter,golang\r\n" +
-        "ahasend-message-retention: 7\r\n" +
+        "AhaSend-Metadata-Retention: 7\r\n" +
         "MIME-Version: 1.0\r\n" +
         "Content-Type: text/html; charset=UTF-8\r\n" +
         "\r\n" +
@@ -337,8 +329,8 @@ func main() {
     m.SetHeader("ahasend-track-opens", "true")
     m.SetHeader("ahasend-track-clicks", "true")
     m.SetHeader("ahasend-tags", "newsletter,product-update,golang")
-    m.SetHeader("ahasend-message-retention", "14")
-    m.SetHeader("ahasend-message-data-retention", "3")
+    m.SetHeader("AhaSend-Metadata-Retention", "14")
+    m.SetHeader("AhaSend-Data-Retention", "3")
 
     // For sandbox testing:
     // m.SetHeader("AhaSend-Sandbox", "true")
@@ -471,7 +463,7 @@ func sendEmailWithRetry(host string, port int, username, password, from, to, sub
         fmt.Printf("Attempt %d failed: %v\n", attempt, err)
 
         if attempt < maxRetries {
-            // Exponential backoff
+            // Linear backoff
             delay := time.Duration(attempt) * time.Second
             fmt.Printf("Retrying in %v...\n", delay)
             time.Sleep(delay)
@@ -557,6 +549,7 @@ Use sandbox mode to test your Go email integration safely:
 package main
 
 import (
+    "time"
     "fmt"
     "net/smtp"
 )
@@ -570,8 +563,11 @@ func main() {
     to := []string{"test@example.com"}
 
     // Sandbox message with simulated outcome
-    msg := []byte("To: test@example.com\r\n" +
+    msg := []byte("From: hello@yourdomain.com\r\n" +
+        "To: test@example.com\r\n" +
+        "Date: " + time.Now().Format(time.RFC1123Z) + "\r\n" +
         "Subject: Sandbox Test\r\n" +
+        "MIME-Version: 1.0\r\n" +
         "AhaSend-Sandbox: true\r\n" +
         "AhaSend-Sandbox-Result: deliver\r\n" +
         "\r\n" +
@@ -677,3 +673,5 @@ func main() {
     Get help from our engineering team
   </Card>
 </CardGroup>
+
+<SmtpRelated />

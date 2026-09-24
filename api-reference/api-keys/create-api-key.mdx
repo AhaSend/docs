@@ -1,5 +1,15 @@
 ---
-title: "Create API Key"
+title: "Create an API Key via the API"
 sidebarTitle: "Create API Key"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/api-keys"
+description: "Create a scoped AhaSend API key through the API, with an optional IP allow list. The secret_key is returned only once, so store it right away."
 ---
+
+
+The AhaSend API creates a new API key with the specified scopes.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Scoped credentials](/security/scoped-credentials).
+- [API key CLI](/cli/commands/apikeys), [IP allow lists](/security/ip-allow-lists), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

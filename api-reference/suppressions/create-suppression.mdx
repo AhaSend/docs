@@ -1,5 +1,20 @@
 ---
-title: "Create Suppression"
+title: "Add an Address to the Suppression List via the API"
 sidebarTitle: "Create Suppression"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/suppressions"
+description: "Add an email address to your AhaSend suppression list through the API, for one sending domain or all domains, with a required expiry time."
 ---
+
+
+The AhaSend API creates a new suppression for an email address.
+
+**Validation Requirements:**
+- `email` must be a valid email address
+- `expires_at` must be in RFC3339 format
+- `domain` is optional - if not provided, applies to all account domains
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Suppression list API](/api-reference/suppressions/get-suppressions).
+- [Suppression CLI](/cli/commands/suppressions), [Suppression durations](/bounces#suppression-duration), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

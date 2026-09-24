@@ -1,17 +1,41 @@
 ---
-title: "Domain Setup"
-sidebarTitle: "Domains"
-description: "Set up and verify your sending domains for optimal email deliverability with AhaSend"
+title: "Domain Setup: SPF, DKIM and DMARC Records"
+sidebarTitle: "Domain Setup"
+description: "Add and verify your sending domain in AhaSend: publish the SPF, DKIM (CNAME), DMARC, return-path and tracking DNS records, then run the DNS check."
 icon: "globe"
 ---
 
-Setting up your domain correctly is **essential** for email deliverability. This guide walks you through adding and verifying your domain with AhaSend to ensure your emails reach the inbox, not the spam folder.
+import DnsProviderCards from "/snippets/dns-provider-cards.mdx";
+
+import EmailHelpGuides from "/snippets/email-help-guides.mdx";
+
+
+To send email with AhaSend, add your domain, publish its SPF, DKIM and DMARC records, then run the DNS check; this guide walks through each step.
+
+Free includes 3 sending domains; Pro and Max include unlimited domains. Automatic DKIM rotation is available on all three plans. Custom DKIM selectors and bring-your-own DKIM are Platform Partner features. See [plans and features](/facts#plans-and-features).
 
 <Warning>
 **Domain verification is required** before you can send any emails through AhaSend. Unverified domains cannot send emails and will result in API errors.
 </Warning>
 
-## Why Domain Setup Matters
+<a id="why-domain-setup-matters" />
+
+## Which DNS Records Do I Need?
+
+Publish the records shown for your domain in the dashboard. New managed-DNS domains use these record types:
+
+| Record | Type | Purpose | Required for sending? |
+|---|---|---|---|
+| SPF | TXT | Authorizes AhaSend through `include:spf.ahasend.com` | Yes |
+| DKIM | Two CNAMEs | Active and standby signing keys | Yes; publish both for rotation |
+| DMARC | TXT | Sets your domain's authentication policy | Yes |
+| Return-path | CNAME | Handles bounces and supports SPF alignment | Recommended |
+| Tracking | CNAME | Uses your domain for tracking links | When tracking is used |
+| MX | Dashboard values | Receives inbound email for routing | When inbound routing is used |
+
+Copy the exact hostnames and values from your domain page; manual DNS and whitelabel setups can differ.
+
+## Why Does AhaSend Need DNS Records?
 
 Email receivers use multiple authentication methods to verify that emails are legitimate. When you properly configure your domain with AhaSend, you're telling receiving servers that:
 
@@ -22,7 +46,7 @@ Email receivers use multiple authentication methods to verify that emails are le
 Without proper domain setup, your emails will either be **rejected outright** or **land in spam folders**, significantly impacting your delivery rates.
 
 <Tip>
-**Subdomain recommendation:** Use a subdomain like `email.yourcompany.com` instead of your main domain for transactional emails. This isolates your transactional email reputation from marketing campaigns.
+**Subdomain recommendation:** Use a subdomain like `email.yourcompany.com` instead of your main domain for transactional emails. This separates configuration and monitoring; mailbox providers can still consider the parent domain’s reputation. See [sending subdomains](/deliverability#should-transactional-mail-use-a-separate-subdomain).
 </Tip>
 
 ## Prerequisites
@@ -74,7 +98,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `TXT`
         **Purpose:** Prevents email spoofing by specifying authorized sending servers
 
-        ```
+        ```text
         Name: @ (or your subdomain)
         Type: TXT
         Value: v=spf1 include:spf.ahasend.com ~all
@@ -97,7 +121,7 @@ Before setting up your domain, make sure you have:
 
         **Managed DNS (DNS v3):**
 
-        ```
+        ```text
         Name: managed._domainkey.(your domain or subdomain)
         Type: CNAME
         Value: [AhaSend alias shown in dashboard]
@@ -113,7 +137,7 @@ Before setting up your domain, make sure you have:
 
         **Manual DNS:**
 
-        ```
+        ```text
         Name: [selector]._domainkey.(your domain or subdomain)
         Type: TXT
         Value: [unique DKIM public key]
@@ -130,14 +154,14 @@ Before setting up your domain, make sure you have:
         **Record Type:** `TXT`
         **Purpose:** Protects your domain from email spoofing and phishing attacks
 
-        ```
+        ```text
         Name: _dmarc
         Type: TXT
         Value: v=DMARC1; p=quarantine; sp=none; adkim=r; aspf=r;
         ```
 
         <Info>
-        This DMARC policy tells receiving servers to quarantine emails that fail authentication and send reports to AhaSend for monitoring.
+        This DMARC policy asks receiving servers to quarantine messages that fail DMARC. It has no `rua` tag and sends no aggregate reports. You can add your own `rua=mailto:reports@yourdomain.com` address to receive reports. If the domain already has a DMARC record, update that record instead of adding another. Check all services that send from the domain before enforcing a quarantine policy.
         </Info>
       </Accordion>
 
@@ -147,7 +171,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `CNAME`
         **Purpose:** Improves deliverability by providing a communication channel for bounce handling and SPF alignment
 
-        ```
+        ```text
         Name: [return-path subdomain].(your domain or subdomain)
         Type: CNAME
         Value: [value shown in dashboard]
@@ -164,7 +188,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `CNAME`
         **Purpose:** Improves deliverability and maintains brand consistency for tracked links
 
-        ```
+        ```text
         Name: [tracking subdomain].(your domain or subdomain)
         Type: CNAME
         Value: [value shown in dashboard]
@@ -181,7 +205,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `CNAME`
         **Purpose:** Keeps subscription management links branded on your domain
 
-        ```
+        ```text
         Name: [subscription subdomain].(your domain or subdomain)
         Type: CNAME
         Value: [value shown in dashboard]
@@ -198,7 +222,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `CNAME`
         **Purpose:** Keeps hosted assets and media URLs branded on your domain
 
-        ```
+        ```text
         Name: [media subdomain].(your domain or subdomain)
         Type: CNAME
         Value: [value shown in dashboard]
@@ -215,7 +239,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** `MX`
         **Purpose:** Required for receiving emails, recommended for better sending reputation
 
-        ```
+        ```text
         Name: @ (or your subdomain)
         Type: MX
         Priority: 10
@@ -270,30 +294,13 @@ Before setting up your domain, make sure you have:
 
 ## DNS Provider Guides
 
-Need help adding DNS records? Here are guides for popular providers:
+Choose your authoritative DNS provider for record names and setup steps.
 
-<CardGroup cols={3}>
-  <Card title="Cloudflare" icon="cloud" href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/">
-    Manage DNS records in Cloudflare dashboard
-  </Card>
-  <Card title="GoDaddy" icon="globe" href="https://www.godaddy.com/help/add-a-txt-record-19232">
-    Add TXT and CNAME records in GoDaddy
-  </Card>
-  <Card title="Namecheap" icon="dollar-sign" href="https://www.namecheap.com/support/knowledgebase/article.aspx/317/2237/how-do-i-add-txtspfdkimdmarc-records-for-my-domain/">
-    Configure email authentication records
-  </Card>
-  <Card title="Route 53" icon="aws" href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-creating.html">
-    AWS Route 53 record management
-  </Card>
-  <Card title="Google Domains" icon="google" href="https://support.google.com/domains/answer/3251147">
-    Add DNS records in Google Domains
-  </Card>
-  <Card title="Other Providers" icon="question" href="mailto:support@ahasend.com">
-    Contact support for help with your DNS provider
-  </Card>
-</CardGroup>
+<DnsProviderCards />
 
-## Manage Domains with API
+<a id="manage-domains-with-api" />
+
+## How Do I Manage Domains Through the API?
 
 For programmatic domain management, use our comprehensive Domains API:
 
@@ -316,7 +323,11 @@ For programmatic domain management, use our comprehensive Domains API:
 API v2 also supports updating domain DNS settings such as tracking, return-path, subscription, media, and DKIM rotation interval, as well as requesting a DNS check for an existing domain.
 </Info>
 
-## Troubleshooting
+<a id="troubleshooting" />
+
+## Why Is My Domain Not Verified?
+
+Most records verify within minutes. DNS changes can take up to 48 hours to propagate. After a domain is added or verified, allow up to 2 minutes for the SMTP configuration to refresh if you see `556 Invalid account or domain`.
 
 <AccordionGroup>
   <Accordion title="DNS Records Not Verifying">
@@ -337,7 +348,7 @@ API v2 also supports updating domain DNS settings such as tracking, return-path,
     3. **Place it before the final mechanism** (`~all` or `-all`)
 
     Example:
-    ```
+    ```text
     OLD: v=spf1 include:_spf.google.com ~all
     NEW: v=spf1 include:_spf.google.com include:spf.ahasend.com ~all
     ```
@@ -366,7 +377,7 @@ API v2 also supports updating domain DNS settings such as tracking, return-path,
   <Accordion title="Still Having Issues?">
     **We're here to help:**
 
-    - **Check our status page** for any ongoing DNS issues
+    - **Check our [status page](https://status.ahasend.com)** for any ongoing DNS issues
     - **Contact support** at [support@ahasend.com](mailto:support@ahasend.com)
     - **Include your domain name** and specific error messages
     - **Attach screenshots** of your DNS configuration if helpful
@@ -397,3 +408,29 @@ Once your domain is verified, you're ready to start sending emails:
 <Info>
 **Domain setup complete?** Your domain is now ready to send emails through AhaSend. Test it out with our [quickstart guide](/quickstart) to send your first email!
 </Info>
+
+## Common Domain Questions
+
+### Can I Keep My Existing SPF Record?
+
+Yes. Add `include:spf.ahasend.com` to the existing SPF record before its final `~all` or `-all` mechanism. Do not publish a second SPF record.
+
+### Why Are There Two DKIM Records?
+
+Managed DNS uses one active key and one standby key so AhaSend can rotate signing keys. Publish both CNAMEs shown in your dashboard.
+
+### How Long Does Verification Take?
+
+Most records verify within minutes. DNS changes can take up to 48 hours to propagate. Check the DNS host, type and value if verification still fails.
+
+### Should I Use a Subdomain?
+
+Use a dedicated subdomain when you want to separate transactional sending from other mail on your main domain. Add and verify that subdomain in AhaSend.
+
+<EmailHelpGuides />
+
+## Related Guides
+
+- [Account quickstart](/quickstart), [Domain API](/api-reference/domains/create-domain), [Domain CLI](/cli/commands/domains).
+- [DNS whitelabel](/scale/dns-whitelabel), [Send-only API keys](/send-api/credentials), [Inbound MX setup](/integrations/routing).
+- [Plans and limits](/facts), [Tracking setup](/tracking/open-tracking).

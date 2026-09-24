@@ -1,17 +1,26 @@
 ---
-title: "How to Send Email with Cloudflare Workers"
+title: "How to Send Email from Cloudflare Workers"
 sidebarTitle: "Cloudflare Workers"
-description: "Send transactional email from Cloudflare Workers with the AhaSend SDK, which runs on workerd natively, plus signed webhook verification."
+description: "Send transactional email from a Cloudflare Worker with the AhaSend SDK, no nodejs_compat flag needed: Worker secrets, sandbox sends, and signed webhooks."
 keywords: ["cloudflare workers send email", "cloudflare workers email api", "workers transactional email", "ahasend cloudflare", "workers webhook verification"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-worker.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from Cloudflare Workers with AhaSend, keep credentials on the server, and test a sandbox send.
+
 The SDK runs on workerd natively and needs no `nodejs_compat` flag, so a Worker gets the same typed client, retries and webhook verifier as a Node server.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - A Workers project set up with [Wrangler](https://developers.cloudflare.com/workers/wrangler/)
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) scoped to `messages:send:{your-domain}`, matching the domain in `from.email`, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) scoped to `messages:send:{your-domain}`, matching the domain in `from.email`, and your account ID
 
 If you're starting from scratch:
 
@@ -57,6 +66,8 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
+<QuickSend />
+
 ## Configure Secrets
 
 Store credentials as Worker secrets, never in the `vars` block of your Wrangler configuration file — `wrangler.jsonc` in projects scaffolded today, `wrangler.toml` in older ones — which ends up in source control:
@@ -90,10 +101,23 @@ export interface Env {
 
 ## Send an Email from a Worker
 
+Pass `fetch: fetch.bind(globalThis)` when constructing the SDK client in workerd. Cloudflare requires the global binding when code stores and later calls `fetch`; without it, SDK 0.2.1 can fail with an [Illegal invocation error](https://developers.cloudflare.com/workers/observability/errors/#illegal-invocation-errors).
+
 Secrets arrive on the `env` argument, which is how Workers deliver bindings whether or not Node compatibility is on — `process.env` is not a substitute, since it only carries your bindings under the `nodejs_compat_populate_process_env` flag. The client is built per request rather than at module scope. This example is a server-to-server endpoint protected by its own bearer token. For browser-facing flows, authenticate the user with your application and load the recipient from a trusted user record; never accept an arbitrary recipient from an unauthenticated request.
 
 ```ts src/index.ts
 import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
+
+async function tokenMatches(header: string | null, expected: string): Promise<boolean> {
+  const supplied = header?.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!supplied) return false;
+  const hash = (value: string) => crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  const [a, b] = await Promise.all([hash(supplied), hash(expected)]);
+  const left = new Uint8Array(a), right = new Uint8Array(b);
+  let difference = 0;
+  for (let i = 0; i < left.length; i++) difference |= left[i] ^ right[i];
+  return difference === 0;
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -102,7 +126,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/welcome") {
       if (
         !env.AHASEND_SEND_TOKEN ||
-        request.headers.get("authorization") !== `Bearer ${env.AHASEND_SEND_TOKEN}`
+        !(await tokenMatches(request.headers.get("authorization"), env.AHASEND_SEND_TOKEN))
       ) {
         return new Response("Unauthorized", { status: 401 });
       }
@@ -134,10 +158,11 @@ export default {
       const ahasend = new AhaSendClient({
         apiKey: env.AHASEND_API_KEY,
         accountId: env.AHASEND_ACCOUNT_ID,
+        fetch: fetch.bind(globalThis),
       });
 
       try {
-        const sandbox = true;
+        const sandbox = true; // Set to false only when ready to deliver real mail.
         const result = await ahasend.messages.send({
           from: { email: "hello@yourdomain.com", name: "Your App" },
           recipients: [{ email: body.email, name: body.name }],
@@ -202,7 +227,7 @@ if (request.method === "POST" && url.pathname === "/webhooks/ahasend") {
       }
       return new Response(null, { status: 200 });
     },
-    { maxBodyBytes: 1_000_000 },
+    { maxBodyBytes: 30_000_000 },
   )(request);
 }
 ```
@@ -223,13 +248,7 @@ npx wrangler deploy
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each one gets a separate, individually-substituted message.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` to dedupe retries of the same business operation. Reusing a key after the server's 24-hour retention window does not prevent a new send.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-- **Queues**: for bursts, push the send onto a [Cloudflare Queue](https://developers.cloudflare.com/queues/) and send from the consumer. Derive a stable AhaSend idempotency key from the queue message or business ID, acknowledge each message only after an accepted send, and configure a dead-letter queue; Cloudflare retries failed batches and otherwise discards messages after their retry limit.
-
-See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration in depth, and the [API reference](/api-reference) for every endpoint the SDK exposes.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -247,3 +266,5 @@ See the [Node.js SDK guide](/guides/nodejs-sdk) for client configuration in dept
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

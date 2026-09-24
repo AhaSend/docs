@@ -1,12 +1,30 @@
 ---
 title: "How to Send Email from a Bolt.new Project"
 sidebarTitle: "Bolt.new"
-description: "Add transactional email to a Bolt.new app with the AhaSend SDK, using a Bolt or Supabase server function or a Node backend, with the key stored where the send runs."
+description: "Add transactional email to a Bolt.new app with the AhaSend SDK from a Bolt or Supabase server function or Node backend, with the API key kept server-side."
 keywords: ["bolt.new email integration", "bolt.new send email", "bolt.new ahasend", "bolt new transactional email", "bolt.new supabase edge function email"]
 icon: "bolt"
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import QuickSend from "/snippets/quick-send-deno.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from a Bolt.new server function with AhaSend, keep credentials on the server, and test a sandbox send.
+
 [Bolt.new](https://bolt.new) develops your app in a browser-based WebContainer. A WebContainer runs inside the browser tab, so it is not a safe place for an AhaSend API key: code there can make network requests, but it cannot keep the key from someone who can inspect or edit the project. Put the send in a Bolt or Supabase server function, or in a separately deployed Node backend.
+
+<SendGuideRules />
+
+## AhaSend Rules for AI Coding Agents
+
+Add this shared block to your project instructions:
+
+<AiEmailRules />
+
+This example pins `@supabase/server` to 1.4.1. Its [withSupabase helper](https://supabase.github.io/server/functions/index.withSupabase.html) passes the authenticated Supabase client and user claims to the handler.
 
 ## Prerequisites
 
@@ -54,6 +72,8 @@ bun add @ahasend/sdk
 
 </CodeGroup>
 
+<QuickSend />
+
 In a Bolt or Supabase server function there is nothing to install in the app package: import it with `import { AhaSendClient } from "npm:@ahasend/sdk"`.
 
 If you use Bolt Database, open the database icon, select **Secrets**, and create `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_SANDBOX` (set it to `true` while testing). Bolt makes database secrets available only to server functions.
@@ -76,7 +96,7 @@ The function it generates should look close to this. Create the client once at m
 
 ```ts supabase/functions/send-receipt/index.ts
 import { AhaSendAPIError, AhaSendClient, isAhaSendError } from "npm:@ahasend/sdk";
-import { withSupabase } from "npm:@supabase/server";
+import { withSupabase } from "npm:@supabase/server@1.4.1";
 
 function requireEnv(name: string): string {
   const value = Deno.env.get(name);
@@ -207,10 +227,7 @@ Your deployed backend and frontend live in different homes. Before you call it d
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries, each of which gets its own message.
-- **Idempotency**: pass your own stable key as the second argument to `send()`, as the example does, so a double-click cannot send twice within the 24-hour replay window. Reuse a key only for the exact same payload; 5xx outcomes are not stored.
-- Building in a different AI tool? See [v0](/guides/v0) and [Lovable](/guides/lovable). See the [API reference](/api-reference) for every field.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -231,3 +248,5 @@ Your deployed backend and frontend live in different homes. Before you call it d
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

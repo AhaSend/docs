@@ -1,5 +1,15 @@
 ---
-title: "Delete API Key"
+title: "Delete an API Key via the API"
 sidebarTitle: "Delete API Key"
 openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/api-keys/{key_id}"
+description: "Revoke an AhaSend API key permanently by ID. Requires the api-keys:delete scope. Create the replacement key first when you rotate credentials."
 ---
+
+
+The AhaSend API deletes an API key.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Scoped credentials](/security/scoped-credentials).
+- [API key CLI](/cli/commands/apikeys), [Create key API](/api-reference/api-keys/create-api-key), [IP allow lists](/security/ip-allow-lists).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

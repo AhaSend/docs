@@ -1,51 +1,103 @@
 ---
-title: "How to Send Email with Railway"
+title: "How to Send Email from Railway (Node.js)"
 sidebarTitle: "Railway"
 description: "Deploy a Node.js app that sends transactional email with the AhaSend SDK to Railway: set variables, expose a public webhook URL, and go live."
 keywords: ["railway deploy nodejs email", "railway transactional email", "railway environment variables", "ahasend railway", "railway webhook url"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from a Node.js app on Railway with AhaSend, keep credentials on the server, and test a sandbox send.
+
 This guide deploys the [Express app](/guides/express) as a persistent Railway service. The same deployment steps apply to other Node.js frameworks such as [Fastify](/guides/fastify), [Koa](/guides/koa), and [NestJS](/guides/nestjs).
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - A [Railway account](https://railway.com) and the [Railway CLI](https://docs.railway.com/guides/cli) installed, or a GitHub repo connected to the service
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:{yourdomain.com}` scope for your sending domain, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{yourdomain.com}` scope for your sending domain, and your account ID
+
+## Install the SDK
+
+In your local Node.js 22 or newer backend project, run:
+
+```bash
+npm install @ahasend/sdk express
+```
+
+<QuickSend />
 
 ## What You're Deploying
 
-Use the SDK client in the completed [Express app](/guides/express):
+Install `@ahasend/sdk` and `express` in a Node.js 22 or newer project. This complete server uses a dedicated server-to-server token and sends in sandbox mode. Replace the sender with a verified domain.
 
 ```ts server.ts
-import { AhaSendClient } from "@ahasend/sdk";
+import { createHash, timingSafeEqual } from "node:crypto";
+import express from "express";
+import { AhaSendClient, AhaSendAPIError } from "@ahasend/sdk";
+import { WebhookVerifier, expressWebhookHandler } from "@ahasend/sdk/webhooks";
 
 const ahasend = AhaSendClient.fromEnv();
-```
+const token = process.env.WELCOME_ENDPOINT_TOKEN;
+if (!token) throw new Error("WELCOME_ENDPOINT_TOKEN is required");
+const expected = createHash("sha256").update(token).digest();
+const app = express();
 
-A send returns a **multi-status** result, one entry in `result.data` per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds, so check every entry: `const rejected = result.data.filter((r) => r.status === "error")`.
-
-Railway injects a `PORT` environment variable. Add a health endpoint, bind the server to that port on `0.0.0.0`, and stop accepting new requests when Railway sends `SIGTERM`:
-
-```ts server.ts
-app.get("/health", (_req, res) => res.sendStatus(200));
-
-const port = Number(process.env.PORT ?? "3000");
-if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
-  throw new Error("PORT must be a valid TCP port");
-}
-
-const server = app.listen(port, "0.0.0.0");
-
-process.once("SIGTERM", () => {
-  server.close((error) => {
-    if (error) {
-      console.error("Failed to close the HTTP server", error);
-      process.exitCode = 1;
+app.get("/health", (_req, res) => { res.sendStatus(200); });
+app.post("/api/welcome", express.json({ limit: "16kb" }), async (req, res) => {
+  const authorization = req.get("authorization") ?? "";
+  const supplied = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!supplied || !timingSafeEqual(createHash("sha256").update(supplied).digest(), expected)) {
+    res.sendStatus(401);
+    return;
+  }
+  const { email, eventId } = req.body ?? {};
+  if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      typeof eventId !== "string" || !/^[A-Za-z0-9._:-]{1,200}$/.test(eventId)) {
+    res.sendStatus(400);
+    return;
+  }
+  try {
+    const result = await ahasend.messages.send({
+      from: { email: "hello@yourdomain.com" },
+      recipients: [{ email }],
+      subject: "Welcome to Your App!",
+      text_content: "Thanks for signing up.",
+      sandbox: true,
+    }, { idempotencyKey: `sandbox-welcome-${eventId}` });
+    const rejected = result.data.some((entry) => entry.status === "error");
+    res.status(rejected ? 422 : 202).json({ accepted: !rejected });
+  } catch (error) {
+    if (error instanceof AhaSendAPIError) {
+      console.error("Send failed", { status: error.status, requestId: error.requestId });
     }
-  });
+    res.sendStatus(502);
+  }
+});
+if (process.env.AHASEND_WEBHOOK_SECRET) {
+  app.post("/webhooks/ahasend", expressWebhookHandler(
+    new WebhookVerifier(process.env.AHASEND_WEBHOOK_SECRET),
+    async (_event, _req, res) => { res.statusCode = 204; res.end(); },
+    { maxBodyBytes: 30_000_000 },
+  )); // Verification only; add a durable handoff before business side effects.
+}
+app.use((_error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  res.sendStatus(500);
+});
+const port = Number(process.env.PORT ?? "3000");
+if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) throw new Error("Invalid PORT");
+const server = app.listen(port, "0.0.0.0");
+process.once("SIGTERM", () => {
+  server.close((error) => { if (error) process.exitCode = 1; });
 });
 ```
+
+Run TypeScript with your project's runner (for example `npx tsx server.ts`). Call `/api/welcome` with your server token and JSON containing `email` and a stable `eventId`. Add a per-caller send limit before production use. An AhaSend 202 contains one result per recipient; this route returns 422 if any recipient is rejected.
 
 ## Configure Deployment Health and Draining
 
@@ -113,7 +165,7 @@ railway up
 
 Your service is private by default. To receive AhaSend webhooks, generate a public domain: open the service, go to **Settings → Networking → Public Networking**, and click **Generate Domain**. Then create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at:
 
-```
+```text
 https://your-app.up.railway.app/webhooks/ahasend
 ```
 
@@ -127,11 +179,7 @@ Anything your handler writes to standard output or standard error is captured in
 
 ## Going Further
 
-- **App-side detail**: the [Express guide](/guides/express) covers sends, per-recipient error handling, and the webhook adapter in full.
-- **Client configuration**: see the [Node.js SDK guide](/guides/nodejs-sdk) for timeouts, retries, idempotency, and the opt-in local rate pacing worth enabling on a long-lived service.
-- **An alternative host**: [Vercel](/guides/vercel) runs the same SDK on serverless functions if you'd rather not manage a process.
-- **Durable webhook work**: do not rely on untracked work after returning `2xx`; Railway can redeploy, restart, or scale the process. Hand work to a durable queue or transactional outbox before acknowledging the delivery.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -146,3 +194,5 @@ Anything your handler writes to standard output or standard error is captured in
     `AHASEND_WEBHOOK_SECRET` must be copied exactly as shown in the AhaSend dashboard, including the `aha-whsec-` prefix. Re-enter it with `railway variable set AHASEND_WEBHOOK_SECRET --stdin` to avoid shell quoting problems, or, once it is sealed, through the edit option in its three-dot menu — a sealed variable cannot be updated through the Raw Editor. Never print the secret or the raw signed body while diagnosing this.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

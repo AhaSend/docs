@@ -1,16 +1,18 @@
 ---
-title: API Keys
-description: Manage API keys for authentication and access control
+title: "ahasend apikeys: Manage API Keys"
+description: "Create, list, update, and delete scoped AhaSend API keys from the command line, including domain-restricted keys such as messages:send:{example.com}."
 icon: key
+sidebarTitle: "apikeys"
 ---
 
-# API Keys Command
 
-Manage API keys for authentication and access control.
+AhaSend CLI `apikeys` commands let you create, inspect, update and revoke API keys; this page covers their arguments and flags.
+
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
 
 ## Overview
 
-```bash
+```text
 ahasend apikeys [subcommand] [flags]
 ```
 
@@ -57,23 +59,24 @@ ahasend apikeys create \
 ## Get API Key Details
 
 ```bash
-ahasend apikeys get ak_1234567890abcdef
+ahasend apikeys get YOUR_RESOURCE_ID
 ```
 
 ## Update API Key
 
 ```bash
 # Update label
-ahasend apikeys update ak_1234567890abcdef --label "Updated Label"
+ahasend apikeys update YOUR_RESOURCE_ID --label "Updated Label"
 
 # Update scope
-ahasend apikeys update ak_1234567890abcdef --scope "messages:send:{example.com}"
+ahasend apikeys update YOUR_RESOURCE_ID --scope "messages:send:{example.com}"
 ```
 
 ## Delete API Key
 
 ```bash
-ahasend apikeys delete ak_1234567890abcdef
+TEST_ID=$(ahasend apikeys create --label "Docs deletion test" --scope "accounts:read" --output json | jq -er '.id')
+ahasend apikeys delete "$TEST_ID"
 ```
 
 <Warning>
@@ -85,3 +88,45 @@ Deleting an API key is irreversible. Applications using this key will lose acces
 - [Learn about API Key Scopes](/api-reference/scopes)
 - [Authenticate with the CLI](/cli/authentication)
 - [Send messages](/cli/commands/messages)
+
+## Command Flags
+
+These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `apikeys create`
+
+| Flag | Description and default |
+|---|---|
+| `--label string` | Label for the API key (required) |
+| `--scope strings` | Scopes to grant (required, can be used multiple times) |
+
+### `apikeys delete`
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt |
+
+### `apikeys get`
+
+This command has no command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `apikeys list`
+
+| Flag | Description and default |
+|---|---|
+| `--cursor string` | Pagination cursor for next page |
+| `--limit int32` | Maximum number of API keys to return (1-100) (default 20) |
+
+### `apikeys update`
+
+| Flag | Description and default |
+|---|---|
+| `--label string` | New label for the API key |
+| `--scope strings` | New scopes to grant (replaces existing scopes) |
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Permission scopes](/api-reference/scopes).
+- [Scoped credentials](/security/scoped-credentials), [Create key API](/api-reference/api-keys/create-api-key), [IP allow lists](/security/ip-allow-lists).
+- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Domain setup](/domains).
+- [Sandbox behavior](/send-api/sandbox), [Suppression durations](/bounces#suppression-duration).

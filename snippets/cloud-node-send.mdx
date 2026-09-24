@@ -1,0 +1,41 @@
+## Add the Shared Sending Code
+
+Save this as `send-email.cjs` beside the function file. Configure `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, `AHASEND_FROM`, `AHASEND_TO` and a long random `SEND_TOKEN` on the server. Set `AHASEND_TO=recipient@example.com` and `AHASEND_DELIVERY_MODE=sandbox` for local testing. Keep a sandbox credential until you are ready for real delivery; changing the mode to `live` alone cannot override a sandbox credential.
+
+```js send-email.cjs
+const { createHash, timingSafeEqual } = require("node:crypto");
+const { AhaSendClient } = require("@ahasend/sdk");
+const digest = (value) => createHash("sha256").update(value).digest();
+let client;
+exports.sendEmail = async (body, authorization = "") => {
+  const token = process.env.SEND_TOKEN;
+  if (!token) return [500, { error: "Missing server configuration" }];
+  if (!timingSafeEqual(digest(authorization), digest(`Bearer ${token}`)))
+    return [401, { error: "Unauthorized" }];
+  if (!body || typeof body.event_id !== "string" ||
+      !/^[A-Za-z0-9_-]{8,64}$/.test(body.event_id))
+    return [400, { error: "event_id must be 8-64 letters, digits, _ or -" }];
+  const mode = process.env.AHASEND_DELIVERY_MODE || "sandbox";
+  if (!["sandbox", "live"].includes(mode) ||
+      !["AHASEND_API_KEY", "AHASEND_ACCOUNT_ID", "AHASEND_FROM", "AHASEND_TO"]
+        .every((name) => process.env[name]))
+    return [500, { error: "Missing or invalid server configuration" }];
+  try {
+    client ||= AhaSendClient.fromEnv();
+    const result = await client.messages.send({
+      from: { email: process.env.AHASEND_FROM },
+      recipients: [{ email: process.env.AHASEND_TO }],
+      subject: "Welcome", text_content: "Your account is ready.",
+      sandbox: mode === "sandbox",
+    }, { idempotencyKey: `${mode}-welcome-${body.event_id}` });
+    const statuses = result.data.map((item) => item.status);
+    if (!statuses.length || statuses.some((s) => !["queued", "scheduled"].includes(s)))
+      return [422, { error: "A recipient was rejected" }];
+    return [202, { statuses }];
+  } catch {
+    return [502, { error: "Email request failed" }];
+  }
+};
+```
+
+The caller supplies only the business event ID. For a real signup, read the recipient from your database after checking the caller's access. Save the exact message with that event ID and reuse both when retrying. Read the [idempotency limits](/api-reference/idempotency) before retrying an uncertain send. Add request limits at the hosting layer and log an internal event ID instead of credentials or message bodies.

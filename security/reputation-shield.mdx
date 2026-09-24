@@ -1,11 +1,14 @@
 ---
-title: "Reputation Shield"
+title: "Reputation Shield: Block Disposable Email"
 sidebarTitle: "Reputation Shield"
-description: "Protect your sender reputation by automatically filtering toxic domains, temporary emails, and typo-squatted addresses"
+description: "AhaSend Reputation Shield blocks mail to 200,000+ toxic and disposable domains and to typo domains like gmial.com, protecting your reputation."
 icon: "shield-halved"
 ---
 
-Reputation Shield protects your sender reputation and prevents security threats by automatically rejecting emails to high-risk recipient addresses. This proactive security feature filters out toxic domains, temporary email addresses, and domains with common typos before messages are sent.
+
+AhaSend Reputation Shield blocks sends to high-risk recipient addresses; this guide explains the checks and how to configure them.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Info>
 **Sender Protection:** Reputation Shield helps maintain your sender reputation by preventing emails to known problematic domains that could damage your deliverability scores.
@@ -80,7 +83,7 @@ When an email is blocked due to toxic or tempmail domain:
 
 This error is returned via:
 - **SMTP:** During the RCPT TO command
-- **API:** In the response body with appropriate HTTP status code
+- **API:** Check both the HTTP status and each message's `status` in the response, as shown below.
 
 ---
 
@@ -124,7 +127,7 @@ When typo detection is enabled:
   <Accordion title="Yahoo Typos" icon="yahoo">
     Protected variations include:
     - `yaho.com`, `yahooo.com`, `yahoo.co`
-    - `yhoo.com`, `yaoo.com`, `yaho.com`
+    - `yhoo.com`, `yaoo.com`
     - `yahho.com`, `yahhoo.com`, `yahoo.cm`
   </Accordion>
 </AccordionGroup>
@@ -134,7 +137,7 @@ When typo detection is enabled:
 When an email is blocked due to domain typo:
 
 ```plaintext
-553 Requested action not taken: recipient domain has common a typo
+553 <human-readable rejection reason>
 ```
 
 <Tip>
@@ -223,42 +226,76 @@ When Reputation Shield blocks an email, your application should:
   </Tab>
 
   <Tab title="API Integration">
+    Use [Create Message](/api-reference/messages/create-message) with Node.js 18 or later. Replace the API key, account ID and sender address with your own values. This example uses sandbox mode so no email reaches the recipient.
+
     ```javascript
+    const API_KEY = 'YOUR_API_KEY';
+    const ACCOUNT_ID = 'YOUR_ACCOUNT_ID';
+
     async function sendEmail(recipient) {
-      try {
-        const response = await fetch('https://api.ahasend.com/v2/send', {
+      const response = await fetch(
+        `https://api.ahasend.com/v2/accounts/${ACCOUNT_ID}/messages`,
+        {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            to: recipient,
-            // ... other email parameters
+            from: { email: 'hello@yourdomain.com' },
+            recipients: [{ email: recipient }],
+            subject: 'Welcome!',
+            text_content: 'Thanks for signing up.',
+            sandbox: true
           })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-
-          if (error.message.includes('toxic or tempmail')) {
-            // Handle toxic domain rejection
-            logToxicAttempt(recipient);
-            throw new Error('Please use a permanent email address');
-          }
-
-          if (error.message.includes('common a typo')) {
-            // Handle typo detection
-            const suggestion = suggestCorrection(recipient);
-            throw new Error(`Did you mean ${suggestion}?`);
-          }
         }
-      } catch (error) {
-        // Handle errors appropriately
-        console.error('Email sending failed:', error);
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${result.message}`);
       }
+
+      for (const message of result.data) {
+        if (message.status === 'error') {
+          throw new Error(`${message.recipient.email}: ${message.error}`);
+        }
+      }
+
+      return result.data;
+    }
+
+    sendEmail('user@example.com')
+      .then(messages => console.log('Message results:', messages))
+      .catch(error => console.error('Email sending failed:', error.message));
+    ```
+
+    A queued message returns HTTP `202` with this response shape:
+
+    ```json
+    {
+      "object": "list",
+      "data": [
+        {
+          "object": "message",
+          "id": "<message-id@yourdomain.com>",
+          "recipient": { "email": "user@example.com", "name": "" },
+          "status": "queued",
+          "error": null
+        }
+      ]
     }
     ```
+
+    For a request with several recipients, HTTP `202` can include rejected recipients with `status: "error"`, `id: null` and an `error` message. Check every entry in `data` before treating the whole request as successful.
+
+    If no recipient can be queued, the API currently returns HTTP `500` with this body:
+
+    ```json
+    { "message": "failed to queue messages" }
+    ```
+
+    That response does not identify the rejection reason. Error text can change, so do not rely on matching phrases such as "toxic or tempmail" to decide whether Reputation Shield blocked an address.
   </Tab>
 </Tabs>
 
@@ -355,3 +392,9 @@ Track the effectiveness of Reputation Shield through:
     Yes, Reputation Shield applies to all outgoing emails including transactional messages. This ensures comprehensive protection across all email types.
   </Accordion>
 </AccordionGroup>
+
+## Related Guides
+
+- [Account quickstart](/quickstart), [Domain setup](/domains), [Send through API](/send-api/send-email).
+- [SMTP special headers](/smtp/special-headers), [Suppression durations](/bounces#suppression-duration), [Plans and limits](/facts).
+- [Tracking setup](/tracking/open-tracking), [Sandbox behavior](/send-api/sandbox).

@@ -1,0 +1,56 @@
+---
+title: "Send Drupal Email with the AhaSend Module"
+sidebarTitle: "Drupal"
+description: "Configure the AhaSend Drupal module with Mail System and a legacy API v1 sandbox key, test the mail plugin, and check the setup before live delivery."
+---
+
+AhaSend's Drupal module sends site email through the HTTP API; this guide configures the released module and tests its Mail System plugin in sandbox mode.
+
+## Prerequisites
+
+Use a staging Drupal 10 or 11 site, Composer, Drush, a [verified sending domain](/domains) and a **Sandbox API v1 credential**. Module 1.0.0 uses the [legacy v1 endpoint](/api-reference/v1), so a v2 API key will not work. The [project page](https://www.drupal.org/project/ahasend) lists its Mail System dependency and current release information.
+
+## Install and Configure the Module
+
+From your Drupal project root:
+
+```bash
+composer require drupal/ahasend:^1.0
+vendor/bin/drush en ahasend -y
+```
+
+Open **Configuration → Mail → AhaSend settings** at `/admin/config/mail/ahasend` in your Drupal site. Save the sandbox v1 key as **AhaSend API Token** and set the **From name**. Set the site's email address to an address on your verified domain. Leave debug logging off to keep message details out of routine logs.
+
+Save the following as `ahasend-test.php` outside the public web directory. It tests the actual `ahasend_mail` plugin directly. Run `vendor/bin/drush php:script /path/to/ahasend-test.php` from the project root.
+
+```php ahasend-test.php
+<?php
+$plugin = \Drupal::service('plugin.manager.mail')->createInstance('ahasend_mail');
+$message = [
+    'from' => \Drupal::config('system.site')->get('mail'),
+    'to' => 'recipient@example.com', 'subject' => 'Drupal sandbox test',
+    'body' => ['Hello from AhaSend'], 'headers' => [], 'params' => [], 'langcode' => 'en',
+];
+if (!$plugin->mail($plugin->format($message))) {
+    throw new RuntimeException('Email was not accepted; check the Drupal log.');
+}
+echo "Accepted by the API; check the AhaSend sandbox log.\n";
+```
+
+The script fails when the module returns false. Check the corresponding AhaSend message as well as the command result.
+
+## Route Production Mail Through Mail System
+
+At **Configuration → System → Mail System**, choose **AhaSend mailer** for the default sender and formatter, or for only the modules you intend to move. Check module-specific overrides too: Mail System uses its own default and module settings, so an override can still select a different sender. The correct plugin ID is `ahasend_mail`. Test both the default path and any module-specific mail you need.
+
+Keep the sandbox credential on staging and use a separate domain-restricted v1 production key on the live site. The module stores its key in Drupal configuration; keep secrets out of exported configuration and repository history by using your deployment's configuration override mechanism. Review [credential security](/security).
+
+Test your actual password-reset, account and receipt workflows. The module's settings form has a **Test email** section, but its notice alone does not prove acceptance; check Drupal logs and the AhaSend message log. The released mail plugin does not reliably pass attachments through to its handler, so verify attachment-dependent workflows before relying on them. For SMTP, the module's project page points to [Drupal Symfony Mailer](https://www.drupal.org/project/symfony_mailer); use the [SMTP settings](/smtp) there.
+
+Track [delivery webhooks](/integrations/webhooks) after acceptance. Save a job outcome and review uncertain requests before retrying so a timeout does not produce duplicate receipts.
+
+## Related Guides
+
+- [Domain setup](/domains), [sandbox mode](/send-api/sandbox), [legacy API v1](/api-reference/v1) and [v1 versus v2](/api-reference/v1/v1-vs-v2).
+- [Symfony SMTP](/guides/symfony), [PHP SMTP](/smtp/php), [REST API](/send-api/send-email), [CLI quickstart](/cli/quickstart) and [Node.js SDK](/guides/nodejs-sdk).
+- [Troubleshooting](/troubleshooting), [SMTP credentials](/smtp/credentials) and [key security](/security).

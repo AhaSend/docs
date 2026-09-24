@@ -1,12 +1,28 @@
 ---
-title: "How to Send Email from a v0-Generated App"
+title: "How to Send Email from a v0 App"
 sidebarTitle: "v0"
-description: "Add transactional email to a v0 Next.js app with the AhaSend SDK: send from a Route Handler, with your API key out of the bundle."
+description: "Send transactional email from a v0-generated Next.js app with AhaSend: a server-side Route Handler, Vercel environment variables, and sandbox tests."
 keywords: ["v0 send email", "v0 vercel email integration", "v0 ahasend", "v0 next.js transactional email", "v0 generated app send email"]
 icon: "wand-magic-sparkles"
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import AiEmailRules from "/snippets/ai-email-rules.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to send transactional email from an app built with v0 with AhaSend, keep credentials on the server, and test a sandbox send.
+
 [v0](https://v0.app) can generate full-stack Next.js applications, including Route Handlers and other server-side code. When you ask it to add email, keep the AhaSend API key and SDK calls behind that server boundary.
+
+<SendGuideRules />
+
+## AhaSend Rules for AI Coding Agents
+
+Add this shared block to your project instructions:
+
+<AiEmailRules />
 
 ## Prerequisites
 
@@ -43,22 +59,24 @@ Next.js only includes variables prefixed with `NEXT_PUBLIC_` in the browser bund
 <CodeGroup>
 
 ```bash npm
-npm install @ahasend/sdk
+npm install @ahasend/sdk server-only
 ```
 
 ```bash pnpm
-pnpm add @ahasend/sdk
+pnpm add @ahasend/sdk server-only
 ```
 
 ```bash yarn
-yarn add @ahasend/sdk
+yarn add @ahasend/sdk server-only
 ```
 
 ```bash bun
-bun add @ahasend/sdk
+bun add @ahasend/sdk server-only
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 ## Create the Client
 
@@ -195,13 +213,7 @@ Use `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries, each of which gets its own message.
-- **Webhooks**: the SDK's `nextRouteHandler` verifies signatures for you. The [Next.js guide](/guides/nextjs) has the full setup.
-- **Deployment details**: the [Vercel guide](/guides/vercel) covers environment variable scoping and function limits.
-- Building in a different AI tool? See [Lovable](/guides/lovable) and [Bolt.new](/guides/bolt-new).
-
-See the [API reference](/api-reference) for every field and endpoint the SDK exposes.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -219,3 +231,5 @@ See the [API reference](/api-reference) for every field and endpoint the SDK exp
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

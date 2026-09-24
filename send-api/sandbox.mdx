@@ -1,137 +1,34 @@
 ---
-title: "Sandbox Mode"
+title: "Sandbox Mode: Test Email Without Sending"
 sidebarTitle: "Sandbox Mode"
-description: "Test your API v2 email integration safely with AhaSend's sandbox mode - simulate email sending without delivery and webhook testing at zero cost"
+description: "Test AhaSend API and SMTP email without delivery: use sandbox credentials or request options, simulate delivery outcomes, and check webhook handlers."
 icon: "flask"
 ---
 
-Sandbox mode lets you simulate the entire email sending process without actually delivering emails to recipients. It's the perfect solution for testing your API v2 integration safely, testing webhook workflows, and developing email features without worrying about costs or accidental sends.
+AhaSend sandbox mode lets you test API and SMTP sends, including delivery webhooks, without delivering email to recipients or using monthly email credits.
 
-<Info>
-**Cost-Free Testing:** Sandbox emails are completely free and don't count toward your monthly email credits, no matter how many you send during development and testing.
-</Info>
+Sandbox is available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-## What is Sandbox Mode?
+## What Happens in Sandbox Mode?
 
-When you send an email using sandbox mode with API v2, AhaSend processes it exactly like a production email - it goes through validation, parsing, and triggers all relevant webhooks - but stops just before attempting actual delivery. This makes it ideal for:
+AhaSend validates and parses your message, records it in the dashboard, and simulates the selected delivery outcome. It makes no connection to the recipient's mail server. Use it for local development, staging, automated tests and checking message substitutions.
 
-- **Development environments** where you need to test email functionality
-- **Staging environments** to verify integrations before going live
-- **Automated testing** in CI/CD pipelines
-- **Webhook testing** to ensure your event handling works correctly
-- **Template testing** to verify email content and formatting
+Before testing, [verify your sending domain](/domains) and create the appropriate [API key](/send-api/credentials) or [SMTP credential](/smtp/credentials).
 
-<CardGroup cols={2}>
-  <Card title="What Happens in Sandbox" icon="check">
-    ✅ Email is validated and processed<br />
-    ✅ Webhooks are triggered<br />
-    ✅ Messages appear in your dashboard logs<br />
-    ✅ No real SMTP delivery attempts are made<br />
-    ✅ Relevant webhooks include representative attempt details<br />
-    ✅ Completely free - no credit usage
-  </Card>
-  <Card title="Perfect For" icon="bullseye">
-    🧪 **Development testing**<br />
-    🔗 **Webhook integration testing**<br />
-    🤖 **Automated test suites**<br />
-    📧 **Template validation**<br />
-    🚀 **Staging environment verification**
-  </Card>
-</CardGroup>
+## How Do I Enable Sandbox Mode?
 
-## Ways to Use Sandbox Mode
+Choose the surface your application uses. Dedicated sandbox credentials keep all sends from that credential in sandbox mode; request parameters or headers let a production credential make an individual sandbox send.
 
-There are three flexible approaches to using sandbox mode with API v2, depending on your testing needs:
+<Tabs>
+<Tab title="API v2">
 
-<AccordionGroup>
-  <Accordion title="1. Dedicated Sandbox Credentials" icon="key">
-    Create API v2 credentials that **always** operate in sandbox mode. Perfect for dedicated testing environments.
+Create a send-only key from **Credentials → Add → API Key v2** and choose **Sandbox** mode. See [API credentials](/send-api/credentials) for the key setup steps. To change an existing sending credential, open it in **Credentials**, change **Mode**, and save. Switching it to Production enables real delivery.
 
-    - Any email sent with these credentials is automatically simulated
-    - Prevents accidental production sends from test environments
-    - Clear separation between testing and production
-    - Best for development and staging environments
-  </Accordion>
-
-  <Accordion title="2. Switchable Credential Mode" icon="toggle-on">
-    Change existing API v2 credentials between Production and Sandbox mode as needed.
-
-    - Toggle credentials between modes in your dashboard
-    - Useful for credentials shared across environments
-    - Immediate effect when mode is changed
-    - Flexibility to adapt to current testing needs
-  </Accordion>
-
-  <Accordion title="3. Production Credentials + Parameters" icon="code">
-    Use production credentials but add the `sandbox` parameter to individual API requests for sandbox testing.
-
-    - Add `"sandbox": true` to any API request
-    - Perfect for one-off testing or selective simulation
-    - No credential configuration changes needed
-    - Fine-grained control over individual sends
-  </Accordion>
-</AccordionGroup>
-
-## Creating Sandbox Credentials
-
-<Steps>
-  <Step title="Access Credentials Dashboard" icon="user">
-    1. **Log in** to your [AhaSend Dashboard](https://dash.ahasend.com)
-    2. **Navigate** to the **[Credentials](https://dash.ahasend.com/account/-/transactional/credentials)** section
-    3. **Click** the **"Create Credential"** button
-  </Step>
-
-  <Step title="Configure Sandbox Credential" icon="gear">
-    **Select Credential Type:**
-    - Choose **"API Key v2"** for advanced API features
-
-    **Choose a Descriptive Name:**
-    - Use clear naming like "Development Sandbox API v2" or "Testing Environment v2"
-    - Include environment info to avoid confusion later
-
-    **Enable Sandbox Mode:**
-    - **Select "Sandbox"** mode to create a dedicated sandbox credential
-    - This ensures the credential always operates in sandbox mode
-  </Step>
-
-  <Step title="Save and Use" icon="floppy-disk">
-    1. **Click** "Create Credential" to generate your sandbox API key
-    2. **Copy** the API key securely
-    3. **Use this API key** in your test environment exactly like production credentials
-
-    <Tip>
-    **Environment Separation:** Use sandbox API keys in development/staging and production keys only in live environments for clear separation.
-    </Tip>
-  </Step>
-</Steps>
-
-## Switching Credential Modes
-
-You can easily change existing API v2 credentials between Production and Sandbox modes:
-
-<Steps>
-  <Step title="Find Your Credential" icon="magnifying-glass">
-    1. **Go to** the **Credentials** tab in your dashboard
-    2. **Find** the API v2 credential you want to modify
-    3. **Click** on the credential to open its settings
-  </Step>
-
-  <Step title="Change the Mode" icon="toggle">
-    1. **Locate** the **Mode** field in the credential settings
-    2. **Select** either **"Sandbox"** or **"Production"** from the dropdown
-    3. **Click** "Save Changes" to apply the new mode
-
-    <Warning>
-    **Mode Effects:** Switching to sandbox stops actual delivery, while switching to production enables real email sending and credit usage.
-    </Warning>
-  </Step>
-</Steps>
-
-## Using Sandbox Parameters
+### Use the API v2 Parameters
 
 For maximum flexibility, you can use production credentials and control sandbox behavior with API parameters:
 
-### Sandbox Request Example
+#### Sandbox Request Example
 
 Add the `sandbox` parameter to your [API v2 message request](/api-reference/messages/create-message):
 
@@ -158,21 +55,13 @@ Add the `sandbox` parameter to your [API v2 message request](/api-reference/mess
 **Parameter Priority:** When AhaSend sees the `"sandbox": true` parameter, it processes the email in sandbox mode regardless of the credential type used for authentication.
 </Note>
 
-## Controlling Simulated Outcomes
+### Choose an API Outcome
 
 Test how your application handles different delivery scenarios by controlling the simulated outcome:
 
-### Available Outcomes
+Use `sandbox_result` to choose one of the [simulated outcomes](#which-outcomes-can-i-simulate).
 
-Use the `sandbox_result` parameter to specify the simulated result:
-
-- **`deliver`** - Simulates successful delivery (default)
-- **`bounce`** - Simulates a hard bounce
-- **`defer`** - Simulates temporary delivery deferral
-- **`fail`** - Simulates permanent delivery failure
-- **`suppress`** - Simulates suppression list blocking
-
-### Examples
+#### Examples
 
 <CodeGroup>
 
@@ -234,6 +123,17 @@ Use the `sandbox_result` parameter to specify the simulated result:
 }
 ```
 
+```json Permanent Failure
+{
+  "from": { "email": "hello@yourdomain.com" },
+  "recipients": [{ "email": "test@example.com" }],
+  "subject": "Sandbox failure test",
+  "text_content": "This email simulates a permanent failure.",
+  "sandbox": true,
+  "sandbox_result": "fail"
+}
+```
+
 ```json Suppression Testing
 {
   "from": {
@@ -259,39 +159,137 @@ Use the `sandbox_result` parameter to specify the simulated result:
 **Webhook Testing:** Each simulated outcome triggers the appropriate webhook events, allowing you to test your entire event handling pipeline safely.
 </Tip>
 
-## Testing Webhooks
 
-Sandbox mode is perfect for testing webhook integrations with API v2:
+</Tab>
+<Tab title="SMTP">
 
-<AccordionGroup>
-  <Accordion title="Webhook Events Still Fire" icon="webhook">
-    - All webhook events are triggered normally in sandbox mode
-    - Test delivery confirmations, bounces, opens, and clicks
-    - Verify your webhook endpoint receives correct payloads
-    - Delivery, deferral, and bounce webhooks include a representative `delivery_attempt` object
+Create an SMTP credential in **Credentials**, select **SMTP**, and enable **Sandbox**. Copy its username and password into your server's secret store; follow [SMTP credential setup](/smtp/credentials). An existing sending credential can switch modes from its **Mode** setting. Use the same [SMTP settings](/smtp) in either mode.
 
-    The event flow and payload shape mirror production, but delivery-attempt
-    diagnostics are synthetic because no destination mail server was contacted.
-    A sandbox classification may override the representative sample and therefore
-    may not agree with its SMTP code or response text.
-  </Accordion>
+### SMTP Header Method
 
-  <Accordion title="Test Different Scenarios" icon="list-check">
-    Use `sandbox_result` to test various outcomes:
-    - **Delivery success** webhooks with `"deliver"`
-    - **Bounce handling** webhooks with `"bounce"`
-    - **Retry logic** with `"defer"` simulations
-    - **Failure processing** with `"fail"` outcomes
-    - **Suppression handling** with `"suppress"` results
-  </Accordion>
+Add the `AhaSend-Sandbox` header to your email like any other header:
 
-  <Accordion title="Safe Integration Testing" icon="shield-check">
-    - Test webhook endpoints without affecting real users
-    - Validate webhook signature verification
-    - Test error handling and retry mechanisms
-    - Ensure proper event processing in your application
-  </Accordion>
-</AccordionGroup>
+```plaintext
+From: hello@yourdomain.com
+To: test@example.com
+Subject: Test Email
+AhaSend-Sandbox: true
+Content-Type: text/plain
+
+This email will be processed in sandbox mode.
+```
+
+### API v1 Header Method
+
+This is the legacy API v1 payload shape. For v2, use the top-level `sandbox: true` and `sandbox_result` fields shown in [API sandbox mode](/send-api/sandbox).
+
+Include the header in your API request's `content.headers`:
+
+```json
+{
+  "from": {
+    "name": "My App",
+    "email": "hello@yourdomain.com"
+  },
+  "recipients": [
+    {
+      "name": "Test User",
+      "email": "test@example.com"
+    }
+  ],
+  "content": {
+    "subject": "Sandbox Test",
+    "text_body": "Testing sandbox mode via API.",
+    "headers": {
+      "AhaSend-Sandbox": "true"
+    }
+  }
+}
+```
+
+<Note>
+**Header Priority:** When AhaSend sees the `AhaSend-Sandbox: true` header, it processes the email in sandbox mode regardless of the credential type used for authentication.
+</Note>
+
+### Choose an SMTP Outcome
+
+Test how your application handles different delivery scenarios by controlling the simulated outcome:
+
+#### Available Outcomes
+
+Use the `AhaSend-Sandbox-Result` header to specify the simulated result:
+
+The same result values in the table below apply to SMTP.
+
+#### Examples
+
+<CodeGroup>
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: test@example.com
+Subject: Test Bounce Handling
+AhaSend-Sandbox: true
+AhaSend-Sandbox-Result: bounce
+Content-Type: text/plain
+
+This email will simulate a bounce for testing.
+```
+
+```json Legacy API v1 Example
+{
+  "from": {
+    "name": "My App",
+    "email": "hello@yourdomain.com"
+  },
+  "recipients": [
+    {
+      "name": "Test User",
+      "email": "test@example.com"
+    }
+  ],
+  "content": {
+    "subject": "Test Deferral Handling",
+    "text_body": "Testing deferral simulation.",
+    "headers": {
+      "AhaSend-Sandbox": "true",
+      "AhaSend-Sandbox-Result": "defer"
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+<Info>
+**Webhook Testing:** Each simulated outcome triggers the appropriate webhook events, allowing you to test your entire event handling pipeline safely.
+</Info>
+
+
+</Tab>
+</Tabs>
+
+## Which Outcomes Can I Simulate?
+
+Use `sandbox_result` in API v2 or `AhaSend-Sandbox-Result` in SMTP. See the [special header reference](/smtp/special-headers) for header parsing rules.
+
+| Result | Simulated outcome | Corresponding event |
+|---|---|---|
+| `deliver` (default) | Successful delivery | `message.delivered` |
+| `bounce` | Hard bounce | `message.bounced` |
+| `defer` | Temporary delivery failure | `message.transient_error` |
+| `fail` | Permanent delivery failure | `message.failed` |
+| `suppress` | Suppression blocking | `message.suppressed` |
+
+See the [event reference](/api-reference/webhooks) for payloads. These are simulated delivery outcomes, not open or click events.
+
+## How Do I Test Webhooks Locally?
+
+Use [CLI webhook testing](/cli/webhook-testing) to forward events to your local handler. Sandbox sends trigger delivery, bounce, deferral, failure and suppression events. Opens and clicks require recipient interaction and are not simulated by sandbox sends; use CLI synthetic test events for those handlers.
+
+Delivery, deferral and bounce webhooks include a representative `delivery_attempt` object. Its diagnostics are synthetic because no destination mail server was contacted. A sandbox classification may override the sample and may differ from its SMTP code or response text.
+
+Verify [signatures](/api-reference/webhooks/security) before processing a test event, and follow the [retry policy](/api-reference/webhooks/retry-policy) when acknowledging deliveries.
 
 ## Advanced Features
 
@@ -340,7 +338,7 @@ API v2 sandbox mode supports advanced features for comprehensive testing:
       "subject": "Scheduled Test Email",
       "text_content": "This is a scheduled sandbox email.",
       "schedule": {
-        "first_attempt": "2024-12-25T10:30:00Z"
+        "first_attempt": "<RFC3339 time within the next 7 days>"
       },
       "sandbox": true
     }
@@ -373,25 +371,17 @@ API v2 sandbox mode supports advanced features for comprehensive testing:
   </Accordion>
 </AccordionGroup>
 
-## Benefits
 
-<CardGroup cols={3}>
-  <Card title="Cost-Free" icon="piggy-bank">
-    No credit usage regardless of volume sent in sandbox mode
-  </Card>
-  <Card title="Safe Testing" icon="shield">
-    Never accidentally email real users during development
-  </Card>
-  <Card title="Realistic Simulation" icon="microscope">
-    Full processing pipeline without actual delivery
-  </Card>
-  <Card title="Webhook Testing" icon="webhook">
-    Complete event simulation for integration testing
-  </Card>
-  <Card title="Flexible Control" icon="sliders">
-    Multiple ways to enable and control sandbox behavior
-  </Card>
-  <Card title="CI/CD Ready" icon="robot">
-    Perfect for automated testing pipelines
-  </Card>
-</CardGroup>
+## Why Did My Test Not Work?
+
+If an email was delivered, check that the credential is in Sandbox mode or the send includes the sandbox parameter or header. `AhaSend-Sandbox` accepts `true` or `1`; use the result header only with sandbox mode.
+
+If no event arrived, check your webhook URL, event filters and handler response. Use [CLI webhook testing](/cli/webhook-testing) to inspect the event and the local response. Check the spelling of the five result values above if the outcome differs from the one you requested.
+
+## Related Guides
+
+- [Domain setup](/domains), [Send-only API keys](/send-api/credentials), [API authentication](/api-reference/authentication).
+- [Create Message reference](/api-reference/messages/create-message), [SMTP settings](/smtp), [CLI sending](/cli/commands/messages).
+- [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [CLI webhook testing](/cli/webhook-testing).
+- [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency), [API errors](/api-reference/errors).
+- [Rate limits](/api-reference/rate-limits), [Suppression durations](/bounces#suppression-duration).

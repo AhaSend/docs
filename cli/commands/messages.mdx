@@ -1,22 +1,25 @@
 ---
-title: Messages
-description: Send and manage email messages
+title: "ahasend messages: Send and Track Email"
+description: "Send transactional email from your terminal with the AhaSend CLI: text/HTML, attachments, templates, scheduling, sandbox mode, and batch sends from CSV/JSON."
 icon: envelope
+sidebarTitle: "messages"
 ---
 
-# Messages Command
 
-Send and manage email messages using the `messages` command.
+AhaSend CLI `messages` commands let you send, inspect and cancel email messages; this page covers their arguments and flags.
+
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
 
 ## Overview
 
-```bash
+```text
 ahasend messages [subcommand] [flags]
 ```
 
 Available subcommands:
 - `send` - Send email messages
 - `list` - List sent messages
+- `get` - Get details for one message
 - `cancel` - Cancel scheduled messages
 
 ## Send Messages
@@ -25,14 +28,14 @@ Available subcommands:
 
 ```bash
 # Text email
-ahasend messages send \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "Hello" \
   --text "Hello World"
 
 # HTML email
-ahasend messages send \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "Welcome" \
@@ -43,14 +46,14 @@ ahasend messages send \
 
 ```bash
 # Single recipient
-ahasend messages send \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --to user@example.com \
   --subject "Notification" \
   --text "Your order has been processed"
 
 # Multiple recipients
-ahasend messages send \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --to user1@example.com \
   --to user2@example.com \
@@ -58,7 +61,7 @@ ahasend messages send \
   --text "Important announcement"
 
 # Batch from file
-ahasend messages send \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --recipients users.csv \
   --subject "Newsletter" \
@@ -69,7 +72,7 @@ ahasend messages send \
 
 ```bash
 # With template
-ahasend messages send \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "Welcome {{name}}" \
@@ -77,7 +80,7 @@ ahasend messages send \
   --global-substitutions data.json
 
 # With attachments
-ahasend messages send \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "Invoice" \
@@ -85,12 +88,12 @@ ahasend messages send \
   --attach invoice.pdf
 
 # Scheduled delivery
-ahasend messages send \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "Reminder" \
   --text "Meeting tomorrow at 2 PM" \
-  --schedule "2024-12-25T14:00:00Z"
+  --schedule "<RFC3339 time within the next 7 days>"
 ```
 
 ### Testing
@@ -105,31 +108,6 @@ ahasend messages send \
   --sandbox
 ```
 
-### Key Flags
-
-**Recipients:**
-- `--to`: Single recipient (can be used multiple times)
-- `--recipients`: CSV/JSON file with recipient data
-
-**Content:**
-- `--subject`: Email subject
-- `--text`: Plain text content
-- `--html`: HTML content
-- `--html-template`: HTML template file
-- `--text-template`: Plain text template file
-- `--global-substitutions`: JSON file with template variables
-
-**Options:**
-- `--attach`: File attachments (can be used multiple times)
-- `--schedule`: Delivery time (RFC3339 format)
-- `--sandbox`: Test mode without sending
-- `--tags`: Tags for categorization
-- `--header`: Custom headers
-
-**Batch Processing:**
-- `--max-concurrency`: Parallel workers (1-10)
-- `--progress`: Show progress bar
-- `--show-metrics`: Display performance statistics
 
 ## List Messages
 
@@ -141,19 +119,31 @@ ahasend messages list
 ahasend messages list --limit 50 --status delivered
 ```
 
+## Get a Message
+
+```bash
+ahasend messages get YOUR_RESOURCE_ID
+```
+
+Attachments are limited to 10 MB per file by the CLI. Scheduling uses RFC3339, in the future and within 7 days. Sandbox outcomes are `deliver`, `bounce`, `defer`, `fail`, and `suppress`; see [sandbox mode](/send-api/sandbox).
+
 ## Cancel Messages
 
 ```bash
 # Cancel scheduled message
-ahasend messages cancel msg_1234567890abcdef
+SCHEDULE=$(python3 -c 'from datetime import datetime,timedelta,timezone; print((datetime.now(timezone.utc)+timedelta(hours=1)).isoformat())')
+TEST_ID=$(ahasend messages send --sandbox --from sender@yourdomain.com --to test@example.com --subject "Cancellation test" --text "Test" --schedule "$SCHEDULE" --output json | jq -er '.data[0].id | ltrimstr("<") | split("@")[0]')
+ahasend messages cancel "$TEST_ID"
 ```
+
+Use the message UUID for get and cancel commands. If sending returns an ID such as `<UUID@yourdomain.com>`, extract the UUID as shown above.
 
 ## Advanced Usage
 
 For detailed information on batch processing and templating:
 
 - [Batch Processing Guide](/cli/batch-processing) - High-volume email sending
-- [Template System](/cli/templates) - Advanced templating with Jinja2
+- [Template System](/cli/templates) - MiniJinja templates with Jinja2-compatible syntax
 - [Examples](/cli/examples) - Real-world use cases
 
 ## Next Steps
@@ -161,3 +151,69 @@ For detailed information on batch processing and templating:
 - [Learn about domains](/cli/commands/domains)
 - [Configure webhooks](/cli/commands/webhooks)
 - [View statistics](/cli/commands/stats)
+
+## Command Flags
+
+These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `messages cancel`
+
+| Flag | Description and default |
+|---|---|
+| `--force` | Skip confirmation prompt |
+
+### `messages get`
+
+This command has no command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `messages list`
+
+| Flag | Description and default |
+|---|---|
+| `--cursor string` | Pagination cursor for next page |
+| `--from-time string` | Filter messages created after this time (RFC3339 or relative like '24h', '7d') |
+| `--limit int` | Maximum number of messages to return (1-100) (default 100) |
+| `--message-id string` | Filter by message ID header |
+| `--recipient string` | Filter by recipient email address |
+| `--sender string` | Sender email address (must be from your domain) |
+| `--show-details` | Show detailed message information |
+| `--status strings` | Filter by message status (can be used multiple times) |
+| `--subject string` | Filter by subject text (partial match) |
+| `--tags strings` | Filter by tags (can be used multiple times) |
+| `--to-time string` | Filter messages created before this time (RFC3339 or relative) |
+
+### `messages send`
+
+| Flag | Description and default |
+|---|---|
+| `--amp string` | AMP HTML content |
+| `--amp-template string` | AMP HTML template file path |
+| `--attach strings` | Attachment file paths (can be used multiple times, max 10MB per file) |
+| `--from string` | Sender email address (required) |
+| `--global-substitutions string` | JSON file with global template variables |
+| `--header strings` | Custom headers in format 'Header-Name: value' (can be used multiple times) |
+| `--html string` | HTML content |
+| `--html-template string` | HTML template file path |
+| `--idempotency-key string` | Idempotency key for duplicate prevention |
+| `--max-concurrency int` | Maximum concurrent sends for batch operations (default 1) |
+| `--max-retries int` | Maximum retry attempts for failed sends (default 3) |
+| `--progress` | Show progress bar for batch operations (disabled in debug mode) |
+| `--recipients string` | Recipients file (JSON or CSV format) with per-recipient substitutions |
+| `--sandbox` | Send in sandbox mode (for testing) |
+| `--sandbox-result string` | Sandbox result simulation: deliver, bounce, defer, fail, or suppress (only used with --sandbox) (default "deliver") |
+| `--schedule string` | Schedule delivery time in RFC3339 format (e.g., '`RFC3339_TIMESTAMP`') |
+| `--show-metrics` | Show performance metrics after batch operations |
+| `--subject string` | Email subject |
+| `--tags strings` | Tags for categorization (can be used multiple times) |
+| `--text string` | Plain text content |
+| `--text-template string` | Plain text template file path |
+| `--to strings` | Recipient email addresses (can be used multiple times) |
+| `--track-clicks` | Enable click tracking (default true) |
+| `--track-opens` | Enable open tracking (default true) |
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Sending guide](/send-api/send-email).
+- [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).
+- [Domain setup](/domains), [Sandbox behavior](/send-api/sandbox), [Tracking setup](/tracking/open-tracking).

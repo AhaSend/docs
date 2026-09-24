@@ -1,0 +1,68 @@
+---
+title: "Migrate from Postmark"
+sidebarTitle: "From Postmark"
+description: "Migrate from Postmark to AhaSend with API field and SMTP setting maps, webhook event changes, suppression import steps and a gradual traffic switch."
+---
+
+import MigrationWebhookChecks from "/snippets/migration-webhook-checks.mdx";
+
+import MigrationSmtpSettings from "/snippets/migration-smtp-settings.mdx";
+
+import MigrationApiResult from "/snippets/migration-api-result.mdx";
+
+import MigrationPrepare from "/snippets/migration-prepare.mdx";
+
+import ImportSuppressions from "/snippets/migration-suppression-import.mdx";
+import MigrationCutover from "/snippets/migration-cutover.mdx";
+
+AhaSend migration from Postmark means changing your send call or SMTP settings, mapping delivery events and carrying blocked recipients across before moving traffic.
+
+<MigrationPrepare />
+
+## Map the API Fields
+
+Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message) with [v2 authentication](/api-reference/authentication). This is a field mapping from [Postmark's send API](https://postmarkapp.com/developer/api/email-api), not a drop-in change of base URL.
+
+| Postmark field | AhaSend v2 field or change |
+|---|---|
+| `From` | `from` address object |
+| `To` | `recipients[]` address objects; separate copies in Create Message |
+| `Subject`, `TextBody`, `HtmlBody` | `subject`, `text_content`, `html_content` |
+| `ReplyTo` | `reply_to` address object |
+| `Tag` | `tags` array |
+| `Headers` name/value array | `headers` object |
+| `Attachments[].Name`, `Content`, `ContentType` | `file_name`, `data`, `content_type`, with `base64: true` |
+| `TemplateId` / `TemplateAlias` and `TemplateModel` | Render or move template content and map substitutions explicitly |
+| `MessageStream` | No identical request field; choose your AhaSend domain and application routing deliberately |
+| `Cc`, `Bcc` | [Create Conversation](/api-reference/messages/create-conversation) for shared conversation headers |
+
+<MigrationApiResult />
+
+## Replace the SMTP Settings
+
+Replace Postmark's transactional or broadcast SMTP endpoint and credentials with AhaSend's SMTP host and a new SMTP credential. Remove Postmark-specific stream headers after mapping their purpose in your app. See [Postmark SMTP](https://postmarkapp.com/developer/user-guide/send-email-with-smtp).
+
+<MigrationSmtpSettings />
+
+## Map Events by Meaning
+
+These are the closest matching outcomes, not identical payloads or a guaranteed one-to-one event sequence. Keep the provider name with each saved message ID while both systems are active. See [Postmark's event documentation](https://postmarkapp.com/developer/webhooks/webhooks-overview) and the [AhaSend event list](/api-reference/webhooks).
+
+| Postmark record type | AhaSend event or application handling |
+|---|---|
+| `Delivery` | `message.delivered` |
+| `Bounce` | `message.bounced` or `message.failed`; inspect bounce type and the actual delivery cause |
+| `SpamComplaint` | `suppression.created` with the complaint reason |
+| `Open` / `Click` | `message.opened` / `message.clicked` when tracking is enabled |
+| `SubscriptionChange` with `SuppressSending: true` | Save the opt-out or suppression; `suppression.created` covers AhaSend additions |
+| `SubscriptionChange` with `SuppressSending: false` | Your app must manage reactivation; there is no matching suppression-removed event in the event list |
+
+<MigrationWebhookChecks />
+
+## Export the Old Recipient Blocks
+
+Use Postmark's [suppression dump](https://postmarkapp.com/developer/api/suppressions-api) for each Message Stream, including hard bounces, spam complaints and manual suppressions. Preserve both the suppression reason and its origin. Keep stream-specific unsubscribe preferences in your app; do not turn an opted-out address into an active address while merging streams.
+
+<ImportSuppressions />
+
+<MigrationCutover />

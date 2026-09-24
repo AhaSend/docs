@@ -1,5 +1,17 @@
 ---
-title: "Get Webhook"
+title: "Get a Webhook via the API"
 sidebarTitle: "Get Webhook"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/webhooks/{webhook_id}"
+description: "Retrieve a single AhaSend webhook by ID with the API, including its URL, subscribed event types, enabled status and domain scope."
 ---
+
+
+The AhaSend API returns a specific webhook by ID. Access requires the global read role
+or a read role matching at least one associated domain.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits).

@@ -1,5 +1,19 @@
 ---
-title: "Update API Key"
+title: "Update an API Key via the API"
 sidebarTitle: "Update API Key"
 openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/api-keys/{key_id}"
+description: "Change an AhaSend API key's label, scopes, or IP allow list. Returns 409 if a key would lock itself out by excluding the caller's current IP."
 ---
+
+
+The AhaSend API updates an existing API key's label and scopes.
+
+You can update `label`, `scopes`, and `ip_allow_list`. See [IP allow lists](/security/ip-allow-lists).
+
+Updating the key you are using returns `409` if its new IP allow list would exclude your current IP.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Scoped credentials](/security/scoped-credentials).
+- [API key CLI](/cli/commands/apikeys), [Create key API](/api-reference/api-keys/create-api-key), [IP allow lists](/security/ip-allow-lists).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

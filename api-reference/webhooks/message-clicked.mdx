@@ -1,5 +1,24 @@
 ---
-title: "Message Click Webhook"
+title: "message.clicked Webhook Event"
 sidebarTitle: "Clicked"
 openapi: "/webhooks.yaml webhook message.clicked"
+description: "The message.clicked webhook fires when a recipient clicks a link tracked by AhaSend. Requires click tracking. Payload includes URL, user agent and IP."
 ---
+
+
+AhaSend sends this event when the recipient clicks a tracked link in your email.
+
+**Requirements**:
+- Click tracking must be enabled for your account or this specific email
+- The clicked link must be processed by AhaSend's click tracking system
+
+**Additional Data**: This webhook includes user agent and IP address information for analytics.
+
+**When it's sent**: When a tracked link in the email is clicked.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Tracking setup](/tracking/open-tracking).

@@ -1,0 +1,14 @@
+## Switch Traffic in Small Steps
+
+1. Verify the AhaSend domain and leave the old provider's required DNS in place while it still sends. Test the new code in [sandbox mode](/send-api/sandbox), including failure and suppression paths.
+2. Keep your message templates in your app or adapt them explicitly. Provider template IDs, recipient lists, request IDs and signing secrets do not transfer to AhaSend automatically.
+3. Import suppressions, then update your saved recipient preferences. Repeat the export/import for changes made since the initial snapshot before moving each traffic group.
+4. Route each new job to exactly one provider. Keep that choice, the saved payload and your application event ID with the job so a retry cannot silently switch providers and duplicate it.
+5. Move a small group of expected mail, compare acceptance, bounces and delivery delays, and increase only when results remain stable. Follow [deliverability and warm-up guidance](/deliverability).
+6. Keep receiving old-provider events for in-flight messages. If you roll back, route only new unsent jobs back and preserve all new suppressions. Retire old credentials, DNS and event handlers after old work has finished.
+
+## Related Guides
+
+- [Domain setup](/domains), [DNS providers](/dns), [send-only API keys](/send-api/credentials) and [SMTP credentials](/smtp/credentials).
+- [Send through the API](/send-api/send-email), [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk) and [CLI quickstart](/cli/quickstart).
+- [Webhook setup](/integrations/webhooks), [signature verification](/api-reference/webhooks/security), [bounces and suppression durations](/bounces), [API errors](/api-reference/errors) and [idempotency](/api-reference/idempotency).

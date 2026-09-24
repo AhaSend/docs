@@ -1,12 +1,23 @@
 ---
-title: Template System
-description: Using templates for personalized emails
+title: "CLI Email Templates and Variables"
+description: "Personalize emails sent with the AhaSend CLI using template files: global and per-recipient substitutions, if/else conditions, loops, and default values."
 icon: file-code
+sidebarTitle: "Templates"
 ---
 
-# Template System
+The AhaSend CLI uses [MiniJinja templating (Jinja2-compatible syntax)](https://github.com/mitsuhiko/minijinja) for creating personalized emails.
 
-The AhaSend CLI uses [Jinja2 templating](https://jinja.palletsprojects.com/en/3.1.x/templates/) for creating personalized emails.
+Templates are rendered by the AhaSend API using MiniJinja. Subject lines also support substitutions. Use `default` for missing values and test your rendering with sandbox mode; see [API templates](/send-api/send-email#template-variables).
+
+| Flag | File |
+|---|---|
+| `--html-template` | HTML content |
+| `--text-template` | Plain text content |
+| `--amp-template` | AMP HTML content |
+| `--global-substitutions` | JSON object shared by recipients |
+| `--recipients` | CSV or JSON recipient data |
+
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
 
 ## Template Basics
 
@@ -25,7 +36,7 @@ Use double curly braces for variable substitution:
 
 Applied to all recipients - use for company-wide data:
 
-```json
+```json company-data.json
 {
   "company_name": "ACME Corporation",
   "support_email": "support@acme.com",
@@ -34,7 +45,7 @@ Applied to all recipients - use for company-wide data:
 ```
 
 ```bash
-ahasend messages send \
+ahasend messages send --sandbox --subject "Docs test" \
   --from sender@example.com \
   --to recipient@example.com \
   --html-template template.html \
@@ -74,7 +85,7 @@ jane@example.com,Jane,basic,567.89
 </Tabs>
 
 ```bash
-ahasend messages send \
+ahasend messages send --sandbox --subject "Docs test" \
   --from sender@example.com \
   --recipients users.csv \
   --html-template template.html \
@@ -134,7 +145,7 @@ ahasend messages send \
 Test templates using sandbox mode:
 
 ```bash
-ahasend messages send \
+ahasend messages send --subject "Docs test" \
   --from test@example.com \
   --to test@example.com \
   --html-template template.html \
@@ -155,5 +166,12 @@ Then check the AhaSend dashboard to see the rendered message.
 ## Next Steps
 
 - [Learn about batch processing](/cli/batch-processing)
-- [Explore Jinja2 documentation](https://jinja.palletsprojects.com/en/3.1.x/templates/)
+- [Explore MiniJinja documentation](https://github.com/mitsuhiko/minijinja)
 - [View CLI examples](/cli/examples)
+
+## Related Guides
+
+- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
+- [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).
+- [Domain setup](/domains), [Sandbox behavior](/send-api/sandbox).

@@ -1,0 +1,32 @@
+## Try a Sandbox Send
+
+Run this short SDK check locally before adding the longer server integration below. Use a [verified sender](/domains), a [send-only API key](/send-api/credentials), and your account ID. It sends to a reserved test address with `sandbox: true`, so no email is delivered.
+
+In your Workers project, add `.dev.vars*` to `.gitignore`. Create `.dev.vars` with `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID`, and `AHASEND_FROM` (an address on your verified domain). Save this as `quick-worker.js`:
+
+```js quick-worker.js
+import { AhaSendClient } from "@ahasend/sdk";
+export default {
+  async fetch(request, env) {
+    if (request.method !== "POST") return new Response(null, { status: 405 });
+    try {
+      const client = new AhaSendClient({ apiKey: env.AHASEND_API_KEY, accountId: env.AHASEND_ACCOUNT_ID, fetch: fetch.bind(globalThis) });
+      const result = await client.messages.send({
+        from: { email: env.AHASEND_FROM },
+        recipients: [{ email: "recipient@example.com" }],
+        subject: "My first sandbox email", text_content: "Hello from AhaSend",
+        sandbox: true,
+      });
+      const statuses = result.data.map((item) => item.status);
+      const accepted = statuses.length > 0 && statuses.every((s) => ["queued", "scheduled"].includes(s));
+      return Response.json({ statuses }, { status: accepted ? 202 : 422 });
+    } catch {
+      return new Response("Sandbox send failed", { status: 502 });
+    }
+  },
+};
+```
+
+Bind `fetch` to `globalThis` when passing it to the SDK in a Worker; this avoids an `Illegal invocation` error in workerd.
+
+Run `npx wrangler dev quick-worker.js --local --ip 127.0.0.1 --port 8787`. In a second terminal, run `curl --fail-with-body -X POST http://127.0.0.1:8787`. A successful response has HTTP 202 and a list of accepted recipient statuses. Stop Wrangler after the check. This fixed-recipient sandbox handler is for local use only; the longer handler below adds authentication for deployment.

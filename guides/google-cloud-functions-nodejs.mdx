@@ -1,0 +1,73 @@
+---
+title: "Send Email from Google Cloud Functions (Node.js)"
+sidebarTitle: "Google Functions (Node.js)"
+description: "Send email from Google Cloud Run functions in Node.js with AhaSend: use the Functions Framework, protect the endpoint and run local sandbox tests."
+---
+
+import GuideRelated from "/snippets/guide-related.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import CloudSend from "/snippets/cloud-node-send.mdx";
+
+AhaSend lets you send transactional email from Google Cloud Run functions in Node.js with the official SDK; this guide runs the same HTTP function locally with the Functions Framework.
+
+Cloud Run functions is the current name for the service previously called Cloud Functions.
+
+## Prerequisites
+
+Use a [verified sending domain](/domains), your account ID, and a domain-scoped [send-only API v2 key](/send-api/credentials). Use [sandbox mode](/send-api/sandbox) for every test. Management tasks need a separate [full API key](/api-reference/authentication).
+
+Use Node.js 22 and the [Node.js Functions Framework](https://github.com/GoogleCloudPlatform/functions-framework-nodejs). A Google Cloud account is only needed when you deploy.
+
+## Install the Dependencies
+
+```bash
+npm init -y
+npm install --save-exact @ahasend/sdk@0.2.1 @google-cloud/functions-framework@3
+npm pkg set main=index.cjs
+```
+
+<QuickSend />
+
+<CloudSend />
+
+## Create the HTTP Function
+
+Save this as `index.cjs`:
+
+```js index.cjs
+const functions = require("@google-cloud/functions-framework");
+const { sendEmail } = require("./send-email.cjs");
+functions.http("sendEmail", async (req, res) => {
+  if (req.method !== "POST") return res.status(405).end();
+  if ((req.rawBody?.length || 0) > 16384) return res.status(413).end();
+  if (!req.is("application/json")) return res.status(415).end();
+  const [status, result] = await sendEmail(req.body, req.get("authorization") || "");
+  res.status(status).json(result);
+});
+```
+
+## Run with the Functions Framework
+
+If port 8080 is busy, set `PORT` to an unused local port in both shells. The commands below default to 8080.
+
+Export the shared code's environment variables before starting the local server:
+
+```bash
+npx functions-framework --target=sendEmail --port="${PORT:-8080}"
+```
+
+In another shell with `SEND_TOKEN` set, run:
+
+```bash
+curl --fail-with-body "http://localhost:${PORT:-8080}"   -H "Authorization: Bearer $SEND_TOKEN" -H 'Content-Type: application/json'   -d '{"event_id":"local-google-node-001"}'
+```
+
+Expect HTTP 202 with acceptance statuses. The handler refuses non-POST requests, missing tokens and invalid event IDs. A fresh test needs a new event ID; an exact retry keeps the old one.
+
+## Prepare the Hosted Function
+
+Choose the Node.js 22 runtime and entry point `sendEmail`. Follow [Google's function deployment steps](https://cloud.google.com/run/docs/deploy-functions). Put secrets in [Secret Manager](https://cloud.google.com/run/docs/configuring/services/secrets), allow only trusted invokers, and cap requests before they create mail jobs. When Cloud Run IAM and the app token are both in use, put the Google identity token in `X-Serverless-Authorization` and keep the app token in `Authorization`, as described in [Google's service authentication guide](https://cloud.google.com/run/docs/authenticating/service-to-service).
+
+Use [webhooks](/integrations/webhooks) to track final delivery. Also see [Google functions in Python](/guides/google-cloud-functions-python), [Go](/guides/google-cloud-functions) and [Node.js SMTP](/smtp/nodejs).
+
+<GuideRelated />

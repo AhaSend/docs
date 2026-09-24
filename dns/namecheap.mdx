@@ -1,0 +1,34 @@
+---
+title: "Namecheap DNS: SPF, DKIM and DMARC"
+sidebarTitle: "Namecheap"
+description: "Add AhaSend SPF, DKIM and DMARC records in Namecheap: find the DNS form, enter the right names and values, then verify your sending domain."
+---
+
+import DnsPrerequisites from "/snippets/dns-prerequisites.mdx";
+import DnsChecks from "/snippets/dns-check-records.mdx";
+import DnsRelated from "/snippets/dns-related.mdx";
+
+AhaSend verifies domains hosted at Namecheap when you publish the SPF, DKIM and DMARC records from your domain page; this guide shows where to enter them.
+
+<DnsPrerequisites />
+
+## Open the DNS Form
+
+Open **Domain List → Manage → Advanced DNS**, then use **Host Records → Add New Record**. Choose the type from AhaSend and fill in **Host** and **Value**. These steps follow [Namecheap's DNS guide](https://www.namecheap.com/support/knowledgebase/article.aspx/317/2237/how-do-i-add-txtspfdkimdmarc-records-for-my-domain/).
+
+Use **TXT Record** for SPF and DMARC. If the Mail Settings area already manages an SPF record, edit that SPF setup rather than adding a second SPF record in Host Records. Custom nameservers mean you need to make the change at that other DNS host.
+
+## Add SPF, DKIM and DMARC
+
+For a zone named `example.com`, use this name mapping. The examples show a common managed-DKIM setup; your dashboard's names and targets take precedence.
+
+| AhaSend record | Type | Name in the provider form | Value |
+|---|---|---|---|
+| SPF for `example.com` | TXT | `@` | SPF value shown by AhaSend, merged into any existing SPF record |
+| `managed._domainkey.example.com` | CNAME | `managed._domainkey` | First DKIM target from your domain page |
+| `managed2._domainkey.example.com` | CNAME | `managed2._domainkey` | Second DKIM target from your domain page |
+| `_dmarc.example.com` | TXT | `_dmarc` | Your reviewed DMARC policy |
+
+<DnsChecks />
+
+<DnsRelated />

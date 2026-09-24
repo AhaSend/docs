@@ -1,0 +1,34 @@
+---
+title: "STRATO DNS: SPF, DKIM and DMARC"
+sidebarTitle: "STRATO"
+description: "Add AhaSend SPF, DKIM and DMARC records in STRATO: find the DNS form, enter the right names and values, then verify your sending domain."
+---
+
+import DnsPrerequisites from "/snippets/dns-prerequisites.mdx";
+import DnsChecks from "/snippets/dns-check-records.mdx";
+import DnsRelated from "/snippets/dns-related.mdx";
+
+AhaSend verifies domains hosted at STRATO when you publish the SPF, DKIM and DMARC records from your domain page; this guide shows where to enter them.
+
+<DnsPrerequisites />
+
+## Open the DNS Form
+
+Open **Domains → Domainverwaltung**, select the gear beside your domain, then **DNS → TXT- und CNAME-Records**. Choose the type from AhaSend and fill in **Präfix** and **Wert**. These steps follow [STRATO's DNS guide](https://www.strato.de/faq/domains/wie-kann-ich-bei-strato-meine-dns-eintraege-verwalten/).
+
+STRATO adds the domain to Präfix. Its SPF and DMARC settings can supply records automatically: inspect them before adding custom TXT values. To supply your own DMARC record, choose **Keine STRATO-DMARC-Regel** and publish the one policy you intend to use. Preserve authorization for any STRATO mailbox service that still sends mail.
+
+## Add SPF, DKIM and DMARC
+
+For a zone named `example.com`, use this name mapping. The examples show a common managed-DKIM setup; your dashboard's names and targets take precedence.
+
+| AhaSend record | Type | Name in the provider form | Value |
+|---|---|---|---|
+| SPF for `example.com` | TXT | leave Präfix empty | SPF value shown by AhaSend, merged into any existing SPF record |
+| `managed._domainkey.example.com` | CNAME | `managed._domainkey` | First DKIM target from your domain page |
+| `managed2._domainkey.example.com` | CNAME | `managed2._domainkey` | Second DKIM target from your domain page |
+| `_dmarc.example.com` | TXT | `_dmarc` | Your reviewed DMARC policy |
+
+<DnsChecks />
+
+<DnsRelated />

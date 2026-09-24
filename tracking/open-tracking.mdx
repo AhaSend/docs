@@ -1,15 +1,20 @@
 ---
-title: "Open Tracking"
+title: "Email Open Tracking: How It Works and Setup"
 sidebarTitle: "Open Tracking"
-description: "Track email opens with AhaSend's open tracking feature - understand engagement, limitations, and implementation across SMTP and API"
+description: "Turn on AhaSend open tracking for the whole account or per message with the ahasend-track-opens header, and see why open rates vary."
 icon: "envelope-open"
 ---
 
-Open tracking allows you to monitor when recipients open your emails by embedding an invisible tracking pixel. This feature provides valuable insights into email engagement, though it comes with inherent accuracy limitations that are important to understand.
+
+AhaSend open tracking records requests for a tracking image in your emails; this guide explains setup, events and the limits of open data.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
 <Warning>
 **Accuracy Limitations:** Open tracking is inherently inaccurate due to email client behavior, bot activity, and privacy features. Use open tracking data as approximate engagement indicators rather than precise metrics.
 </Warning>
+
+Open tracking is off by default. Enable it in account settings or override it per message. Tracked URLs use the AhaSend tracking domain unless you configure a [custom tracking CNAME](/domains).
 
 ## How Open Tracking Works
 
@@ -30,7 +35,7 @@ Open tracking works by embedding a tiny, invisible 1x1 pixel image at the end of
     - **Location:** Automatically inserted at the end of HTML emails
     - **Format:** Transparent image served from AhaSend's servers
     - **Requirements:** HTML email format (not available for plain text)
-    - **Privacy:** Removed before email delivery, never visible to recipients
+    - **Privacy:** Invisible to recipients: a 1×1 transparent image in the delivered email
   </Accordion>
 </AccordionGroup>
 
@@ -212,7 +217,7 @@ For API v1 (`/v1/email/send`), include tracking headers in the `content.headers`
     - Open rates are estimates, not precise measurements
     - Focus on trends rather than absolute numbers
     - Combine with other metrics (clicks, conversions) for full picture
-    - Account for 20-50% of opens potentially going untracked
+    - Image blocking can prevent an open from being recorded; image prefetching can record an open without a person reading the message
   </Accordion>
 
   <Accordion title="Privacy and Compliance" icon="shield">
@@ -287,3 +292,8 @@ For API v1 (`/v1/email/send`), include tracking headers in the `content.headers`
   </Accordion>
 </AccordionGroup>
 
+## Related Guides
+
+- [Account quickstart](/quickstart), [Domain setup](/domains), [Open event payload](/api-reference/webhooks/message-opened).
+- [Click tracking](/tracking/click-tracking), [API tracking options](/api-reference/messages/create-message), [SMTP tracking headers](/smtp/special-headers).
+- [Plans and limits](/facts), [Retention rules](/retention).

@@ -1,58 +1,48 @@
 ---
-title: "Webhooks API"
+title: "Webhook Events and Payload Reference"
 sidebarTitle: "Introduction"
-description: "Real-time HTTP callbacks for email events following the Standard Webhooks specification"
+description: "Reference for AhaSend email webhooks: every event type (delivered, bounced, opened, clicked, failed and more), payload format, signature headers and retries."
 icon: "webhook"
 ---
 
-<Note>
-**New to webhooks?** Start with our [comprehensive webhooks guide](/integrations/webhooks) to learn how to create and configure webhooks in your dashboard before diving into the API details.
-</Note>
+AhaSend webhook events report email delivery, engagement, suppression and domain changes; this reference lists every event and its payload. Use the [webhook setup guide](/integrations/webhooks) to configure an endpoint.
 
-Webhooks are user-defined HTTP callbacks that notify your application in real-time when specific events occur in AhaSend. When an email is delivered, bounced, opened, or other events happen, AhaSend sends a POST request to your configured endpoint with detailed event data.
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-## Overview
+## Event Types
 
-AhaSend webhooks follow the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks), providing:
+| Event type | Filter flag | Fires when | Payload |
+|---|---|---|---|
+| `message.reception` | `on_reception` | A message is accepted | [Reference](/api-reference/webhooks/message-reception) |
+| `message.delivered` | `on_delivered` | The recipient server accepts the message | [Reference](/api-reference/webhooks/message-delivered) |
+| `message.transient_error` | `on_transient_error` | A delivery attempt has a temporary failure | [Reference](/api-reference/webhooks/message-transient_error) |
+| `message.failed` | `on_failed` | Message delivery fails | [Reference](/api-reference/webhooks/message-failed) |
+| `message.bounced` | `on_bounced` | The recipient server rejects the message | [Reference](/api-reference/webhooks/message-bounced) |
+| `message.suppressed` | `on_suppressed` | A suppression prevents sending | [Reference](/api-reference/webhooks/message-suppressed) |
+| `message.opened` | `on_opened` | The tracking image is requested | [Reference](/api-reference/webhooks/message-opened) |
+| `message.clicked` | `on_clicked` | A tracked link is requested | [Reference](/api-reference/webhooks/message-clicked) |
+| `suppression.created` | `on_suppression_created` | A suppression is created | [Reference](/api-reference/webhooks/suppression-created) |
+| `domain.dns_error` | `on_dns_error` | A sending domain has a DNS error | [Reference](/api-reference/webhooks/domain-dns_error) |
 
-- **Real-time notifications** for email events (delivery, bounce, open, click, suppression)
-- **Secure payload delivery** with HMAC signature verification
-- **Automatic retries** up to 6 times over 16+ minutes for failed deliveries
-- **Idempotency support** via unique webhook-id headers
+Inbound routing has a separate [`message.routing` event](/api-reference/routes/route-message).
+
+## Suppression Duration
+
+See [bounces and suppression durations](/bounces#suppression-duration) for expiry rules and the next steps after a failed send.
 
 ## Payload Structure
 
 All webhook events use a consistent JSON structure:
 
-```json
-{
-  "type": "entity.event",
-  "webhook_id": "abe11757-2886-4b55-96f1-0e0afc95795a",
-  "timestamp": "2024-05-06T09:49:16.687031577Z",
-  "data": {
-    // Event-specific data
-  }
-}
-```
+Events contain `type`, `webhook_id`, `timestamp`, and an event-specific `data` object. The payload `webhook_id` identifies the configured endpoint; the `webhook-id` header identifies the delivery across retries. Inbound routes use `route_id` instead of `webhook_id`. Use the payload reference for each event above.
 
-## Security Headers
+## Delivery and Verification
 
-Every webhook request includes three security headers for verification:
+Check [signatures](/api-reference/webhooks/security) before trusting a payload, and use the [retry policy](/api-reference/webhooks/retry-policy) to handle duplicate or failed deliveries. Manage endpoints with [Create Webhook](/api-reference/webhooks/create-webhook), [List Webhooks](/api-reference/webhooks/get-webhooks), [Update Webhook](/api-reference/webhooks/update-webhook) and [Delete Webhook](/api-reference/webhooks/delete-webhook).
 
-- `webhook-id`: Unique event identifier for idempotency
-- `webhook-timestamp`: Unix timestamp when the webhook was sent
-- `webhook-signature`: HMAC signature for payload verification
+## Related Guides
 
-## Getting Started
-
-<CardGroup cols={2}>
-  <Card title="Create Webhooks" icon="plus" href="/integrations/webhooks">
-    Learn how to configure webhooks in your dashboard and handle events
-  </Card>
-  <Card title="Security" icon="shield" href="/api-reference/webhooks/security">
-    Implement signature verification and security best practices
-  </Card>
-  <Card title="Retry Policy" icon="arrows-rotate" href="/api-reference/webhooks/retry-policy">
-    Understand webhook delivery guarantees and retry behavior
-  </Card>
-</CardGroup>
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing), [Signature verification](/api-reference/webhooks/security).
+- [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Tracking setup](/tracking/open-tracking).

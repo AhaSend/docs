@@ -1,17 +1,22 @@
 ---
-title: "Integration Guides"
+title: "Framework and Platform Email Guides"
 sidebarTitle: "Overview"
-description: "Step-by-step guides for sending transactional email from your framework, runtime, deployment platform, or AI coding tool with the AhaSend SDKs."
+description: "Guides for sending transactional email with AhaSend from Node.js, Go, Next.js, Express, serverless platforms, and AI coding tools like Cursor."
 icon: "plug"
 ---
 
-Each guide focuses on one framework, runtime, platform, or development tool and
-shows the relevant server-side integration, credential boundary, and deployment
-details. Framework guides cover sending and webhook verification where the
-platform supports them; development-tool guides focus on grounding, review, and
-sandbox testing.
+import PhpPythonFrameworkCards from "/snippets/php-python-framework-cards.mdx";
+
+import FrameworkCards from "/snippets/framework-cards.mdx";
+
+import GuideRelated from "/snippets/guide-related.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+AhaSend integration guides show how to send email from your framework, server runtime or AI-built app with the official SDKs and server-side credentials.
 
 Already have a mailer in your framework, such as Nodemailer or ActionMailer? Point it at the [SMTP relay](/smtp) instead: four settings, no new code. If your stack is not covered here at all, the [Quickstart](/quickstart) shows the plain REST API, which works anywhere.
+
+<SendGuideRules />
 
 ## Start with Your Language
 
@@ -25,38 +30,30 @@ Already have a mailer in your framework, such as Nodemailer or ActionMailer? Poi
   </Card>
 </CardGroup>
 
-## Web Frameworks
+## Framework Guides
 
-<CardGroup cols={3}>
-  <Card title="Express" icon="server" href="/guides/express" />
-  <Card title="Fastify" icon="server" href="/guides/fastify" />
-  <Card title="NestJS" icon="server" href="/guides/nestjs" />
-  <Card title="Next.js" icon="layer-group" href="/guides/nextjs" />
-  <Card title="Nuxt" icon="layer-group" href="/guides/nuxt" />
-  <Card title="SvelteKit" icon="layer-group" href="/guides/sveltekit" />
-</CardGroup>
+<FrameworkCards />
 
-Also covered: [Hono](/guides/hono), [Koa](/guides/koa), [ElysiaJS](/guides/elysiajs), [Encore.ts](/guides/encore), [Remix](/guides/remix), [Astro](/guides/astro), and [Vite](/guides/vite).
+## PHP, Python and CMS Guides
 
-## Go Frameworks
-
-<CardGroup cols={3}>
-  <Card title="Gin" icon="golang" href="/guides/gin" />
-  <Card title="Echo" icon="golang" href="/guides/echo" />
-  <Card title="Fiber" icon="golang" href="/guides/fiber" />
-</CardGroup>
-
-Also covered: [chi](/guides/chi) and [gorilla/mux](/guides/gorilla-mux), plus [Azure Functions](/guides/azure-functions) and [Cloud Run functions](/guides/google-cloud-functions) for Go on serverless.
+<PhpPythonFrameworkCards />
 
 ## Runtimes and Deployment
 
 The SDK runs on Node.js, Deno, Bun, Cloudflare workerd, and Vercel Edge. These guides cover what each platform changes: where secrets live, how deploys work, and what to watch for.
 
 <CardGroup cols={3}>
+  <Card title="Azure Functions (Node.js)" icon="cloud" href="/guides/azure-functions-nodejs" />
+  <Card title="Azure Functions (Python)" icon="cloud" href="/guides/azure-functions-python" />
+  <Card title="Cloud Run Functions (Node.js)" icon="cloud" href="/guides/google-cloud-functions-nodejs" />
+  <Card title="Cloud Run Functions (Python)" icon="cloud" href="/guides/google-cloud-functions-python" />
+  <Card title="AWS Lambda (Python)" icon="aws" href="/guides/aws-lambda-python" />
+  <Card title="Azure Functions (Go)" icon="cloud" href="/guides/azure-functions" />
+  <Card title="Cloud Run Functions (Go)" icon="cloud" href="/guides/google-cloud-functions" />
   <Card title="Bun" icon="bolt" href="/guides/bun" />
   <Card title="Deno Deploy" icon="bolt" href="/guides/deno-deploy" />
   <Card title="Cloudflare Workers" icon="cloudflare" href="/guides/cloudflare-workers" />
-  <Card title="AWS Lambda" icon="aws" href="/guides/aws-lambda" />
+  <Card title="AWS Lambda (Node.js)" icon="aws" href="/guides/aws-lambda" />
   <Card title="Vercel" icon="cloud-arrow-up" href="/guides/vercel" />
   <Card title="Railway" icon="train" href="/guides/railway" />
 </CardGroup>
@@ -75,7 +72,9 @@ AI agents write email code quickly and invent APIs just as quickly. These guides
   <Card title="Windsurf" icon="wind" href="/guides/windsurf" />
 </CardGroup>
 
-## What Every Guide Assumes
+## Credentials and Tests
+
+SMTP guides use [SMTP credentials](/smtp/credentials). The released WordPress and Drupal integrations use legacy v1 keys; follow their specific setup steps.
 
 <Steps>
   <Step title="A Verified Sending Domain">
@@ -83,7 +82,7 @@ AI agents write email code quickly and invent APIs just as quickly. These guides
   </Step>
 
   <Step title="An API Key with Send Scope">
-    Create one in the [dashboard](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, or scope it to a single domain to limit the blast radius if it leaks. The guides read it from `AHASEND_API_KEY`, alongside `AHASEND_ACCOUNT_ID` and, for webhooks, `AHASEND_WEBHOOK_SECRET`.
+    For v2 API guides, create one in the [dashboard](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{your-domain}` scope (`messages:send:all` for sending from many domains), or scope it to a single domain to limit the blast radius if it leaks. The guides read it from `AHASEND_API_KEY`, alongside `AHASEND_ACCOUNT_ID` and, for webhooks, `AHASEND_WEBHOOK_SECRET`.
   </Step>
 
   <Step title="Sandbox Mode for Testing">
@@ -102,3 +101,5 @@ AI agents write email code quickly and invent APIs just as quickly. These guides
     Send test messages and forward webhook events to localhost from your terminal while building an integration.
   </Card>
 </CardGroup>
+
+<GuideRelated />

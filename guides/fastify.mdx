@@ -1,17 +1,26 @@
 ---
-title: "How to Send Email with Fastify"
+title: "How to Send Email with Fastify (Node.js)"
 sidebarTitle: "Fastify"
-description: "Send transactional email from Fastify in under 5 minutes with the AhaSend Node.js SDK, plus signed webhook handling via the built-in Fastify adapter."
+description: "Send transactional email from a Fastify 5 app with the AhaSend Node.js SDK, and verify signed webhooks using fastify-raw-body and the Fastify adapter."
 keywords: ["fastify send email", "fastify transactional email", "nodejs email api fastify", "ahasend fastify", "fastify webhook email"]
 ---
 
+import GuideRelated from "/snippets/guide-related.mdx";
+import GuideNextSteps from "/snippets/guide-next-steps.mdx";
+import QuickSend from "/snippets/quick-send-node.mdx";
+import SendGuideRules from "/snippets/send-guide-rules.mdx";
+
+This guide shows how to use AhaSend to send transactional email from Fastify in Node.js, keep credentials on the server, and test a sandbox send.
+
 [Fastify](https://fastify.dev) parses JSON before your handler sees it, so the webhook route needs `fastify-raw-body` registered on it. Signature verification runs against the raw bytes, and the adapter returns an opaque 400 without them.
+
+<SendGuideRules />
 
 ## Prerequisites
 
 - Node.js 22 or newer, and Fastify 5. Set `"type": "module"` in `package.json` — the code below uses top-level `await` and ESM import specifiers.
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
-- An [API key](https://dash.ahasend.com/account/-/settings/api-keys) with the `messages:send:all` scope, and your account ID
+- An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the `messages:send:{your-domain}` scope (`messages:send:all` for sending from many domains), and your account ID
 
 ## Install the SDK
 
@@ -34,6 +43,8 @@ bun add @ahasend/sdk fastify @fastify/rate-limit fastify-raw-body
 ```
 
 </CodeGroup>
+
+<QuickSend />
 
 `fastify-raw-body` is only needed for webhooks: signature verification requires the raw, unparsed request body.
 
@@ -119,12 +130,13 @@ app.post<{ Body: WelcomeBody }>(
 
     try {
       const result = await ahasend.messages.send({
+        sandbox: true,
         from: { email: "hello@yourdomain.com", name: "Your App" },
         recipients: [{ email: request.body.email, name: request.body.name }],
         subject: "Welcome to Your App!",
         html_content: "<h1>Welcome aboard 🎉</h1><p>We're glad you're here.</p>",
         text_content: "Welcome aboard! We're glad you're here.",
-      }, { idempotencyKey: `welcome-${request.body.eventId}` });
+      }, { idempotencyKey: `sandbox-welcome-${request.body.eventId}` });
 
       const rejected = result.data.filter((r) => r.status === "error");
       if (rejected.length > 0) {
@@ -161,7 +173,7 @@ A 202 is **multi-status**: `result.data` carries one entry per recipient, and an
 
 The SDK retries transient failures automatically, but a 5xx or timeout does not prove that no email was sent. The stable `idempotencyKey` lets stored results be replayed for 24 hours, but server errors release the key for re-execution. Reconcile an uncertain result before retrying, and persist `eventId` in your application if the welcome email must never be sent twice.
 
-Add `sandbox: true` to the send request to validate it without delivering anything. The idempotency key is bound to a hash of the request body, so flipping `sandbox` on or off while reusing the same `eventId` returns `422` `AhaSendIdempotencyMismatchError` — use a distinct key prefix for sandbox traffic.
+The send example uses `sandbox: true` to validate the request without delivering anything. The idempotency key is bound to a hash of the request body, so flipping `sandbox` on or off while reusing the same `eventId` returns `422` `AhaSendIdempotencyMismatchError` — use a distinct key prefix for sandbox traffic.
 
 ## Handle Webhooks
 
@@ -192,7 +204,7 @@ const verifier = new WebhookVerifier(webhookSecret);
 
 app.post(
   "/webhooks/ahasend",
-  { bodyLimit: 1_000_000, config: { rawBody: true } },
+  { bodyLimit: 30_000_000, config: { rawBody: true } },
   fastifyWebhookHandler(verifier, async (event) => {
     if (!isKnownWebhookEvent(event)) return; // future event type, acknowledge & ignore
 
@@ -207,7 +219,7 @@ app.post(
         app.log.info({ webhookType: event.type });
         break;
     }
-  }, { maxBodyBytes: 1_000_000 }),
+  }, { maxBodyBytes: 30_000_000 }),
 );
 
 // Last statement in the file: no plugin or route can be added after this.
@@ -227,13 +239,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 ## Going Further
 
-- **Templating**: pass `substitutions` per recipient and use `{{ variable }}` in the subject or body.
-- **Batch sends**: `recipients` accepts up to 100 entries; each gets a separate, individually-substituted message.
-- **Scheduling**: set `schedule.first_attempt` to a future RFC 3339 timestamp within 7 days of the request.
-- **Your own idempotency keys**: pass `{ idempotencyKey: "order-123" }` as the second argument to `send()` so stored results for the same request can be replayed within the server's retention window.
-- **Attachments**: pass `attachments: [{ data, content_type, file_name, base64: true }]`. Set `base64: true` for binary files such as PDFs.
-
-See the [API reference](/api-reference) for every endpoint the SDK exposes. On a different Node framework? The same SDK powers the [Express](/guides/express) and [Hono](/guides/hono) guides.
+<GuideNextSteps />
 
 ## Troubleshooting
 
@@ -245,9 +251,11 @@ See the [API reference](/api-reference) for every endpoint the SDK exposes. On a
     A plugin or route was added after `app.listen()` resolved. Fastify seals the instance once it starts, so `app.listen()` must be the last statement in `server.ts`, after both routes are declared.
   </Accordion>
   <Accordion title="401 AhaSendAuthenticationError">
-    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded without logging any part of it, and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/settings/api-keys).
+    The API key is missing, malformed, or revoked. Verify `AHASEND_API_KEY` is loaded without logging any part of it, and that the key exists in your [dashboard](https://dash.ahasend.com/account/-/transactional/credentials).
   </Accordion>
   <Accordion title="400 error mentioning the from address">
     The `from` address must belong to a verified sending domain on your account. Check domain status in the dashboard.
   </Accordion>
 </AccordionGroup>
+
+<GuideRelated />

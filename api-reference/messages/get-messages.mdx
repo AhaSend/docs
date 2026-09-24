@@ -1,11 +1,24 @@
 ---
-title: "List Messages"
+title: "List and Search Sent Emails via the API"
 sidebarTitle: "List Messages"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/messages"
+description: "List emails sent through AhaSend and filter them by status, sender, recipient, subject, Message-ID header, tags or time range, with cursor-based pagination."
 ---
+
+
+The AhaSend API returns a list of message summaries for the account. Can be filtered by various parameters.
+
+`messages:read:all` can read across the account. Domain-scoped keys see
+only messages for domains authorized by their matching read roles.
 
 <Note>
 The `content` field is omitted from list responses for performance reasons. Use the
 [Get Message](/api-reference/messages/get-message) endpoint to retrieve the full
 message content.
 </Note>
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sending guide](/send-api/send-email).
+- [Message CLI](/cli/commands/messages), [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk).
+- [Go SDK](/guides/go-sdk), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
