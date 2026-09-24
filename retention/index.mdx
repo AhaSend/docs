@@ -49,6 +49,10 @@ Understanding the difference between data and metadata helps you set appropriate
     - Full message payload
 
     **Retention:** Within your plan's range; 0 days needs approval
+
+    <Warning>
+    **Message routing needs message data.** Keep message data retention at 1 day or more on any account that uses [message routing](/integrations/routing).
+    </Warning>
   </Accordion>
 </AccordionGroup>
 
@@ -69,7 +73,7 @@ Configure default retention periods for your entire account:
     - **Message Data:** Within your plan's range (new-account default: 7 days)
 
     <Warning>
-    **Minimum Requirements:** Message metadata requires at least 1 day retention for delivery tracking. Message data can be set to 0 days on Pro and Max after approval from AhaSend.
+    **Minimum Requirements:** Message metadata requires at least 1 day retention for delivery tracking. Message data can be set to 0 days on Pro and Max after approval from AhaSend. Accounts that use message routing must keep message data for at least 1 day: routes deliver inbound emails from stored message data and stop working at 0 days.
     </Warning>
   </Step>
 
