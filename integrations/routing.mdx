@@ -73,6 +73,13 @@ Before setting up message routing, ensure your domain is properly configured:
     3. Test email delivery to ensure routing works
   </Accordion>
 
+  <Accordion title="Message Data Retention" icon="clock">
+    **Routing depends on stored message data:**
+    - Inbound emails are stored as message data and delivered to your endpoint from that store
+    - Message data retention must be **1 day or more** on the account; at 0 days inbound emails are discarded on arrival and nothing is routed
+    - Check the setting under **Account Settings → Retention Policy** (see [Data Retention](/retention))
+  </Accordion>
+
   <Accordion title="Endpoint Requirements" icon="server">
     **Your Application Endpoint Must:**
     - Accept HTTP POST requests
@@ -653,6 +660,7 @@ All message routing requests follow the Standard Webhooks payload format:
     - MX records not updated or propagated
     - Typos in recipient patterns
     - Route disabled due to endpoint failures
+    - Message data retention set to 0 days (see [Data Retention](/retention))
   </Accordion>
 
   <Accordion title="Endpoint Not Receiving Requests" icon="server">
