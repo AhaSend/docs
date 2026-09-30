@@ -139,6 +139,7 @@ Once OpenID Connect SSO is activated:
     **Login problems:**
     - **Verify** user is added as team member in AhaSend
     - **Check** the user's email address is at one of your SSO domains; sign-ins for other addresses are refused
+    - **Check** your identity provider doesn't mark the user's email as unverified (`email_verified: false`); those sign-ins are refused
     - **Confirm** user exists in your identity provider
     - **Test** SSO configuration with account owner first
   </Accordion>
