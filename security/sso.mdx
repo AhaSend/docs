@@ -60,7 +60,7 @@ Configure SSO in your account settings as the account owner:
 
 ## Verify Your SSO Domains
 
-SSO signs in people by their email address, so AhaSend only accepts sign-ins for addresses at your SSO domains, and you need to show that you own each domain when you first add it. A domain counts as verified when either:
+SSO signs in people by their email address, so AhaSend only accepts sign-ins for addresses at your SSO domains, and you need to show that you own each domain when you first add it. Subdomains aren't included: if your team also uses `eu.yourcompany.com`, add it as its own domain. A domain counts as verified when either:
 
 - **It is a verified sending domain** in the same AhaSend account. If you already send from `yourcompany.com`, there is nothing more to do. See [Domain setup](/domains).
 - **It has the SSO TXT record.** Use this for a domain you don't send from.
