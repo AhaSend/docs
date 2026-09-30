@@ -27,7 +27,7 @@ These are common SMTP meanings, not a promise that every server emits identical 
 | `535` / `5.7.8` | Authentication credentials are invalid | Check the SMTP username and password, not an API key |
 | `550 5.1.1` | Destination mailbox address does not exist | Correct the address; do not repeatedly retry it |
 | `5.2.2` | Mailbox is full | Follow the accompanying 4xx or 5xx reply and provider text |
-| `552` / `5.3.4` | Message exceeds a size limit | Reduce content or attachments and check the stated limit |
+| `552` / `5.3.4` | Message exceeds a size limit (AhaSend: 20 MiB per message) | Reduce content or attachments; base64 adds about one third to attachment size |
 | `5.7.1` | Delivery refused for a security or policy reason | Inspect authentication, content, sender reputation and the server's text |
 | `5.7.26` | Multiple authentication checks failed | Check SPF, DKIM and DMARC alignment |
 

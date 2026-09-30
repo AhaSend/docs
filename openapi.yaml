@@ -839,7 +839,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Attachment'
-          description: File attachments. For inline images, set the attachment's `content_id` to a value wrapped in angle brackets (e.g. `<image1@example.com>`) and reference it from `html_content` with `cid:` (e.g. `<img src="cid:image1@example.com">`).
+          description: File attachments. There is no per-attachment size limit; the request body is limited to 30 MB and the resulting message (headers, body and base64-encoded attachments) to 20 MiB. For inline images, set the attachment's `content_id` to a value wrapped in angle brackets (e.g. `<image1@example.com>`) and reference it from `html_content` with `cid:` (e.g. `<img src="cid:image1@example.com">`).
         headers:
           type: object
           additionalProperties:
@@ -933,7 +933,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Attachment'
-          description: File attachments. For inline images, set the attachment's `content_id` to a value wrapped in angle brackets (e.g. `<image1@example.com>`) and reference it from `html_content` with `cid:` (e.g. `<img src="cid:image1@example.com">`).
+          description: File attachments. There is no per-attachment size limit; the request body is limited to 30 MB and the resulting message (headers, body and base64-encoded attachments) to 20 MiB. For inline images, set the attachment's `content_id` to a value wrapped in angle brackets (e.g. `<image1@example.com>`) and reference it from `html_content` with `cid:` (e.g. `<img src="cid:image1@example.com">`).
         headers:
           type: object
           additionalProperties:
