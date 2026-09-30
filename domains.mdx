@@ -20,7 +20,7 @@ Free includes 3 sending domains; Pro and Max include unlimited domains. Automati
 
 <a id="why-domain-setup-matters" />
 
-## Which DNS Records Do I Need?
+## Which DNS records do I need?
 
 Publish the records shown for your domain in the dashboard. New managed-DNS domains use these record types:
 
@@ -35,7 +35,7 @@ Publish the records shown for your domain in the dashboard. New managed-DNS doma
 
 Copy the exact hostnames and values from your domain page; manual DNS and whitelabel setups can differ.
 
-## Why Does AhaSend Need DNS Records?
+## Why does AhaSend need DNS records?
 
 Email receivers use multiple authentication methods to verify that emails are legitimate. When you properly configure your domain with AhaSend, you're telling receiving servers that:
 
@@ -62,7 +62,7 @@ Before setting up your domain, make sure you have:
 </Info>
 
 <Steps>
-  <Step title="Add Your Domain" icon="plus">
+  <Step title="Add your domain" icon="plus">
     Start by adding your domain to your AhaSend account:
 
     1. **Log in to your [AhaSend Dashboard](https://dash.ahasend.com)**
@@ -78,7 +78,7 @@ Before setting up your domain, make sure you have:
     </Info>
   </Step>
 
-  <Step title="Configure DNS Records" icon="gear">
+  <Step title="Configure DNS records" icon="gear">
     Add the DNS records shown on your domain details page. The exact hostnames and values can vary by account, domain mode, and reseller configuration.
 
     <Info>
@@ -92,7 +92,7 @@ Before setting up your domain, make sure you have:
     </Tip>
 
     <AccordionGroup>
-      <Accordion title="SPF Record (Required)" icon="shield-check">
+      <Accordion title="SPF record (Required)" icon="shield-check">
         **Sender Policy Framework (SPF)** authorizes AhaSend to send emails on your domain's behalf.
 
         **Record Type:** `TXT`
@@ -113,7 +113,7 @@ Before setting up your domain, make sure you have:
         </Note>
       </Accordion>
 
-      <Accordion title="DKIM Records (Required)" icon="signature">
+      <Accordion title="DKIM records (Required)" icon="signature">
         **DomainKeys Identified Mail (DKIM)** cryptographically signs your emails to verify authenticity.
 
         **Record Type:** Usually `CNAME` for managed DNS, sometimes `TXT` for manual DNS
@@ -148,7 +148,7 @@ Before setting up your domain, make sure you have:
         </Note>
       </Accordion>
 
-      <Accordion title="DMARC Record (Required)" icon="shield-halved">
+      <Accordion title="DMARC record (Required)" icon="shield-halved">
         **Domain-based Message Authentication, Reporting and Conformance (DMARC)** provides policy guidance for email authentication failures.
 
         **Record Type:** `TXT`
@@ -163,9 +163,13 @@ Before setting up your domain, make sure you have:
         <Info>
         This DMARC policy asks receiving servers to quarantine messages that fail DMARC. It has no `rua` tag and sends no aggregate reports. You can add your own `rua=mailto:reports@yourdomain.com` address to receive reports. If the domain already has a DMARC record, update that record instead of adding another. Check all services that send from the domain before enforcing a quarantine policy.
         </Info>
+
+        <Note>
+        **Subdomains inherit the root record.** If you add `mail.example.com`, the DNS check first looks for `_dmarc.mail.example.com`. If there is none, it looks for `_dmarc.example.com` and accepts that. You only need a DMARC record on the subdomain itself when you want a different policy or reporting address for it.
+        </Note>
       </Accordion>
 
-      <Accordion title="Return-Path Record (Highly Recommended)" icon="reply">
+      <Accordion title="Return-Path record (Highly recommended)" icon="reply">
         **Return-Path** specifies where bounce messages and delivery notifications should be sent.
 
         **Record Type:** `CNAME`
@@ -182,7 +186,7 @@ Before setting up your domain, make sure you have:
         </Tip>
       </Accordion>
 
-      <Accordion title="Email Tracking Record (Optional)" icon="chart-line">
+      <Accordion title="Email tracking record (Optional)" icon="chart-line">
         **Tracking Domain** ensures tracking URLs in your emails come from your domain instead of AhaSend's.
 
         **Record Type:** `CNAME`
@@ -199,7 +203,7 @@ Before setting up your domain, make sure you have:
         </Note>
       </Accordion>
 
-      <Accordion title="Subscription Management Record (Optional)" icon="mailbox">
+      <Accordion title="Subscription management record (Optional)" icon="mailbox">
         **Subscription management domain** hosts unsubscribe and subscription management links on your own domain.
 
         **Record Type:** `CNAME`
@@ -216,7 +220,7 @@ Before setting up your domain, make sure you have:
         </Note>
       </Accordion>
 
-      <Accordion title="Media Record (Optional)" icon="image">
+      <Accordion title="Media record (Optional)" icon="image">
         **Media domain** serves hosted media assets from your own domain.
 
         **Record Type:** `CNAME`
@@ -233,7 +237,7 @@ Before setting up your domain, make sure you have:
         </Note>
       </Accordion>
 
-      <Accordion title="MX Record (Recommended)" icon="envelope">
+      <Accordion title="MX record (Recommended)" icon="envelope">
         **Mail Exchanger (MX)** specifies the mail server responsible for receiving emails for your domain.
 
         **Record Type:** `MX`
@@ -253,7 +257,7 @@ Before setting up your domain, make sure you have:
     </AccordionGroup>
   </Step>
 
-  <Step title="Wait for DNS Propagation" icon="clock">
+  <Step title="Wait for DNS propagation" icon="clock">
     DNS changes can take time to propagate across the internet:
 
     - **Typical time:** 5-30 minutes
@@ -265,7 +269,7 @@ Before setting up your domain, make sure you have:
     </Tip>
   </Step>
 
-  <Step title="Verify Your Domain" icon="check-circle">
+  <Step title="Verify your domain" icon="check-circle">
     Once your DNS records are live, verify your domain in AhaSend:
 
     1. **Return to your domain details page** in the dashboard
@@ -292,7 +296,7 @@ Before setting up your domain, make sure you have:
   </Step>
 </Steps>
 
-## DNS Provider Guides
+## DNS provider guides
 
 Choose your authoritative DNS provider for record names and setup steps.
 
@@ -300,21 +304,21 @@ Choose your authoritative DNS provider for record names and setup steps.
 
 <a id="manage-domains-with-api" />
 
-## How Do I Manage Domains Through the API?
+## How do I manage domains through the API?
 
 For programmatic domain management, use our comprehensive Domains API:
 
 <CardGroup cols={2}>
-  <Card title="Create Domain" icon="plus" href="/api-reference/domains/create-domain">
+  <Card title="Create domain" icon="plus" href="/api-reference/domains/create-domain">
     Add new domains programmatically
   </Card>
-  <Card title="List Domains" icon="list" href="/api-reference/domains/get-domains">
+  <Card title="List domains" icon="list" href="/api-reference/domains/get-domains">
     Retrieve all your configured domains
   </Card>
-  <Card title="Get Domain Details" icon="check" href="/api-reference/domains/get-domain">
+  <Card title="Get domain details" icon="check" href="/api-reference/domains/get-domain">
     Check domain verification status
   </Card>
-  <Card title="Delete Domain" icon="trash" href="/api-reference/domains/delete-domain">
+  <Card title="Delete domain" icon="trash" href="/api-reference/domains/delete-domain">
     Remove domains from your account
   </Card>
 </CardGroup>
@@ -325,12 +329,12 @@ API v2 also supports updating domain DNS settings such as tracking, return-path,
 
 <a id="troubleshooting" />
 
-## Why Is My Domain Not Verified?
+## Why is my domain not verified?
 
 Most records verify within minutes. DNS changes can take up to 48 hours to propagate. After a domain is added or verified, allow up to 2 minutes for the SMTP configuration to refresh if you see `556 Invalid account or domain`.
 
 <AccordionGroup>
-  <Accordion title="DNS Records Not Verifying">
+  <Accordion title="DNS records not verifying">
     **Common causes and solutions:**
 
     - **Wait longer:** DNS propagation can take up to 48 hours
@@ -340,7 +344,7 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
     - **Check with DNS tools:** Use online DNS checkers to verify records are live
   </Accordion>
 
-  <Accordion title="Existing SPF Record Conflicts">
+  <Accordion title="Existing SPF record conflicts">
     **If you already have an SPF record:**
 
     1. **Don't create a duplicate** - domains can only have one SPF record
@@ -354,7 +358,7 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
     ```
   </Accordion>
 
-  <Accordion title="Why Do I See Two DKIM Records?">
+  <Accordion title="Why do I see two DKIM records?">
     **Managed DNS domains use two DKIM selectors.**
 
     - **Active selector:** Used for signing mail right now and required for verification
@@ -363,18 +367,18 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
     Publishing both DKIM CNAMEs from the start is recommended. It lets AhaSend rotate keys later without requiring another DNS change on your side.
   </Accordion>
 
-  <Accordion title="Subdomain vs Root Domain">
+  <Accordion title="Subdomain vs root domain">
     **Understanding the difference:**
 
     - **Root domain:** `yourcompany.com` (affects all subdomains)
     - **Subdomain:** `email.yourcompany.com` (isolated setup)
 
-    **For subdomains:** Add all DNS records to the specific subdomain, not the root domain.
+    **For subdomains:** Add the SPF, DKIM, return-path and tracking records at the subdomain itself. DMARC is the exception: a record at the root domain also counts, because the DNS check falls back to `_dmarc.<root domain>` when the subdomain has none.
 
     Records like return-path, tracking, subscription management, and media are usually additional subdomains under the domain you add to AhaSend.
   </Accordion>
 
-  <Accordion title="Still Having Issues?">
+  <Accordion title="Still having issues?">
     **We're here to help:**
 
     - **Check our [status page](https://status.ahasend.com)** for any ongoing DNS issues
@@ -386,21 +390,21 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
   </Accordion>
 </AccordionGroup>
 
-## What's Next?
+## What's next?
 
 Once your domain is verified, you're ready to start sending emails:
 
 <CardGroup cols={2}>
-  <Card title="Send Your First Email" icon="paper-plane" href="/quickstart">
+  <Card title="Send your first email" icon="paper-plane" href="/quickstart">
     Follow our quickstart guide to send emails via API or SMTP
   </Card>
-  <Card title="Create SMTP Credentials" icon="user-plus" href="/smtp/credentials">
+  <Card title="Create SMTP credentials" icon="user-plus" href="/smtp/credentials">
     Generate credentials for your applications
   </Card>
-  <Card title="Create API Keys" icon="key" href="/send-api/credentials">
+  <Card title="Create API keys" icon="key" href="/send-api/credentials">
     Track email delivery and engagement events
   </Card>
-  <Card title="Enable Tracking" icon="chart-line" href="/tracking/open-tracking">
+  <Card title="Enable tracking" icon="chart-line" href="/tracking/open-tracking">
     Monitor opens and clicks on your emails
   </Card>
 </CardGroup>
@@ -409,27 +413,27 @@ Once your domain is verified, you're ready to start sending emails:
 **Domain setup complete?** Your domain is now ready to send emails through AhaSend. Test it out with our [quickstart guide](/quickstart) to send your first email!
 </Info>
 
-## Common Domain Questions
+## Common domain questions
 
-### Can I Keep My Existing SPF Record?
+### Can I keep my existing SPF record?
 
 Yes. Add `include:spf.ahasend.com` to the existing SPF record before its final `~all` or `-all` mechanism. Do not publish a second SPF record.
 
-### Why Are There Two DKIM Records?
+### Why are there two DKIM records?
 
 Managed DNS uses one active key and one standby key so AhaSend can rotate signing keys. Publish both CNAMEs shown in your dashboard.
 
-### How Long Does Verification Take?
+### How long does verification take?
 
 Most records verify within minutes. DNS changes can take up to 48 hours to propagate. Check the DNS host, type and value if verification still fails.
 
-### Should I Use a Subdomain?
+### Should I use a subdomain?
 
 Use a dedicated subdomain when you want to separate transactional sending from other mail on your main domain. Add and verify that subdomain in AhaSend.
 
 <EmailHelpGuides />
 
-## Related Guides
+## Related guides
 
 - [Account quickstart](/quickstart), [Domain API](/api-reference/domains/create-domain), [Domain CLI](/cli/commands/domains).
 - [DNS whitelabel](/scale/dns-whitelabel), [Send-only API keys](/send-api/credentials), [Inbound MX setup](/integrations/routing).
