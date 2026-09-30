@@ -91,7 +91,7 @@ Before setting up message routing, ensure your domain is properly configured:
     **Your Application Endpoint Must:**
     - Accept HTTP POST requests
     - Respond with 2xx status codes (200-299) for successful processing
-    - Handle JSON payloads up to several MB (if attachments enabled)
+    - Handle JSON payloads of up to about 30 MB when attachments are enabled: inbound messages are accepted up to 20 MiB (the same limit as outbound SMTP) and AhaSend does not cap the routed payload, so it can reach the message size plus base64 and JSON overhead
     - Process requests within 5 seconds to avoid timeouts
 
     **Required Handling:**
@@ -152,11 +152,11 @@ Configure message routes in your AhaSend dashboard to start processing inbound e
       <Accordion title="Attachments" icon="paperclip">
         **Include Attachments:**
         - Enable to receive email attachments as base64-encoded data
-        - Significantly increases payload size
+        - Significantly increases payload size; there is no per-attachment limit, only the 20 MiB total message limit enforced at the SMTP server
         - Useful for document processing or file handling workflows
 
         <Warning>
-        **Payload Size:** Enabling attachments can create payloads of several MB. Ensure your endpoint can handle large requests.
+        **Payload Size:** Enabling attachments can create payloads of up to about 30 MB. Ensure your endpoint and any proxy in front of it accept requests of that size. Messages larger than 20 MiB are rejected at SMTP time, so the sender gets a bounce and nothing reaches your endpoint.
         </Warning>
       </Accordion>
 

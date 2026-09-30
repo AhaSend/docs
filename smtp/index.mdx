@@ -31,13 +31,13 @@ No. AhaSend supports STARTTLS on ports 25, 587 and 2525. It does not support imp
 | Limit | Value | What to do |
 |---|---|---|
 | Recipients per message | 50 | Split larger sends into separate messages, or use the [API](/send-api/send-email). |
-| Message size | 20 MB, including headers, body and encoded attachments | Allow for base64 size growth when adding attachments. |
+| Message size | 20 MiB (20,971,520 bytes) for the complete message: headers, body and attachments after base64 encoding | Allow for base64 size growth when adding attachments. There is no separate per-attachment limit. |
 | Messages per connection | 10,000 | Close and reopen the connection after reaching the limit; queued mail is unaffected. |
 | Idle timeout | 1 minute without new data | Reconnect after an idle or interrupted connection. |
 
 The recipient limit applies to consecutive `RCPT TO` commands in one SMTP transaction. The connection limit applies to consecutive `MAIL FROM` commands; extra commands receive a transient failure. The timeout also applies to slow transmission during `DATA`.
 
-Base64 increases attachment size by about one third, so a 15 MB file uses about 20 MB before headers and message content are added.
+Base64 increases attachment size by about one third, so a 15 MB file uses about 20 MB before headers and message content are added. Messages over the limit are rejected during the SMTP transaction with a permanent size error (see [SMTP errors](/smtp/errors)); nothing is truncated. The same 20 MiB limit applies to inbound mail received for [message routing](/integrations/routing). The [API](/send-api/send-email#limits) accepts request bodies up to 30 MB so that a maximum-size message still fits once JSON and base64 overhead are added.
 
 Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. See [facts and limits](/facts).
 

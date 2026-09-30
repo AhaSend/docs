@@ -26,6 +26,8 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 | Setting | Limit |
 |---|---|
 | Recipients per request | 100 |
+| Request body size | 30 MB (decimal). Larger requests are rejected, not truncated |
+| Resulting message size | 20 MiB (20,971,520 bytes) for the complete message: headers, body and attachments after base64 encoding, the same limit as [SMTP](/smtp#what-are-the-smtp-limits). No separate per-attachment limit |
 | API requests | 100 per second, with bursts of 200; see [rate limits](/api-reference/rate-limits) |
 | Scheduled first attempt | In the future, within 7 days |
 | Scheduled expiry | After the first attempt, within 8 days |
