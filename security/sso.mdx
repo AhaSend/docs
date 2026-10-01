@@ -37,7 +37,7 @@ Configure SSO in your account settings as the account owner:
 
     **Required Configuration:**
     - **Configuration Type:** PKCE (recommended) or Client Credentials
-    - **Domain:** Comma-separated email domains (e.g., `yourcompany.com`)
+    - **Domain:** Comma-separated email domains (e.g., `yourcompany.com`). You need to show that you own each one; see [Verify your SSO domains](#verify-your-sso-domains)
     - **Issuer URL:** Base URL from your IdP (e.g., `https://iam.company.com`)
     - **Client ID:** Provided by your identity provider
     - **Client Secret:** Required for the Client Credentials configuration; not required for PKCE. For PKCE, select `S256` as the PKCE method
@@ -53,10 +53,31 @@ Configure SSO in your account settings as the account owner:
   <Step title="Validate and Activate" icon="check">
     **Complete SSO setup:**
     1. **Save** your configuration
-    2. **System validates** the settings automatically
+    2. **System validates** the settings and checks that you own each new domain
     3. **SSO activates** if validation is successful
   </Step>
 </Steps>
+
+## Verify Your SSO Domains
+
+SSO signs in people by their email address, so AhaSend only accepts sign-ins for addresses at your SSO domains, and you need to show that you own each domain when you first add it. Subdomains aren't included: if your team also uses `eu.yourcompany.com`, add it as its own domain. A domain counts as verified when either:
+
+- **It is a verified sending domain** in the same AhaSend account. If you already send from `yourcompany.com`, there is nothing more to do. See [Domain setup](/domains).
+- **It has the SSO TXT record.** Use this for a domain you don't send from.
+
+The TXT record is shown under the **Domain** field in your account settings:
+
+| Type | Name | Value |
+|------|------|-------|
+| `TXT` | `_ahasend-sso.yourcompany.com` | `ahasend-sso=...` (copy it from your settings page) |
+
+The value is the same for every domain in your account, so you can add the record before you save. Replace `yourcompany.com` with each domain you add. See the [DNS provider guides](/dns) for how to add a record.
+
+AhaSend only checks a domain when you first add it. Once it is saved, you can remove the TXT record, and later changes to your DNS won't stop your team from signing in.
+
+<Note>
+A domain can only be used for SSO by one AhaSend account. If another account already uses your domain, [contact support](mailto:support@ahasend.com).
+</Note>
 
 ## How SSO Works
 
@@ -117,9 +138,18 @@ Once OpenID Connect SSO is activated:
   <Accordion title="Team Member Access Issues" icon="user-slash">
     **Login problems:**
     - **Verify** user is added as team member in AhaSend
-    - **Check** email domain matches configured domains
+    - **Check** the user's email address is at one of your SSO domains; sign-ins for other addresses are refused
+    - **Check** your identity provider doesn't mark the user's email as unverified (`email_verified: false`); those sign-ins are refused
     - **Confirm** user exists in your identity provider
     - **Test** SSO configuration with account owner first
+  </Accordion>
+
+  <Accordion title="We Couldn't Verify a Domain" icon="globe">
+    **Saving fails with "We couldn't verify ...":**
+    - **Add** the domain as a sending domain and finish its DNS setup, or add the SSO TXT record
+    - **Check** the record name is `_ahasend-sso.` followed by the domain, not the domain itself
+    - **Copy** the value exactly from your settings page
+    - **Wait** a few minutes after adding the record; DNS changes can take time to show up
   </Accordion>
 
   <Accordion title="Configuration Validation Errors" icon="triangle-exclamation">
