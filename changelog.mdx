@@ -9,6 +9,34 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 ## August 2026
 
+<Update label="September 2026">
+#### Changes
+
+- **The account and sub-account `website` field now accepts a domain or an http(s) URL everywhere**: the dashboard, onboarding, [`PUT /v2/accounts`](/api-reference/accounts/update-account), and the sub-account [create](/api-reference/sub-accounts/create-sub-account) and [update](/api-reference/sub-accounts/update-sub-account) endpoints. The value is stored as the bare domain, so `https://acme.com/team` is saved as `acme.com`. Values that are not web addresses (such as `ftp:`, `mailto:` or `javascript:`) and hosts that are not valid domain names are now rejected. Existing websites are not changed until they are next edited.
+- **[Inbound routes created through the API](/api-reference/routes/create-route) now get the same signing-secret format as routes created in the dashboard**: `<prefix>-rsec-` followed by 64 characters that may include letters, digits, `_` and `-`. If your code checks the length or characters of [route secrets](/integrations/routing#signature-verification), update it to accept this format. Existing secrets are unchanged and keep working.
+- **The `AhaSend-Schedule` header is now reserved in API v2 sends.** If you include it in a message's custom `headers`, it is dropped. To schedule a message, use the API's [scheduling fields](/api-reference/messages/create-message).
+- **Messages that expire after running out of retries now suppress the recipient only when the receiving side caused the failure.** A message that expires without ever being attempted no longer suppresses the address. Messages to domains that really don't exist are still [suppressed](/bounces#suppression-duration).
+- **After you [create an API key](/send-api/credentials#creating-api-keys), its secret is shown once and is no longer placed in the page address**, so it does not end up in your browser history (previously it was included in the URL). Reloading the page will not show it again, so copy it when it first appears.
+
+#### Improvements
+
+- **[Validation errors](/api-reference/errors#validation-errors) from `PUT /v2/accounts` and the sub-account endpoints are now clearer.** They name the JSON field, list every problem in the request and say what to send, instead of a generic "invalid request body" or internal validator text.
+- **Delivery events are recorded more reliably during heavy sending.** Events are confirmed only after they are stored, so they are no longer lost during service restarts or traffic spikes.
+- **The message details page now keeps explaining why a message is waiting**, for example that your account has reached its sending rate limit, for as long as it waits. Before, the explanation could disappear after a few minutes.
+- **The cookie consent banner on the dashboard is now served from AhaSend's own domain**, so it loads even when a third-party CDN is blocked.
+
+#### Bug Fixes
+
+- **Fixed temporary failures on AhaSend's side adding valid recipients to your [suppression list](/bounces#why-was-my-email-suppressed)** and disabling campaign subscribers. These messages still show as bounced. Recipients are now suppressed only when the receiving mail server or the recipient's own domain rejects the address.
+- **Fixed spam complaints from mailbox providers not being processed** when the original email used a character set other than UTF-8. Recipients who complain are now suppressed and unsubscribed from your lists as intended.
+- **Fixed domains that point their inbound (MX) host at AhaSend with a CNAME showing the MX record as not configured** and being unable to create [inbound routes](/integrations/routing#prerequisites). Inbound mail to these domains kept arriving throughout.
+- **Fixed a short DNS lookup failure marking a correctly configured domain's records as missing.** This could briefly mark a domain as [unverified](/domains#why-is-my-domain-not-verified) and pause its sending or receiving. We now keep the last known status until DNS gives a clear answer, and try several resolvers before deciding a record is really gone.
+- **Fixed the checkout pay button spinning forever** when an ad blocker or browser tracking protection blocks Stripe's payment form. You now see a clear message explaining what to do.
+- **Fixed choosing a plan on the Billing page sometimes failing** because two checkout sessions were started at once.
+- **Fixed resending a verification email, requesting a password reset and changing your email address showing "Internal server error"** when the request had actually succeeded. Expired-link messages now say a new email was sent only when one really was.
+
+</Update>
+
 <Update label="August 2026">
 
 ### August 2026: New Features
