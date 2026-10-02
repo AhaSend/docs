@@ -59,7 +59,8 @@ AhaSend returns standard SMTP response codes with specific meanings:
 | `451` | **Internal server error** - Temporary server issue | Retry the request |
 | `535 5.7.8` | **Invalid credentials** - Authentication failed | Check username/password |
 | `521` | **Account disabled** - Account suspended or out of credits | Check account status in dashboard |
-| `552` | **Invalid message format** - Malformed email content | Validate email structure and headers |
+| `552 5.6.0` | **Invalid message format** - The message is malformed, for example it uses bare line feeds instead of CRLF line endings or has no `From` header | Fix the message structure and headers named in the reply, then resend |
+| `552 5.3.4` | **Message too large** - The message exceeds the 20 MiB size limit | Reduce content or attachments, then resend |
 | `553` | **Email rejected** - Recipient domain is toxic, temporary, or has typos | Verify recipient domain |
 | `556` | **Invalid account or domain** - Account or sending domain not configured | Verify domain setup |
 
