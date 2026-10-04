@@ -6506,7 +6506,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden
+          description: |
+            Forbidden, or AhaSend paused the sub account. Only AhaSend support
+            can resume that pause.
           content:
             application/json:
               schema:
