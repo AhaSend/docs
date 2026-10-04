@@ -1,7 +1,7 @@
 ---
 title: "Email Troubleshooting and FAQ"
 sidebarTitle: "Troubleshooting"
-description: "Fix common AhaSend email problems: domains that do not verify, messages delivered but missing, port 465 failures, API 403 errors and suppressed recipients."
+description: "Fix common AhaSend email problems: domains that do not verify, paused sending, missing messages, port 465 failures, API 403 errors and suppressions."
 ---
 
 import EmailConceptRelated from "/snippets/email-concept-related.mdx";
@@ -19,6 +19,25 @@ The key must belong to the right account and allow the domain in the message's F
 ## Why Is Sending Paused on My Domain?
 
 AhaSend refuses new email from a paused domain. It pauses a domain when too many recent emails from it bounced. Your other domains continue to send. Check the domain page in the dashboard for the reason and the next steps. See [paused domains](/domains#why-is-sending-paused-on-my-domain).
+
+## Why Is Sending Paused on My Account?
+
+AhaSend refuses all new email from a paused account. Each v2 API request that uses an API key of the account gets HTTP 401 with `account is paused`. SMTP refuses each message with code `521`. You can still sign in to the dashboard. The dashboard alert shows the reason and the next steps. AhaSend can also send an email about the pause to the account members. For a sub-account, the members of the parent account also get it.
+
+When the parent account is paused, its sub-accounts cannot send. A send request of a sub-account then gets HTTP 403 with `Sending is paused on the parent account. Contact the parent account owner.`, and the sub-account dashboard shows a banner.
+
+| Reason | What to do next |
+|--------|-----------------|
+| Too many recent emails had content that we do not permit. For example: marketing content from a transactional domain, phishing or cold email. | Tell us which domains send marketing email. We will set the correct [sending type](/deliverability#which-sending-type-should-my-domain-use) on them. Do not send phishing or cold email. |
+| Too many recent emails got a high spam score. | Remove content that looks like spam. |
+| Too many recent emails bounced. | Remove addresses that are not valid or old. Send only to people who asked for your email. |
+| We found a violation of our terms of service. | Contact support. |
+| Our team must examine your account. | Contact support. |
+| The owner of the parent account paused this account. | Contact the owner of the parent account. |
+
+You cannot lift a pause on your own account. If AhaSend paused it, fix the cause, then reply to the pause email or write to [support@ahasend.com](mailto:support@ahasend.com). AhaSend support examines the account and lifts the pause. For a sub-account, the parent account can also lift any pause. If the parent account paused it, contact the owner of the parent account.
+
+The owner or an Administrator of the parent account can resume a paused [sub-account](/scale/sub-accounts): open the sub-account in **Settings > Sub-accounts** and click **Resume**, or call [Resume Sub-Account](/api-reference/sub-accounts/unsuspend-sub-account). When the parent account is paused, its sub-accounts cannot send until AhaSend support lifts that pause.
 
 ## Why Does SMTP Port 465 Not Work?
 

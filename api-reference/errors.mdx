@@ -68,7 +68,7 @@ Authentication failed or is missing.
 - Missing `Authorization` header
 - Invalid API key format (must be `Bearer <api_key>`)
 - API key doesn't exist or has been revoked
-- Account associated with API key is suspended
+- Sending is paused on the account of the API key
 - API key doesn't belong to the specified account
 
 ```json
@@ -85,7 +85,7 @@ Authentication failed or is missing.
 
 ```json
 {
-  "message": "Account is suspended"
+  "message": "account is paused"
 }
 ```
 
