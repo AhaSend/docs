@@ -16,6 +16,10 @@ Check that the records are saved at the provider serving your current nameserver
 
 The key must belong to the right account and allow the domain in the message's From address. Check the account ID, verified sender and [key scope](/api-reference/scopes). A domain-scoped key for `example.com` does not automatically authorize a different sending domain. Follow [send-only key setup](/send-api/credentials) and read the actual [API error message](/api-reference/errors).
 
+## Why Is Sending Paused on My Domain?
+
+AhaSend refuses new email from a paused domain. It pauses a domain when too many recent emails from it bounced. Your other domains continue to send. Check the domain page in the dashboard for the reason and the next steps. See [paused domains](/domains#why-is-sending-paused-on-my-domain).
+
 ## Why Does SMTP Port 465 Not Work?
 
 AhaSend does not support implicit TLS on port 465. Use the STARTTLS settings on [SMTP](/smtp), then authenticate with an SMTP username and password. An API key is not an SMTP password. If the connection times out before a server greeting, check outbound network access on your host.

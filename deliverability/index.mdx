@@ -40,6 +40,19 @@ Use a subdomain such as `notify.example.com` for transactional mail when you nee
 
 A separate subdomain makes operations easier to manage; it does not guarantee that reputation is fully isolated from the parent domain. Keep the main domain's mailbox MX records in place. A return-path subdomain and a visible From subdomain serve different purposes; follow the records AhaSend gives you for each.
 
+## Which Sending Type Should My Domain Use?
+
+Each sending domain has a sending type: transactional or marketing. A new domain is transactional. We recommend that you choose the sending type of each domain to match the mail that you send from it:
+
+- **Transactional:** messages that a recipient expects from their own actions, such as password resets and receipts.
+- **Marketing:** newsletters, promotions, announcements and other marketing mail.
+
+The sending type affects your deliverability. If you send both kinds of mail, use a separate [subdomain](#should-transactional-mail-use-a-separate-subdomain) for each kind.
+
+<Warning>
+Do not send marketing mail from a transactional domain. It can get your account paused.
+</Warning>
+
 ## What Do Gmail and Yahoo Require?
 
 Review these rules before launch and whenever a provider changes its guidance. This summary was checked in September 2026; the provider pages remain the source of current requirements.

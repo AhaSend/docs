@@ -246,6 +246,7 @@
                   "api-reference/sub-accounts/update-sub-account",
                   "api-reference/sub-accounts/suspend-sub-account",
                   "api-reference/sub-accounts/unsuspend-sub-account",
+                  "api-reference/sub-accounts/unpause-sub-account-domain",
                   "api-reference/sub-accounts/delete-sub-account",
                   "api-reference/sub-accounts/get-sub-accounts-usage"
                 ]
