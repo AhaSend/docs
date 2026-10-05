@@ -216,6 +216,9 @@ def lint(root, commands):
                 if kind == "unclosed-fence":
                     add("fence-close", path, number, "Code fence is not closed")
             else:
+                # A changelog <Update> label stands in for the section headings above its #### headings.
+                if re.match(r"\s*<Update\b", content):
+                    previous_heading = 3
                 heading = HEADING.match(content)
                 html_heading = re.search(r"<h([1-6])(?:\s[^>]*)?>(.*?)</h\1>", content, re.I)
                 if heading or html_heading:
