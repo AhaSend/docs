@@ -1,0 +1,66 @@
+---
+title: "Daily Marketing Sending Limit"
+sidebarTitle: "Marketing Limit"
+description: "Learn how AhaSend's daily marketing limit works: which mail counts, how the limit grows, the rolling 24-hour window and how campaigns stay within it."
+---
+
+AhaSend gives each account two sending limits. Transactional mail uses the hourly sending limit. Marketing mail uses a separate daily marketing limit. This page explains the daily marketing limit.
+
+The two limits are independent. Marketing mail never uses the hourly limit, and transactional mail never uses the daily marketing limit. Thus, a large campaign does not delay your password resets or receipts.
+
+## Which Mail Counts?
+
+| Mail | Counts against the daily marketing limit |
+|---|---|
+| Campaigns | Yes |
+| Campaign test sends | Yes |
+| API and SMTP mail from a domain with the sending type marketing | Yes |
+| API and SMTP mail from a domain with the sending type transactional | No. It uses the hourly limit |
+| Inbound mail | No |
+| [Sandbox](/send-api/sandbox) mail | No |
+| Mail to a suppressed address | No |
+
+Each recipient counts as one email.
+
+The sending type of a domain decides which limit its API and SMTP mail uses. See [which sending type to use](/deliverability#which-sending-type-should-my-domain-use).
+
+## What Is My Limit?
+
+The limit starts low for new accounts. It grows with your plan, account age, sending volume and a low spam rate.
+
+The campaign page shows the current limit of your account.
+
+<Card title="Need a Higher Limit?" icon="envelope">
+Contact our [support team](mailto:support@ahasend.com) to ask for a higher daily marketing limit.
+</Card>
+
+## How Does the 24-Hour Window Work?
+
+The limit uses a rolling 24-hour window, not a calendar day. You can send the full daily amount at once. After that, capacity comes back gradually during the next 24 hours.
+
+All marketing mail of the account shares one limit. For example, API and SMTP marketing mail reduces the amount that is available to your campaigns.
+
+## What Happens Above the Limit?
+
+**Campaigns** do not send faster than your limit. When the limit is used up, the campaign waits and continues when capacity comes back. A campaign that is larger than your daily limit continues over the next days.
+
+**API, SMTP and test mail** above the limit waits in the sending queue. AhaSend sends it when capacity comes back. If the message waits for more than about a day, it expires and [fails](/api-reference/webhooks/message-failed).
+
+<Warning>
+Do not send more API or SMTP marketing mail than your daily limit permits. Mail that waits too long expires and is not delivered. Spread large sends over more than one day, or use a campaign.
+</Warning>
+
+## What Does the Campaign Page Show?
+
+| Field | When it shows |
+|---|---|
+| Daily marketing limit | On a scheduled campaign and on the campaign report. Accounts without a daily limit see "No limit" |
+| Estimated finish | On the campaign report, while the campaign is sending |
+| Sending continues at | While the campaign waits, the time when it continues |
+
+The estimated finish assumes that the campaign gets your full daily limit. Other marketing mail from your account uses the same limit, so the campaign can finish later than the estimate.
+
+## Related Guides
+
+- [Plans and limits](/facts), [deliverability best practices](/deliverability) and [bounces and suppressions](/bounces).
+- [IP pools](/scale/ip-pools), [sandbox mode](/send-api/sandbox) and [API rate limits](/api-reference/rate-limits).
