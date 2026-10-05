@@ -49,6 +49,8 @@ Without proper domain setup, your emails will either be **rejected outright** or
 **Subdomain recommendation:** Use a subdomain like `email.yourcompany.com` instead of your main domain for transactional emails. This separates configuration and monitoring; mailbox providers can still consider the parent domain’s reputation. See [sending subdomains](/deliverability#should-transactional-mail-use-a-separate-subdomain).
 </Tip>
 
+Each domain has a sending type, transactional or marketing. Choose the type that matches the mail you send from the domain. See [which sending type to use](/deliverability#which-sending-type-should-my-domain-use).
+
 ## Prerequisites
 
 Before setting up your domain, make sure you have:
@@ -389,6 +391,36 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
     Our engineering team typically responds within a few hours!
   </Accordion>
 </AccordionGroup>
+
+## Why is sending paused on my domain?
+
+AhaSend pauses sending from a marketing domain when too many recent emails from it bounced. The pause applies only to that domain:
+
+- AhaSend refuses new email from the domain, through the API and through SMTP.
+- Your other domains continue to send.
+- AhaSend still delivers the email that it accepted before the pause.
+- [Sandbox](/send-api/sandbox) messages from the domain are still accepted.
+- You cannot delete or rename the domain, and you cannot add its name to another account.
+
+### How do I see that a domain is paused?
+
+- **Dashboard:** the domain page shows the reason and what to do next. The domain list shows a **Paused** badge.
+- **Email:** AhaSend sends an email to the owners and admins of the account. For a [sub-account](/scale/sub-accounts#paused-domains), the owners and admins of the parent account also get the email.
+- **API:** the [Domain object](/api-reference/domains/get-domain) has the fields `paused`, `paused_at` and `pause_reason`. The reason `bounce_rate` means that too many recent emails from the domain bounced.
+- **Send errors:** the [API](/api-reference/errors#403-forbidden) returns HTTP 403, and [SMTP](/smtp/errors) refuses the message with code `550 5.7.1`. Both give this text:
+
+```text
+Sending from domain 'example.com' is paused. Check your dashboard for the reason.
+```
+
+### How do I get a pause lifted?
+
+1. Fix the cause. For a high bounce rate, remove addresses that are not valid or old. Send only to people who asked for your email.
+2. Reply to the pause email, or write to [support@ahasend.com](mailto:support@ahasend.com). AhaSend support lifts the pause.
+
+For a sub-account, the parent account can also lift the pause. See [paused domains of sub-accounts](/scale/sub-accounts#paused-domains).
+
+A change of the [sending type](/deliverability#which-sending-type-should-my-domain-use) does not lift a pause. After the pause is lifted, AhaSend can refuse email from the domain for a few more minutes.
 
 ## What's next?
 

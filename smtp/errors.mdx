@@ -30,6 +30,7 @@ These are common SMTP meanings, not a promise that every server emits identical 
 | `552` / `5.3.4` | Message exceeds a size limit (AhaSend: 20 MiB per message) | Reduce content or attachments; base64 adds about one third to attachment size |
 | `552` / `5.6.0` | AhaSend rejected a malformed message, for example one with bare line feeds instead of CRLF line endings or no `From` header | Fix the structure or headers named in the reply, then resend |
 | `5.7.1` | Delivery refused for a security or policy reason | Inspect authentication, content, sender reputation and the server's text |
+| `550 5.7.1 Sending from domain '<domain>' is paused` | AhaSend paused sending from that domain | See [paused domains](/domains#why-is-sending-paused-on-my-domain) |
 | `5.7.26` | Multiple authentication checks failed | Check SPF, DKIM and DMARC alignment |
 
 ## Why Does AhaSend Return a 556 Domain Error?
