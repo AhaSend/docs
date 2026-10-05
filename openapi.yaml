@@ -570,7 +570,7 @@ components:
         sending_type:
           type: string
           enum: [transactional, marketing]
-          description: The type of email that you send from the domain. The sending type affects your deliverability. Marketing email from a transactional domain can get the domain paused.
+          description: The type of email that you send from the domain. The sending type affects your deliverability. Marketing email from a transactional domain can get your account paused.
         paused:
           type: boolean
           description: Whether sending from the domain is paused. While the domain is paused, new email from it is refused, and you cannot delete or rename it. Your other domains continue to send.
