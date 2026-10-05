@@ -23,6 +23,7 @@ These are common SMTP meanings, not a promise that every server emits identical 
 | `250` after message data | That server accepted the message | Track delivery separately; do not immediately resend |
 | `421` | Service unavailable or closing the connection | Retry later with a bounded delay after checking service status |
 | `450`, `451`, `452` | Temporary mailbox, processing or resource problem | Read the text and let the delivery queue retry |
+| `451 4.3.0 Unsubscribe link is not available` | AhaSend could not make the [unsubscribe link](/deliverability/unsubscribe) that the message needs | Send the message again later; SMTP clients do this automatically |
 | `530` | Authentication or a required security step is missing | Enable STARTTLS, then authenticate as the reply requires |
 | `535` / `5.7.8` | Authentication credentials are invalid | Check the SMTP username and password, not an API key |
 | `550 5.1.1` | Destination mailbox address does not exist | Correct the address; do not repeatedly retry it |

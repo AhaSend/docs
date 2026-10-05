@@ -28,7 +28,7 @@ The response to [Create Message](/api-reference/messages/create-message) is an a
 
 A suppression blocks sending to an address for the matching sending domain, or for the applicable account domains. Look up the address and sending domain with [List Suppressions](/api-reference/suppressions/get-suppressions) or the [suppression CLI](/cli/commands/suppressions). Read its reason and expiry instead of assuming every suppression came from a hard bounce.
 
-AhaSend can create suppressions from delivery problems or spam complaints. Your application can also create one for an unsubscribe or an internal blocklist. Reasons are readable strings, including caller-supplied text; do not treat them as a fixed enum.
+AhaSend can create suppressions from delivery problems, spam complaints or a click on an AhaSend [unsubscribe link](/deliverability/unsubscribe). Your application can also create one for an unsubscribe or an internal blocklist. Reasons are readable strings, including caller-supplied text; do not treat them as a fixed enum.
 
 ## Suppression Duration
 
@@ -38,6 +38,7 @@ AhaSend can create suppressions from delivery problems or spam complaints. Your 
 | Temporary delivery failures | 7 days |
 | Message expires after repeated attempts | 15 days |
 | Spam complaint | Effectively permanent |
+| Unsubscribe through an AhaSend unsubscribe link | Effectively permanent |
 | Created through the API | Caller supplies the required `expires_at` |
 
 API-created suppressions do not inherit a default expiry from their reason. Keep unsubscribes and complaints in your own durable recipient preferences too; an expiry must not silently restore permission to send unwanted mail.
