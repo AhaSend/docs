@@ -85,7 +85,9 @@ Yes. AhaSend keeps your headers as they are when all of these are true:
 
 Your endpoint must then accept the one-click POST. See [how to add one-click unsubscribe](/deliverability#how-do-i-add-one-click-unsubscribe).
 
-If your headers do not meet these rules, and the message needs the unsubscribe headers, AhaSend writes them again. Its link comes first. Your valid links, for example a `mailto:` link, come after it in the same header. AhaSend removes items that are not valid.
+If your headers do not meet these rules, and the message needs the unsubscribe headers, AhaSend replaces them. The new `List-Unsubscribe` header has only the AhaSend link, so that each unsubscribe adds a suppression in AhaSend. AhaSend does not keep your links, also not a `mailto:` link.
+
+An API v2 send with a saved template that uses `{{unsubscribe_url}}` always gets the AhaSend headers, also when your headers meet the rules.
 
 For example, if your message has only this header:
 
@@ -96,7 +98,7 @@ List-Unsubscribe: <mailto:unsubscribe@yourdomain.com>
 the delivered message has these headers:
 
 ```text
-List-Unsubscribe: <https://subscriptions.example.com/unsubscribe/SIGNED_TOKEN>, <mailto:unsubscribe@yourdomain.com>
+List-Unsubscribe: <https://subscriptions.example.com/unsubscribe/SIGNED_TOKEN>
 List-Unsubscribe-Post: List-Unsubscribe=One-Click
 ```
 
