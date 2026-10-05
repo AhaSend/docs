@@ -58,9 +58,11 @@ A password reset requested by a user is different from a newsletter. Decide whet
 
 ## How Do I Add One-Click Unsubscribe?
 
-For subscribed messages, implement an HTTPS endpoint that accepts the standard unsubscribe POST and saves the opt-out without requiring login, cookies or another confirmation. Use a hard-to-guess token tied to the recipient and list. Do not unsubscribe on a GET request, because link scanners may visit it.
+AhaSend adds a signed one-click unsubscribe link to API and SMTP mail from a domain with the [sending type](#which-sending-type-should-my-domain-use) marketing. For mail from a transactional domain, put `{{unsubscribe_url}}` in the content: AhaSend then adds the link and the headers. The same variable gives you the visible link in the body. See [unsubscribe links](/deliverability/unsubscribe).
 
-The message needs these two headers. This is a format example: replace the URL with your working endpoint and recipient token before sending.
+To use your own unsubscribe endpoint instead, implement an HTTPS endpoint that accepts the standard unsubscribe POST and saves the opt-out without requiring login, cookies or another confirmation. Use a hard-to-guess token tied to the recipient and list. Do not unsubscribe on a GET request, because link scanners may visit it.
+
+The message needs these two headers. This is a format example: replace the URL with your working endpoint and recipient token before sending. AhaSend keeps headers in this form as they are.
 
 ```text
 List-Unsubscribe: <https://example.com/unsubscribe/RECIPIENT_TOKEN>
