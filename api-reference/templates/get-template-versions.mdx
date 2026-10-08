@@ -1,0 +1,16 @@
+---
+title: "List Template Versions via the API"
+sidebarTitle: "List Template Versions"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/templates/{template_id}/versions"
+description: "List the published versions of an AhaSend transactional template, newest first, with the time of each publish and the user or API key that made it."
+---
+
+
+The AhaSend API returns the published versions of a template, newest first, without their content. The template keeps its most recent versions and removes older ones. Every publish that has a draft to publish makes a version. Access requires `templates:read`.
+
+`published_by` shows the user or API key that published the version. It is `null` when neither is known, for example when the API key that published it was deleted. To read the content of a version, use [Get Template Version](/api-reference/templates/get-template-version).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Restore Template Version](/api-reference/templates/restore-template-version).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -1,0 +1,28 @@
+---
+title: "Create a Transactional Template via the API"
+sidebarTitle: "Create Template"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/templates"
+description: "Create an AhaSend transactional template from MJML or HTML, set its subject and sender, and publish it in the same request or later."
+---
+
+
+The AhaSend API creates a transactional template. Access requires `templates:write`.
+
+The subject, preview text, sender and content go to the template's draft. Sends cannot use the template until you publish it: pass `publish: true`, or call [Publish Template](/api-reference/templates/publish-template). A create with `publish: true` and no content to publish is refused with `400` and creates nothing.
+
+**Editor:**
+- `content.mjml` creates an `advanced` template, and `content.html` creates an `html` template.
+- Without `content.mjml` or `content.html`, set `editor`.
+- You cannot change the editor after you create the template.
+- You can change the design of a `simple` template only in the dashboard.
+
+**Content rules:**
+- MJML must pass strict validation. For a validation error, the message gives the line of each problem.
+- Images and stylesheets must use full URLs, such as `https://example.com/logo.png`. The API cannot upload files.
+
+This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Update Template](/api-reference/templates/update-template), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

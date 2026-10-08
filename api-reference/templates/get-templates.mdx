@@ -1,0 +1,16 @@
+---
+title: "List Transactional Templates via the API"
+sidebarTitle: "List Templates"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/templates"
+description: "List the transactional templates in your AhaSend account, newest first, with their editor and whether each one has unpublished changes."
+---
+
+
+The AhaSend API returns the account's transactional templates. Access requires `templates:read`.
+
+Each template is listed without its `content`. To read the content, use [Get Template](/api-reference/templates/get-template). When `has_draft` is `true`, the template has changes that are not published yet.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Create Template](/api-reference/templates/create-template).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

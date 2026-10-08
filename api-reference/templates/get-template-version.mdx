@@ -1,0 +1,16 @@
+---
+title: "Get a Template Version via the API"
+sidebarTitle: "Get Template Version"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/templates/{template_id}/versions/{version_id}"
+description: "Retrieve one published version of an AhaSend transactional template with its content, subject, sender and variables, to compare or restore it."
+---
+
+
+The AhaSend API returns one published version of a template with its content. Access requires `templates:read`.
+
+To bring a version back, use [Restore Template Version](/api-reference/templates/restore-template-version).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [List Template Versions](/api-reference/templates/get-template-versions).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

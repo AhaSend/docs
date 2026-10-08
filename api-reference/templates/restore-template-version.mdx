@@ -1,0 +1,22 @@
+---
+title: "Restore a Template Version via the API"
+sidebarTitle: "Restore Template Version"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/templates/{template_id}/versions/{version_id}/restore"
+description: "Copy a published version of an AhaSend transactional template into its draft, and optionally publish it in the same request so that sends use it."
+---
+
+
+The AhaSend API copies a published version into the template's draft. Access requires `templates:write`.
+
+The API and the dashboard edit the same draft, so the restore replaces the whole draft, including changes made in the dashboard. The template's `name` does not change.
+
+With `publish: true`, the API then publishes the draft, as [Publish Template](/api-reference/templates/publish-template) does. If the version cannot be published, the API refuses the request and the draft stays as it was. If the publish step fails after the restore, the draft keeps the restored version.
+
+If the template changes in the dashboard or through another request while this request runs, the API tries again. If that continues, the API answers `503` with a `Retry-After` header. Retry the request after that delay.
+
+This operation accepts an `Idempotency-Key` header. A `503` stores no response, so a retry with the same key runs the request again. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [List Template Versions](/api-reference/templates/get-template-versions), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

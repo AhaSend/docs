@@ -1,0 +1,22 @@
+---
+title: "Publish a Template Draft via the API"
+sidebarTitle: "Publish Template"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/templates/{template_id}/publish"
+description: "Publish the draft of an AhaSend transactional template so that sends use it. Each published draft is kept as a new version of the template."
+---
+
+
+The AhaSend API publishes the draft of a template. Sends use it from then on, and the template keeps it as a new version. Access requires `templates:write`.
+
+The API and the dashboard edit the same draft. A publish publishes the whole draft, including changes made in the dashboard. To see what a publish will publish, use [Get Template Draft](/api-reference/templates/get-template-draft) first.
+
+A template with no draft and with published content stays as it is, so you can repeat the request safely. A template with no draft and no published content is refused with `400`. So is a draft with no content, and a draft whose design or text holds a `{{`, `{%` or `{#` that cannot be rendered. The operation takes no request body.
+
+If the template changes in the dashboard or through another request while this request runs, the API tries again. If that continues, the API answers `503` with a `Retry-After` header. Retry the request after that delay.
+
+This operation accepts an `Idempotency-Key` header. A `503` stores no response, so a retry with the same key runs the request again. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [List Template Versions](/api-reference/templates/get-template-versions), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

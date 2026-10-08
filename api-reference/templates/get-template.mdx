@@ -1,0 +1,16 @@
+---
+title: "Get a Transactional Template via the API"
+sidebarTitle: "Get Template"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/templates/{template_id}"
+description: "Retrieve an AhaSend transactional template by ID: the published copy that sends use, with its content, sender and the variables a send uses."
+---
+
+
+The AhaSend API returns the published copy of a template. Sends use this copy. Access requires `templates:read`.
+
+When `has_draft` is `true`, the template has changes that are not published yet. To read them, use [Get Template Draft](/api-reference/templates/get-template-draft).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Update Template](/api-reference/templates/update-template).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

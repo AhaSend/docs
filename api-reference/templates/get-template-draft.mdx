@@ -1,0 +1,18 @@
+---
+title: "Get a Template Draft via the API"
+sidebarTitle: "Get Template Draft"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/templates/{template_id}/draft"
+description: "Read the unpublished changes of an AhaSend transactional template, saved in the dashboard or through the API, before you publish or discard them."
+---
+
+
+The AhaSend API returns the draft of a template: the changes that are not published yet. Access requires `templates:read`.
+
+The API and the dashboard edit the same draft, so the draft can hold changes from both. Sends use the published copy until you [publish the draft](/api-reference/templates/publish-template).
+
+A template with no draft returns `404`.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Discard Template Draft](/api-reference/templates/discard-template-draft).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

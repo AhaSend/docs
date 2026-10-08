@@ -171,6 +171,23 @@
                 ]
               },
               {
+                "group": "Templates",
+                "icon": "file-lines",
+                "pages": [
+                  "api-reference/templates/create-template",
+                  "api-reference/templates/get-template",
+                  "api-reference/templates/get-templates",
+                  "api-reference/templates/update-template",
+                  "api-reference/templates/publish-template",
+                  "api-reference/templates/get-template-draft",
+                  "api-reference/templates/discard-template-draft",
+                  "api-reference/templates/get-template-versions",
+                  "api-reference/templates/get-template-version",
+                  "api-reference/templates/restore-template-version",
+                  "api-reference/templates/delete-template"
+                ]
+              },
+              {
                 "group": "Suppressions",
                 "icon": "ban",
                 "pages": [

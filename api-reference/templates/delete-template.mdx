@@ -1,0 +1,16 @@
+---
+title: "Delete a Transactional Template via the API"
+sidebarTitle: "Delete Template"
+openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/templates/{template_id}"
+description: "Delete a transactional template from your AhaSend account. Sends that use the template fail after it is deleted, and a second delete returns 404."
+---
+
+
+The AhaSend API deletes a transactional template. Access requires `templates:delete`.
+
+After the delete, sends that use the template fail.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [List Templates](/api-reference/templates/get-templates).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -1,0 +1,31 @@
+---
+title: "Update a Transactional Template via the API"
+sidebarTitle: "Update Template"
+openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/templates/{template_id}"
+description: "Change an AhaSend transactional template's content, subject, preview text or sender. Changes go to the draft until you publish them."
+---
+
+
+The AhaSend API changes a transactional template. Access requires `templates:write`.
+
+**Drafts and publishing:**
+- Changes to the subject, preview text, sender and content go to the template's draft. The API and the dashboard edit the same draft. A new `name` is not drafted: it changes when the request succeeds.
+- Sends use the published copy until you publish the draft: pass `publish: true`, or call [Publish Template](/api-reference/templates/publish-template).
+- A publish publishes the whole draft, including changes made in the dashboard. A publish that its checks refuse changes nothing; [Publish Template](/api-reference/templates/publish-template) lists them. If the template changes between the draft write and the publish, and the publish then fails, the draft keeps the request's changes and the name does not change.
+
+**Fields:**
+- A field that you leave out does not change. `from` replaces the address and the name together, so a `from` without `name` clears the name.
+- Each field is compared with the draft, or with the published template when there is no draft. Fields equal to those values leave the draft and the published content as they are, but `publish: true` still publishes an existing draft.
+- A request with no field, or with only `publish: false`, is refused with `400`.
+- You can send back a non-null `content` of [Get Template Draft](/api-reference/templates/get-template-draft), or of [Get Template](/api-reference/templates/get-template) when `has_draft` is `false`. While a draft exists, Get Template answers the published `content`, and sending it back replaces the draft's design and text. Leave out `content` when you do not change it. For a `simple` template, send back only `content.text`: you can change its design only in the dashboard.
+
+**Content rules:**
+- MJML must pass strict validation. For a validation error, the message gives the line of each problem.
+- Images and stylesheets must use full URLs, such as `https://example.com/logo.png`. The API cannot upload files.
+
+If the template changes in the dashboard or through another request while this request runs, the API tries again. If that continues, the API answers `503` with a `Retry-After` header. Retry the request after that delay.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Template Draft](/api-reference/templates/get-template-draft).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

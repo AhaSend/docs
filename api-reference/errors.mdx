@@ -1,6 +1,6 @@
 ---
 title: "API Error Codes and Error Responses"
-description: "Reference for AhaSend API v2 HTTP status codes (400, 401, 403, 404, 409, 422, 429, 500), the JSON error format, example messages, and how to fix each one."
+description: "Reference for AhaSend API v2 HTTP status codes (400, 401, 403, 404, 409, 422, 429, 500, 503), the JSON error format, example messages and fixes for each."
 icon: "triangle-exclamation"
 sidebarTitle: "Errors"
 ---
@@ -193,6 +193,18 @@ These errors indicate a problem on our end. If you consistently receive 500 erro
 ```json
 {
   "message": "internal server error, please try again later"
+}
+```
+
+#### 503 Service Unavailable
+
+The service could not finish the request. Retry it later.
+
+The template operations answer `503` with a `Retry-After` header when the template kept changing while the request ran, for example while it was edited in the dashboard. Retry the request after that delay.
+
+```json
+{
+  "message": "template is being changed by another request, try again"
 }
 ```
 
