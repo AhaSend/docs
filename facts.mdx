@@ -12,7 +12,7 @@ AhaSend is a European transactional email service for developers: send through a
 | Fact | Details |
 |---|---|
 | Company | AhaSend B.V. |
-| Data location | All message data is stored in the EU. `send-us.ahasend.com` is a US connection point that accepts SMTP and forwards it to the EU. |
+| Data location | All message data is stored in the EU. |
 | Delivery speed | Typical delivery under one second to Gmail and under five seconds to other major mailbox providers. |
 | Pricing model | Free, Pro and Max plans with included monthly volume and usage-based overage; no long-term contracts. See [current pricing](https://ahasend.com/pricing). |
 | Status | [Service status](https://status.ahasend.com) |
@@ -48,7 +48,7 @@ New accounts keep message metadata and message data for 7 days. Zero data retent
 | Statistics, stream and trigger endpoints | 1 request per second | [API rate limits](/api-reference/rate-limits) |
 | Create Message recipients | Up to 100 per request | [Send email](/send-api/send-email) |
 | Scheduled sending | First attempt within 7 days; expiry within 8 days | [Create Message](/api-reference/messages/create-message) |
-| SMTP hosts | `send.ahasend.com` (EU); `send-us.ahasend.com` (US connection point) | [SMTP settings](/smtp) |
+| SMTP host | `send.ahasend.com` | [SMTP settings](/smtp) |
 | SMTP ports and encryption | 25, 587 and 2525; STARTTLS on all ports; AUTH PLAIN only after STARTTLS | [SMTP settings](/smtp) |
 | Implicit TLS on port 465 | Not supported | [SMTP settings](/smtp) |
 | SMTP message size | 20 MiB (20,971,520 bytes), complete message including base64-encoded attachments; also applies to inbound mail | [SMTP limits](/smtp) |
