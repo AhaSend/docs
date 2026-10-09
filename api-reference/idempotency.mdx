@@ -29,7 +29,7 @@ When you make a request with an `Idempotency-Key` header:
     - **API Keys**: Create API keys
     - **Domains**: Create domains
     - **Messages**: Send messages
-    - **Templates**: Create and publish templates, and restore template versions
+    - **Templates**: Create, update and publish templates, and restore template versions
     - **Account Members**: Add team members
     - **Suppressions**: Create email suppressions
     - **Routes**: Create message routes
@@ -52,7 +52,7 @@ When you make a request with an `Idempotency-Key` header:
     - **Key Format**: Any string up to 255 characters
     - **Uniqueness**: Keys are scoped to your account
     - **Expiration**: Stored responses expire after 24 hours — except API key creation, whose secret-bearing response expires after 5 minutes
-    - **Request Method**: Only the operations listed below support idempotency; other POST operations do not gain it implicitly
+    - **Request Method**: Only the operations listed below support idempotency; other operations do not gain it implicitly
   </Accordion>
 
   <Accordion title="Request Matching" icon="fingerprint">
@@ -76,6 +76,7 @@ When you make a request with an `Idempotency-Key` header:
 | `POST /v2/accounts/{account_id}/messages` |
 | `POST /v2/accounts/{account_id}/messages/conversation` |
 | `POST /v2/accounts/{account_id}/templates` |
+| `PUT /v2/accounts/{account_id}/templates/{template_id}` |
 | `POST /v2/accounts/{account_id}/templates/{template_id}/publish` |
 | `POST /v2/accounts/{account_id}/templates/{template_id}/versions/{version_id}/restore` |
 | `POST /v2/accounts/{account_id}/members` |
@@ -214,7 +215,7 @@ The API responds differently based on the idempotency key status:
 
 <Tabs>
   <Tab title="First Request">
-    **Status**: `202 Accepted` for Create Message (`201 Created` for resource creation)
+    **Status**: `202 Accepted` for Create Message, `201 Created` for resource creation, and `200 OK` for other operations, such as Update Template
 
     **Headers**:
     - Standard response headers

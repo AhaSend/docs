@@ -18,7 +18,7 @@ The subject, preview text, sender and content go to the template's draft. Sends 
 
 **Content rules:**
 - MJML must pass strict validation. For a validation error, the message gives the line of each problem.
-- Images and stylesheets must use full URLs, such as `https://example.com/logo.png`. The API cannot upload files.
+- Images and stylesheets must use `https://` URLs, such as `https://example.com/logo.png`. The API refuses `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
 
 This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 

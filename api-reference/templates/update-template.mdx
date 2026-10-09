@@ -14,18 +14,25 @@ The AhaSend API changes a transactional template. Access requires `templates:wri
 - A publish publishes the whole draft, including changes made in the dashboard. A publish that its checks refuse changes nothing; [Publish Template](/api-reference/templates/publish-template) lists them. If the template changes between the draft write and the publish, and the publish then fails, the draft keeps the request's changes and the name does not change.
 
 **Fields:**
-- A field that you leave out does not change. `from` replaces the address and the name together, so a `from` without `name` clears the name.
+- A field that you leave out does not change. The one exception is the text beside a new design: see **Text**. `from` replaces the address and the name together, so a `from` without `name` clears the name.
 - Each field is compared with the draft, or with the published template when there is no draft. Fields equal to those values leave the draft and the published content as they are, but `publish: true` still publishes an existing draft.
 - A request with no field, or with only `publish: false`, is refused with `400`.
 - You can send back a non-null `content` of [Get Template Draft](/api-reference/templates/get-template-draft), or of [Get Template](/api-reference/templates/get-template) when `has_draft` is `false`. While a draft exists, Get Template answers the published `content`, and sending it back replaces the draft's design and text. Leave out `content` when you do not change it. For a `simple` template, send back only `content.text`: you can change its design only in the dashboard.
 
+**Text:**
+- When you send a new `content.mjml` or `content.html` and leave out `content.text`, a text written by hand stays, and a text made from the HTML is made again from the new HTML.
+- Send `content.text` as `null` to make the text again from the new HTML, also when the text was written by hand.
+- A text written by hand that stays must still render. If it holds a `{{`, `{%` or `{#` that cannot be rendered, the request is refused with `400`.
+
 **Content rules:**
 - MJML must pass strict validation. For a validation error, the message gives the line of each problem.
-- Images and stylesheets must use full URLs, such as `https://example.com/logo.png`. The API cannot upload files.
+- Images and stylesheets must use `https://` URLs, such as `https://example.com/logo.png`. The API refuses `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
 
 If the template changes in the dashboard or through another request while this request runs, the API tries again. If that continues, the API answers `503` with a `Retry-After` header. Retry the request after that delay.
 
+This operation accepts an `Idempotency-Key` header. A retry with the same key replays the first answer. A `503` stores no response, so a retry with the same key runs the request again. See [Idempotency](/api-reference/idempotency).
+
 ## Related Guides
 
-- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Template Draft](/api-reference/templates/get-template-draft).
-- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Get Template Draft](/api-reference/templates/get-template-draft), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
