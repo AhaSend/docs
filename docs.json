@@ -164,6 +164,7 @@
                 "icon": "envelope",
                 "pages": [
                   "api-reference/messages/create-message",
+                  "api-reference/messages/create-template-message",
                   "api-reference/messages/create-conversation",
                   "api-reference/messages/get-message",
                   "api-reference/messages/get-messages",

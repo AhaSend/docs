@@ -28,7 +28,7 @@ When you make a request with an `Idempotency-Key` header:
 
     - **API Keys**: Create API keys
     - **Domains**: Create domains
-    - **Messages**: Send messages
+    - **Messages**: Send messages, including transactional templates
     - **Templates**: Create, update and publish templates, and restore template versions
     - **Account Members**: Add team members
     - **Suppressions**: Create email suppressions
@@ -74,6 +74,7 @@ When you make a request with an `Idempotency-Key` header:
 | `POST /v2/accounts/{account_id}/api-keys` |
 | `POST /v2/accounts/{account_id}/domains` |
 | `POST /v2/accounts/{account_id}/messages` |
+| `POST /v2/accounts/{account_id}/messages/template` |
 | `POST /v2/accounts/{account_id}/messages/conversation` |
 | `POST /v2/accounts/{account_id}/templates` |
 | `PUT /v2/accounts/{account_id}/templates/{template_id}` |

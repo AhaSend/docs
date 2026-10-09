@@ -165,6 +165,8 @@ AhaSend supports three types of scopes:
 | `templates:write` | Create and update transactional templates, publish and discard their drafts, and restore their versions |
 | `templates:delete` | Delete transactional templates |
 
+Sending a template with [Create Template Message](/api-reference/messages/create-template-message) needs the send scope of the sender's domain, not a `templates` scope.
+
 ### API Key Management
 
 | Scope | Description |

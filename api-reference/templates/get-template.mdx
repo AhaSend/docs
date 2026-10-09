@@ -6,7 +6,7 @@ description: "Retrieve an AhaSend transactional template by ID: the published co
 ---
 
 
-The AhaSend API returns the published copy of a template. Sends use this copy. Access requires `templates:read`.
+The AhaSend API returns the published copy of a template. [Create Template Message](/api-reference/messages/create-template-message) sends this copy, and each recipient must give a value for every required name in `variables`. Access requires `templates:read`.
 
 When `has_draft` is `true`, the template has changes that are not published yet. To read them, use [Get Template Draft](/api-reference/templates/get-template-draft).
 

@@ -6,7 +6,7 @@ description: "Publish the draft of an AhaSend transactional template so that sen
 ---
 
 
-The AhaSend API publishes the draft of a template. Sends use it from then on, and the template keeps it as a new version. Access requires `templates:write`.
+The AhaSend API publishes the draft of a template. [Create Template Message](/api-reference/messages/create-template-message) sends it from then on, and the template keeps it as a new version. Access requires `templates:write`.
 
 The API and the dashboard edit the same draft. A publish publishes the whole draft, including changes made in the dashboard. To see what a publish will publish, use [Get Template Draft](/api-reference/templates/get-template-draft) first.
 
@@ -19,4 +19,4 @@ This operation accepts an `Idempotency-Key` header. A `503` stores no response, 
 ## Related Guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
-- [List Template Versions](/api-reference/templates/get-template-versions), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Create Template Message](/api-reference/messages/create-template-message), [List Template Versions](/api-reference/templates/get-template-versions), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
