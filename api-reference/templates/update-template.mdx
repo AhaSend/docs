@@ -9,13 +9,13 @@ description: "Change an AhaSend transactional template's content, subject, previ
 The AhaSend API changes a transactional template. Access requires `templates:write`.
 
 **Drafts and publishing:**
-- Changes to the subject, preview text, sender and content go to the template's draft. The API and the dashboard edit the same draft. A new `name` is not drafted: it changes when the request succeeds.
+- Changes to the subject, preview text, sender, reply-to and content go to the template's draft. The API and the dashboard edit the same draft. A new `name` is not drafted: it changes when the request succeeds.
 - Sends use the published copy until you publish the draft: pass `publish: true`, or call [Publish Template](/api-reference/templates/publish-template).
 - A publish publishes the whole draft, including changes made in the dashboard. A publish that its checks refuse changes nothing; [Publish Template](/api-reference/templates/publish-template) lists them. If the template changes between the draft write and the publish, and the publish then fails, the draft keeps the request's changes and the name does not change.
 
 **Fields:**
-- A field that you leave out does not change. The one exception is the text beside a new design: see **Text**. `from` replaces the address and the name together, so a `from` without `name` clears the name.
-- Each field is compared with the draft, or with the published template when there is no draft. Fields equal to those values leave the draft and the published content as they are, but `publish: true` still publishes an existing draft.
+- A field that you leave out does not change. The one exception is the text beside a new design: see **Text**. `from` replaces the address and the name together, so a `from` without `name` clears the name. A `reply_to` needs a sender, so `from: null` also clears `reply_to`.
+- Each field is compared with the draft, or with the published template when there is no draft. Fields equal to those values leave the draft and the published content as they are, but `publish: true` still publishes an existing draft. A change that makes the draft equal to the published template removes the draft: `has_draft` becomes `false`, and Get Template Draft answers `404`.
 - A request with no field, or with only `publish: false`, is refused with `400`.
 - You can send back a non-null `content` of [Get Template Draft](/api-reference/templates/get-template-draft), or of [Get Template](/api-reference/templates/get-template) when `has_draft` is `false`. While a draft exists, Get Template answers the published `content`, and sending it back replaces the draft's design and text. Leave out `content` when you do not change it. For a `simple` template, send back only `content.text`: you can change its design only in the dashboard.
 
@@ -26,7 +26,8 @@ The AhaSend API changes a transactional template. Access requires `templates:wri
 
 **Content rules:**
 - MJML must pass strict validation. For a validation error, the message gives the line of each problem.
-- Images and stylesheets must use `https://` URLs, such as `https://example.com/logo.png`. The API refuses `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
+- Images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
+- The MJML, the HTML and a text written by hand can each be at most 200 KB.
 
 If the template changes in the dashboard or through another request while this request runs, the API tries again. If that continues, the API answers `503` with a `Retry-After` header. Retry the request after that delay.
 

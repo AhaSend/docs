@@ -8,7 +8,7 @@ description: "Create an AhaSend transactional template from MJML or HTML, set it
 
 The AhaSend API creates a transactional template. Access requires `templates:write`.
 
-The subject, preview text, sender and content go to the template's draft. Sends cannot use the template until you publish it: pass `publish: true`, or call [Publish Template](/api-reference/templates/publish-template). A create with `publish: true` and no content to publish is refused with `400` and creates nothing.
+The subject, preview text, sender, reply-to and content go to the template's draft. Sends cannot use the template until you publish it: pass `publish: true`, or call [Publish Template](/api-reference/templates/publish-template). A create with `publish: true` and no content to publish is refused with `400` and creates nothing.
 
 **Editor:**
 - `content.mjml` creates an `advanced` template, and `content.html` creates an `html` template.
@@ -18,7 +18,8 @@ The subject, preview text, sender and content go to the template's draft. Sends 
 
 **Content rules:**
 - MJML must pass strict validation. For a validation error, the message gives the line of each problem.
-- Images and stylesheets must use `https://` URLs, such as `https://example.com/logo.png`. The API refuses `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
+- Images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
+- The MJML, the HTML and a text written by hand can each be at most 200 KB.
 
 This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 
