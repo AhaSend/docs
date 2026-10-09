@@ -38,6 +38,7 @@
               "email-authentication",
               {
                 "group": "DNS Providers",
+                "icon": "sitemap",
                 "pages": [
                   "dns/index",
                   "dns/cloudflare",
