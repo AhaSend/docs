@@ -45,6 +45,10 @@ Header names are case-insensitive. This page uses `AhaSend-` casing for readabil
 **Values:** `true` | `false`<br />
 **Purpose:** Enable or disable open tracking for individual emails
 
+<Note>
+**Open Tracking Requirements:** The sending domain's tracking domain must be set up, or the message is sent without tracking. Only HTML emails are supported.
+</Note>
+
 ```plaintext SMTP Example
 From: hello@yourdomain.com
 To: user@example.com
@@ -67,7 +71,7 @@ Content-Type: text/html
 **Purpose:** Enable or disable click tracking for individual emails
 
 <Note>
-**Click Tracking Requirements:** Your account must be manually verified to use click tracking. Only HTML emails with `http://` and `https://` links are supported.
+**Click Tracking Requirements:** The sending domain's tracking domain must be set up, or the message is sent without tracking. Only HTML emails with `http://` and `https://` links are supported.
 </Note>
 
 ```plaintext SMTP Example
