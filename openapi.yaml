@@ -79,7 +79,7 @@ info:
     - `sub-accounts:read` - List and read sub accounts under the parent
     - `sub-accounts:write` - Create and update sub accounts
     - `sub-accounts:delete` - Soft-delete sub accounts
-    - `sub-accounts:suspend` - Suspend and unsuspend sub accounts, and unpause their domains
+    - `sub-accounts:suspend` - Pause and resume sub accounts, and unpause their domains
     - `sub-accounts:usage` - Read per-sub-account usage and allocated cost
     - `sub-account-api-keys:read` - List and read API keys owned by sub accounts
     - `sub-account-api-keys:write` - Create and update API keys owned by sub accounts
@@ -1514,7 +1514,7 @@ components:
           type: string
           minLength: 1
           maxLength: 500
-          description: Reason shown on the sub account suspension record
+          description: Reason for the pause. When this call starts the pause, the dashboard of the sub account shows it as a note.
       example:
         reason: "Customer requested temporary pause"
 
@@ -6288,8 +6288,8 @@ paths:
 
   /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/suspend:
     post:
-      summary: Suspend Sub Account
-      description: Suspends a sub account under the parent account
+      summary: Pause Sub Account
+      description: Pauses sending on a sub account under the parent account. The status of the sub account becomes `suspended`.
       operationId: suspendSubAccount
       tags:
         - Sub Accounts
@@ -6373,7 +6373,7 @@ paths:
               $ref: '#/components/schemas/SuspendSubAccountRequest'
       responses:
         '200':
-          description: Sub account suspended successfully
+          description: Sub account paused successfully
           content:
             application/json:
               schema:
@@ -6411,8 +6411,8 @@ paths:
 
   /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/unsuspend:
     post:
-      summary: Unsuspend Sub Account
-      description: Unsuspends a sub account under the parent account
+      summary: Resume Sub Account
+      description: Resumes sending on a paused sub account under the parent account
       operationId: unsuspendSubAccount
       tags:
         - Sub Accounts
@@ -6488,7 +6488,7 @@ paths:
 
       responses:
         '200':
-          description: Sub account unsuspended successfully
+          description: Sub account resumed successfully
           content:
             application/json:
               schema:
@@ -6506,7 +6506,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden
+          description: |
+            Forbidden, or AhaSend paused the sub account. Only AhaSend support
+            can resume that pause.
           content:
             application/json:
               schema:

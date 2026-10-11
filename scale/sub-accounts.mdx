@@ -32,7 +32,7 @@ This model is built for platforms and agencies that send on behalf of many custo
   </Card>
 
   <Card title="Central Control" icon="sliders">
-    Create, update, suspend, unsuspend, and soft-delete sub-accounts from the parent, view per-sub-account usage, and set an optional monthly sending cap on each one.
+    Create, update, pause, resume, and soft-delete sub-accounts from the parent, view per-sub-account usage, and set an optional monthly sending cap on each one.
   </Card>
 </CardGroup>
 
@@ -44,7 +44,7 @@ Sub-accounts follow a parent and child model:
 * Each sub-account has its own child account ID (`sub_account_id`). Once a sub-account has its own API key, that key uses the **child** account ID on ordinary routes, for example `/v2/accounts/{sub_account_id}/domains`.
 * Sub-account API keys can only be created and managed with **parent** credentials that hold the right `sub-account-api-keys:*` scope. A sub-account cannot manage its own nested API keys.
 
-From the parent account you stay in control end to end: manage the full lifecycle ([create](/api-reference/sub-accounts/create-sub-account) and [update](/api-reference/sub-accounts/update-sub-account) sub-accounts, suspend, unsuspend, and soft-delete), pull per-sub-account statistics with [Get Sub-Account Usage](/api-reference/sub-accounts/get-sub-accounts-usage), and, because the parent provisions the sub-account's API keys, act on the sub-account's behalf to manage anything inside it (domains, webhooks, sending, and more).
+From the parent account you stay in control end to end: manage the full lifecycle ([create](/api-reference/sub-accounts/create-sub-account) and [update](/api-reference/sub-accounts/update-sub-account) sub-accounts, pause, resume, and soft-delete), pull per-sub-account statistics with [Get Sub-Account Usage](/api-reference/sub-accounts/get-sub-accounts-usage), and, because the parent provisions the sub-account's API keys, act on the sub-account's behalf to manage anything inside it (domains, webhooks, sending, and more).
 
 <Note>
   Each sub-account has an optional `monthly_credit` field, a monthly sending cap where `0` means no cap.

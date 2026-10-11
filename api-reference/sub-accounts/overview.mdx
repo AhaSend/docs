@@ -1,7 +1,7 @@
 ---
 title: "Sub-Accounts API Overview"
 sidebarTitle: "Introduction"
-description: "Use the AhaSend Sub-Accounts API to provision isolated child accounts per customer, issue their API keys, suspend them, and track per-account usage and cost."
+description: "Use the AhaSend Sub-Accounts API to provision isolated child accounts per customer, issue their API keys, pause them, and track per-account usage and cost."
 icon: "sitemap"
 ---
 
@@ -25,8 +25,8 @@ Each sub-account reports a `status` field:
 | Status | Meaning |
 |--------|---------|
 | `active` | The sub-account is operating normally. |
-| `suspended` | The sub-account was suspended directly via the [suspend endpoint](/api-reference/sub-accounts/suspend-sub-account). |
-| `parent-suspended` | The sub-account is suspended because its parent account is suspended. |
+| `suspended` | Sending is paused on the sub-account. The parent account can pause it with the [pause endpoint](/api-reference/sub-accounts/suspend-sub-account). AhaSend can also [pause it](/troubleshooting#why-is-sending-paused-on-my-account). |
+| `parent-suspended` | Sending is paused on the parent account, so the sub-account cannot send. |
 | `deleted` | The sub-account has been soft-deleted. |
 
 The `monthly_credit` field is an optional monthly cap on the sub-account, where `0` means no cap.
@@ -61,7 +61,7 @@ Sub-account operations require dedicated scopes, all granted to **parent**-accou
 | `sub-accounts:read` | List and read sub-accounts |
 | `sub-accounts:write` | Create and update sub-accounts |
 | `sub-accounts:delete` | Soft-delete sub-accounts |
-| `sub-accounts:suspend` | Suspend and unsuspend sub-accounts, and unpause their domains |
+| `sub-accounts:suspend` | Pause and resume sub-accounts, and unpause their domains |
 | `sub-accounts:usage` | Read per-sub-account usage and allocated cost |
 | `sub-account-api-keys:read` | List and read sub-account API keys |
 | `sub-account-api-keys:write` | Create and update sub-account API keys |
