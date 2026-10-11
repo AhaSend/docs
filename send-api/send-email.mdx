@@ -153,6 +153,8 @@ All API requests require authentication using your API v2 key:
 
 </CodeGroup>
 
+In the HTML body, AhaSend HTML-escapes each value: a `first_name` of `<b>Ann</b>` shows as the text `<b>Ann</b>`, not as bold. To insert a value as HTML, for example a block of order rows that your code builds, write `{{ order_rows|safe }}`, and escape any user input inside that value yourself. The subject, the headers and the text body get values as they are.
+
 ## Advanced Examples
 
 <Note>
@@ -398,7 +400,7 @@ Based on the [API documentation](/api-reference/messages/create-message), ensure
     - Use descriptive variable names
     - Provide fallback values in templates
     - Validate variables before sending
-    - Escape HTML content in variables
+    - Send values as plain text: AhaSend HTML-escapes them in the HTML body. Use `{{ name|safe }}` only for HTML that your own code builds
   </Accordion>
 
   <Accordion title="Bulk Operations" icon="layer-group">

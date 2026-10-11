@@ -28,7 +28,8 @@ Authorization uses the domain of the sender, `from.email` or the template's defa
 - Each recipient must give a value for each required variable of the template. The `variables` list of [Get Template](/api-reference/templates/get-template) shows which variables are required. A variable that the design wraps in a fallback is not required. An empty value counts as a value.
 - When a recipient does not give a required variable, the request is refused with `400`, and no message is sent. The error names each recipient and the variables it does not give, for example `missing required template variables: user@example.com needs first_name, order_id`.
 - A value for a name that the template does not use is accepted. Your `subject` and `headers` resolve from the same values, and a `{{ name }}` with no value becomes empty.
-- The send supplies `email`, `view_browser_url` and `unsubscribe_url` itself and replaces a value a recipient gives for them. `email` is the recipient's address, and `view_browser_url` is empty.
+- In the HTML body, each value is HTML-escaped. A design that writes `{{ name|safe }}` inserts that value as HTML. The subject, the headers and the text body get values as they are.
+- The send supplies `email` and `unsubscribe_url` itself and replaces a value a recipient gives for them. `email` is the recipient's address.
 
 **Unsubscribe link:**
 When the template's design uses `unsubscribe_url`, each recipient gets its own unsubscribe link. The message carries `List-Unsubscribe` with that link and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, so the unsubscribe button of a mail client works. The button suppresses the recipient for the sending domain. The link opens a confirmation page, and the recipient is suppressed after they confirm. A `List-Unsubscribe` or `List-Unsubscribe-Post` in your `headers` is dropped. When the design does not use `unsubscribe_url`, the send makes no link and sends your headers as you give them.
