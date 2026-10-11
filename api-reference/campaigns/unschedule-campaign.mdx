@@ -1,0 +1,20 @@
+---
+title: "Unschedule a Campaign via the API"
+sidebarTitle: "Unschedule Campaign"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/campaigns/{campaign_id}/unschedule"
+description: "Return a validating or scheduled AhaSend marketing campaign to draft, so you can change it or its send time. A campaign that has queued mail cannot return."
+---
+
+
+The AhaSend API returns a `validating` or `scheduled` campaign to `draft`. It stops the list check that runs, or cancels the scheduled send. Access requires `campaigns:send`.
+
+After the request, you can change the campaign with [Update Campaign](/api-reference/campaigns/update-campaign) and send it again with [Send Campaign](/api-reference/campaigns/send-campaign).
+
+A campaign that has queued mail answers `409`. So does a campaign in any status other than `validating` or `scheduled`. The request takes no body. An empty JSON object is accepted.
+
+This operation accepts an `Idempotency-Key` header. A refusal from this operation is stored for the key, so send a corrected request with a new key. See [Idempotency](/api-reference/idempotency) and [campaign retries](/api-reference/campaigns/overview#idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Campaign status](/api-reference/campaigns/overview#campaign-status), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

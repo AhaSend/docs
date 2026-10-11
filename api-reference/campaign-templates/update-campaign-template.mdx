@@ -1,0 +1,32 @@
+---
+title: "Update a Campaign Template via the API"
+sidebarTitle: "Update Campaign Template"
+openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/campaign-templates/{template_id}"
+description: "Change the name or the content of an AhaSend campaign template. The change applies immediately, and campaigns made from it keep their own designs."
+---
+
+
+The AhaSend API changes the name, the content, or both, of a campaign template. Access requires `templates:write`.
+
+**Changes:**
+- A campaign template has no draft. The change applies when the request succeeds.
+- Campaigns already made from the campaign template keep their own copies of the design. The change applies only to campaigns that you create after it.
+- A field that you leave out does not change and is not checked. A request with no field is refused with `400`.
+- A `name` or `content` equal to the current one changes nothing, so you can repeat the request safely.
+- You cannot change the editor.
+
+**Content:**
+- You can send back the `content` of [Get Campaign Template](/api-reference/campaign-templates/get-campaign-template) with your changes. Leave out `content` when you do not change it.
+- For a `simple` campaign template, send only `content.text`: you can change its design only in the dashboard.
+- When you send a new `content.mjml` or `content.html` and leave out `content.text`, a text written by hand stays, and a text made from the HTML is made again from the new HTML. Send `content.text` as `null` to make the text again from the new HTML, also when the text was written by hand.
+- A text written by hand that stays must still render. If it holds a `{{`, `{%` or `{#` that cannot be rendered, the request is refused with `400`.
+- The content follows the rules of [Create Campaign Template](/api-reference/campaign-templates/create-campaign-template): strict MJML, full `https://` URLs for images and stylesheets, and at most 200 KB each for the MJML, the HTML and a text written by hand.
+
+A design that is saved later in the dashboard replaces the design that this request wrote. This is also true for a dashboard editor that was opened before this request.
+
+This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

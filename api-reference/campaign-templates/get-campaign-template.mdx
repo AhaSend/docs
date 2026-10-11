@@ -1,0 +1,18 @@
+---
+title: "Get a Campaign Template via the API"
+sidebarTitle: "Get Campaign Template"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/campaign-templates/{template_id}"
+description: "Retrieve an AhaSend campaign template by ID with its editor and content: the MJML or HTML design and the plain text that new campaigns copy from it."
+---
+
+
+The AhaSend API returns a campaign template with its content. Access requires `templates:read`.
+
+`content` is `null` when the campaign template has no HTML and no text, for example after a create without content. A campaign can copy the campaign template only when it has HTML.
+
+The ID of a transactional template answers `404`. To read a transactional template, use [Get Template](/api-reference/templates/get-template).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Update Campaign Template](/api-reference/campaign-templates/update-campaign-template).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

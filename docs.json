@@ -189,6 +189,35 @@
                 ]
               },
               {
+                "group": "Campaigns",
+                "icon": "bullhorn",
+                "pages": [
+                  "api-reference/campaigns/overview",
+                  "api-reference/campaigns/create-campaign",
+                  "api-reference/campaigns/get-campaign",
+                  "api-reference/campaigns/get-campaigns",
+                  "api-reference/campaigns/update-campaign",
+                  "api-reference/campaigns/duplicate-campaign",
+                  "api-reference/campaigns/test-campaign",
+                  "api-reference/campaigns/send-campaign",
+                  "api-reference/campaigns/unschedule-campaign",
+                  "api-reference/campaigns/get-campaign-stats",
+                  "api-reference/campaigns/get-campaign-recipients",
+                  "api-reference/campaigns/delete-campaign"
+                ]
+              },
+              {
+                "group": "Campaign Templates",
+                "icon": "palette",
+                "pages": [
+                  "api-reference/campaign-templates/create-campaign-template",
+                  "api-reference/campaign-templates/get-campaign-template",
+                  "api-reference/campaign-templates/get-campaign-templates",
+                  "api-reference/campaign-templates/update-campaign-template",
+                  "api-reference/campaign-templates/delete-campaign-template"
+                ]
+              },
+              {
                 "group": "Suppressions",
                 "icon": "ban",
                 "pages": [

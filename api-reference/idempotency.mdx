@@ -30,6 +30,8 @@ When you make a request with an `Idempotency-Key` header:
     - **Domains**: Create domains
     - **Messages**: Send messages, including transactional templates
     - **Templates**: Create, update and publish templates, and restore template versions
+    - **Campaign Templates**: Create and update campaign templates
+    - **Campaigns**: Create, update and duplicate campaigns, and send, unschedule and test them
     - **Account Members**: Add team members
     - **Suppressions**: Create email suppressions
     - **Routes**: Create message routes
@@ -80,6 +82,14 @@ When you make a request with an `Idempotency-Key` header:
 | `PUT /v2/accounts/{account_id}/templates/{template_id}` |
 | `POST /v2/accounts/{account_id}/templates/{template_id}/publish` |
 | `POST /v2/accounts/{account_id}/templates/{template_id}/versions/{version_id}/restore` |
+| `POST /v2/accounts/{account_id}/campaign-templates` |
+| `PUT /v2/accounts/{account_id}/campaign-templates/{template_id}` |
+| `POST /v2/accounts/{account_id}/campaigns` |
+| `PUT /v2/accounts/{account_id}/campaigns/{campaign_id}` |
+| `POST /v2/accounts/{account_id}/campaigns/{campaign_id}/duplicate` |
+| `POST /v2/accounts/{account_id}/campaigns/{campaign_id}/send` |
+| `POST /v2/accounts/{account_id}/campaigns/{campaign_id}/unschedule` |
+| `POST /v2/accounts/{account_id}/campaigns/{campaign_id}/test` |
 | `POST /v2/accounts/{account_id}/members` |
 | `POST /v2/accounts/{account_id}/sub-accounts` |
 | `POST /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/api-keys` |
@@ -216,7 +226,7 @@ The API responds differently based on the idempotency key status:
 
 <Tabs>
   <Tab title="First Request">
-    **Status**: `202 Accepted` for Create Message, `201 Created` for resource creation, and `200 OK` for other operations, such as Update Template
+    **Status**: `202 Accepted` for Create Message, Create Template Message, Create Conversation and Send Campaign, `201 Created` for resource creation, and `200 OK` for other operations, such as Update Template
 
     **Headers**:
     - Standard response headers
@@ -255,7 +265,9 @@ The API responds differently based on the idempotency key status:
   </Tab>
 
   <Tab title="Failed Original">
-    **Replayed**: on ordinary idempotent operations, deterministic `2xx` and `4xx` outcomes produced after the idempotency middleware are stored and replayed. Authentication and IP allow list failures happen before that middleware and are not stored. API key creation stores a successful `201` only; a controller-produced `4xx` leaves the key in progress until its lease expires.
+    **Replayed**: on ordinary idempotent operations, deterministic `2xx` and `4xx` outcomes produced after the idempotency middleware are stored and replayed. Authentication failures, IP allow list failures and the rate-limit `429` happen before that middleware and are not stored. API key creation stores a successful `201` only; a controller-produced `4xx` leaves the key in progress until its lease expires. [Test Campaign](/api-reference/campaigns/test-campaign) stores a `2xx` only; a `4xx` releases the key, so a retry with the same key gets a new answer.
+
+    **Campaign status conflicts**: Update Campaign, Send Campaign, Unschedule Campaign and Test Campaign answer `409` when the status of the campaign does not allow the request. That `409` has no `Retry-After` header. Except for Test Campaign, it is stored like other `4xx` answers, so a retry with the same key replays it with `Idempotent-Replayed: true`. After the status changes, retry with a new key. See the [forms of a campaign 409](/api-reference/campaigns/overview#idempotency).
 
     **Re-executed**: server errors (`5xx`) are transient — no response is stored, and a retry with the same idempotency key re-executes the request as if it were the first attempt.
   </Tab>
@@ -285,9 +297,9 @@ The API responds differently based on the idempotency key status:
   </Card>
 
   <Card title="Retry Logic" icon="arrow-rotate-right">
-    Implement exponential backoff when retrying requests. Always use the same idempotency key for retries.
+    Retry with the same idempotency key when you do not know the outcome, or the answer was not stored, as the **Failed Original** tab under [Response Behavior](#response-behavior) describes. Examples are a network error, a `5xx`, a rate-limit `429` (wait as [API rate limits](/api-reference/rate-limits) describes), and a `409` that is still in progress (wait for its `Retry-After` delay). A stored answer is replayed, so a retry of a stored `4xx` with the same key gets the same answer. For a `5xx` or a network error, wait with exponential backoff between retries. The snippet below handles the in-progress `409`; the [Error Handling](#best-practices) card lists how to treat the other `409` answers.
 
-    Pass a `makeRequest(key)` callback that sends the same body each time and throws an object with HTTP `status` and `retryAfter` seconds on failure. Only use this retry policy after deciding that retrying an uncertain send is acceptable.
+    Pass a `makeRequest(key)` callback that sends the same body each time and, on failure, throws an object with the HTTP `status` and the response `headers` (a `Headers` object). Only use this retry policy after deciding that retrying an uncertain send is acceptable.
 
     ```javascript
     export async function retryInProgress(makeRequest, idempotencyKey) {
@@ -295,10 +307,12 @@ The API responds differently based on the idempotency key status:
         try {
           return await makeRequest(idempotencyKey);
         } catch (error) {
-          if (error.status !== 409 || attempt === 2) throw error;
-          const seconds = Number(error.retryAfter);
-          const wait = Number.isFinite(seconds) && seconds > 0 ? seconds : 2 ** attempt;
-          await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+          const seconds = Number(error.headers?.get('Retry-After'));
+          const inProgress = error.status === 409
+            && error.headers?.get('Idempotent-Replayed') === 'false'
+            && seconds > 0;
+          if (!inProgress || attempt === 2) throw error;
+          await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
         }
       }
     }
@@ -311,7 +325,8 @@ The API responds differently based on the idempotency key status:
 
   <Card title="Error Handling" icon="triangle-exclamation">
     Handle different response codes appropriately:
-    - `409`: Concurrent request in progress — wait for the `Retry-After` interval, then retry with the same key
+    - `409` with `Idempotent-Replayed: false` and `Retry-After`: request in progress — wait for the `Retry-After` interval, then retry with the same key
+    - Any other `409`: a conflict with the state of the resource — do not retry with the same key; after you resolve the conflict, use a new key
     - `422`: Key reused with a different request — use a new idempotency key, or retry with the original payload and endpoint
     - `5xx`: Transient failure — retry with the same idempotency key
     - `2xx`/`4xx` with `Idempotent-Replayed: true` header: replayed original outcome
@@ -340,7 +355,7 @@ The API responds differently based on the idempotency key status:
 
     **What it means**: The failure is treated as transient, and the key remains usable.
 
-    **What to do**: Retry with the same idempotency key — the request is re-executed as if it were the first attempt. (Ordinary operations store deterministic `4xx` responses after idempotency middleware. Authentication, IP allow list failures, and the two API-key create operations have the exceptions described above.)
+    **What to do**: Retry with the same idempotency key — the request is re-executed as if it were the first attempt. (Other answers can be stored. The **Failed Original** tab under [Response Behavior](#response-behavior) lists what is stored and the exceptions.)
   </Accordion>
 
   <Accordion title="Key Mismatch" icon="key">

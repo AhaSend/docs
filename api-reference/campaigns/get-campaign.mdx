@@ -1,0 +1,21 @@
+---
+title: "Get a Campaign via the API"
+sidebarTitle: "Get Campaign"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/campaigns/{campaign_id}"
+description: "Retrieve an AhaSend marketing campaign by ID with its status, sender, lists and design, and for a draft, the issues that stop it from being sent."
+---
+
+
+The AhaSend API returns a campaign with its lists, its design and its status. Access requires `campaigns:read`.
+
+- `ready` and `issues` apply to a draft. `ready` is `true` when the draft has no issues. `issues` lists what to fix, each with a `code` and a `message`. For a campaign that is not a draft, both are `null`. See [Issues](/api-reference/campaigns/overview#issues).
+- `status` and `status_reason` show where the campaign is after a send. See [Campaign status](/api-reference/campaigns/overview#campaign-status).
+- `list_ids` holds the lists of the campaign in the order they were saved. A list that was deleted is left out.
+- `from` is `null` until the campaign has a complete sender, and when the domain of the sender was deleted. When the sender has no name, `from.name` is an empty string, so you can send the object back as it is.
+- `editor` is `null` while the campaign has no design.
+- `content` is `null` while the campaign has no design, and while its design has no HTML and no text. For example, after a create with `editor` alone, `editor` is set and `content` is `null`.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Update Campaign](/api-reference/campaigns/update-campaign).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

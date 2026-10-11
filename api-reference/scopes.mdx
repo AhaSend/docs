@@ -161,11 +161,22 @@ AhaSend supports three types of scopes:
 
 | Scope | Description |
 |-------|-------------|
-| `templates:read` | List and view transactional templates, their drafts and their published versions |
-| `templates:write` | Create and update transactional templates, publish and discard their drafts, and restore their versions |
-| `templates:delete` | Delete transactional templates |
+| `templates:read` | List and view transactional templates, their drafts and their published versions, and campaign templates |
+| `templates:write` | Create and update transactional templates, publish and discard their drafts, and restore their versions; create and update campaign templates |
+| `templates:delete` | Delete transactional templates and campaign templates |
 
-Sending a template with [Create Template Message](/api-reference/messages/create-template-message) needs the send scope of the sender's domain, not a `templates` scope.
+The `templates` scopes cover transactional templates and [campaign templates](/api-reference/campaign-templates/create-campaign-template) together. Sending a template with [Create Template Message](/api-reference/messages/create-template-message) needs the send scope of the sender's domain, not a `templates` scope.
+
+### Campaigns
+
+| Scope | Description |
+|-------|-------------|
+| `campaigns:read` | List and view campaigns, their stats and their recipients |
+| `campaigns:write` | Create, update and duplicate campaigns |
+| `campaigns:delete` | Delete draft campaigns |
+| `campaigns:send` | Send, unschedule and test campaigns |
+
+Sending, unscheduling and testing a campaign need only `campaigns:send`. They need no `messages:send` scope, not even for the sender's domain. See the [Campaigns API](/api-reference/campaigns/overview).
 
 ### API Key Management
 

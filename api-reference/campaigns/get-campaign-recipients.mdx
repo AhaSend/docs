@@ -1,0 +1,22 @@
+---
+title: "List Campaign Recipients via the API"
+sidebarTitle: "List Campaign Recipients"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/campaigns/{campaign_id}/recipients"
+description: "List the recipients of an AhaSend marketing campaign in one status or with one bounce classification, with the list, attempts and bounce details of each."
+---
+
+
+The AhaSend API returns the recipients of a campaign, by contact ID, highest first. Access requires `campaigns:read`.
+
+Send exactly one of `status` and `bounce_classification`:
+- `status` is a key of `report.by_status` in [Get Campaign Stats](/api-reference/campaigns/get-campaign-stats), such as `Queued`, `Delivered` or `Administratively Bounced`.
+- `bounce_classification` is a key of `report.by_bounce_classification`. `Unknown` counts bounces with no classification and cannot be listed.
+
+Each recipient gives the address that the campaign sent to, the list it was sent from, its status, its delivery attempts and, for a bounce, the classification, the reason and the message of the receiving server.
+
+A page after the last recipient is empty and has no `previous_cursor`. To start again, read the first page without a cursor.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Campaign Stats](/api-reference/campaigns/get-campaign-stats).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
