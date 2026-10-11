@@ -101,6 +101,7 @@ This typically occurs when your API key doesn't have the required scopes for the
 - API key lacks required scopes (e.g., trying to delete domains without `domains:delete:all` or `domains:delete:{domain}` scope)
 - Attempting to access resources outside your API key's domain restrictions
 - Insufficient permissions for specific operations
+- Sending from the domain is paused. You cannot send from the domain or delete it. See [paused domains](/domains#why-is-sending-paused-on-my-domain).
 
 ```json
 {
@@ -111,6 +112,12 @@ This typically occurs when your API key doesn't have the required scopes for the
 ```json
 {
   "message": "api key does not have sufficient permissions to read webhooks"
+}
+```
+
+```json
+{
+  "message": "Sending from domain 'example.com' is paused. Check your dashboard for the reason."
 }
 ```
 

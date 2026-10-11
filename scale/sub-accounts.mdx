@@ -128,6 +128,15 @@ See [Create Domain](/api-reference/domains/create-domain), [Check Domain DNS](/a
 
 See the API overview for [sub-account status values](/api-reference/sub-accounts/overview#sub-account-status).
 
+## Paused Domains
+
+AhaSend can [pause sending from a domain](/domains#why-is-sending-paused-on-my-domain) of a sub-account. The owners and admins of the parent account also get the pause email.
+
+The parent account can lift the pause. Fix the cause first, then use one of these:
+
+* **Dashboard:** go to **Settings > Sub-accounts** and open the sub-account. The **Paused domains** card lists each paused domain. Click **Lift pause**. The owners and admins of the parent account can do this.
+* **API:** call [Unpause Sub-Account Domain](/api-reference/sub-accounts/unpause-sub-account-domain) with a parent API key that has the `sub-accounts:suspend` scope.
+
 ## Usage and Billing
 
 The [usage endpoint](/api-reference/sub-accounts/get-sub-accounts-usage) returns current billing-period message volume and the proportional cost allocated to the parent and each active sub-account:

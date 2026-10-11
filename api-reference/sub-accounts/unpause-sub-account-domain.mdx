@@ -1,0 +1,21 @@
+---
+title: "Unpause a Sub-Account Domain via the API"
+sidebarTitle: "Unpause Sub-Account Domain"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/domains/{domain}/unpause"
+description: "Lift the pause on a sending domain of an AhaSend sub-account from the parent account. The call is idempotent. Requires the sub-accounts:suspend scope."
+---
+
+
+The AhaSend API lifts the pause on a domain of a sub-account under the parent account.
+
+<Info>
+  **Platform Partner feature:** Sub-Accounts is part of our Platform Partner capabilities and is currently in early access. [Contact us](https://ahasend.com/contact) to enable it on your account.
+</Info>
+
+Fix the cause of the pause before you lift it. See [paused domains](/domains#why-is-sending-paused-on-my-domain).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sub-account paused domains](/scale/sub-accounts#paused-domains).
+- [Sub-account API rules](/api-reference/sub-accounts/overview), [Get Domain](/api-reference/domains/get-domain), [Unsuspend Sub-Account](/api-reference/sub-accounts/unsuspend-sub-account).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits), [Plans and limits](/facts).
