@@ -61,6 +61,7 @@
             "pages": [
               "deliverability/index",
               "deliverability/marketing-limit",
+              "deliverability/unsubscribe",
               "bounces",
               "troubleshooting",
               "glossary"
