@@ -1,0 +1,16 @@
+---
+title: "Delete a Campaign via the API"
+sidebarTitle: "Delete Campaign"
+openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/campaigns/{campaign_id}"
+description: "Delete a draft AhaSend marketing campaign with its design and list choices; the lists stay. Only a draft can be deleted, and a second delete returns 404."
+---
+
+
+The AhaSend API deletes a draft campaign with its design and its list choices. Access requires `campaigns:delete`.
+
+A campaign that is not a draft answers `409`. A second delete of the same campaign answers `404`. Deleting a campaign does not delete its lists or its contacts.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [List Campaigns](/api-reference/campaigns/get-campaigns).
+- [Changes only to drafts](/api-reference/campaigns/overview#changes-only-to-drafts), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

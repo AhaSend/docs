@@ -1,0 +1,37 @@
+---
+title: "Update a Campaign via the API"
+sidebarTitle: "Update Campaign"
+openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/campaigns/{campaign_id}"
+description: "Change a draft AhaSend marketing campaign: its name, sender, reply-to, lists, subject, preview text or design. Only a draft campaign can be changed."
+---
+
+
+The AhaSend API changes a draft campaign. Access requires `campaigns:write`.
+
+A campaign that is not a draft answers `409` with `campaign is not a draft`. To change a scheduled campaign, [unschedule it](/api-reference/campaigns/unschedule-campaign) first. See [Changes only to drafts](/api-reference/campaigns/overview#changes-only-to-drafts).
+
+**Fields:**
+- A field that you leave out does not change and is not checked. A request with no field is refused with `400`.
+- `null` clears `subject`, `preheader`, `from` or `reply_to`. When you clear `from`, `reply_to` stays.
+- `list_ids` replaces all lists of the campaign. A list that does not exist is refused with `400`.
+- `template_id` is not accepted: only [Create Campaign](/api-reference/campaigns/create-campaign) can copy a campaign template. A request with `template_id` is refused with `400` as an unknown field.
+- The fields follow the rules of [Create Campaign](/api-reference/campaigns/create-campaign).
+
+**Design:**
+- You cannot change the editor of the design.
+- A campaign with no design yet needs `content.mjml` or `content.html`, which sets its editor.
+- For a `simple` design, send only `content.text`: you can change the design only in the dashboard.
+- When you send a new `content.mjml` or `content.html` and leave out `content.text`, a text written by hand stays, and a text made from the HTML is made again from the new HTML. Send `content.text` as `null` to make the text again from the new HTML, also when the text was written by hand.
+- A text written by hand that stays must still render. If it holds a `{{`, `{%` or `{#` that cannot be rendered, the request is refused with `400`.
+- The content follows the content rules of [Create Campaign](/api-reference/campaigns/create-campaign).
+
+**Changes from the dashboard:**
+- The API and the dashboard change the same campaign. The request waits for other changes to the same campaign to finish, and a send that starts after the request uses the change.
+- When a dashboard editor is open on the same campaign, the design that is saved last is kept.
+
+This operation accepts an `Idempotency-Key` header. A refusal from this operation is stored for the key, so send a corrected request with a new key. See [Idempotency](/api-reference/idempotency) and [campaign retries](/api-reference/campaigns/overview#idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Get Campaign](/api-reference/campaigns/get-campaign), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -1,0 +1,16 @@
+---
+title: "List Campaigns via the API"
+sidebarTitle: "List Campaigns"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/campaigns"
+description: "List the marketing campaigns in your AhaSend account, newest first, with their status, subject, sender and send times. Filter the list by status."
+---
+
+
+The AhaSend API returns the account's marketing campaigns, newest first. Access requires `campaigns:read`.
+
+Use `status` to list only the campaigns in one status. Each campaign is listed without its lists, its design and its issues. To read them, use [Get Campaign](/api-reference/campaigns/get-campaign).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Create Campaign](/api-reference/campaigns/create-campaign).
+- [Campaign status](/api-reference/campaigns/overview#campaign-status), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

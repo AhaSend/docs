@@ -167,10 +167,57 @@
                 "icon": "envelope",
                 "pages": [
                   "api-reference/messages/create-message",
+                  "api-reference/messages/create-template-message",
                   "api-reference/messages/create-conversation",
                   "api-reference/messages/get-message",
                   "api-reference/messages/get-messages",
                   "api-reference/messages/cancel-message"
+                ]
+              },
+              {
+                "group": "Templates",
+                "icon": "file-lines",
+                "pages": [
+                  "api-reference/templates/create-template",
+                  "api-reference/templates/get-template",
+                  "api-reference/templates/get-templates",
+                  "api-reference/templates/update-template",
+                  "api-reference/templates/publish-template",
+                  "api-reference/templates/get-template-draft",
+                  "api-reference/templates/discard-template-draft",
+                  "api-reference/templates/get-template-versions",
+                  "api-reference/templates/get-template-version",
+                  "api-reference/templates/restore-template-version",
+                  "api-reference/templates/delete-template"
+                ]
+              },
+              {
+                "group": "Campaigns",
+                "icon": "bullhorn",
+                "pages": [
+                  "api-reference/campaigns/overview",
+                  "api-reference/campaigns/create-campaign",
+                  "api-reference/campaigns/get-campaign",
+                  "api-reference/campaigns/get-campaigns",
+                  "api-reference/campaigns/update-campaign",
+                  "api-reference/campaigns/duplicate-campaign",
+                  "api-reference/campaigns/test-campaign",
+                  "api-reference/campaigns/send-campaign",
+                  "api-reference/campaigns/unschedule-campaign",
+                  "api-reference/campaigns/get-campaign-stats",
+                  "api-reference/campaigns/get-campaign-recipients",
+                  "api-reference/campaigns/delete-campaign"
+                ]
+              },
+              {
+                "group": "Campaign Templates",
+                "icon": "palette",
+                "pages": [
+                  "api-reference/campaign-templates/create-campaign-template",
+                  "api-reference/campaign-templates/get-campaign-template",
+                  "api-reference/campaign-templates/get-campaign-templates",
+                  "api-reference/campaign-templates/update-campaign-template",
+                  "api-reference/campaign-templates/delete-campaign-template"
                 ]
               },
               {

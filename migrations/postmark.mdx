@@ -32,7 +32,7 @@ Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message
 | `Tag` | `tags` array |
 | `Headers` name/value array | `headers` object |
 | `Attachments[].Name`, `Content`, `ContentType` | `file_name`, `data`, `content_type`, with `base64: true` |
-| `TemplateId` / `TemplateAlias` and `TemplateModel` | Render or move template content and map substitutions explicitly |
+| `TemplateId` / `TemplateAlias` and `TemplateModel` | Recreate the template in AhaSend and send it with [Create Template Message](/api-reference/messages/create-template-message), or render it in your app; map `TemplateModel` to `recipients[].substitutions`. Template syntax is not automatically portable |
 | `MessageStream` | No identical request field; choose your AhaSend domain and application routing deliberately |
 | `Cc`, `Bcc` | [Create Conversation](/api-reference/messages/create-conversation) for shared conversation headers |
 

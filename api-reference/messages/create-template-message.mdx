@@ -1,0 +1,45 @@
+---
+title: "Send a Transactional Template via the API"
+sidebarTitle: "Create Template Message"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/messages/template"
+description: "Send a published AhaSend transactional template by its ID to up to 100 recipients. Each recipient gives its own values for the template's variables."
+---
+
+
+The AhaSend API sends a transactional template to one or more recipients. Each recipient gets a separate message. The template supplies the body, and it supplies the subject, the sender and the reply-to when the request leaves them out. To send content that is not stored in a template, use [Create Message](/api-reference/messages/create-message).
+
+Authorization uses the domain of the sender, `from.email` or the template's default sender: either `messages:send:all` or the matching domain-specific send role is sufficient. Sending a template needs no `templates` scope. A request with no `from` is refused with `403` when the API key cannot send from any domain.
+
+**Template:**
+- `template_id` is required. It must be the ID of one of this account's transactional templates. [List Templates](/api-reference/templates/get-templates) returns the IDs. Any other ID, a deleted template included, is refused with `404` `template not found`.
+- The send uses the published copy of the template. Changes in its draft are not sent until you [publish them](/api-reference/templates/publish-template). A template with no published content is refused with `400`.
+- The message has the template's HTML body with its preview text, and the template's text body. It has no AMP part. The request cannot carry `text_content`, `html_content` or `amp_content`, and is refused with `400` when it does.
+- [Get Message](/api-reference/messages/get-message) returns the ID of the template in the message's `template_id`.
+
+**Sender and subject:**
+- Leave out `from` to send from the template's default sender. A `from` in the request is used even when the template has a default sender.
+- When the request has no `from` and the template has no default sender, the request is refused with `400` `from is required because the template has no default sender`.
+- The sender, the request's or the template's, must be from a domain you own with valid DNS records.
+- When the request has no `reply_to` and no `reply-to` header, the template's reply-to is used.
+- `subject` replaces the template's subject. When it is left out, empty or only spaces, the template's published subject is used. When neither has a subject, the request is refused with `400`.
+
+**Variables:**
+- Each recipient's `substitutions` hold its values for the template's variables. They are the only place for these values: a `substitutions` object at the top of the request is refused with `400`.
+- Each recipient must give a value for each required variable of the template. The `variables` list of [Get Template](/api-reference/templates/get-template) shows which variables are required. A variable that the design wraps in a fallback is not required. An empty value counts as a value.
+- When a recipient does not give a required variable, the request is refused with `400`, and no message is sent. The error names each recipient and the variables it does not give, for example `missing required template variables: user@example.com needs first_name, order_id`.
+- A value for a name that the template does not use is accepted. Your `subject` and `headers` resolve from the same values, and a `{{ name }}` with no value becomes empty.
+- The send supplies `email`, `view_browser_url` and `unsubscribe_url` itself and replaces a value a recipient gives for them. `email` is the recipient's address, and `view_browser_url` is empty.
+
+**Unsubscribe link:**
+When the template's design uses `unsubscribe_url`, each recipient gets its own unsubscribe link. The message carries `List-Unsubscribe` with that link and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, so the unsubscribe button of a mail client works. The button suppresses the recipient for the sending domain. The link opens a confirmation page, and the recipient is suppressed after they confirm. A `List-Unsubscribe` or `List-Unsubscribe-Post` in your `headers` is dropped. When the design does not use `unsubscribe_url`, the send makes no link and sends your headers as you give them.
+
+**Other fields:**
+`attachments`, `headers`, `tags`, `tracking`, `retention`, `schedule`, `sandbox` and `sandbox_result` follow the rules of [Create Message](/api-reference/messages/create-message). The response is the same per-recipient list. When sending from the domain is paused, the request is refused with `403`. A sandbox message is accepted from a paused domain.
+
+This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Create Template](/api-reference/templates/create-template), [Sending guide](/send-api/send-email), [Sandbox behavior](/send-api/sandbox).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
