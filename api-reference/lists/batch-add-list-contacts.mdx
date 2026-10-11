@@ -1,0 +1,32 @@
+---
+title: "Add Contacts to a List in a Batch via the API"
+sidebarTitle: "Batch Add List Contacts"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/lists/{list_id}/contacts/batch"
+description: "Add up to 1,000 existing AhaSend contacts to a list in one request, by ID or email address. Existing memberships, unsubscribes included, never change."
+---
+
+
+The AhaSend API adds 1 to 1,000 existing contacts to one list, and answers when the work is done. Access requires `lists:write`.
+
+**Entries:**
+- Each entry names exactly one of `email` and `id`.
+- This operation only adds. A new membership is `confirmed`. A membership that already exists is reported `already_member` and does not change, whatever its status. So a batch never removes an unsubscribe.
+- No contact is created. An entry that names no contact of the account is reported `not_found`.
+
+**Results:**
+- `data` gives one result for each entry, in the order of the request. `position` is the index of the entry. `outcome` is `added`, `already_member`, `not_found` or `invalid`. `added` and `already_member` include the membership, and `not_found` and `invalid` include a `reason`.
+- `added`, `skipped` and `failed` count the results. `skipped` counts `already_member`, and `failed` counts `not_found` and `invalid`.
+- An entry is `invalid` when it names neither or both of `email` and `id`, has any other field, has an `id` that is not a UUID, or has an `email` that fails the checks of contact writes.
+- An entry that repeats an identifier of an earlier entry is `invalid`, and so is that earlier entry. Email addresses are compared after they are trimmed and changed to lowercase, so `A@example.com` and `a@example.com` are the same.
+- When one contact is named once by email and once by ID, the first entry is `added` and the later one is `already_member`.
+- One invalid entry does not stop the others. A field other than `data` in the body, an empty `data` array or more than 1,000 entries is refused with `400` for the whole request.
+
+**Pacing:**
+1,000 is a limit, not a target. Measure how long a batch takes with real data. Send the next batch only after the previous response arrives, and send smaller batches or wait longer when the time grows. After a `429`, wait before you continue. The API does not promise a fixed throughput. See [API rate limits](/api-reference/rate-limits).
+
+This operation accepts an `Idempotency-Key` header. The memberships and the stored response are saved together. A retry with the same key replays the `200`, the `404` for a missing list or the `400` for 24 hours. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Batch Upsert Contacts](/api-reference/contacts/batch-upsert-contacts), [Lists API overview](/api-reference/lists/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

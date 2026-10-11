@@ -1,0 +1,28 @@
+---
+title: "Add or Update a List Contact via the API"
+sidebarTitle: "Add or Update List Contact"
+openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/lists/{list_id}/contacts/{id_or_email}"
+description: "Add an existing AhaSend contact to a list, or change its per-list subscription status to confirmed, unconfirmed or unsubscribed. No contact is created."
+---
+
+
+The AhaSend API adds one existing contact to one list, or changes the membership that is already there. It returns the membership in both cases. Access requires `lists:write`.
+
+`{id_or_email}` is the contact ID or its email address. Percent-encode an email address exactly once. See [Name a contact in the path](/api-reference/contacts/overview#name-a-contact-in-the-path). This operation does not create a contact. To create one, use [Create Contact](/api-reference/contacts/create-contact).
+
+**Status:**
+- The body can hold only `subscription_status`: `confirmed`, `unconfirmed` or `unsubscribed`. An empty object is allowed.
+- A new membership is `confirmed`, unless the body names another status.
+- For a membership that already exists, a body with no status changes nothing. To subscribe a contact again after an unsubscribe, name `confirmed`.
+- When the body names the status that the membership already has, nothing changes, `updated_at` included. So a retry gives the same result.
+- `confirmed` sets `subscribed_at` and clears `unsubscribed_at`. `unsubscribed` sets `unsubscribed_at` and keeps `subscribed_at`. `unconfirmed` sets neither.
+
+**Refusals:**
+- `complained` cannot be written. A body that names it is refused with `400`.
+- A membership that is `complained` cannot change. A request for it answers `409` and changes nothing, also a request with no status.
+- A list or a contact that does not exist answers `404`, and the message says which.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Batch Add List Contacts](/api-reference/lists/batch-add-list-contacts).
+- [Memberships](/api-reference/lists/overview#memberships), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

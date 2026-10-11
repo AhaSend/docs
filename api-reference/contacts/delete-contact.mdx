@@ -1,0 +1,20 @@
+---
+title: "Delete a Contact via the API"
+sidebarTitle: "Delete Contact"
+openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/contacts/{id_or_email}"
+description: "Permanently delete an AhaSend contact with its list memberships, unsubscribe record, campaign recipient records, opens and clicks. This cannot be undone."
+---
+
+
+The AhaSend API permanently deletes one contact. Access requires `contacts:delete`.
+
+`{id_or_email}` is the contact ID or its email address. Percent-encode an email address exactly once. See [Name a contact in the path](/api-reference/contacts/overview#name-a-contact-in-the-path).
+
+The delete also removes the contact's unsubscribe record, its list memberships, its campaign recipient records, its opens and its clicks. You cannot undo it. Suppressions for complaints and other permanent suppressions do not change.
+
+To stop marketing email to a contact, unsubscribe it instead: use [Update Contact](/api-reference/contacts/update-contact) with `unsubscribed: true`. An unsubscribe keeps the record of the choice.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [List Contacts](/api-reference/contacts/get-contacts).
+- [Contacts API overview](/api-reference/contacts/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

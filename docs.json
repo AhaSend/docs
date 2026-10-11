@@ -221,6 +221,36 @@
                 ]
               },
               {
+                "group": "Contacts",
+                "icon": "address-book",
+                "pages": [
+                  "api-reference/contacts/overview",
+                  "api-reference/contacts/create-contact",
+                  "api-reference/contacts/get-contact",
+                  "api-reference/contacts/get-contacts",
+                  "api-reference/contacts/update-contact",
+                  "api-reference/contacts/delete-contact",
+                  "api-reference/contacts/batch-upsert-contacts"
+                ]
+              },
+              {
+                "group": "Lists",
+                "icon": "list-ul",
+                "pages": [
+                  "api-reference/lists/overview",
+                  "api-reference/lists/create-list",
+                  "api-reference/lists/get-list",
+                  "api-reference/lists/get-lists",
+                  "api-reference/lists/update-list",
+                  "api-reference/lists/delete-list",
+                  "api-reference/lists/get-list-contacts",
+                  "api-reference/lists/upsert-list-contact",
+                  "api-reference/lists/batch-add-list-contacts",
+                  "api-reference/lists/delete-list-contact",
+                  "api-reference/lists/get-contact-lists"
+                ]
+              },
+              {
                 "group": "Suppressions",
                 "icon": "ban",
                 "pages": [

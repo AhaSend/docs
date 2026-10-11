@@ -20,7 +20,7 @@ Before you create a campaign, make sure you have:
 
 - **An API key** with the `campaigns` scopes that you need, and the `templates` scopes to manage campaign templates. Copying a campaign template with `template_id` on Create Campaign needs only `campaigns:write`. See [Scopes](#scopes).
 - **A verified sender domain** that is not paused. See [domain setup](/domains).
-- **A list with subscribed contacts.** See [Build and Send a Campaign](#build-and-send-a-campaign) for where to find the ID of a list.
+- **A list with subscribed contacts.** Create lists and add contacts with the [Lists API](/api-reference/lists/overview) or in the dashboard. See [Build and Send a Campaign](#build-and-send-a-campaign) for where to find the ID of a list.
 
 ## Build and Send a Campaign
 
@@ -35,7 +35,7 @@ Before you create a campaign, make sure you have:
 
   <Step title="Set the sender, lists, subject, preview text and content">
     - `from` is the sender. Its address must be on a domain of your account with valid DNS records.
-    - `list_ids` holds the IDs of the lists to send to. To find the ID of a list, open the list under **Marketing > Lists** in the dashboard: the ID is the last part of the page's URL. Before you send, the lists must have subscribed contacts.
+    - `list_ids` holds the IDs of the lists to send to. To find the ID of a list, use [List Lists](/api-reference/lists/get-lists), or open the list under **Marketing > Lists** in the dashboard: the ID is the last part of the page's URL. Before you send, the lists must have subscribed contacts.
     - `subject` is the subject line, and `preheader` is the preview text that most inboxes show after the subject.
     - `content` is the design. On create only, `template_id` can copy the design of a campaign template instead. Update Campaign does not accept `template_id`.
   </Step>

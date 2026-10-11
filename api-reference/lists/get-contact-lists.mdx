@@ -1,0 +1,22 @@
+---
+title: "List a Contact's Lists via the API"
+sidebarTitle: "List Contact's Lists"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/contacts/{id_or_email}/lists"
+description: "List the AhaSend lists that one contact is on, with its subscription status on each list. Filter by status to see what a person is subscribed to."
+---
+
+
+The AhaSend API returns the lists that one contact is on, newest membership first. Access requires `lists:read`.
+
+`{id_or_email}` is the contact ID or its email address. Percent-encode an email address exactly once. See [Name a contact in the path](/api-reference/contacts/overview#name-a-contact-in-the-path).
+
+Each item is a membership with its `subscription_status` and the list. Deleted lists are left out. `subscription_status` filters the memberships by `unconfirmed`, `confirmed`, `unsubscribed` or `complained`. This is the reverse of [List Contacts on a List](/api-reference/lists/get-list-contacts).
+
+There is no operation that removes a contact from all lists. To stop marketing email to the contact on all lists, use [Update Contact](/api-reference/contacts/update-contact) with `unsubscribed: true`. This does not change the memberships: each one still shows its status, but the contact no longer counts toward the `contact_count` of any list. To unsubscribe the contact from one list, use [Add or Update a List Contact](/api-reference/lists/upsert-list-contact) with `subscription_status: "unsubscribed"`.
+
+Pages use cursors: send `after` or `before`, not both. See [Pagination](/api-reference/lists/overview#pagination).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Contact](/api-reference/contacts/get-contact).
+- [Lists API overview](/api-reference/lists/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

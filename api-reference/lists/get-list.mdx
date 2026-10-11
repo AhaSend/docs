@@ -1,0 +1,18 @@
+---
+title: "Get a List via the API"
+sidebarTitle: "Get List"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/lists/{list_id}"
+description: "Retrieve one AhaSend contact list by ID with its name, description, tags and contact_count, the number of subscribers a campaign to it would reach."
+---
+
+
+The AhaSend API returns one list of the account. Access requires `lists:read`.
+
+`contact_count` is the number of members that a campaign to the list would reach. See [Lists](/api-reference/lists/overview#lists) for what it counts. To read the members, use [List Contacts on a List](/api-reference/lists/get-list-contacts).
+
+A list that was deleted answers `404`.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Update List](/api-reference/lists/update-list).
+- [Lists API overview](/api-reference/lists/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

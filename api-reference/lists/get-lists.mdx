@@ -1,0 +1,20 @@
+---
+title: "List Contact Lists via the API"
+sidebarTitle: "List Lists"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/lists"
+description: "List the contact lists in your AhaSend account, newest first, with the subscriber count of each. Search the lists by part of their name."
+---
+
+
+The AhaSend API returns the account's lists, newest first. Access requires `lists:read`.
+
+Each list has `contact_count`, the number of members that a campaign to it would reach. See [Lists](/api-reference/lists/overview#lists).
+
+`name` finds the lists whose names hold the value, in any case. `%`, `_` and `\` match as plain characters, not as wildcards. The API trims the value, so an empty value or one with only spaces returns all lists.
+
+Pages use cursors: send `after` or `before`, not both. See [Pagination](/api-reference/lists/overview#pagination).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Create List](/api-reference/lists/create-list).
+- [Lists API overview](/api-reference/lists/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

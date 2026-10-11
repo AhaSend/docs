@@ -1,0 +1,22 @@
+---
+title: "List Contacts via the API"
+sidebarTitle: "List Contacts"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/contacts"
+description: "List the contacts in your AhaSend account, newest first. Filter by email address, status, account-wide subscription and creation time."
+---
+
+
+The AhaSend API returns the account's contacts, newest first. Access requires `contacts:read`.
+
+**Filters:**
+- `email` matches one email address exactly, after it is trimmed and changed to lowercase.
+- `status` is `enabled`, `disabled` or `blocked`.
+- `subscribed` filters by the account-wide unsubscribe of the contact. It does not look at list memberships.
+- `from_time` and `to_time` limit the creation time. Both are RFC 3339 times, and both ends are included.
+
+Pages use cursors: send `after` or `before`, not both. See [Pagination](/api-reference/contacts/overview#pagination). To list the contacts of one list, use [List Contacts on a List](/api-reference/lists/get-list-contacts).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Create Contact](/api-reference/contacts/create-contact).
+- [Contacts API overview](/api-reference/contacts/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

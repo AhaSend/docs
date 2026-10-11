@@ -28,7 +28,7 @@ The design comes from one source:
 - `reply_to` is an address only, without a display name.
 - In `subject` and `preheader`, line breaks become spaces, and spaces at the start and end are removed. An empty subject or preview text counts as none.
 - The API checks the subject, the preview text, the sender and the reply-to by the same rules as the dashboard, and its error messages use the same words.
-- `list_ids` holds 1 to 50 lists of your account, in the order you give. A list that you give twice counts once. A list that does not exist is refused with `400`. See [where to find a list's ID](/api-reference/campaigns/overview#build-and-send-a-campaign).
+- `list_ids` holds 1 to 50 lists of your account, in the order you give. A list that you give twice counts once. A list that does not exist is refused with `400`. To find the ID of a list, use [List Lists](/api-reference/lists/get-lists), or see [where to find a list's ID](/api-reference/campaigns/overview#build-and-send-a-campaign) in the dashboard.
 
 This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 

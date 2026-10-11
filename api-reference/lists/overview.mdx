@@ -1,0 +1,85 @@
+---
+title: "Lists API Overview"
+sidebarTitle: "Introduction"
+description: "Manage AhaSend contact lists through the API: create lists, add contacts, record unsubscribes per list, and read who a campaign to a list will reach."
+icon: "list-ul"
+---
+
+
+The AhaSend Lists API manages your contact lists and the contacts on them. A campaign sends to lists, so a list is how a contact gets marketing email. This page explains lists and memberships, and the rules that apply to all list operations.
+
+## Lists
+
+A list is a static, private, single opt-in group of [contacts](/api-reference/contacts/overview), and the unit that a campaign targets. List names do not have to be unique in an account.
+
+`contact_count` is the number of subscribers that a campaign to the list would reach. It counts a member when:
+- Its membership is `confirmed`.
+- The contact is `enabled`.
+- The contact is not unsubscribed account-wide.
+- Email validation did not find the contact invalid.
+
+It is the same number that the dashboard shows.
+
+## Memberships
+
+A membership is one contact on one list. It has no ID of its own: you name it by the list ID and the contact. A contact can be on many lists, and each membership has its own `subscription_status`:
+
+| Status | Meaning |
+|--------|---------|
+| `confirmed` | The contact is subscribed to the list. A campaign to the list reaches it, after the account-wide checks above. |
+| `unconfirmed` | The contact is on the list but is not subscribed. A campaign does not reach it. |
+| `unsubscribed` | The contact unsubscribed from this list. |
+| `complained` | The contact reported this list as spam. This status comes from the mailbox provider. You cannot set it, change it or remove the membership. |
+
+`subscribed_at` is the time the membership became `confirmed`. A confirm of a membership that is already `confirmed` does not change it. `unsubscribed_at` is the time the membership became `unsubscribed`, or the time of the complaint. It is cleared when the membership becomes `confirmed` again.
+
+The per-list status and the account-wide `unsubscribed` flag of the contact are separate. [Update Contact](/api-reference/contacts/update-contact) with `unsubscribed: true` stops campaigns to the contact on all lists, and leaves every membership status as it is.
+
+## Unsubscribe, Remove or Delete
+
+| Goal | Operation | Effect |
+|------|-----------|--------|
+| Stop email from one list | [Add or Update a List Contact](/api-reference/lists/upsert-list-contact) with `subscription_status: "unsubscribed"` | You can undo it, and the record of the unsubscribe stays. |
+| Stop email from all lists | [Update Contact](/api-reference/contacts/update-contact) with `unsubscribed: true` | You can undo it, and the memberships stay. |
+| Take a contact off one list | [Remove a Contact from a List](/api-reference/lists/delete-list-contact) | The membership and its unsubscribe record are deleted, so a later add is silent. |
+| Delete a list | [Delete List](/api-reference/lists/delete-list) | The list is gone, but its memberships are kept, with their unsubscribes and complaints. |
+
+To stop marketing email, unsubscribe the contact instead of removing it.
+
+## Pagination
+
+List Lists, List Contacts on a List and List Contact's Lists return items newest first. Each page gives `pagination.has_more`, `pagination.next_cursor` and `pagination.previous_cursor`. Send `next_cursor` as `after` for the next page, or `previous_cursor` as `before` for the previous page. You cannot send `after` and `before` together. `limit` is 1 to 100, and the default is 100.
+
+## Scopes
+
+| Scope | Grants |
+|-------|--------|
+| `lists:read` | List and view lists, their contacts and the lists of a contact |
+| `lists:write` | Create and update lists, and add, update and remove the contacts on them |
+| `lists:delete` | Delete lists |
+
+To remove a contact from a list, you need `lists:write`, not `lists:delete`. List Contacts on a List with `include_contacts=true` also needs `contacts:read`. See [Permission scopes](/api-reference/scopes#lists).
+
+## Idempotency
+
+Create List and Batch Add List Contacts accept an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
+
+## API Operations
+
+| Task | Endpoint reference |
+|---|---|
+| Create a list | [Create List](/api-reference/lists/create-list) |
+| Read a list and its subscriber count | [Get List](/api-reference/lists/get-list) |
+| List and search lists | [List Lists](/api-reference/lists/get-lists) |
+| Change a list | [Update List](/api-reference/lists/update-list) |
+| Delete a list | [Delete List](/api-reference/lists/delete-list) |
+| Read the contacts on a list | [List Contacts on a List](/api-reference/lists/get-list-contacts) |
+| Add one contact, or change its status | [Add or Update a List Contact](/api-reference/lists/upsert-list-contact) |
+| Add up to 1,000 contacts | [Batch Add List Contacts](/api-reference/lists/batch-add-list-contacts) |
+| Take a contact off a list | [Remove a Contact from a List](/api-reference/lists/delete-list-contact) |
+| Read the lists of a contact | [List Contact's Lists](/api-reference/lists/get-contact-lists) |
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Contacts API overview](/api-reference/contacts/overview), [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -90,6 +90,10 @@ When you make a request with an `Idempotency-Key` header:
 | `POST /v2/accounts/{account_id}/campaigns/{campaign_id}/send` |
 | `POST /v2/accounts/{account_id}/campaigns/{campaign_id}/unschedule` |
 | `POST /v2/accounts/{account_id}/campaigns/{campaign_id}/test` |
+| `POST /v2/accounts/{account_id}/contacts` |
+| `POST /v2/accounts/{account_id}/contacts/batch` |
+| `POST /v2/accounts/{account_id}/lists` |
+| `POST /v2/accounts/{account_id}/lists/{list_id}/contacts/batch` |
 | `POST /v2/accounts/{account_id}/members` |
 | `POST /v2/accounts/{account_id}/sub-accounts` |
 | `POST /v2/accounts/{account_id}/sub-accounts/{sub_account_id}/api-keys` |
@@ -234,7 +238,7 @@ The API responds differently based on the idempotency key status:
 
     **Body**: Normal response content
 
-    The Create Message response is the per-recipient list shown in [response handling](/send-api/send-email#response-handling).
+    The Create Message response is the per-recipient list shown in [response handling](/send-api/send-email#how-do-i-read-the-sending-response).
   </Tab>
 
   <Tab title="Replayed Response">
@@ -246,7 +250,7 @@ The API responds differently based on the idempotency key status:
 
     **Body**: Exact same response as the original request
 
-    The Create Message response is the per-recipient list shown in [response handling](/send-api/send-email#response-handling).
+    The Create Message response is the per-recipient list shown in [response handling](/send-api/send-email#how-do-i-read-the-sending-response).
   </Tab>
 
   <Tab title="Concurrent Request">

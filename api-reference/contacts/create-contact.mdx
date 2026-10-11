@@ -1,0 +1,26 @@
+---
+title: "Create a Contact via the API"
+sidebarTitle: "Create Contact"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/contacts"
+description: "Create one contact in your AhaSend account with its name, status, unsubscribe choice and attributes. The new contact is on no list until you add it to one."
+---
+
+
+The AhaSend API creates one account-global contact. Access requires `contacts:write`.
+
+Only `email` is required. The API trims it and changes it to lowercase. An email address that another contact of the account already has is refused with `409`.
+
+**Fields:**
+- `status` is `enabled` when you leave it out or send `null`.
+- `unsubscribed: true` creates the contact as unsubscribed account-wide, and sets `unsubscribed_at` to the current UTC time. Campaigns do not send to an unsubscribed contact.
+- `attributes` must use the keys and types that you defined in the dashboard, and a value cannot be `null`. See [Attributes](/api-reference/contacts/overview#attributes).
+- `validation_status` and `last_validated_at` are read-only.
+
+The new contact is on no list, so a campaign cannot reach it yet. To add it to a list, use [Add or Update a List Contact](/api-reference/lists/upsert-list-contact) or [Batch Add List Contacts](/api-reference/lists/batch-add-list-contacts). Create Contact does not read or change suppressions.
+
+This operation accepts an `Idempotency-Key` header. The API stores a `201`, a `400` and a `409` for a duplicate contact for 24 hours, and replays them for a retry with the same key. A `409` with `Idempotent-Replayed: false` and `Retry-After` means a request with the same key is still in progress. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Contacts API overview](/api-reference/contacts/overview), [Batch Upsert Contacts](/api-reference/contacts/batch-upsert-contacts), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

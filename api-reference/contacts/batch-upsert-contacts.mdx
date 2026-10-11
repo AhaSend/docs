@@ -1,0 +1,33 @@
+---
+title: "Create or Update Contacts in a Batch via the API"
+sidebarTitle: "Batch Upsert Contacts"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/contacts/batch"
+description: "Create or update up to 1,000 AhaSend contacts in one request, matched by email address. Each gets its own result, so one bad record does not stop the rest."
+---
+
+
+The AhaSend API creates or updates 1 to 1,000 contacts in one request, and answers when the work is done. Access requires `contacts:write`.
+
+**Matching and fields:**
+- Each entry needs `email`. The API trims it and changes it to lowercase, then updates the contact with that address, or creates one.
+- On an update, a field that you leave out or send as `null` does not change. On a create, such a field gets the same default as in [Create Contact](/api-reference/contacts/create-contact).
+- `attributes` is merged into the stored attributes, and a `null` value removes that key. See [Attributes](/api-reference/contacts/overview#attributes).
+
+**Results:**
+- `data` gives one result for each entry, in the order of the request. `position` is the index of the entry. `outcome` is `created`, `updated` or `failed`, and a failed entry has a `reason`.
+- `created`, `updated` and `failed` count the results.
+- An entry that fails does not stop the other entries.
+- When two or more entries have the same email address after it is trimmed and changed to lowercase, all of them fail.
+- An empty `data` array, more than 1,000 entries or a malformed body is refused with `400` for the whole request.
+
+The contacts are not added to a list. To add them, use [Batch Add List Contacts](/api-reference/lists/batch-add-list-contacts).
+
+**Pacing:**
+1,000 is a limit, not a target. Measure how long a batch takes with real data. Send the next batch only after the previous response arrives, and send smaller batches or wait longer when the time grows. After a `429`, wait before you continue. The API does not promise a fixed throughput. See [API rate limits](/api-reference/rate-limits).
+
+This operation accepts an `Idempotency-Key` header. The changes and the stored response are saved together. A retry with the same key replays the `200` or the `400` for 24 hours. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Contacts API overview](/api-reference/contacts/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
