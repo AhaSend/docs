@@ -60,6 +60,7 @@
             "group": "Delivery and Troubleshooting",
             "pages": [
               "deliverability/index",
+              "deliverability/marketing-limit",
               "bounces",
               "troubleshooting",
               "glossary"
