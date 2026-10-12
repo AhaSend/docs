@@ -175,7 +175,7 @@
                 ]
               },
               {
-                "group": "Templates",
+                "group": "Transactional Templates",
                 "icon": "file-lines",
                 "pages": [
                   "api-reference/templates/create-template",

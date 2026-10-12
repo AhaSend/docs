@@ -11,13 +11,20 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 #### New Features
 
 - **[Transactional templates](/api-reference/templates/get-templates) in API v2.** Create, update and delete templates, work on a draft, publish it, and read or restore published versions. Send a template with [Create Template Message](/api-reference/messages/create-template-message): each recipient gives its own values for the template's variables.
+- **Transactional templates in the dashboard.** Under Transactional → Templates, design a template with the Simple Editor or the Advanced Editor, or upload your own HTML file or a zip with its images. Each template has its own page with its ID, its variables, a sample API request, a preview with your sample values, a test send, a default sender and subject, and its delivery statistics for the last 30 days. Your edits go to a draft. API sends keep using the published version until you click Publish, and the last 50 published versions can be previewed and restored.
 - **[Campaigns](/api-reference/campaigns/overview) and [campaign templates](/api-reference/campaign-templates/get-campaign-templates) in API v2.** Create a draft campaign from MJML, HTML or a campaign template, check it, send a test, schedule or send it, and read its statistics and recipients.
+- **Saved campaign templates.** Save a campaign's design as a template under Marketing → Templates and start new campaigns from it. Each campaign keeps its own copy, so a later change to the template does not change campaigns you already made.
 - **[Contacts](/api-reference/contacts/overview) and [lists](/api-reference/lists/overview) in API v2.** Manage contacts, add them to lists in batches and read each list's members.
 - **Sending type for domains.** Each domain is transactional or marketing. Choose the type that matches the mail you send from it. See [which sending type to use](/deliverability#which-sending-type-should-my-domain-use).
 - **[One-click unsubscribe](/deliverability/unsubscribe).** Mail from a marketing domain gets `List-Unsubscribe` and `List-Unsubscribe-Post` headers. Put `{{unsubscribe_url}}` in any message to add the same link to its body.
 - **[Daily marketing limit](/deliverability/marketing-limit).** Marketing mail of each account has a daily limit. Campaigns above it continue on the next days; API and SMTP marketing mail above it waits about a day and then fails.
 - **[Paused domains](/domains#why-is-sending-paused-on-my-domain).** AhaSend can pause one domain when too many of its recent emails bounced, while the account's other domains keep sending. A parent account can [unpause a sub-account's domain](/api-reference/sub-accounts/unpause-sub-account-domain).
 - **New API key [scopes](/api-reference/scopes)**: `contacts:*`, `lists:*`, `campaigns:*`, `templates:write` and `templates:delete`. Keys with `*` have them all. Keys with the `templates` scopes also manage campaign templates.
+- **"View in browser" link for campaigns.** Add the link from the editor's variable menu. It opens the email as the recipient got it, after the campaign is sent. Opens and clicks on this copy are not tracked.
+- **Right-to-left emails.** Both editors can set the direction of the whole email or of parts of it, for Arabic, Hebrew, Persian and other right-to-left languages.
+- **Campaigns, contacts and lists for every account.** The dashboard has a new sidebar with Transactional, Marketing, Developers and Settings sections. Old links and bookmarks open the new pages.
+- **Dashboard times in your time zone.** Charts, daily totals, report times, date filters and CSV exports use the time zone in your profile (Profile → Timezone), or UTC when none is set. Billing periods stay in UTC.
+- **[Go SDK](/guides/go-sdk) v0.3.0 and [Node.js SDK](/guides/nodejs-sdk) `@ahasend/sdk` 0.3.0.** Both cover the new contacts, lists, campaigns, campaign templates and transactional templates APIs, template sends, domain sending types and the sub-account domain unpause. Install them with `go get github.com/AhaSend/ahasend-go@v0.3.0` or `npm install @ahasend/sdk@0.3.0`.
 
 #### Changes
 
@@ -28,6 +35,40 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **A spam complaint about a campaign ends the contact's subscription to that campaign's list** and adds no suppression, so transactional mail to the address continues. A complaint about transactional mail still suppresses the address.
 - **API error messages say "paused" in place of "suspended"** for accounts and domains.
 - **Campaign reports count only bounced and failed recipients as bounces.** Mail that expires before AhaSend ever tried to deliver it ends as failed and adds no bounce.
+- **Campaign open and click rates are now unique recipients out of delivered emails**, without bot opens and clicks. The click rate was clicks divided by opens before, and could pass 100%. Reports of earlier campaigns show the new rates too.
+- **A list's subscriber count now shows the contacts a campaign can reach.** Bounced, invalid and unsubscribed contacts are left out, in the dashboard and in the API's `contact_count`. The Lists page also shows the total number of contacts on each list.
+- **Unsubscribes and spam complaints are protected suppressions.** [Wiping suppressions](/api-reference/suppressions/wipe-suppressions) keeps them, and the dashboard marks them as protected. You can still delete one at a time.
+- **Renaming a contact field changes only its label.** Its key, which templates, saved searches and the API use, stays the same.
+- **Pause notices explain the reason.** When an account is paused, the dashboard and the email give the reason and the next steps.
+- **Some campaign actions are refused earlier**: scheduling less than a minute ahead, scheduling when the sender domain is not verified or is paused, and scheduling when no contact on the chosen lists can get the campaign. The message says which one applies. A reply-to address must be a plain address, without a name.
+- **Messages record their template.** In API v2, a message sent from a transactional template carries its `template_id`.
+- **The contact CSV export writes dates in your time zone, with the UTC offset.** If you read this file with your own code, check how it reads dates.
+- **New legacy (v1) API keys can no longer be created.** Existing v1 keys keep working. Create an API v2 key for new integrations.
+- **An account name made only of spaces is refused**, in onboarding and on the account page.
+
+#### Improvements
+
+- **The old DKIM key is revoked a week after a rotation.** On managed DNS domains, AhaSend publishes an empty (revoked) key for the old signing key and deletes its private key, so an old key can no longer pass DKIM. Domains with manually set up DKIM are not affected.
+- **Campaign list checks finish faster on large lists**, so the decision before sending is based on more of the checked contacts.
+- **Campaign report breakdowns load faster on large campaigns.** They are counted in the background and show when they were last updated. The bounce and status lists page with Previous and Next, and no recipient is repeated or skipped.
+- **Advanced search on a list is more complete.** Full names match, "is empty" also finds contacts that never had the field, and date filters accept relative dates such as "7 days ago".
+
+#### Bug Fixes
+
+- **Fixed [Reputation Shield](/security/reputation-shield) rejecting mail to real mail providers**, such as Hotmail, Outlook, Live, MSN, Proton and Tutanota, for a short time in early October. A public list of temporary-mail domains we use had started to include them.
+- **Fixed automatic DKIM rotations starting late for some domains**, mostly on plans that rotate more often.
+- **Fixed API v2 always reporting managed DKIM records as `propagated: false`**, even on fully set up domains.
+- **Fixed managed DNS records sometimes showing "Issue detected" for up to 15 minutes** after we published them, when our DNS provider briefly limited our requests.
+- **Fixed contacts being marked invalid when the address check service was busy** during a campaign list check. Those contacts keep their status and still get the campaign.
+- **Fixed many spam complaints from Yahoo and Microsoft not being recorded.** Complaints now appear in your statistics, and the addresses are handled as described above.
+- **Fixed a bounce or a complaint erasing a contact's unsubscribe from a list.** A bulk add or a CSV re-import also no longer subscribes people who left a list again.
+- **Fixed updating a webhook through API v2 failing with `500`** for webhooks limited to some domains. This affected requests from 5 to 12 October.
+- **Fixed campaign report exports (CSV and PDF) returning "not found".**
+- **Fixed advanced search on the list page not applying its filter.**
+- **Fixed the Send Campaign button on a list page returning "not found".** It now starts a campaign for that list.
+- **Fixed a campaign's reply-to address not being removable.**
+- **Fixed the average delivery time cards on the home page showing 0** for accounts with no delivery window set.
+- **Fixed changing a domain's settings through API v2 not updating its `updated_at`.**
 
 </Update>
 
