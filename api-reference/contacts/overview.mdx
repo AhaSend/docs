@@ -1,0 +1,92 @@
+---
+title: "Contacts API Overview"
+sidebarTitle: "Introduction"
+description: "Manage the contacts of your AhaSend account through the API: create, read, update and delete them one at a time, or create and update up to 1,000 at once."
+icon: "address-book"
+---
+
+
+The AhaSend Contacts API manages the contacts of your account. This page explains what a contact is, how it relates to lists, and the rules that apply to all contact operations.
+
+## Contacts and Lists
+
+A contact is one person in your account, found by email address. Contacts are account-global: one contact has one email address, and one email address belongs to at most one contact in the account. The API trims the email address and changes it to lowercase before it stores it.
+
+A new contact is on no list. Campaigns send to lists, so a campaign cannot reach a contact until you add it to a list with the [Lists API](/api-reference/lists/overview). Each list membership has its own `subscription_status`. See [Memberships](/api-reference/lists/overview#memberships).
+
+A contact has two kinds of consent:
+- `unsubscribed` on the contact is account-wide. When it is `true`, campaigns do not send to the contact on any list. It does not change the contact's memberships.
+- `subscription_status` on a membership applies to one list only.
+
+Contacts and [suppressions](/api-reference/suppressions/get-suppressions) are separate. Create Contact does not read or change suppressions, and a change to `unsubscribed` does not add or remove a suppression.
+
+## Contact Fields
+
+| Field | Meaning |
+|-------|---------|
+| `email` | The email address, trimmed and in lowercase |
+| `first_name`, `last_name` | The name of the contact |
+| `status` | `enabled`, `disabled` or `blocked`. A new contact is `enabled` unless you set another status. |
+| `status_reason` | Free text that explains the status |
+| `unsubscribed`, `unsubscribed_at` | The account-wide unsubscribe and its time |
+| `attributes` | Your own fields. See [Attributes](#attributes). |
+| `validation_status`, `last_validated_at` | The result of the last email validation. You cannot write these fields. |
+
+## Name a Contact in the Path
+
+Operations on one contact take `{id_or_email}` in the path:
+- A value in UUID form is read as the contact ID.
+- Any other value is read as an email address. The API trims it and changes it to lowercase.
+
+Percent-encode an email address exactly once as a path segment. For example, `user+tag@example.com` becomes `user%2Btag%40example.com`. The official SDKs encode the value for you, so pass them the email address as it is.
+
+## Attributes
+
+You define the attribute keys and their types in the dashboard. A write must use a defined key, and its value must match the type:
+
+| Type | Value |
+|------|-------|
+| `string` | A JSON string |
+| `number` | A finite JSON number |
+| `boolean` | A JSON boolean |
+| `date` | A string in the form `YYYY-MM-DD` |
+| `timestamp` | An RFC 3339 string |
+
+On create, an attribute value cannot be `null`. On update, the API merges the `attributes` object into the stored attributes, and a `null` value removes that key.
+
+Attributes that you read can also hold `null`, arrays or nested objects. Writes accept only the types above.
+
+## Pagination
+
+List Contacts returns contacts newest first. Each page gives `pagination.has_more`, `pagination.next_cursor` and `pagination.previous_cursor`. Send `next_cursor` as `after` for the next page, or `previous_cursor` as `before` for the previous page. You cannot send `after` and `before` together. `limit` is 1 to 100, and the default is 100.
+
+## Scopes
+
+| Scope | Grants |
+|-------|--------|
+| `contacts:read` | List and view contacts |
+| `contacts:write` | Create and update contacts, one at a time or in a batch |
+| `contacts:delete` | Delete contacts |
+
+To read the lists of a contact, you need `lists:read`. See [Permission scopes](/api-reference/scopes#lists).
+
+## Idempotency
+
+Create Contact and Batch Upsert Contacts accept an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
+
+## API Operations
+
+| Task | Endpoint reference |
+|---|---|
+| Create a contact | [Create Contact](/api-reference/contacts/create-contact) |
+| Read a contact | [Get Contact](/api-reference/contacts/get-contact) |
+| List and filter contacts | [List Contacts](/api-reference/contacts/get-contacts) |
+| Change a contact or unsubscribe it from all lists | [Update Contact](/api-reference/contacts/update-contact) |
+| Remove a contact and its history | [Delete Contact](/api-reference/contacts/delete-contact) |
+| Create or update up to 1,000 contacts | [Batch Upsert Contacts](/api-reference/contacts/batch-upsert-contacts) |
+| Read the lists of a contact | [List Contact's Lists](/api-reference/lists/get-contact-lists) |
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Lists API overview](/api-reference/lists/overview), [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

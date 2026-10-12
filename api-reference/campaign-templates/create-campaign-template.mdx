@@ -1,0 +1,31 @@
+---
+title: "Create a Campaign Template via the API"
+sidebarTitle: "Create Campaign Template"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/campaign-templates"
+description: "Create an AhaSend campaign template from MJML or HTML, or as an empty design for the dashboard's editor, so that new campaigns can copy its design."
+---
+
+
+The AhaSend API creates a campaign template: a reusable design for marketing campaigns. Access requires `templates:write`.
+
+A campaign template has no draft, no versions, no subject and no sender. The request sets the design that a campaign copies when you create it with `template_id` in [Create Campaign](/api-reference/campaigns/create-campaign). The campaign sets its own subject and sender.
+
+**Editor:**
+- `content.mjml` creates an `advanced` campaign template, and `content.html` creates an `html` campaign template.
+- Without `content.mjml` or `content.html`, set `editor`. An `editor` that does not agree with the content is refused.
+- Without `content`, the campaign template gets an empty design, which you can complete in the dashboard's editor.
+- You cannot change the editor after you create the campaign template.
+- You can change the design of a `simple` campaign template only in the dashboard.
+
+**Content rules:**
+- MJML must pass strict validation. For a validation error, the message gives the line of each problem.
+- Images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
+- The MJML, the HTML and a text written by hand can each be at most 200 KB.
+- A campaign can copy the campaign template only when the campaign template has HTML.
+
+This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Campaigns API overview](/api-reference/campaigns/overview), [Update Campaign Template](/api-reference/campaign-templates/update-campaign-template), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

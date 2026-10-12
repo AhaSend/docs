@@ -1,0 +1,20 @@
+---
+title: "Remove a Contact from a List via the API"
+sidebarTitle: "Remove List Contact"
+openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/lists/{list_id}/contacts/{id_or_email}"
+description: "Remove a contact from an AhaSend list. This deletes the membership and its unsubscribe record; to stop email but keep the record, unsubscribe instead."
+---
+
+
+The AhaSend API removes one contact from one list. Access requires `lists:write`, not `lists:delete`.
+
+`{id_or_email}` is the contact ID or its email address. Percent-encode an email address exactly once. See [Name a contact in the path](/api-reference/contacts/overview#name-a-contact-in-the-path).
+
+The API deletes the membership, and with it any record that the contact unsubscribed from this list. So when you add the contact again later, nothing shows the earlier unsubscribe. To stop email from this list and keep the record, use [Add or Update a List Contact](/api-reference/lists/upsert-list-contact) with `subscription_status: "unsubscribed"` instead. You can undo an unsubscribe.
+
+A membership that is `complained` cannot be removed and answers `409`, so the contact cannot be added back as `confirmed`. A list, a contact or a membership that does not exist answers `404`, and the message says which. The contact itself stays.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Unsubscribe, remove or delete](/api-reference/lists/overview#unsubscribe-remove-or-delete).
+- [Lists API overview](/api-reference/lists/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

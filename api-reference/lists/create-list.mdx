@@ -1,0 +1,24 @@
+---
+title: "Create a List via the API"
+sidebarTitle: "Create List"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/lists"
+description: "Create an AhaSend contact list with a name, a description and tags. A new list has no contacts, and list names do not have to be unique."
+---
+
+
+The AhaSend API creates one list. Access requires `lists:write`.
+
+Lists are static, private and single opt-in. A new list has no members, so its `contact_count` is `0`. To add contacts, use [Add or Update a List Contact](/api-reference/lists/upsert-list-contact) or [Batch Add List Contacts](/api-reference/lists/batch-add-list-contacts).
+
+**Fields:**
+- `name` is required. The API trims it, and it must then have 1 to 255 characters. Names do not have to be unique in an account.
+- `description` can have up to 1,000 characters after it is trimmed. Without it, the description is empty.
+- `tags`: the API trims each tag, drops empty tags and merges duplicates. At most 50 tags can remain. A `null` tag is refused.
+- A field that you cannot write is refused with `400`, and the message names it.
+
+This operation accepts an `Idempotency-Key` header. A retry with the same key replays the stored response for 24 hours. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Lists API overview](/api-reference/lists/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -1,6 +1,6 @@
 ---
 title: "API Error Codes and Error Responses"
-description: "Reference for AhaSend API v2 HTTP status codes (400, 401, 403, 404, 409, 422, 429, 500), the JSON error format, example messages, and how to fix each one."
+description: "Reference for AhaSend API v2 HTTP status codes (400, 401, 403, 404, 409, 422, 429, 500, 502, 503), the JSON error format, example messages and fixes for each."
 icon: "triangle-exclamation"
 sidebarTitle: "Errors"
 ---
@@ -20,6 +20,20 @@ All API errors return a consistent JSON structure with an HTTP status code and a
 
 The `message` field is human-readable text, not a stable error code. Use the HTTP status and the operation's contract for program logic.
 
+When [Send Campaign](/api-reference/campaigns/send-campaign) or [Test Campaign](/api-reference/campaigns/test-campaign) refuses a campaign with issues, the `400` body also holds `issues`. Each issue has a stable `code` and a `message`. See [Issues](/api-reference/campaigns/overview#issues).
+
+```json
+{
+  "message": "campaign is not ready to send",
+  "issues": [
+    {
+      "code": "subject_missing",
+      "message": "Add a subject before you send the campaign."
+    }
+  ]
+}
+```
+
 ## HTTP Status Codes
 
 The AhaSend API uses standard HTTP status codes to indicate the success or failure of requests:
@@ -28,7 +42,7 @@ The AhaSend API uses standard HTTP status codes to indicate the success or failu
 
 - **200 OK** - Request succeeded
 - **201 Created** - Resource created successfully
-- **202 Accepted** - Message accepted for processing; inspect each recipient's status
+- **202 Accepted** - Message accepted for processing; inspect each recipient's status. Send Campaign also answers `202`, with the campaign in `validating`
 
 ### 4xx Client Errors
 
@@ -68,7 +82,7 @@ Authentication failed or is missing.
 - Missing `Authorization` header
 - Invalid API key format (must be `Bearer <api_key>`)
 - API key doesn't exist or has been revoked
-- Account associated with API key is suspended
+- Sending is paused on the account of the API key
 - API key doesn't belong to the specified account
 
 ```json
@@ -85,7 +99,7 @@ Authentication failed or is missing.
 
 ```json
 {
-  "message": "Account is suspended"
+  "message": "account is paused"
 }
 ```
 
@@ -101,6 +115,7 @@ This typically occurs when your API key doesn't have the required scopes for the
 - API key lacks required scopes (e.g., trying to delete domains without `domains:delete:all` or `domains:delete:{domain}` scope)
 - Attempting to access resources outside your API key's domain restrictions
 - Insufficient permissions for specific operations
+- Sending from the domain is paused. You cannot send from the domain or delete it. See [paused domains](/domains#why-is-sending-paused-on-my-domain).
 
 ```json
 {
@@ -111,6 +126,12 @@ This typically occurs when your API key doesn't have the required scopes for the
 ```json
 {
   "message": "api key does not have sufficient permissions to read webhooks"
+}
+```
+
+```json
+{
+  "message": "Sending from domain 'example.com' is paused. Check your dashboard for the reason."
 }
 ```
 
@@ -143,6 +164,7 @@ The request conflicts with the current state of the resource.
 - **Idempotency conflicts**: Another request with the same idempotency key is already in progress
 - **Resource conflicts**: Trying to create a resource that already exists (e.g., duplicate domain)
 - **IP allow list conflicts**: Updating your own key would exclude the caller's current IP
+- **Campaign status conflicts**: Changing, deleting, testing or sending a campaign that is not a draft, or unscheduling a campaign that is not `validating` or `scheduled` or that has queued mail. See [Changes only to drafts](/api-reference/campaigns/overview#changes-only-to-drafts)
 
 ```json
 {
@@ -174,6 +196,8 @@ When you receive this error, wait before making additional requests. Use exponen
 }
 ```
 
+**Daily test limit:** [Test Campaign](/api-reference/campaigns/test-campaign) also answers `429` when the addresses of the test would take the day's total over 50 test emails (UTC). Its message currently reads `daily test send limit reached`. Backoff does not clear this `429`. A test to fewer addresses can still fit the same day; otherwise the limit clears when the UTC day changes. Keep count of the test emails you send each UTC day; a `429` from Test Campaign that stays after backoff is the daily limit. See [Test Campaign](/api-reference/campaigns/test-campaign) for the rules of the limit.
+
 ### 5xx Server Errors
 
 #### 500 Internal Server Error
@@ -193,6 +217,28 @@ These errors indicate a problem on our end. If you consistently receive 500 erro
 ```json
 {
   "message": "internal server error, please try again later"
+}
+```
+
+#### 502 Bad Gateway
+
+[Test Campaign](/api-reference/campaigns/test-campaign) answers `502` when the mail server could not take the test. Nothing was sent, and the test does not count toward the daily test limit. Retry the request.
+
+```json
+{
+  "message": "the test could not be sent"
+}
+```
+
+#### 503 Service Unavailable
+
+The service could not finish the request. Retry it later.
+
+The transactional template operations answer `503` with a `Retry-After` header when the template kept changing while the request ran, for example while it was edited in the dashboard. Retry the request after that delay.
+
+```json
+{
+  "message": "template is being changed by another request, try again"
 }
 ```
 

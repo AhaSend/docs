@@ -157,6 +157,47 @@ AhaSend supports three types of scopes:
 | `suppressions:delete` | Remove specific suppressions |
 | `suppressions:wipe` | Clear entire suppression list |
 
+### Templates
+
+| Scope | Description |
+|-------|-------------|
+| `templates:read` | List and view transactional templates, their drafts and their published versions, and campaign templates |
+| `templates:write` | Create and update transactional templates, publish and discard their drafts, and restore their versions; create and update campaign templates |
+| `templates:delete` | Delete transactional templates and campaign templates |
+
+The `templates` scopes cover transactional templates and [campaign templates](/api-reference/campaign-templates/create-campaign-template) together. Sending a template with [Create Template Message](/api-reference/messages/create-template-message) needs the send scope of the sender's domain, not a `templates` scope.
+
+### Campaigns
+
+| Scope | Description |
+|-------|-------------|
+| `campaigns:read` | List and view campaigns, their stats and their recipients |
+| `campaigns:write` | Create, update and duplicate campaigns |
+| `campaigns:delete` | Delete draft campaigns |
+| `campaigns:send` | Send, unschedule and test campaigns |
+
+Sending, unscheduling and testing a campaign need only `campaigns:send`. They need no `messages:send` scope, not even for the sender's domain. See the [Campaigns API](/api-reference/campaigns/overview).
+
+### Contacts
+
+| Scope | Description |
+|-------|-------------|
+| `contacts:read` | List and view contacts |
+| `contacts:write` | Create and update contacts, one at a time or in a batch |
+| `contacts:delete` | Delete contacts |
+
+Reading the lists of a contact needs `lists:read`, not a `contacts` scope. See the [Contacts API](/api-reference/contacts/overview).
+
+### Lists
+
+| Scope | Description |
+|-------|-------------|
+| `lists:read` | List and view lists, the contacts on a list and the lists of a contact |
+| `lists:write` | Create and update lists, and add, update and remove the contacts on a list |
+| `lists:delete` | Delete lists |
+
+Removing a contact from a list needs `lists:write`, not `lists:delete`. Listing the contacts on a list with `include_contacts=true` needs `contacts:read` as well as `lists:read`. See the [Lists API](/api-reference/lists/overview).
+
 ### API Key Management
 
 | Scope | Description |
@@ -174,7 +215,7 @@ These scopes are granted to **parent**-account API keys to manage sub-accounts a
 | `sub-accounts:read` | List and read sub-accounts under the parent |
 | `sub-accounts:write` | Create and update sub-accounts |
 | `sub-accounts:delete` | Soft-delete sub-accounts |
-| `sub-accounts:suspend` | Suspend and unsuspend sub-accounts |
+| `sub-accounts:suspend` | Pause and resume sub-accounts, and unpause their domains |
 | `sub-accounts:usage` | Read per-sub-account usage and allocated cost |
 | `sub-account-api-keys:read` | List and read API keys owned by sub-accounts |
 | `sub-account-api-keys:write` | Create and update API keys owned by sub-accounts |

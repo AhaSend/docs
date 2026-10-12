@@ -1,0 +1,169 @@
+---
+title: "Campaigns API Overview"
+sidebarTitle: "Introduction"
+description: "Build, test and send AhaSend marketing campaigns through the API: set the sender, lists, subject and design, fix the issues, then read stats and recipients."
+icon: "bullhorn"
+---
+
+
+The AhaSend Campaigns API creates marketing campaigns, sends them to your lists and reports the results. This page gives the steps from a new campaign to its report, and the rules that apply to all campaign operations.
+
+## Campaign Templates and Campaigns
+
+A campaign template is a reusable design. In the dashboard, campaign templates are under **Marketing > Templates**. When you create a campaign with a `template_id`, the campaign copies the design of that campaign template. The copy belongs to the campaign: later changes to the campaign template do not change the campaign, and you can delete the campaign template without an effect on the campaign.
+
+Campaign templates and [transactional templates](/api-reference/templates/create-template) are different resources. The campaign template operations do not return transactional templates, and the transactional template operations do not return campaign templates.
+
+## Prerequisites
+
+Before you create a campaign, make sure you have:
+
+- **An API key** with the `campaigns` scopes that you need, and the `templates` scopes to manage campaign templates. Copying a campaign template with `template_id` on Create Campaign needs only `campaigns:write`. See [Scopes](#scopes).
+- **A verified sender domain** that is not paused. See [domain setup](/domains).
+- **A list with subscribed contacts.** Create lists and add contacts with the [Lists API](/api-reference/lists/overview) or in the dashboard. See [Build and Send a Campaign](#build-and-send-a-campaign) for where to find the ID of a list.
+
+## Build and Send a Campaign
+
+<Steps>
+  <Step title="Make the design">
+    Create a reusable design with [Create Campaign Template](/api-reference/campaign-templates/create-campaign-template), or give the design to the campaign itself in the next step. A design is MJML, HTML, or an empty design that you complete in the dashboard's editor.
+  </Step>
+
+  <Step title="Create the campaign">
+    Call [Create Campaign](/api-reference/campaigns/create-campaign) with a `name`. All other fields are optional. You can set them in the same request, or later with [Update Campaign](/api-reference/campaigns/update-campaign).
+  </Step>
+
+  <Step title="Set the sender, lists, subject, preview text and content">
+    - `from` is the sender. Its address must be on a domain of your account with valid DNS records.
+    - `list_ids` holds the IDs of the lists to send to. To find the ID of a list, use [List Lists](/api-reference/lists/get-lists), or open the list under **Marketing > Lists** in the dashboard: the ID is the last part of the page's URL. Before you send, the lists must have subscribed contacts.
+    - `subject` is the subject line, and `preheader` is the preview text that most inboxes show after the subject.
+    - `content` is the design. On create only, `template_id` can copy the design of a campaign template instead. Update Campaign does not accept `template_id`.
+  </Step>
+
+  <Step title="Fix the issues">
+    [Get Campaign](/api-reference/campaigns/get-campaign) returns `ready` and `issues`. While `ready` is `false`, each issue gives a `code` and a `message` that tells you what to fix. See [Issues](#issues).
+  </Step>
+
+  <Step title="Send a test">
+    [Test Campaign](/api-reference/campaigns/test-campaign) sends the campaign to up to 5 addresses, so you can check it in a real inbox. See [Test Sends](#test-sends).
+  </Step>
+
+  <Step title="Send now or later">
+    [Send Campaign](/api-reference/campaigns/send-campaign) sends the campaign now, or at the time in `send_at`. To return a `validating` or `scheduled` campaign to `draft`, use [Unschedule Campaign](/api-reference/campaigns/unschedule-campaign). A campaign in any other status, `waiting_for_review` included, cannot be unscheduled.
+  </Step>
+
+  <Step title="Read the results">
+    [Get Campaign Stats](/api-reference/campaigns/get-campaign-stats) returns the counters and rates of the campaign. [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients) returns the recipients in one status or with one bounce classification.
+  </Step>
+</Steps>
+
+## Campaign Status
+
+| Status | Meaning |
+|--------|---------|
+| `draft` | The campaign is being prepared. |
+| `validating` | The campaign is scheduled, and its lists are being checked. |
+| `waiting_for_review` | The campaign is held for a review before it sends. |
+| `scheduled` | The campaign is accepted and waits for its send time. |
+| `sending` | The campaign is sending now. |
+| `paused` | Sending stopped for now. `status_reason` tells why. |
+| `sent` | All messages were sent. |
+| `canceled` | The campaign stopped before it finished. `status_reason` tells why. |
+| `failed` | The campaign could not be sent. `status_reason` tells why. |
+
+When a send reaches the daily marketing limit of your account, it continues later. `send_resumes_at` gives the time when it continues. In the dashboard, the page of a scheduled, sending or sent campaign shows your daily marketing limit.
+
+## Changes Only to Drafts
+
+You can change, delete, test and send a campaign only while its status is `draft`. For a campaign in any other status, these operations answer `409` with `campaign is not a draft`.
+
+To change a campaign that is `validating` or `scheduled`, unschedule it first. The campaign goes back to `draft`. Change it, then send it again. A campaign that has queued mail, or that is in another status, cannot go back to `draft`. To send the same campaign again, use [Duplicate Campaign](/api-reference/campaigns/duplicate-campaign), which makes a new draft from a campaign in any status.
+
+The API and the dashboard change the same campaign.
+
+## Issues
+
+A draft campaign is `ready` when it has no issues. Send Campaign refuses a campaign with issues with `400`, and the response holds the issues.
+
+| Code | Meaning |
+|------|---------|
+| `sender_missing` | The campaign has no complete sender, or the domain of the sender was deleted. |
+| `lists_missing` | The campaign has no list that still exists. |
+| `subject_missing` | The campaign has no subject. |
+| `preheader_missing` | The campaign has no preview text. |
+| `design_missing` | The campaign has no design, or its design has no HTML. |
+| `text_broken` | The subject, the preview text or the design holds template syntax that cannot be rendered, so every message would fail. |
+| `unsubscribe_link_missing` | The HTML of the design has no unsubscribe link. |
+
+## Unsubscribe Link
+
+Every campaign must have an unsubscribe link. The HTML of the design must use `{{ unsubscribe_url }}` or `{{ unsubscribe_link }}`, with or without filters. Without one of them, the campaign has the issue `unsubscribe_link_missing`, and Send Campaign refuses it.
+
+A test send does not need the unsubscribe link, so you can test a design before you add it.
+
+## Test Sends
+
+A test send goes to 1 to 5 addresses, and your account can send 50 test emails per day (UTC). [Test Campaign](/api-reference/campaigns/test-campaign) gives the rules of the daily limit.
+
+## Idempotency
+
+These operations accept an `Idempotency-Key` header:
+
+- Create Campaign Template and Update Campaign Template.
+- Create Campaign, Update Campaign and Duplicate Campaign.
+- Send Campaign, Unschedule Campaign and Test Campaign.
+
+The API stores the answer that the operation itself gives to a key, including a refusal (`4xx`), and replays it for every retry with the same key. So a refusal from the operation stays a refusal for that key. After you fix the cause, for example after you add the missing subject or after the status of the campaign changes, send the request again with a new `Idempotency-Key`. Test Campaign is the one exception: it does not store a `4xx` answer.
+
+The API does not store a `5xx`, or a `401`, `403` or rate-limit `429`, which come before the operation runs. You can retry these with the same key. Stored answers expire after 24 hours. See [Idempotency](/api-reference/idempotency).
+
+A campaign `409` has one of three forms:
+
+| Headers | Meaning | What to do |
+|---------|---------|------------|
+| `Idempotent-Replayed: false` and `Retry-After` | A request with the same key is still in progress. | Retry with the same key after the `Retry-After` delay. |
+| Neither header | The status of the campaign does not allow the request. | After the status changes, send the request again, with a new key if you used one. |
+| `Idempotent-Replayed: true` | The API replays a status conflict that it stored for an earlier request with the same key. | After the status changes, retry with a new key. |
+
+Only Update Campaign, Send Campaign, Unschedule Campaign and Test Campaign have a status conflict among the operations with a key. Test Campaign does not store its status conflict, so it never answers in the third form. The other campaign and campaign template operations with a key answer `409` only in the first form. Do not use the `message` to tell the forms apart.
+
+See [Idempotency](/api-reference/idempotency).
+
+## Scopes
+
+| Scope | Grants |
+|-------|--------|
+| `campaigns:read` | List and view campaigns, their stats and their recipients |
+| `campaigns:write` | Create, update and duplicate campaigns |
+| `campaigns:delete` | Delete draft campaigns |
+| `campaigns:send` | Send, unschedule and test campaigns |
+| `templates:read` | List and view campaign templates |
+| `templates:write` | Create and update campaign templates |
+| `templates:delete` | Delete campaign templates |
+
+The `templates` scopes give access to transactional templates and campaign templates together. See [Permission scopes](/api-reference/scopes).
+
+## API Operations
+
+| Task | Endpoint reference |
+|---|---|
+| Create a reusable design | [Create Campaign Template](/api-reference/campaign-templates/create-campaign-template) |
+| Read a reusable design | [Get Campaign Template](/api-reference/campaign-templates/get-campaign-template) |
+| List reusable designs | [List Campaign Templates](/api-reference/campaign-templates/get-campaign-templates) |
+| Change a reusable design | [Update Campaign Template](/api-reference/campaign-templates/update-campaign-template) |
+| Remove a reusable design | [Delete Campaign Template](/api-reference/campaign-templates/delete-campaign-template) |
+| Create a campaign | [Create Campaign](/api-reference/campaigns/create-campaign) |
+| Read a campaign and its issues | [Get Campaign](/api-reference/campaigns/get-campaign) |
+| List campaigns | [List Campaigns](/api-reference/campaigns/get-campaigns) |
+| Change a draft | [Update Campaign](/api-reference/campaigns/update-campaign) |
+| Copy a campaign | [Duplicate Campaign](/api-reference/campaigns/duplicate-campaign) |
+| Send a test | [Test Campaign](/api-reference/campaigns/test-campaign) |
+| Send now or later | [Send Campaign](/api-reference/campaigns/send-campaign) |
+| Return a campaign to draft | [Unschedule Campaign](/api-reference/campaigns/unschedule-campaign) |
+| Read the results | [Get Campaign Stats](/api-reference/campaigns/get-campaign-stats), [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients) |
+| Remove a draft | [Delete Campaign](/api-reference/campaigns/delete-campaign) |
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

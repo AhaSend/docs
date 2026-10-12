@@ -1,0 +1,26 @@
+---
+title: "Update a Contact via the API"
+sidebarTitle: "Update Contact"
+openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/contacts/{id_or_email}"
+description: "Change an AhaSend contact by ID or email address: its email, name, status, account-wide unsubscribe or attributes. Only the fields you send change."
+---
+
+
+The AhaSend API changes one contact. Access requires `contacts:write`.
+
+`{id_or_email}` is the contact ID or its email address. Percent-encode an email address exactly once. See [Name a contact in the path](/api-reference/contacts/overview#name-a-contact-in-the-path).
+
+**Fields:**
+- A field that you leave out or send as `null` does not change.
+- `email` changes the email address of the contact. An address that another contact of the account has is refused with `409`.
+- `attributes` is merged into the stored attributes. A `null` value removes that key. Other values must match the types that you defined in the dashboard. See [Attributes](/api-reference/contacts/overview#attributes).
+
+**Unsubscribe:**
+- `unsubscribed: true` stops campaigns to the contact on all lists. It does not change the contact's memberships, and the contact no longer counts toward the `contact_count` of any list. There is no operation that removes a contact from all lists.
+- To unsubscribe the contact from one list only, use [Add or Update a List Contact](/api-reference/lists/upsert-list-contact) with `subscription_status: "unsubscribed"`.
+- A change to `unsubscribed` does not add or remove a suppression.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Contact](/api-reference/contacts/get-contact).
+- [Contacts API overview](/api-reference/contacts/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

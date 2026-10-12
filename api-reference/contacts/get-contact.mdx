@@ -1,0 +1,18 @@
+---
+title: "Get a Contact via the API"
+sidebarTitle: "Get Contact"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/contacts/{id_or_email}"
+description: "Retrieve one AhaSend contact by ID or email address, with its name, status, account-wide unsubscribe, attributes and validation result."
+---
+
+
+The AhaSend API returns one contact of the account. Access requires `contacts:read`.
+
+`{id_or_email}` is the contact ID or its email address. A value in UUID form is read as the ID. Percent-encode an email address exactly once, so `user+tag@example.com` becomes `user%2Btag%40example.com`. The official SDKs encode it for you. See [Name a contact in the path](/api-reference/contacts/overview#name-a-contact-in-the-path).
+
+The contact does not show its lists. To read them, use [List Contact's Lists](/api-reference/lists/get-contact-lists).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Update Contact](/api-reference/contacts/update-contact).
+- [Contacts API overview](/api-reference/contacts/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

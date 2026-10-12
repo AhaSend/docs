@@ -1,0 +1,38 @@
+---
+title: "Create a Campaign via the API"
+sidebarTitle: "Create Campaign"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/campaigns"
+description: "Create a draft AhaSend marketing campaign with its sender, lists, subject, preview text and design, from MJML, HTML or a campaign template."
+---
+
+
+The AhaSend API creates a draft marketing campaign. Access requires `campaigns:write`.
+
+Only `name` is required. You can set all other fields in this request, or later with [Update Campaign](/api-reference/campaigns/update-campaign). The response gives `ready` and `issues`: while the campaign has issues, it cannot be sent. See [Issues](/api-reference/campaigns/overview#issues).
+
+**Design:**
+The design comes from one source:
+- `content.mjml` creates an `advanced` design, and `content.html` creates an `html` design. With `content` that has neither, set `editor`. An `editor` that does not agree with the content is refused.
+- `editor` without `content` creates an empty design, which you can complete in the dashboard's editor.
+- `template_id` copies the design of a [campaign template](/api-reference/campaign-templates/create-campaign-template). The copy belongs to the campaign: later changes to the campaign template do not change it. A campaign template with no HTML is refused. A `template_id` that names no campaign template of your account is refused with `400` `campaign template not found`. `template_id` cannot go with `editor` or `content`.
+- Without any of them, the campaign has no design yet.
+
+**Content rules:**
+- MJML must pass strict validation. For a validation error, the message gives the line of each problem.
+- Images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
+- The MJML, the HTML and a text written by hand can each be at most 200 KB.
+- The HTML must have an unsubscribe link before you can send the campaign. See [Unsubscribe link](/api-reference/campaigns/overview#unsubscribe-link).
+
+**Sender, subject and lists:**
+- `from.email` must be on a domain of your account with valid DNS records. A paused domain is accepted here, but Send Campaign and Test Campaign refuse it.
+- `reply_to` is an address only, without a display name.
+- In `subject` and `preheader`, line breaks become spaces, and spaces at the start and end are removed. An empty subject or preview text counts as none.
+- The API checks the subject, the preview text, the sender and the reply-to by the same rules as the dashboard, and its error messages use the same words.
+- `list_ids` holds 1 to 50 lists of your account, in the order you give. A list that you give twice counts once. A list that does not exist is refused with `400`. To find the ID of a list, use [List Lists](/api-reference/lists/get-lists), or see [where to find a list's ID](/api-reference/campaigns/overview#build-and-send-a-campaign) in the dashboard.
+
+This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Campaigns API overview](/api-reference/campaigns/overview), [Test Campaign](/api-reference/campaigns/test-campaign), [Send Campaign](/api-reference/campaigns/send-campaign), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

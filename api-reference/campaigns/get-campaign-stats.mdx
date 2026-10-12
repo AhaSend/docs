@@ -1,0 +1,28 @@
+---
+title: "Get Campaign Stats via the API"
+sidebarTitle: "Get Campaign Stats"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/campaigns/{campaign_id}/stats"
+description: "Read the results of an AhaSend marketing campaign: delivered messages, opens, clicks, unsubscribes, complaints, bounces and rates, as the report shows them."
+---
+
+
+The AhaSend API returns the numbers of a campaign, the same numbers as the campaign report in the dashboard. Access requires `campaigns:read`.
+
+**Live counters:**
+`recipients`, `delivered`, `opens`, `clicks`, `unsubscribes` and `complaints` are live. Opens and clicks do not include bots.
+
+**Stored report:**
+- `report` holds the numbers counted from the recipients of the campaign: openers, clickers, bounces, deferrals, recipients by status and bounces by bounce classification. `report.computed_at` is the time of the count.
+- The report is counted again from time to time. When a request finds the report missing or old, it asks for a new count and answers the stored report. Read the stats again later to get the new numbers.
+- `report` is `null` until the first count.
+- `recount_failed` is `true` while the last count failed, so `report` can be old.
+
+**Rates:**
+`rates` gives percentages from 0 to 100 with two decimals. `open_rate` and `click_rate` use `delivered` as the base. `bounce_rate` and `deferral_rate` use `report.recipients` as the base. A rate is `null` while `report` is `null` or its base is zero.
+
+To list the recipients behind a number in `report.by_status` or `report.by_bounce_classification`, use [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Campaign](/api-reference/campaigns/get-campaign).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

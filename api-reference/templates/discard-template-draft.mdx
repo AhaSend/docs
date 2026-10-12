@@ -1,0 +1,18 @@
+---
+title: "Discard a Template Draft via the API"
+sidebarTitle: "Discard Template Draft"
+openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/templates/{template_id}/draft"
+description: "Discard the unpublished changes of an AhaSend transactional template, including changes made in the dashboard. The published copy stays as it is."
+---
+
+
+The AhaSend API discards the draft of a template. Access requires `templates:write`.
+
+The API and the dashboard edit the same draft, so this also discards changes made in the dashboard. A template with no draft stays as it is, so you can repeat the request safely.
+
+If the template changes in the dashboard or through another request while this request runs, the API tries again. If that continues, the API answers `503` with a `Retry-After` header. Retry the request after that delay.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Template Draft](/api-reference/templates/get-template-draft).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

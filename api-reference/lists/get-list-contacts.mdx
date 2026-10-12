@@ -1,0 +1,23 @@
+---
+title: "List the Contacts on a List via the API"
+sidebarTitle: "List Contacts on a List"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/lists/{list_id}/contacts"
+description: "List the members of an AhaSend contact list with their per-list subscription status. Filter by status or email, and embed the whole contact."
+---
+
+
+The AhaSend API returns the members of one list, newest membership first. Access requires `lists:read`.
+
+Each item is a membership with its `subscription_status`, the `contact_id` and the email address of the contact. See [Memberships](/api-reference/lists/overview#memberships).
+
+**Filters:**
+- `subscription_status` is `unconfirmed`, `confirmed`, `unsubscribed` or `complained`. `confirmed` gives the members that a campaign to the list can reach, after the account-wide checks of the contact. See [Lists](/api-reference/lists/overview#lists).
+- `email` matches one email address exactly, after it is trimmed and changed to lowercase. An empty value returns all members.
+- `include_contacts=true` adds the whole contact to each item. It also needs the `contacts:read` scope. Without it, the request answers `403`, also for a list that does not exist.
+
+Pages use cursors: send `after` or `before`, not both. See [Pagination](/api-reference/lists/overview#pagination).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Batch Add List Contacts](/api-reference/lists/batch-add-list-contacts).
+- [Lists API overview](/api-reference/lists/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

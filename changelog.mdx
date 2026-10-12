@@ -7,6 +7,30 @@ sidebarTitle: "Changelog"
 
 The AhaSend changelog lists product releases, API changes and fixes by month, with links to the affected features.
 
+<Update label="October 2026">
+#### New Features
+
+- **[Transactional templates](/api-reference/templates/get-templates) in API v2.** Create, update and delete templates, work on a draft, publish it, and read or restore published versions. Send a template with [Create Template Message](/api-reference/messages/create-template-message): each recipient gives its own values for the template's variables.
+- **[Campaigns](/api-reference/campaigns/overview) and [campaign templates](/api-reference/campaign-templates/get-campaign-templates) in API v2.** Create a draft campaign from MJML, HTML or a campaign template, check it, send a test, schedule or send it, and read its statistics and recipients.
+- **[Contacts](/api-reference/contacts/overview) and [lists](/api-reference/lists/overview) in API v2.** Manage contacts, add them to lists in batches and read each list's members.
+- **Sending type for domains.** Each domain is transactional or marketing. Choose the type that matches the mail you send from it. See [which sending type to use](/deliverability#which-sending-type-should-my-domain-use).
+- **[One-click unsubscribe](/deliverability/unsubscribe).** Mail from a marketing domain gets `List-Unsubscribe` and `List-Unsubscribe-Post` headers. Put `{{unsubscribe_url}}` in any message to add the same link to its body.
+- **[Daily marketing limit](/deliverability/marketing-limit).** Marketing mail of each account has a daily limit. Campaigns above it continue on the next days; API and SMTP marketing mail above it waits about a day and then fails.
+- **[Paused domains](/domains#why-is-sending-paused-on-my-domain).** AhaSend can pause one domain when too many of its recent emails bounced, while the account's other domains keep sending. A parent account can [unpause a sub-account's domain](/api-reference/sub-accounts/unpause-sub-account-domain).
+- **New API key [scopes](/api-reference/scopes)**: `contacts:*`, `lists:*`, `campaigns:*`, `templates:write` and `templates:delete`. Keys with `*` have them all. Keys with the `templates` scopes also manage campaign templates.
+
+#### Changes
+
+- **Breaking: API v2 HTML-escapes substitution values in the HTML and AMP bodies**, as v1 and campaigns already do. A value of `<b>Ann</b>` now shows as that text, not in bold. To insert a value as HTML, write `{{ name|safe }}` in your content. If your code escapes values itself, stop doing so, or they are escaped twice. The subject, the headers and the text body get values as they are. See [substitutions](/send-api/send-email).
+- **API v2 refuses some headers with `400`**: a custom header name that is not a valid header name (for example one with a space or a colon), and a substitution value with a line break that would end up in a header, such as the subject or a display name.
+- **API v1 and v2 drop the custom headers `X-Campaign`, `X-CUSTOMER-ID`, `X-Subscriber-ID` and `X-Schedule-ID`.** The send succeeds without them. A v1 sandbox key always sends sandbox mail, whatever headers the request carries.
+- **A campaign needs an unsubscribe link before it can be scheduled**: `{{ unsubscribe_url }}` in its design, in the dashboard and in the API. Campaigns that are already scheduled or sending are not affected.
+- **A spam complaint about a campaign ends the contact's subscription to that campaign's list** and adds no suppression, so transactional mail to the address continues. A complaint about transactional mail still suppresses the address.
+- **API error messages say "paused" in place of "suspended"** for accounts and domains.
+- **Campaign reports count only bounced and failed recipients as bounces.** Mail that expires before AhaSend ever tried to deliver it ends as failed and adds no bounce.
+
+</Update>
+
 <Update label="September 2026">
 #### Changes
 
