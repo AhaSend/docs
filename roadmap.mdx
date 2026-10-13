@@ -7,9 +7,47 @@ sidebarTitle: "Roadmap"
 
 The AhaSend roadmap shows active work, planned improvements and shipped features, with links to the available documentation.
 
-<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 11 October 2026</p>
+<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 13 October 2026</p>
 
 <div className="rm">
+  <section>
+    <div className="rm-head">
+      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (3)</h2>
+    </div>
+
+    <div className="rm-list">
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="https://ahasend.com/campaign-builder">Campaign Builder</a> <span className="rm-tag is-product">New product</span></p>
+          <p>Send marketing campaigns to your contact lists with a Simple or a Full editor, reusable templates, contacts and lists in the Management API and a report per campaign. Live for every account.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/domains">Configuring Marketing domains</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Mark a domain as Marketing so its mail goes out through dedicated marketing pools, kept apart from your transactional traffic, with List-Unsubscribe headers added automatically.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/send-api/credentials">Simplified credentials and API keys</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Credentials and API keys combined into one place, with v2 keys as the default.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section>
     <div className="rm-head">
       <h2 className="rm-badge is-active" id="active">Active (2)</h2>
@@ -20,57 +58,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Campaign Builder <span className="rm-tag is-early">Early access</span></p>
-          <p>Send marketing campaigns to your contact lists with a simple or a full drag-and-drop editor. In early access; the parts below have already shipped to early-access accounts.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-sub is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Reusable templates <span className="rm-tag is-improvement">Shipped</span></p>
-          <p>Create, edit, copy and delete templates in the dashboard; send them through the API with per-recipient substitutions.</p>
-        </div>
-      </div>
-      <div className="rm-card is-sub is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Contacts and lists in the Management API <span className="rm-tag is-improvement">Shipped</span></p>
-          <p>Create, read, update and delete contacts and lists; add and remove contacts from lists.</p>
-        </div>
-      </div>
-      <div className="rm-card is-sub is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Send with a template via the API <span className="rm-tag is-improvement">Shipped</span></p>
-          <p>Send a stored template by its ID with <a href="/api-reference/messages/create-template-message">Create Template Message</a> instead of sending the full body.</p>
-        </div>
-      </div>
-      <div className="rm-card is-sub is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Campaigns in the API <span className="rm-tag is-improvement">Shipped</span></p>
-          <p>Create campaigns and campaign templates, send tests, send or schedule campaigns and read their results with the <a href="/api-reference/campaigns/overview">Campaigns API</a>.</p>
-        </div>
-      </div>
-      <div className="rm-card is-sub is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">New dashboard navigation <span className="rm-tag is-improvement">Shipped</span></p>
-          <p>Restructured sidebar grouping transactional, marketing, developer and settings pages.</p>
-        </div>
-      </div>
-      <div className="rm-card is-sub is-active">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Still to come</p>
-          <p>Campaign Builder documentation, viewing campaign content after sending, and dedicated marketing pools for campaign traffic.</p>
+          <p className="rm-title">Zero-day retention for sub accounts <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Sub accounts inherit the option to set message data retention to zero when the parent account is allowed to.</p>
         </div>
       </div>
 
@@ -78,8 +67,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Zero-day retention for sub accounts <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Sub accounts inherit the option to set message data retention to zero when the parent account is allowed to.</p>
+          <p className="rm-title">MCP server for transactional email and the Campaign Builder <span className="rm-tag is-new">New feature</span></p>
+          <p>Let AI assistants send transactional email and create and manage campaigns, templates and lists through a Model Context Protocol server.</p>
         </div>
       </div>
     </div>
@@ -87,7 +76,7 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-planned" id="planned">Planned (34)</h2>
+      <h2 className="rm-badge is-planned" id="planned">Planned (33)</h2>
     </div>
 
     <div className="rm-list">
@@ -95,8 +84,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Configuring Marketing domains <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Mark a domain as Marketing so its mail goes out through dedicated marketing pools, kept apart from your transactional traffic.</p>
+          <p className="rm-title">Usage endpoint <span className="rm-tag is-new">New feature</span></p>
+          <p>Read your message usage per account and per domain through the Management API, the same way sub accounts can today.</p>
         </div>
       </div>
 
@@ -104,8 +93,17 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">MCP server for the Campaign Builder <span className="rm-tag is-new">New feature</span></p>
-          <p>Let AI assistants create and manage campaigns, templates and lists through a Model Context Protocol server.</p>
+          <p className="rm-title">Temporary AhaSend accounts for AI agents <span className="rm-tag is-new">New feature</span></p>
+          <p>Short-lived accounts designed for use by AI agents.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Readable SPF include chains <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Clearer display of nested SPF include chains on the domain verification page.</p>
         </div>
       </div>
 
@@ -115,15 +113,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Inbound authentication results <span className="rm-tag is-improvement">Improvement</span></p>
           <p>See the SPF, DKIM and DMARC results of inbound messages, or receive the raw MIME, so you can decide what to trust before routing.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">SEPA payments <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Pay your AhaSend invoices by SEPA direct debit.</p>
         </div>
       </div>
 
@@ -149,8 +138,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Temporary AhaSend accounts for AI agents <span className="rm-tag is-new">New feature</span></p>
-          <p>Short-lived accounts designed for use by AI agents.</p>
+          <p className="rm-title">SEPA payments <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Pay your AhaSend invoices by SEPA direct debit.</p>
         </div>
       </div>
 
@@ -169,24 +158,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Cleaner messages pagination <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Hide the Next button when there are no further messages to show.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Simplified credentials and API keys <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Credentials and API keys combined into one place, with v2 keys as the default.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Account ID after creating credentials <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Surface the Account ID right after you create sending credentials.</p>
         </div>
       </div>
 
@@ -394,6 +365,15 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Wildcard subdomains for message routes <span className="rm-tag is-new">New feature</span></p>
           <p>Match a route on any subdomain of a routed domain.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Wildcard subdomains for sending domains <span className="rm-tag is-new">New feature</span></p>
+          <p>Verify a domain once and send from any of its subdomains.</p>
         </div>
       </div>
     </div>
