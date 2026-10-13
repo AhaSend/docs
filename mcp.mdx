@@ -1,0 +1,160 @@
+---
+title: "Connect AI Tools with the MCP Server"
+sidebarTitle: "MCP Server"
+description: "Connect Claude, Cursor, VS Code, Codex or ChatGPT to AhaSend with the hosted MCP server, choose what the agent may do, and disconnect it at any time."
+icon: "robot"
+---
+
+The AhaSend MCP server lets an AI tool work with your AhaSend account in plain language. The agent can send email, find out why an email failed, set up domains, build templates, manage contacts and lists, and create and send campaigns.
+
+The server address is:
+
+```text
+https://mcp.ahasend.com/mcp
+```
+
+You add this one address to your AI tool, log in with your AhaSend dashboard account in the browser, and choose what the agent may do. You do not create or copy an API key.
+
+## How the Connection Works
+
+When you connect a tool, AhaSend shows a page in your browser where you:
+
+1. Choose the account that the tool works on. You can choose a sub-account.
+2. Choose what the agent may do, with a preset or your own set of permissions. See [Choose What the Agent May Do](#choose-what-the-agent-may-do).
+3. Click **Allow**.
+
+Each connection is a normal API key on the [API Keys](https://dash.ahasend.com/account/-/developers/api-keys) page of that account. The key's label names the tool and the user who connected it. The API applies the key's scopes to every action of the agent, so the agent can do only what the key allows. You can change the scopes of the key on the API Keys page at any time.
+
+## Connect Your AI Tool
+
+<Tabs>
+  <Tab title="Claude Code">
+    Add the server:
+
+    ```bash
+    claude mcp add --transport http ahasend https://mcp.ahasend.com/mcp
+    ```
+
+    Then run `/mcp` in Claude Code, select **ahasend** and log in in the browser.
+  </Tab>
+
+  <Tab title="Claude.ai">
+    1. Go to **Customize > Connectors** and click **Add custom connector**.
+    2. Enter `https://mcp.ahasend.com/mcp` as the server URL and click **Add**.
+    3. Click **Connect** and log in in the browser.
+
+    On Team and Enterprise plans, an Owner adds the connector for the organization, and each member then connects with their own AhaSend user. See [Anthropic's guide](https://claude.com/docs/connectors/custom/add-unlisted).
+  </Tab>
+
+  <Tab title="Cursor">
+    Add the server to `.cursor/mcp.json` in your project, or to `~/.cursor/mcp.json` for all projects:
+
+    ```json
+    {
+      "mcpServers": {
+        "ahasend": {
+          "url": "https://mcp.ahasend.com/mcp"
+        }
+      }
+    }
+    ```
+
+    Cursor asks you to log in the first time it uses the server.
+  </Tab>
+
+  <Tab title="VS Code">
+    Add the server to `.vscode/mcp.json` in your project:
+
+    ```json
+    {
+      "servers": {
+        "ahasend": {
+          "type": "http",
+          "url": "https://mcp.ahasend.com/mcp"
+        }
+      }
+    }
+    ```
+
+    You can also run **MCP: Add Server** from the Command Palette. VS Code asks you to log in the first time it uses the server.
+  </Tab>
+
+  <Tab title="Codex">
+    Add the server, then log in:
+
+    ```bash
+    codex mcp add ahasend --url https://mcp.ahasend.com/mcp
+    codex mcp login ahasend
+    ```
+  </Tab>
+
+  <Tab title="ChatGPT">
+    ChatGPT connects to MCP servers in developer mode. Create an app with `https://mcp.ahasend.com/mcp` as the server URL and OAuth as the authentication, then log in in the browser. See [OpenAI's guide](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt) for the plans that have developer mode and the current menu names.
+  </Tab>
+</Tabs>
+
+## Choose What the Agent May Do
+
+On the connection page, choose a preset:
+
+| Preset | The agent may |
+|--------|---------------|
+| **Read-only** | Look at messages, domains, statistics, templates and settings, and change nothing |
+| **Developer** | Read everything, send email, and manage domains, webhooks, routes, suppressions and templates |
+| **Marketer** | Read everything, and manage templates, contacts, lists and campaigns, including sending campaigns |
+| **Full** | Do everything the MCP server can do |
+| **Custom** | Do what you choose, permission by permission |
+
+The page shows only the permissions that the account and your user may hold. For example, only the account owner and Administrators can let an agent create and change sub-accounts.
+
+You can also:
+
+- **Limit to these domains:** limit every permission that applies to a sending domain, such as sending email or reading messages, to the domains you choose.
+- **Sandbox sending only:** email that the agent sends goes to the [sandbox](/send-api/sandbox) and is not delivered. The agent also cannot send campaigns.
+
+The permissions are the API key [scopes](/api-reference/scopes). The agent sees only the tools that its scopes allow.
+
+## What the Agent Can Do
+
+The tools cover:
+
+- **Sending:** send email, send email from a template, reply in a conversation, and cancel a scheduled email.
+- **Diagnostics:** list and read messages, find out why an email failed, and read deliverability, bounce and delivery time statistics.
+- **Domains:** add a domain, show the DNS records to add, check the DNS, and change or delete a domain.
+- **Templates:** create, change, publish and restore transactional templates and campaign templates.
+- **Contacts and lists:** create, change and delete contacts and lists, and add contacts to lists.
+- **Campaigns:** create, change, test, send, schedule and unschedule campaigns, and read their statistics and recipients.
+- **Management:** webhooks, routes, suppressions, SMTP credentials and sub-accounts.
+
+The agent cannot create API keys or SMTP credentials, change account settings, billing or team members, remove all suppressions at once, or delete or suspend sub-accounts. Do these in the dashboard.
+
+## Safety Rules
+
+- **A campaign sends only after you say yes.** Before the agent sends or schedules a campaign, your AI tool shows you a question with the send time, the number of contacts, the campaign name, the subject, the sender and the lists. The campaign is sent only if you answer yes. If your AI tool cannot show the question, the agent sends nothing and gives you a link to the campaign in the dashboard, where you send it yourself.
+- **One email goes to 50 recipients or fewer.** The agent cannot send one email to more than 50 recipients. Use a campaign to send to more people.
+- **Received email is hidden.** See [Received Email](#received-email).
+
+## Received Email
+
+Anyone can send email to your inbound addresses. A received email can contain text that tells the agent to do something, such as sending your account data to someone else. The agent can follow such text through AhaSend's tools, and through any other tool that your AI tool gives it, such as web access. AhaSend cannot control your AI tool's other tools.
+
+For this reason, a connection does not read received email unless you turn it on:
+
+- **Off (the default):** the agent sees only email that your account sent. It cannot read a received message.
+- **On:** the agent can also read received email. Each received message is marked as untrusted, and the agent is told that its content is data, not instructions.
+
+To turn it on, choose **Custom** on the connection page, choose a permission to read messages, and tick **Read received email**. Turn it on only if the agent must read received email, for example to debug inbound routing. The choice stays with the connection until you connect again.
+
+Contact fields and bounce reasons can also contain text from other people, whatever this setting is.
+
+## Disconnect a Tool
+
+Delete the connection's API key on the [API Keys](https://dash.ahasend.com/account/-/developers/api-keys) page. The tool loses access at once. If you only remove the server in your AI tool, the API key stays until the connection ends.
+
+A connection also ends when the user who connected it loses access to the account, and when the tool does not use it for 30 days.
+
+## When Tools Stop Working
+
+If the account is paused, if two-factor authentication is required and your user does not have it, or if your email address is not confirmed, every tool returns a message that says what to fix in the dashboard. The connection stays. When you fix the cause, the tools work again.
+
+If your AI tool asks you to log in again, the connection has ended. Connect the tool again.
