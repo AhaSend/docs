@@ -110,7 +110,8 @@
             "pages": [
               "integrations/webhooks",
               "integrations/routing",
-              "integrations/dsn-reports"
+              "integrations/dsn-reports",
+              "mcp-server"
             ]
           },
           {
