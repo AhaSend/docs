@@ -1,7 +1,7 @@
 ---
 title: "Connect AI Tools with the MCP Server"
 sidebarTitle: "MCP Server"
-description: "Connect Claude, Cursor, VS Code, Codex or ChatGPT to AhaSend with the hosted MCP server, choose what the agent may do, and disconnect it at any time."
+description: "Connect Claude, Cursor, VS Code, Codex, ChatGPT or Mistral Vibe to AhaSend with the hosted MCP server, choose what the agent may do, and disconnect it at any time."
 icon: "robot"
 ---
 
@@ -21,7 +21,7 @@ When you connect a tool, AhaSend shows a page in your browser where you:
 
 1. Choose the account that the tool works on. You can choose a sub-account.
 2. Choose what the agent may do, with a preset or your own set of permissions. See [Choose What the Agent May Do](#choose-what-the-agent-may-do).
-3. Click **Allow**.
+3. Click **Authorize**.
 
 Each connection is a normal API key on the [API Keys](https://dash.ahasend.com/account/-/developers/api-keys) page of that account. The key's label names the tool and the user who connected it. The API applies the key's scopes to every action of the agent, so the agent can do only what the key allows. You can change the scopes of the key on the API Keys page at any time.
 
@@ -90,6 +90,15 @@ Each connection is a normal API key on the [API Keys](https://dash.ahasend.com/a
 
   <Tab title="ChatGPT">
     ChatGPT connects to MCP servers in developer mode. Create an app with `https://mcp.ahasend.com/mcp` as the server URL and OAuth as the authentication, then log in in the browser. See [OpenAI's guide](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt) for the plans that have developer mode and the current menu names.
+  </Tab>
+
+  <Tab title="Mistral Vibe">
+    1. In [Mistral Vibe](https://chat.mistral.ai), open **Connectors** and click **Add Connector**.
+    2. Open the **Custom MCP Connector** tab.
+    3. Enter `ahasend` as the connector name and `https://mcp.ahasend.com/mcp` as the server URL.
+    4. Click **Connect** and log in in the browser.
+
+    Only an administrator can add a connector. On Free, Pro and Student plans, the account owner is the administrator. To use the server in a chat, turn it on in the chat's connector menu. See [Mistral's guide](https://docs.mistral.ai/le-chat/knowledge-integrations/connectors/mcp-connectors).
   </Tab>
 </Tabs>
 

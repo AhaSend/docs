@@ -111,7 +111,7 @@
               "integrations/webhooks",
               "integrations/routing",
               "integrations/dsn-reports",
-              "mcp"
+              "mcp-server"
             ]
           },
           {
