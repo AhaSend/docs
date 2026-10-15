@@ -24,12 +24,13 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Right-to-left emails.** Both editors can set the direction of the whole email or of parts of it, for Arabic, Hebrew, Persian and other right-to-left languages.
 - **Campaigns, contacts and lists for every account.** The dashboard has a new sidebar with Transactional, Marketing, Developers and Settings sections. Old links and bookmarks open the new pages.
 - **Dashboard times in your time zone.** Charts, daily totals, report times, date filters and CSV exports use the time zone in your profile (Profile → Timezone), or UTC when none is set. Billing periods stay in UTC.
-- **[Go SDK](/guides/go-sdk) v0.3.2 and [Node.js SDK](/guides/nodejs-sdk) `@ahasend/sdk` 0.3.0.** Both cover the new contacts, lists, campaigns, campaign templates and transactional templates APIs, template sends, domain sending types and the sub-account domain unpause. Install them with `go get github.com/AhaSend/ahasend-go@v0.3.0` or `npm install @ahasend/sdk@0.3.0`.
+- **[Go SDK](/guides/go-sdk) v0.3.2 and [Node.js SDK](/guides/nodejs-sdk) `@ahasend/sdk` 0.3.0.** Both cover the new contacts, lists, campaigns, campaign templates and transactional templates APIs, template sends, domain sending types and the sub-account domain unpause. Install them with `go get github.com/AhaSend/ahasend-go@v0.3.2` or `npm install @ahasend/sdk@0.3.0`.
 - **[MCP server](/mcp-server) for AI tools.** Connect Claude Code, Claude.ai, ChatGPT, Cursor, VS Code, Codex, Mistral Vibe and other AI tools to your account at `https://mcp.ahasend.com/mcp`. The agent can send email, find out why an email failed, set up domains, build templates, and manage contacts, lists and campaigns. You do not create or copy an API key: you log in through the browser, choose the account (a sub-account too), and choose what the agent may do. Use the Read-only, Developer, Marketer or Full preset or pick single permissions, and optionally limit the connection to some domains or to sandbox sending.
   - Each connection is an API key. The API Keys page names the tool and the user who connected it, and you can change its permissions or delete it there at any time.
   - The agent cannot read received email unless you turn this on for the connection. A campaign is sent only after you confirm it in your AI tool.
   - A connection ends when its user loses access to the account, and when the tool does not use it for 30 days.
   - The **Connect an AI tool** button on the API Keys page shows the setup steps for each tool, with one-click install for Cursor and VS Code.
+- **Save a list search as a new list.** On a list page, search or use advanced search, then click **Save as new list** to put the matching contacts on a new list. Send a campaign to that list to reach only those contacts. Each contact keeps its status, so an unsubscribed contact stays unsubscribed on the new list. The contacts are copied in the background, and the new list's page shows when the copy is done. The new list is separate from the original: later changes to the original list do not reach it.
 
 #### Changes
 
@@ -75,7 +76,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Fixed updating a webhook through API v2 failing with `500`** for webhooks limited to some domains. This affected requests from 5 to 12 October.
 - **Fixed campaign report exports (CSV and PDF) returning "not found".**
 - **Fixed advanced search on the list page not applying its filter.**
-- **Fixed the Send Campaign button on a list page returning "not found".** It now starts a campaign for that list.
+- **Fixed the Send Campaign button on a list page returning "not found".** It now starts a campaign for that list. When a search narrows the list, the campaign window says that the campaign goes to the whole list.
 - **Fixed a campaign's reply-to address not being removable.**
 - **Fixed the average delivery time cards on the home page showing 0** for accounts with no delivery window set.
 - **Fixed changing a domain's settings through API v2 not updating its `updated_at`.**
