@@ -1,56 +1,185 @@
 ---
 title: "Send Drupal Email with the AhaSend Module"
 sidebarTitle: "Drupal"
-description: "Configure the AhaSend Drupal module with Mail System and a legacy API v1 sandbox key, test the mail plugin, and check the setup before live delivery."
+description: "Send Drupal email through AhaSend API v2 with the AhaSend module: add a Symfony Mailer transport, test in sandbox mode and log delivery events from signed webhooks."
 ---
 
-AhaSend's Drupal module sends site email through the HTTP API; this guide configures the released module and tests its Mail System plugin in sandbox mode.
+The [AhaSend module](https://www.drupal.org/project/ahasend) adds an AhaSend transport to Drupal's Symfony Mailer module. Your site's email, such as password resets, account notifications and form submissions, is sent through the AhaSend API v2. The module can also receive signed AhaSend webhooks and show the delivery events of each message in Drupal.
 
 ## Prerequisites
 
-Use a staging Drupal 10 or 11 site, Composer, Drush, a [verified sending domain](/domains) and a **Sandbox API v1 credential**. Module 1.0.0 uses the [legacy v1 endpoint](/api-reference/v1), so a v2 API key will not work. The [project page](https://www.drupal.org/project/ahasend) lists its Mail System dependency and current release information.
+- Drupal 10.6 or later, or Drupal 11, with PHP 8.1 or later, Composer and Drush.
+- A [verified sending domain](/domains).
+- An API v2 key.
 
-## Install and Configure the Module
+Composer also installs the required [Symfony Mailer](https://www.drupal.org/project/symfony_mailer) module. The AhaSend module works with Symfony Mailer 1.6 or later and with 2.x, which is called Mailer Plus. This guide notes where the two differ.
+
+<Note>
+  Version 2.x of the module uses API v2. It replaces version 1.x, which used the legacy API v1 and the Mail System module. Version 1.x is no longer supported and has no upgrade path.
+</Note>
+
+## Install the Module
 
 From your Drupal project root:
 
 ```bash
-composer require drupal/ahasend:^1.0
-vendor/bin/drush en ahasend -y
+composer require drupal/ahasend:^2.0
+drush en ahasend -y
 ```
 
-Open **Configuration → Mail → AhaSend settings** at `/admin/config/mail/ahasend` in your Drupal site. Save the sandbox v1 key as **AhaSend API Token** and set the **From name**. Set the site's email address to an address on your verified domain. Leave debug logging off to keep message details out of routine logs.
+Enabling the module also enables Symfony Mailer.
 
-Save the following as `ahasend-test.php` outside the public web directory. It tests the actual `ahasend_mail` plugin directly. Run `vendor/bin/drush php:script /path/to/ahasend-test.php` from the project root.
+With Mailer Plus 2.x, Drupal core emails go through Mailer Plus only when an override is enabled for them. Enable the Mailer Override submodule:
 
-```php ahasend-test.php
+```bash
+drush en mailer_override -y
+```
+
+Then open `/admin/config/system/mailer/override` and enable the overrides for the emails your site sends, for example **User** for account and password-reset emails.
+
+## Add the AhaSend Transport
+
+1. At **Configuration → System → Basic site settings**, set the site's **Email address** to an address on your verified domain. Drupal sends from this address by default.
+2. Open `/admin/config/system/mailer/transport`, choose **AhaSend (API v2)** as the **Transport type** and click **Add transport**.
+3. Enter a label and fill in the AhaSend fields:
+
+   | Field                                 | Value                                                                                                                       |
+   | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+   | **API key**                           | Your `aha-sk-` key. The saved key is never shown again; select **Change API key** to replace it.                            |
+   | **Account ID**                        | Your account ID (a UUID).                                                                                                   |
+   | **Mode**                              | **Live**, or a simulated result: **Sandbox: deliver**, **Sandbox: bounce**, **Sandbox: defer**, **Sandbox: fail** or **Sandbox: suppress**. |
+   | **Open tracking**, **Click tracking** | **Account default**, **On** or **Off**. See [open tracking](/tracking/open-tracking) and [click tracking](/tracking/click-tracking). |
+
+4. Set **Mode** to **Sandbox: deliver** for your first tests. AhaSend records sandbox sends and sends their webhook events, but delivers nothing. See [sandbox mode](/send-api/sandbox).
+5. Click **Test connection**. It calls the [ping endpoint](/api-reference/utility/ping), which checks only the API key. It does not check the account ID, the key's scope or your sender address; the first real send does.
+6. Save the transport, then click **Set as default** next to it in the transport list.
+
+With the Key module installed, the form also shows **API key source**; see [Keep Secrets Out of Configuration](#keep-secrets-out-of-configuration).
+
+## Send a Test Email
+
+- Symfony Mailer 1.x: open the **Test** tab at `/admin/config/system/mailer/test`.
+- Mailer Plus 2.x: open `/admin/config/system/mailer`.
+
+Enter a recipient and click **Send**. Drupal's confirmation only shows that it tried to send. Find the message in the AhaSend dashboard and in **Reports → AhaSend message log** (`/admin/reports/ahasend`). If it is missing, look for AhaSend errors in **Reports → Recent log messages**.
+
+Then test the emails your site depends on, such as password reset, new account and form notifications.
+
+When the tests pass, set **Mode** to **Live**. A key created in **Sandbox** mode keeps every send in sandbox, even when the transport is set to **Live**, so use a production key on the live site.
+
+## Receive Delivery Events with Webhooks
+
+Webhooks are optional. With them, the message log shows what happened to each email after AhaSend accepted it.
+
+1. Open **Configuration → Web services → AhaSend** (`/admin/config/services/ahasend`) and copy the **Webhook URL**, for example `https://example.com/ahasend/webhook`.
+2. In the AhaSend dashboard, open **Webhooks**, click **Add Webhook**, paste the URL, choose the events to send and create the webhook. See [webhooks](/integrations/webhooks).
+3. Copy the **Webhook Secret** from the webhook's details page, paste it into **Signing secret** in Drupal and save.
+4. Send a sandbox test email. After a short delay, its entry in the message log shows the reception and delivery events.
+
+Save the secret right after you create the webhook. Until Drupal has a secret, the webhook URL answers 404, and AhaSend disables a webhook after more than 100 consecutive failed deliveries.
+
+The webhook URL is public. Each delivery is authenticated by its [signature](/integrations/webhooks), and deliveries with an invalid signature get a 401 response. Deliveries whose timestamp is more than 5 minutes away from the server's time are rejected, so keep the server clock in sync. The URL stays reachable in maintenance mode. After a long outage, check in the AhaSend dashboard that the webhook is still enabled.
+
+## Message Log
+
+**Reports → AhaSend message log** (`/admin/reports/ahasend`) has two tabs:
+
+- **Messages**: one entry per recipient, with the send time, subject, sender, recipient and status. The status follows the webhook events received for the message and uses the dashboard's names: **Received**, **Deferred**, **Delivered**, **Opened**, **Clicked**, **Bounced**, **Failed** or **Suppressed**. Until the first event arrives, or if no webhook is set up, it shows the result AhaSend returned when the email was sent, such as **Queued**. Open an entry to see its delivery timeline from webhooks, such as **Message Delivered**, **Message Deferred**, **Message Bounced** or **Message Opened**, with the receiving server's SMTP response when AhaSend reports one.
+- **Events**: account-level events that belong to no single message, such as suppressions and DNS errors.
+
+## Keep Secrets Out of Configuration
+
+By default, Drupal saves the API key and the webhook signing secret in its configuration, so `drush config:export` writes them to your export files. To avoid this, use the [Key module](https://www.drupal.org/project/key) 1.18 or later:
+
+1. Install and enable it:
+
+   ```bash
+   composer require drupal/key
+   drush en key -y
+   ```
+
+2. At `/admin/config/system/keys`, add a key of type **Authentication** that uses the **File** or **Environment** provider. A key that uses the **Configuration** provider is exported too, and the module warns you when you select one.
+3. In the transport form, set **API key source** to **Use a key from the Key module** and select the key. In the AhaSend settings form, do the same with **Signing secret source**.
+
+Only the key's name is saved. If you delete a key the module uses, Drupal warns you, and sending or webhook processing stops until you select another key.
+
+To use different values on each environment, override them in `settings.php`. Replace `TRANSPORT_ID` with the transport's machine name:
+
+```php settings.php
+// Symfony Mailer 1.x.
+$config['symfony_mailer.mailer_transport.TRANSPORT_ID']['configuration']['api_key'] = getenv('AHASEND_API_KEY');
+// Mailer Plus 2.x.
+$config['mailer_transport.mailer_transport.TRANSPORT_ID']['configuration']['api_key'] = getenv('AHASEND_API_KEY');
+// Webhook signing secret.
+$config['ahasend.settings']['webhook_secret'] = getenv('AHASEND_WEBHOOK_SECRET');
+```
+
+An override wins over the value saved in the form, but the transport form still stores any key you enter there. A transport that uses a key from the Key module ignores an `api_key` override; override `api_key_id` to select a different key instead. Review [key security](/security) and [IP allow lists](/security/ip-allow-lists).
+
+## React to Webhook Events in Code
+
+Every verified webhook delivery dispatches the `AhaSendWebhookEvent::RECEIVED` event (`ahasend.webhook_received`). The module stores each delivery at priority 100 and stops retried deliveries there, so subscribe with a lower priority to react once per event. This subscriber in a custom module logs each bounce:
+
+```php src/EventSubscriber/AhaSendBounceSubscriber.php
 <?php
-$plugin = \Drupal::service('plugin.manager.mail')->createInstance('ahasend_mail');
-$message = [
-    'from' => \Drupal::config('system.site')->get('mail'),
-    'to' => 'recipient@example.com', 'subject' => 'Drupal sandbox test',
-    'body' => ['Hello from AhaSend'], 'headers' => [], 'params' => [], 'langcode' => 'en',
-];
-if (!$plugin->mail($plugin->format($message))) {
-    throw new RuntimeException('Email was not accepted; check the Drupal log.');
+
+namespace Drupal\mymodule\EventSubscriber;
+
+use Drupal\ahasend\Event\AhaSendWebhookEvent;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+
+final class AhaSendBounceSubscriber implements EventSubscriberInterface {
+
+  public function __construct(
+    private readonly LoggerChannelFactoryInterface $loggerFactory,
+  ) {}
+
+  public static function getSubscribedEvents(): array {
+    return [AhaSendWebhookEvent::RECEIVED => ['onWebhook', 0]];
+  }
+
+  public function onWebhook(AhaSendWebhookEvent $event): void {
+    if ($event->getType() !== 'message.bounced') {
+      return;
+    }
+    $recipient = $event->getData()['recipient'] ?? '';
+    $this->loggerFactory->get('mymodule')->warning('AhaSend reported a bounce for @recipient.', [
+      '@recipient' => $recipient,
+    ]);
+  }
+
 }
-echo "Accepted by the API; check the AhaSend sandbox log.\n";
 ```
 
-The script fails when the module returns false. Check the corresponding AhaSend message as well as the command result.
+Register it in `mymodule.services.yml`:
 
-## Route Production Mail Through Mail System
+```yaml mymodule.services.yml
+services:
+  mymodule.ahasend_bounce_subscriber:
+    class: Drupal\mymodule\EventSubscriber\AhaSendBounceSubscriber
+    arguments: ['@logger.factory']
+    tags:
+      - { name: event_subscriber }
+```
 
-At **Configuration → System → Mail System**, choose **AhaSend mailer** for the default sender and formatter, or for only the modules you intend to move. Check module-specific overrides too: Mail System uses its own default and module settings, so an override can still select a different sender. The correct plugin ID is `ahasend_mail`. Test both the default path and any module-specific mail you need.
+Add `ahasend:ahasend` to the `dependencies` in `mymodule.info.yml`, so the AhaSend module cannot be uninstalled while your subscriber uses its event class.
 
-Keep the sandbox credential on staging and use a separate domain-restricted v1 production key on the live site. The module stores its key in Drupal configuration; keep secrets out of exported configuration and repository history by using your deployment's configuration override mechanism. Review [credential security](/security).
+The event also has `getPayload()`, `getMessageIdHeader()` and `getDeliveryId()`. The signature proves a delivery came from AhaSend, but values such as subjects, addresses and SMTP responses come from third parties: treat them as untrusted input. See [webhooks](/integrations/webhooks) for the event types and their data.
 
-Test your actual password-reset, account and receipt workflows. The module's settings form has a **Test email** section, but its notice alone does not prove acceptance; check Drupal logs and the AhaSend message log. The released mail plugin does not reliably pass attachments through to its handler, so verify attachment-dependent workflows before relying on them. For SMTP, the module's project page points to [Drupal Symfony Mailer](https://www.drupal.org/project/symfony_mailer); use the [SMTP settings](/smtp) there.
+## Troubleshooting
 
-Track [delivery webhooks](/integrations/webhooks) after acceptance. Save a job outcome and review uncertain requests before retrying so a timeout does not produce duplicate receipts.
+- **AhaSend (API v2) is missing from the transport types**: clear caches with `drush cr`.
+- **Test connection passes, but emails fail**: check the account ID, that the key's scope covers your sender domain, and that the sender address uses a verified domain. AhaSend's error message is in **Reports → Recent log messages**; see [API errors](/api-reference/errors).
+- **Emails are accepted but never arrive**: check that **Mode** is **Live** and that the API key is not a sandbox key.
+- **Core emails skip AhaSend on Mailer Plus 2.x**: enable Mailer Override and the override for those emails.
+- **The webhook URL answers 404**: no signing secret is saved, or the selected key is missing or empty.
+- **Webhook deliveries get 401**: the signing secret does not match the webhook, or the server clock is more than 5 minutes off.
+- **Webhooks stopped arriving**: AhaSend disables a webhook after more than 100 consecutive failed deliveries. Fix the cause, then enable it again in the dashboard.
 
 ## Related Guides
 
-- [Domain setup](/domains), [sandbox mode](/send-api/sandbox), [legacy API v1](/api-reference/v1) and [v1 versus v2](/api-reference/v1/v1-vs-v2).
-- [Symfony SMTP](/guides/symfony), [PHP SMTP](/smtp/php), [REST API](/send-api/send-email), [CLI quickstart](/cli/quickstart) and [Node.js SDK](/guides/nodejs-sdk).
-- [Troubleshooting](/troubleshooting), [SMTP credentials](/smtp/credentials) and [key security](/security).
+- [Domain setup](/domains), [API credentials](/send-api/credentials), [scoped credentials](/security/scoped-credentials) and [sandbox mode](/send-api/sandbox).
+- [Webhooks](/integrations/webhooks), [bounces and suppressions](/bounces), [open tracking](/tracking/open-tracking) and [click tracking](/tracking/click-tracking).
+- [Troubleshooting](/troubleshooting), [API errors](/api-reference/errors) and [key security](/security).
+- The module's [project page](https://www.drupal.org/project/ahasend) and [issue queue](https://www.drupal.org/project/issues/ahasend).
