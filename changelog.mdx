@@ -24,7 +24,13 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Right-to-left emails.** Both editors can set the direction of the whole email or of parts of it, for Arabic, Hebrew, Persian and other right-to-left languages.
 - **Campaigns, contacts and lists for every account.** The dashboard has a new sidebar with Transactional, Marketing, Developers and Settings sections. Old links and bookmarks open the new pages.
 - **Dashboard times in your time zone.** Charts, daily totals, report times, date filters and CSV exports use the time zone in your profile (Profile → Timezone), or UTC when none is set. Billing periods stay in UTC.
-- **[Go SDK](/guides/go-sdk) v0.3.0 and [Node.js SDK](/guides/nodejs-sdk) `@ahasend/sdk` 0.3.0.** Both cover the new contacts, lists, campaigns, campaign templates and transactional templates APIs, template sends, domain sending types and the sub-account domain unpause. Install them with `go get github.com/AhaSend/ahasend-go@v0.3.0` or `npm install @ahasend/sdk@0.3.0`.
+- **[Go SDK](/guides/go-sdk) v0.3.2 and [Node.js SDK](/guides/nodejs-sdk) `@ahasend/sdk` 0.3.0.** Both cover the new contacts, lists, campaigns, campaign templates and transactional templates APIs, template sends, domain sending types and the sub-account domain unpause. Install them with `go get github.com/AhaSend/ahasend-go@v0.3.2` or `npm install @ahasend/sdk@0.3.0`.
+- **[MCP server](/mcp-server) for AI tools.** Connect Claude Code, Claude.ai, ChatGPT, Cursor, VS Code, Codex, Mistral Vibe and other AI tools to your account at `https://mcp.ahasend.com/mcp`. The agent can send email, find out why an email failed, set up domains, build templates, and manage contacts, lists and campaigns. You do not create or copy an API key: you log in through the browser, choose the account (a sub-account too), and choose what the agent may do. Use the Read-only, Developer, Marketer or Full preset or pick single permissions, and optionally limit the connection to some domains or to sandbox sending.
+  - Each connection is an API key. The API Keys page names the tool and the user who connected it, and you can change its permissions or delete it there at any time.
+  - The agent cannot read received email unless you turn this on for the connection. A campaign is sent only after you confirm it in your AI tool.
+  - A connection ends when its user loses access to the account, and when the tool does not use it for 30 days.
+  - The **Connect an AI tool** button on the API Keys page shows the setup steps for each tool, with one-click install for Cursor and VS Code.
+- **Save a list search as a new list.** On a list page, search or use advanced search, then click **Save as new list** to put the matching contacts on a new list. Send a campaign to that list to reach only those contacts. Each contact keeps its status, so an unsubscribed contact stays unsubscribed on the new list. The contacts are copied in the background, and the new list's page shows when the copy is done. The new list is separate from the original: later changes to the original list do not reach it.
 
 #### Changes
 
@@ -45,6 +51,9 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **The contact CSV export writes dates in your time zone, with the UTC offset.** If you read this file with your own code, check how it reads dates.
 - **New legacy (v1) API keys can no longer be created.** Existing v1 keys keep working. Create an API v2 key for new integrations.
 - **An account name made only of spaces is refused**, in onboarding and on the account page.
+- **API keys have a new permission list in the dashboard**, the same one as the MCP connection page. When you create or edit a key, each group of permissions has a No access, Read or Write switch, and a click on a group shows its single permissions. Quick buttons set Full access, Sending only or Read-only. Each permission that applies to a sending domain is allowed for all domains or for the domains you choose, with a filter when the account has many domains. Choosing "only these domains" without picking a domain is refused.
+- **Saving an API key removes permissions that no longer apply**: those for a domain that was removed from the account, and those for a feature the account no longer has. The edit page lists them before you save.
+- **API v2 rate-limit `429` responses carry a `Retry-After` header** with the number of seconds to wait before you retry. See [rate limits](/api-reference/rate-limits).
 
 #### Improvements
 
@@ -52,6 +61,8 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Campaign list checks finish faster on large lists**, so the decision before sending is based on more of the checked contacts.
 - **Campaign report breakdowns load faster on large campaigns.** They are counted in the background and show when they were last updated. The bounce and status lists page with Previous and Next, and no recipient is repeated or skipped.
 - **Advanced search on a list is more complete.** Full names match, "is empty" also finds contacts that never had the field, and date filters accept relative dates such as "7 days ago".
+- **See a sent campaign's email in full.** On a sent campaign's page, the design thumbnail has a **View email** button that opens the email in a new tab.
+- **Dark mode is easier to read.** Links and blue buttons, disabled ones included, are lighter, and selected text is visible, in dark mode and on the dark sidebar and page headers. The stat cards on a campaign report all have the same height.
 
 #### Bug Fixes
 
@@ -65,10 +76,13 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Fixed updating a webhook through API v2 failing with `500`** for webhooks limited to some domains. This affected requests from 5 to 12 October.
 - **Fixed campaign report exports (CSV and PDF) returning "not found".**
 - **Fixed advanced search on the list page not applying its filter.**
-- **Fixed the Send Campaign button on a list page returning "not found".** It now starts a campaign for that list.
+- **Fixed the Send Campaign button on a list page returning "not found".** It now starts a campaign for that list. When a search narrows the list, the campaign window says that the campaign goes to the whole list.
 - **Fixed a campaign's reply-to address not being removable.**
 - **Fixed the average delivery time cards on the home page showing 0** for accounts with no delivery window set.
 - **Fixed changing a domain's settings through API v2 not updating its `updated_at`.**
+- **Fixed an API v2 send reporting recipients as sent that were never sent** when the client closed the connection during the request. A retry with the same idempotency key got the same wrong answer. A send now finishes once it has started. This also applies to template sends.
+- **Fixed a refused API key create losing your choices.** The form came back closed, and opening it again started from Full access, so a key with fewer permissions could be created with all of them. The form now opens again with the name, [IP allow list](/security/ip-allow-lists), permissions and sending mode you entered, and shows why the key was not created.
+- **Fixed an IP allow list change being refused again and again** after a save that needed you to confirm it was you. The form did not ask for the confirmation a second time. This affected the API key and SMTP credential forms.
 
 </Update>
 

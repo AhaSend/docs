@@ -187,7 +187,7 @@ The same idempotency key was used with a different method, resolved path, or req
 You've exceeded the API rate limits.
 
 <Tip>
-When you receive this error, wait before making additional requests. Use exponential backoff with jitter. See [API rate limits](/api-reference/rate-limits); rate-limit headers are not a documented contract.
+When you receive this error, wait the number of seconds in the `Retry-After` header before you retry, and use exponential backoff with jitter if the error repeats. See [API rate limits](/api-reference/rate-limits).
 </Tip>
 
 ```json

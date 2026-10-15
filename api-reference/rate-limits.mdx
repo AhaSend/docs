@@ -81,7 +81,7 @@ When you exceed the rate limit, the API returns a `429 Too Many Requests` status
 </CodeGroup>
 
 <Info>
-Requests share the account limit. Spread requests over time; a new second does not reset a fixed request counter. Do not depend on `Retry-After` or `X-RateLimit-*` headers for rate-limit responses.
+Requests share the account limit. Spread requests over time; a new second does not reset a fixed request counter. A rate-limit `429` carries a `Retry-After` header with the number of seconds to wait before you retry. Do not depend on `X-RateLimit-*` headers.
 </Info>
 
 [Test Campaign](/api-reference/campaigns/test-campaign) also answers `429` when your account reaches its daily test limit. Backoff does not clear that `429`. See [Test Campaign](/api-reference/campaigns/test-campaign) for the rules of the limit.
