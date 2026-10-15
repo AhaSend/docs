@@ -1,0 +1,123 @@
+---
+title: "Transactional Templates"
+sidebarTitle: "Templates"
+description: "Store an email design once in AhaSend and send it by ID through the API, with your own values for each recipient."
+---
+
+A transactional template is an email design that lives in your AhaSend account. Your code sends the template's ID and a few values per recipient; AhaSend supplies the body, the subject and the sender. The person who designs the email can change it in the dashboard without a code release.
+
+Templates are sent through the API only. SMTP cannot send a template.
+
+## When to Use a Template
+
+| | Template | Create Message |
+| --- | --- | --- |
+| Where the design lives | In AhaSend | In your code, sent with every call |
+| Who changes the wording | Anyone with dashboard access | A developer, with a deploy |
+| Request size | `template_id` plus values | Full HTML and text every time |
+| Endpoint | [Create Template Message](/api-reference/messages/create-template-message) | [Create Message](/api-reference/messages/create-message) |
+
+Use a template for emails whose wording changes more often than your code: password resets, order confirmations, invoices, onboarding steps. Use Create Message when the body is built per send, for example a report that is generated on the fly.
+
+Transactional templates are separate from [campaign templates](/api-reference/campaign-templates/get-campaign-templates), which are starting designs for marketing campaigns under Marketing → Templates.
+
+## Create a Template
+
+In the dashboard, open **Transactional → Templates** and create a template. Choose how to build the design:
+
+- **Simple Editor**: write the email like a document. Its design can only be changed in the dashboard.
+- **Advanced Editor**: design the email in MJML.
+- **Upload**: your own HTML file, or a zip with the HTML and its images (the `html` editor in the API).
+
+Each template has its own page with its ID, the variables the design uses, a sample API request, a preview with your sample values, a test send, a default sender and subject, and its delivery statistics for the last 30 days.
+
+You can also create a template through the API with [Create Template](/api-reference/templates/create-template), from MJML (`content.mjml`) or HTML (`content.html`). Images and stylesheets must use full `https://` URLs; the API cannot upload files. The MJML, the HTML and a custom text version can each be at most 200 KB.
+
+## Variables
+
+Write a variable in the design as `{{ first_name }}`. The templating language is [MiniJinja](https://github.com/mitsuhiko/minijinja), the same as for [Create Message](/send-api/send-email).
+
+- **Required or optional.** Every variable is required unless the design gives it a fallback, for example `{{ first_name|default("there") }}`. The template page and [Get Template](/api-reference/templates/get-template) list each variable with `required: true` or `false`.
+- **Escaping.** In the HTML body, every value is HTML-escaped. To insert a value as HTML, write `{{ content|safe }}` in the design. The subject, the headers and the text body get values as they are.
+- **Reserved names.** AhaSend supplies `email` (the recipient's address) and, when the design uses it, `unsubscribe_url`. A value you give for these is replaced.
+- **Subject and headers.** A `{{ variable }}` in the subject or in a custom header resolves from the same values. A variable with no value becomes empty.
+
+### Unsubscribe Link
+
+When the design uses `{{ unsubscribe_url }}`, each recipient gets its own link, and the message carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, so the unsubscribe button of mail clients works. The button suppresses the recipient for the sending domain; the link opens a confirmation page first. Most transactional email should not have an unsubscribe link; use it for templates that are optional for the recipient, such as digests.
+
+## Draft, Publish, Versions
+
+Every edit, in the dashboard or through the API, goes to the template's **draft**. Sends use the **published** copy.
+
+<Warning>
+  A template that was never published cannot be sent, and changes you save are not sent until you click **Publish** (or call [Publish Template](/api-reference/templates/publish-template)). Check the preview and send a test from the template page first.
+</Warning>
+
+- The dashboard and the API edit the same draft. A publish publishes the whole draft, including dashboard changes. [Get Template Draft](/api-reference/templates/get-template-draft) shows what a publish will publish; [Discard Template Draft](/api-reference/templates/discard-template-draft) throws it away.
+- Each publish makes a version. A template keeps its 50 most recent versions. Preview any of them on the template page or with [Get Template Version](/api-reference/templates/get-template-version), and bring one back with [Restore Template Version](/api-reference/templates/restore-template-version).
+- `has_draft` on [Get Template](/api-reference/templates/get-template) tells you whether unpublished changes are waiting.
+
+## Send a Template
+
+Call [Create Template Message](/api-reference/messages/create-template-message) with the template's ID. Each recipient gets a separate message with its own values. One request can hold up to 100 recipients.
+
+```bash
+curl -X POST "https://api.ahasend.com/v2/accounts/{account_id}/messages/template" \
+  -H "Authorization: Bearer $AHASEND_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_id": "6f1b7f0e-2d3a-4c58-9b1e-0b6f2e9d4a11",
+    "recipients": [
+      {
+        "email": "anna@example.com",
+        "name": "Anna",
+        "substitutions": { "first_name": "Anna", "order_id": "10457" }
+      },
+      {
+        "email": "jonas@example.com",
+        "substitutions": { "first_name": "Jonas", "order_id": "10458" }
+      }
+    ]
+  }'
+```
+
+The response is the same per-recipient list as Create Message: for each recipient an `id` (null when nothing was sent), a `status` (`queued`, `scheduled` or `error`) and an `error`.
+
+What the request can set, and what it cannot:
+
+- **`from`**: optional. Left out, the template's default sender is used. When neither is set, the request is refused with `400 from is required because the template has no default sender`.
+- **`subject`**: optional. Left out or empty, the template's published subject is used. When neither has a subject, the request is refused.
+- **`reply_to`**: optional. Left out, the template's reply-to is used.
+- **`substitutions`**: per recipient only. A `substitutions` object at the top of the request is refused with `400 substitutions go on each recipient, not at the top of the request`.
+- **Body**: always the template's, and the message has no AMP part. `html_content`, `text_content` and `amp_content` are refused with `400 <field> is not accepted, the template supplies the body`.
+- **`attachments`, `headers`, `tags`, `tracking`, `retention`, `schedule`, `sandbox`**: work as in [Create Message](/api-reference/messages/create-message). Sandbox sends are a good way to check your substitutions without using credits.
+
+The [Node.js SDK](/guides/nodejs-sdk) (`@ahasend/sdk` 0.3.0 and later) and the [Go SDK](/guides/go-sdk) (v0.3.0 and later) cover template sends; see the [changelog](/changelog) for the release.
+
+### Permissions
+
+Sending a template needs a key that can send from the sender's domain: `messages:send:all` or the domain-specific send scope. No `templates` scope is needed to send. Creating, editing and publishing templates needs `templates:write`; deleting needs `templates:delete`. See [Permission scopes](/api-reference/scopes).
+
+## Errors You Will See
+
+| Response | Cause | Fix |
+| --- | --- | --- |
+| `404 template not found` | `template_id` is not a template of this account, or the template was deleted | Copy the ID from the template page or [List Templates](/api-reference/templates/get-templates) |
+| `400 template has no published content, design it and publish it` | The template was never published | Click Publish on the template page |
+| `400 the template has no subject, publish one on the template page or pass subject` | No `subject` in the request and none published on the template | Set a subject on the template page, or send `subject` |
+| `400 missing required template variables: anna@example.com needs first_name, order_id` | A recipient lacks a required variable. No message in the request is sent | Add the value, or give the variable a fallback in the design |
+| `400 from is required because the template has no default sender` | No `from` in the request and none on the template | Set a default sender on the template page, or send `from` |
+| `403` | The key cannot send from the sender's domain, or the domain is paused | Check the key's scopes and the domain's status |
+| `403 this api key is not authorized to send messages` | No `from` in the request and the key can send from no domain | Send `from`, or give the key a send scope |
+
+## Tracking
+
+- Every message sent from a template records the template: [Get Message](/api-reference/messages/get-message) returns its `template_id`, and the template page shows delivery statistics for the last 30 days.
+- Templates are available through the [MCP server](/mcp-server): an AI agent can create, change, publish and restore templates, and send one.
+
+## Related
+
+- [Create Template](/api-reference/templates/create-template), [Update Template](/api-reference/templates/update-template), [Publish Template](/api-reference/templates/publish-template), [List Template Versions](/api-reference/templates/get-template-versions)
+- [Create Template Message](/api-reference/messages/create-template-message)
+- [Sending guide](/send-api/send-email), [Sandbox](/send-api/sandbox), [Permission scopes](/api-reference/scopes)

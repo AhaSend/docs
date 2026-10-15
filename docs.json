@@ -95,7 +95,8 @@
             "pages": [
               "send-api/credentials",
               "send-api/sandbox",
-              "send-api/send-email"
+              "send-api/send-email",
+              "send-api/templates"
             ]
           },
           {
