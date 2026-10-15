@@ -1,7 +1,7 @@
 ---
-title: "Transactional Email API and SMTP Relay Docs"
+title: "Transactional Email, SMTP Relay and Campaigns Docs"
 sidebarTitle: "Introduction"
-description: "AhaSend developer docs: send transactional email with the REST API, SMTP relay, CLI or SDKs, verify your sending domain, and track events with webhooks."
+description: "AhaSend developer docs: send transactional email with the REST API, SMTP relay, CLI or SDKs, send newsletters with Campaign Builder, verify your sending domain, and track events with webhooks."
 icon: "book-open"
 ---
 
@@ -10,7 +10,7 @@ import EmailHelpGuides from "/snippets/email-help-guides.mdx";
 import OfficialSdks from "/snippets/official-sdks.mdx";
 
 
-AhaSend is a European transactional email service for developers: send through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, with data stored in the EU and 1,000 free emails per month.
+AhaSend is a European email service for developers: send transactional email through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, and newsletters and campaigns with Campaign Builder, with data stored in the EU and 1,000 free emails per month shared by both.
 
 <Info>
 **New to AhaSend?** Start with our [Quickstart Guide](/quickstart) to send your first email in under 5 minutes, or [create your free account](https://dash.ahasend.com/user/register) to get 1,000 free emails per month.
@@ -23,6 +23,7 @@ AhaSend is a European transactional email service for developers: send through a
 
 ### Built for Developers
 - **[Clean, intuitive REST APIs](/api-reference)** and [SMTP relay](/smtp)
+- **[Campaign Builder](/api-reference/campaigns/overview)** on every plan: contacts, lists, templates and campaign reports, on separate marketing infrastructure
 - **[Powerful CLI tool](/cli)** for development, testing, and automation
 - **Sandbox Mode** for [SMTP](/send-api/sandbox) and [API](/send-api/sandbox) testing and development
 - **[Engineering-led support](mailto:support@ahasend.com)** from real developers, not chatbots
@@ -57,6 +58,15 @@ AhaSend is a European transactional email service for developers: send through a
   </Card>
   <Card title="CLI Tool" icon="terminal" href="/cli">
     Command-line interface for developers. Send emails, manage webhooks, test integrations locally.
+  </Card>
+  <Card title="Transactional Templates" icon="file-code" href="/send-api/templates">
+    Store a design once and send it by ID with values per recipient.
+  </Card>
+  <Card title="Campaigns" icon="paper-plane" href="/api-reference/campaigns/overview">
+    Newsletters and campaigns to contact lists, in the dashboard or through the API.
+  </Card>
+  <Card title="Marketing Domains" icon="bullhorn" href="/deliverability#which-sending-type-should-my-domain-use">
+    Marketing mail runs on separate infrastructure with its own limit, so it never touches your transactional reputation.
   </Card>
 </CardGroup>
 
@@ -106,6 +116,7 @@ Replace placeholder values with your API keys and verified domain. Use [sandbox 
 2. **[Set up your domain](/domains)**, authorizing AhaSend to send emails on your behalf
 3. Use our **[APIs](/send-api/send-email)** or **[SMTP](/smtp)** to send your first email
 4. **[Configure webhooks](/integrations/webhooks)** to track email events in real-time
+5. **[Send a campaign](/api-reference/campaigns/overview)** to a contact list when you have a newsletter to send
 
 Ready to start sending emails that actually reach the inbox? Let's get you set up! 🚀
 
