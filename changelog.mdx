@@ -59,6 +59,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 - **The old DKIM key is revoked a week after a rotation.** On managed DNS domains, AhaSend publishes an empty (revoked) key for the old signing key and deletes its private key, so an old key can no longer pass DKIM. Domains with manually set up DKIM are not affected.
 - **Campaign list checks finish faster on large lists**, so the decision before sending is based on more of the checked contacts.
+- **Campaign list checks no longer count addresses on catch-all domains as bad.** A catch-all domain accepts mail for any address, so the check cannot confirm the mailbox. These contacts still get the campaign, and the list check on the campaign report shows them as Catch-all, next to Risky. A campaign to a large list where most addresses are on catch-all domains goes to manual review.
 - **Campaign report breakdowns load faster on large campaigns.** They are counted in the background and show when they were last updated. The bounce and status lists page with Previous and Next, and no recipient is repeated or skipped.
 - **Advanced search on a list is more complete.** Full names match, "is empty" also finds contacts that never had the field, and date filters accept relative dates such as "7 days ago".
 - **See a sent campaign's email in full.** On a sent campaign's page, the design thumbnail has a **View email** button that opens the email in a new tab.
@@ -70,7 +71,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Fixed automatic DKIM rotations starting late for some domains**, mostly on plans that rotate more often.
 - **Fixed API v2 always reporting managed DKIM records as `propagated: false`**, even on fully set up domains.
 - **Fixed managed DNS records sometimes showing "Issue detected" for up to 15 minutes** after we published them, when our DNS provider briefly limited our requests.
-- **Fixed contacts being marked invalid when the address check service was busy** during a campaign list check. Those contacts keep their status and still get the campaign.
+- **Fixed campaign list checks counting addresses they could not check as bad**: when the address check service was busy, when the check timed out, or when the receiving mail server asked to try again later or blocked the check. Those contacts keep their status, still get the campaign, and a later list check can check them again.
 - **Fixed many spam complaints from Yahoo and Microsoft not being recorded.** Complaints now appear in your statistics, and the addresses are handled as described above.
 - **Fixed a bounce or a complaint erasing a contact's unsubscribe from a list.** A bulk add or a CSV re-import also no longer subscribes people who left a list again.
 - **Fixed updating a webhook through API v2 failing with `500`** for webhooks limited to some domains. This affected requests from 5 to 12 October.
