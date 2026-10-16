@@ -143,14 +143,12 @@ Headers such as `AhaSend-Track-Opens`, `AhaSend-Tags` and `AhaSend-Sandbox` cont
 
 When the server refuses any recipient, nothing is sent, and the error names the recipient.
 
-`--output json` prints the CLI's own result object, not an API response, after a sent message and after a test that passed or failed. Its keys are written as the CLI names them, with capital letters:
+A sent message's output shows its Message-ID: the one `--header` gave, or the one the command sets, a UUID at the domain of `--from`, such as `<0d371db4-00d0-5eec-851c-e1db1e2b190d@example.com>`. AhaSend keeps it, so [`messages get`](/cli/commands/messages#get-a-message) finds the message by it.
 
-- `Success`: whether the message was sent or the test passed
-- `TestMode`: whether this was a `--test` run
-- `Connected`: whether a test connected to the server
-- `Authenticated`: whether a test logged in
-- `Error`: why a test failed, or an empty string
-- `MessageID`: always an empty string
+`--output json` prints the CLI's own result object, not an API response, with the same keys as CSV output:
+
+- After a sent message: `success` (`true`) and `message_id`.
+- After a test that passed or failed: `test_mode` (`true`), `success` (whether the test passed), `connected` (whether it connected to the server), `authenticated` (whether it logged in) and `error` (why it failed, or an empty string).
 
 A failed send prints no result object: it prints the error object that [JSON Output](/cli/configuration#json-output) describes.
 
