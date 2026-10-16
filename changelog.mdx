@@ -30,6 +30,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
   - The agent cannot read received email unless you turn this on for the connection. A campaign is sent only after you confirm it in your AI tool.
   - A connection ends when its user loses access to the account, and when the tool does not use it for 30 days.
   - The **Connect an AI tool** button on the API Keys page shows the setup steps for each tool, with one-click install for Cursor and VS Code.
+- **[SMTP on port 465](/smtp#does-ahasend-support-port-465).** `send.ahasend.com` accepts SMTP on port 465 with implicit TLS, for clients and devices that cannot use STARTTLS. Port 465 accepts AUTH PLAIN and AUTH LOGIN. Ports 25, 587 and 2525 with STARTTLS are unchanged.
 - **Save a list search as a new list.** On a list page, search or use advanced search, then click **Save as new list** to put the matching contacts on a new list. Send a campaign to that list to reach only those contacts. Each contact keeps its status, so an unsubscribed contact stays unsubscribed on the new list. The contacts are copied in the background, and the new list's page shows when the copy is done. The new list is separate from the original: later changes to the original list do not reach it.
 
 #### Changes

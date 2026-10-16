@@ -115,7 +115,23 @@ swaks \
   --attach @/path/to/invoice.pdf
 ```
 
+```bash Port 465 (Implicit TLS)
+swaks \
+  --from hello@yourdomain.com \
+  --to user@example.com \
+  --server send.ahasend.com \
+  --port 465 \
+  --auth login \
+  --tls-on-connect \
+  --auth-user 'YOUR_SMTP_USERNAME' \
+  --auth-password 'YOUR_SMTP_PASSWORD' \
+  --header 'Subject: Welcome to our platform!' \
+  --body "Thanks for signing up. We're excited to have you!"
+```
+
 </CodeGroup>
+
+On port 465, use `--tls-on-connect` instead of `--tls`. Port 465 accepts `--auth login` and `--auth plain`.
 
 ## Advanced Examples
 

@@ -42,7 +42,7 @@ The owner or an Administrator of the parent account can resume a paused [sub-acc
 
 ## Why Does SMTP Port 465 Not Work?
 
-AhaSend does not support implicit TLS on port 465. Use the STARTTLS settings on [SMTP](/smtp), then authenticate with an SMTP username and password. An API key is not an SMTP password. If the connection times out before a server greeting, check outbound network access on your host.
+Port 465 on `send.ahasend.com` uses implicit TLS. Set your client's security option to SSL/TLS (also called SMTPS or implicit TLS), not STARTTLS: a client that waits for a greeting before it starts TLS gets no greeting, and the server closes the connection after 30 seconds. See the settings for common libraries on [SMTP](/smtp#does-ahasend-support-port-465). Authenticate with an SMTP username and password; an API key is not an SMTP password. If the connection itself times out, check outbound network access on your host: some hosting providers block port 465. Ports 587 and 2525 with STARTTLS work the same way.
 
 ## Why Was My Email Delivered but Not Received?
 

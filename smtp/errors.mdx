@@ -43,7 +43,7 @@ Do not infer that every `556` from every recipient server has this AhaSend-speci
 
 ## Why Does Port 465 Fail?
 
-AhaSend does not support implicit TLS on port 465. Use STARTTLS on a supported port and authenticate after TLS, as described in [SMTP settings](/smtp). Do not disable certificate validation to get past a connection error. If your host blocks outbound SMTP, check its network policy or use the [HTTPS API](/send-api/send-email).
+Port 465 uses implicit TLS: set your client to SSL/TLS, not STARTTLS. A client set to STARTTLS on port 465 waits for a greeting, and the server closes the connection after 30 seconds. See the settings for common libraries in [SMTP settings](/smtp#does-ahasend-support-port-465). Do not disable certificate validation to get past a connection error. If your host blocks outbound SMTP, check its network policy or use the [HTTPS API](/send-api/send-email).
 
 ## Should I Retry a Failed Send?
 

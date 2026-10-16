@@ -60,7 +60,7 @@ EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = os.environ["AHASEND_FROM"]
 ```
 
-Keep credentials in your deployment's secret store. `EMAIL_USE_TLS` enables STARTTLS; [port 465 and implicit TLS are unsupported](/smtp).
+Keep credentials in your deployment's secret store. `EMAIL_USE_TLS` enables STARTTLS. To use [port 465 with implicit TLS](/smtp#does-ahasend-support-port-465) instead, set `EMAIL_PORT = 465`, `EMAIL_USE_SSL = True` and `EMAIL_USE_TLS = False`; Django allows only one of the two to be `True`.
 
 ## Send from Your Application
 
