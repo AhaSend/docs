@@ -1,10 +1,10 @@
 | Setting | Value |
 |---|---|
 | Host | `send.ahasend.com` |
-| Ports | 25, 587 and 2525 |
-| Encryption | STARTTLS required on every supported port |
-| Authentication | AUTH PLAIN only after STARTTLS |
+| Ports with STARTTLS | 25, 587 and 2525 |
+| Port with implicit TLS | 465 (TLS from the first byte, also called SSL/TLS or SMTPS) |
+| Encryption | Required on every port: STARTTLS on 25, 587 and 2525, implicit TLS on 465 |
+| Authentication | AUTH PLAIN after STARTTLS on 25, 587 and 2525; AUTH PLAIN or AUTH LOGIN on 465 |
 | Username and password | Your SMTP credential, not an API key |
-| Port 465 | Implicit TLS is not supported |
 
 All message data is stored in the EU. See [SMTP limits](/smtp#what-are-the-smtp-limits).

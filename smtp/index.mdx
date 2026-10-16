@@ -1,14 +1,14 @@
 ---
 title: "SMTP Relay Settings: Host, Ports, TLS, Limits"
 sidebarTitle: "Server Information"
-description: "AhaSend SMTP relay settings: send.ahasend.com, ports 25/587/2525 with STARTTLS, PLAIN auth, message limits and SMTP error codes."
+description: "AhaSend SMTP relay settings: send.ahasend.com, ports 25/587/2525 with STARTTLS or 465 with implicit TLS, PLAIN and LOGIN auth, limits and SMTP error codes."
 icon: "server"
 ---
 
 import SmtpSettings from "/snippets/smtp-settings.mdx";
 
 
-AhaSend SMTP relay settings are listed here: server hosts, STARTTLS ports, authentication, message limits and response codes.
+AhaSend SMTP relay settings are listed here: server host, ports and encryption, authentication, message limits and response codes.
 
 Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
@@ -18,13 +18,25 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 ## Which SMTP Settings Should I Use?
 
-Use `send.ahasend.com` with your SMTP credentials on port 587, 25 or 2525.
+Use `send.ahasend.com` with your SMTP credentials on port 587, 25 or 2525 with STARTTLS, or on port 465 with implicit TLS.
 
 <SmtpSettings />
 
 ## Does AhaSend Support Port 465?
 
-No. AhaSend supports STARTTLS on ports 25, 587 and 2525. It does not support implicit TLS on port 465. Create an [SMTP credential](/smtp/credentials), then connect, start TLS and authenticate with AUTH PLAIN.
+Yes. Port 465 uses implicit TLS: your client starts TLS as soon as it connects, before the server greets it, and sends no `STARTTLS` command. It accepts AUTH PLAIN and AUTH LOGIN. Limits, response codes and [special headers](/smtp/special-headers) are the same on every port.
+
+Set your client's security option to match the port:
+
+| Library or tool | Port 465 | Ports 587, 25 and 2525 |
+|---|---|---|
+| Nodemailer | `secure: true` | `secure: false` |
+| Python `smtplib` | `smtplib.SMTP_SSL` | `smtplib.SMTP`, then `starttls()` |
+| PHPMailer | `PHPMailer::ENCRYPTION_SMTPS` | `PHPMailer::ENCRYPTION_STARTTLS` |
+| MailKit | `SecureSocketOptions.SslOnConnect` | `SecureSocketOptions.StartTls` |
+| Swaks | `--tls-on-connect` | `--tls` |
+
+A client set to STARTTLS on port 465 waits for a greeting that never comes, and the server closes the connection after 30 seconds. A client set to SSL/TLS on port 587 fails at once with a TLS error such as `wrong version number`. See [port 465 problems](/troubleshooting#why-does-smtp-port-465-not-work).
 
 ## What Are the SMTP Limits?
 
@@ -90,6 +102,17 @@ Password: your-smtp-password
 Authentication: PLAIN
 ```
 
+### Port 465 Configuration
+
+```text
+Host: send.ahasend.com
+Port: 465
+Security: SSL/TLS (implicit TLS)
+Username: your-smtp-username
+Password: your-smtp-password
+Authentication: PLAIN or LOGIN
+```
+
 ### Programming Language Examples
 
 <CardGroup cols={3}>
@@ -146,7 +169,7 @@ Authentication: PLAIN
 ## Security Considerations
 
 <Warning>
-**Always use STARTTLS:** Unencrypted SMTP connections are not secure and may expose your credentials and email content.
+**Always use TLS:** use STARTTLS on ports 25, 587 and 2525, or implicit TLS on port 465. Unencrypted SMTP connections are not secure and may expose your credentials and email content.
 </Warning>
 
 <CardGroup cols={2}>

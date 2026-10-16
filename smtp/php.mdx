@@ -383,7 +383,7 @@ $message->getHeaders()
   <Accordion title="Connection Problems" icon="wifi">
     **Network and connection issues:**
     - Try different ports: 587 (recommended), 25, or 2525
-    - Ensure STARTTLS is enabled, not SSL
+    - Use `PHPMailer::ENCRYPTION_STARTTLS` on ports 587, 25 and 2525, and `PHPMailer::ENCRYPTION_SMTPS` on port 465
     - Check firewall settings aren't blocking SMTP
     - Verify server allows outbound SMTP connections
   </Accordion>
