@@ -1,6 +1,6 @@
 ---
 title: "ahasend contacts: Manage Account Contacts"
-sidebarTitle: "Contacts"
+sidebarTitle: "contacts"
 description: "Create, read, update, delete, and batch-import AhaSend account contacts with the CLI, including status, unsubscribe choices, and custom attributes."
 icon: "address-book"
 ---
@@ -8,59 +8,104 @@ icon: "address-book"
 AhaSend CLI contact commands manage account-global contacts by email address or UUID.
 
 <Note>
-The [Contacts API](/api-reference/contacts/overview) is live, but these commands are not in the published v0.2.0 binary. They exist in the development CLI build `7a47882`. Wait for a [CLI release](https://github.com/AhaSend/ahasend-cli/releases) containing contacts before using these examples.
+These commands need CLI v0.3.0 or later. Check your version with `ahasend --version`, and [upgrade](/cli/installation) if it is older.
 </Note>
 
 ## Prerequisites
 
-[Authenticate with a full API key](/cli/authentication). Contact tasks need `contacts:read`, `contacts:write`, or `contacts:delete`, according to the action. Attribute keys must already exist in the dashboard. Creating a contact does not subscribe it to a list.
+[Authenticate with a full API key](/cli/authentication). Contact tasks need these [scopes](/api-reference/scopes):
+
+| Scope | Commands |
+|---|---|
+| `contacts:read` | `contacts list`, `contacts get` |
+| `contacts:write` | `contacts create`, `contacts update`, `contacts batch` |
+| `contacts:delete` | `contacts delete` |
+| `lists:read` | `contacts memberships` |
+
+Attribute keys must already exist in the dashboard. Creating a contact does not add it to a list; add it with [`ahasend lists members add`](/cli/commands/lists#add-and-list-members). The shell examples need Bash.
+
+Commands that take `<id-or-email>` accept a contact ID or a raw email address. Pass the address exactly as written, including `+`, and do not percent-encode it.
 
 ## Create, Read and Update
 
-Choose a fresh test address, then run these commands in order:
+Save these commands in one Bash script. The script creates two test contacts, and its last step deletes them.
 
 ```bash
+set -euo pipefail
 ahasend contacts create docs-contact-test@example.com --first-name Pat --last-name Example --status enabled
 ahasend contacts list --limit 10
 ahasend contacts get docs-contact-test@example.com
 ahasend contacts update docs-contact-test@example.com --unsubscribed=true
 ```
 
-`update` sends only fields you supply. Set an attribute's value to `null` to remove that value; use `--attributes` with a JSON object. Status values are `enabled`, `disabled`, and `blocked`.
+`update` sends only the flags you give, and needs at least one. `--first-name ""`, `--last-name ""` and `--status-reason ""` clear those fields. To remove an attribute, set its value to `null` in `--attributes`, such as `--attributes '{"old_key":null}'`. Status values are `enabled`, `disabled` and `blocked`.
+
+To find contacts, filter the list by email, status, subscription or creation time. Times are RFC 3339, such as `2026-01-15T10:30:00Z`, or relative, such as `7d` for 7 days ago:
+
+```bash
+ahasend contacts list --status enabled --subscribed=true
+ahasend contacts list --from-time 7d --limit 50
+```
 
 ## Batch Import
 
-Save this as `contacts.json`. Use fresh test addresses for each run.
+Continue the script. `contacts batch` creates or updates up to 1,000 contacts in one request. Save this as `contacts.json`:
 
 ```json contacts.json
 {"data":[{"email":"docs-batch-test@example.com","first_name":"Pat"}]}
 ```
 
 ```bash
-ahasend contacts batch --file contacts.json --idempotency-key docs-contact-import-UNIQUE_RUN_ID
+ahasend contacts batch --file contacts.json
 ```
 
-## Delete a Test Contact
+- The file is a JSON object whose only field is `data`. The 1,000 limit counts every item, duplicates included.
+- Items may hold only contact fields, and no field may be `null`; leave a field out to keep it unchanged. Inside `attributes`, `null` removes that attribute.
+- The command prints the result of each item, and exits with code 1 when any item failed.
+- With `--idempotency-key`, reuse a key only to retry the same file contents.
 
-The example creates the contact it deletes. Use a fresh address for the fixture.
+## List a Contact's Lists
+
+Continue the script:
 
 ```bash
-ahasend contacts create docs-contact-delete-test@example.com --first-name Test
-ahasend contacts delete docs-contact-delete-test@example.com --force
+ahasend contacts memberships docs-contact-test@example.com
+ahasend contacts memberships docs-contact-test@example.com --subscription-status unsubscribed
 ```
 
-## Commands and Flags
+Each membership shows its list and its status: `unconfirmed`, `confirmed`, `unsubscribed` or `complained`.
+
+## Delete the Test Contacts
+
+Finish the script by deleting the contacts it created.
+
+```bash
+ahasend contacts delete docs-contact-test@example.com --force
+ahasend contacts delete docs-batch-test@example.com --force
+```
+
+The script stops at the first command that fails, and then deletes nothing. If it stops early, run these two commands to delete the contacts it made; a contact it did not make fails with a not found error.
+
+`contacts delete` asks for confirmation first; see [prompts](/cli/configuration#prompts).
+
+<Warning>
+Deleting a contact cannot be undone. It cancels the contact's active workflows and erases its unsubscribe, list membership, campaign, open and click history. To stop mail and keep the history, run `ahasend contacts update <id-or-email> --unsubscribed=true` instead.
+</Warning>
+
+## Command Flags
+
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `contacts batch`
 
 ```text
-ahasend contacts batch --file <JSON> [flags]
+ahasend contacts batch --file <path> [flags]
 ```
 
 | Flag | Description and default |
 |---|---|
 | `--file string` | JSON file containing `{"data":[...]}` (required) |
-| `--idempotency-key string` | Idempotency key for safe retries |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 
 ### `contacts create`
 
@@ -72,11 +117,13 @@ ahasend contacts create <email> [flags]
 |---|---|
 | `--attributes string` | Contact attributes as a JSON object |
 | `--first-name string` | Contact first name |
-| `--idempotency-key string` | Idempotency key for safe retries |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--last-name string` | Contact last name |
-| `--status string` | Contact status (enabled, disabled, blocked) |
+| `--status string` | Contact status: `enabled`, `disabled` or `blocked` |
 | `--status-reason string` | Reason for the contact status |
 | `--unsubscribed` | Whether the contact is globally unsubscribed |
+
+Attribute values cannot be `null` on `create`.
 
 ### `contacts delete`
 
@@ -86,7 +133,7 @@ ahasend contacts delete <id-or-email> [flags]
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `contacts get`
 
@@ -104,14 +151,29 @@ ahasend contacts list [flags]
 
 | Flag | Description and default |
 |---|---|
-| `--after string` | Cursor for the next page |
-| `--before string` | Cursor for the previous page |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
 | `--email string` | Filter by normalized exact email address |
-| `--from-time string` | Include contacts created at or after this RFC3339 time |
-| `--limit int32` | Maximum number of contacts to return (1-100; default 100) |
-| `--status string` | Filter by status (enabled, disabled, blocked) |
-| `--subscribed string` | Filter by subscription state (true, false) |
-| `--to-time string` | Include contacts created at or before this RFC3339 time |
+| `--from-time string` | Filter contacts created after this time (RFC3339 or relative like '24h', '7d') |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+| `--status string` | Filter by status: `enabled`, `disabled` or `blocked` |
+| `--subscribed` | Filter by global subscription state |
+| `--to-time string` | Filter contacts created before this time (RFC3339 or relative) |
+
+The list is newest first. `--subscribed=false` lists unsubscribed contacts.
+
+### `contacts memberships`
+
+```text
+ahasend contacts memberships <id-or-email> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+| `--subscription-status string` | Filter by membership status: `unconfirmed`, `confirmed`, `unsubscribed` or `complained` |
 
 ### `contacts update`
 
@@ -121,17 +183,16 @@ ahasend contacts update <id-or-email> [flags]
 
 | Flag | Description and default |
 |---|---|
-| `--attributes string` | Contact attributes as a JSON object |
+| `--attributes string` | Attributes to change as a JSON object (a null value removes that attribute) |
 | `--email string` | New email address |
-| `--first-name string` | Contact first name |
-| `--last-name string` | Contact last name |
-| `--status string` | Contact status (enabled, disabled, blocked) |
-| `--status-reason string` | Reason for the contact status |
-| `--unsubscribed` | Whether the contact is globally unsubscribed |
-
+| `--first-name string` | New first name (empty clears it) |
+| `--last-name string` | New last name (empty clears it) |
+| `--status string` | New status: `enabled`, `disabled` or `blocked` |
+| `--status-reason string` | New reason for the status (empty clears it) |
+| `--unsubscribed` | Whether the contact is globally unsubscribed (false resubscribes it) |
 
 ## Related Guides
 
-- [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
-- [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).
+- [Contacts API](/api-reference/contacts/overview), [Batch upsert contacts](/api-reference/contacts/batch-upsert-contacts), [Lists of a contact](/api-reference/lists/get-contact-lists).
+- [Lists commands](/cli/commands/lists), [Campaigns commands](/cli/commands/campaigns), [CLI authentication](/cli/authentication).
 - [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

@@ -7,84 +7,155 @@ sidebarTitle: "Webhook Testing"
 
 Test and debug webhook events locally without deploying to production using the AhaSend CLI.
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in](/cli/authentication) with an API key that has the read, write and delete [webhook scopes](/api-reference/scopes#webhook-management) for all domains, and replace `YOUR_RESOURCE_ID` with the ID of one of your webhooks or of the temporary webhook the listener creates. The sandbox send in [Development Workflow](#development-workflow) also needs the `messages:send:all` scope and your verified sender domain in place of `yourdomain.com`. The scripted trigger needs [jq](https://jqlang.org).
 
 ## Overview
 
 The CLI provides tools for:
-- Creating local webhook listeners
+- Streaming webhook events to your terminal over a WebSocket connection
+- Forwarding events, signed, to a local endpoint
 - Triggering test events
-- Forwarding events to local endpoints
 - Debugging webhook signatures and payloads
+
+Every flag on this page is listed in the [`webhooks` command reference](/cli/commands/webhooks#command-flags).
 
 ## Local Webhook Listener
 
 ### Basic Usage
 
-An existing webhook must be enabled to emit events. For a disabled test webhook, start its listener, then run `ahasend webhooks update YOUR_RESOURCE_ID --enable` in another terminal. Disable it again before stopping the listener. A listener without `--webhook-id` creates an enabled temporary webhook.
+`ahasend webhooks listen` prints each event as text, whatever `--output` says. It runs until you press Ctrl+C or the connection closes.
 
 ```bash
 # Listen for all webhook events
 ahasend webhooks listen
 
-# Use existing webhook
+# Use an existing webhook
 ahasend webhooks listen --webhook-id YOUR_RESOURCE_ID
 
-# Forward events to local endpoint
+# Forward events to a local endpoint
 ahasend webhooks listen --forward-to http://localhost:3000/webhook
 
-# Filter specific event types
+# Show only some event types
 ahasend webhooks listen --events message.opened,message.clicked
 
 # Slim output (only event types)
 ahasend webhooks listen --slim-output
 ```
 
+The API key needs the `webhooks:write:all` scope. When the connection starts, the command prints a banner with the webhook ID, the forwarding secret and, with `--forward-to`, the forwarding URL.
+
+`--events` filters in the CLI: events of other types are neither shown nor forwarded. It takes event keys or types, such as `opened` or `message.opened`.
+
+### Temporary Webhooks
+
+Without `--webhook-id`, the API creates a temporary webhook named `DevMode webhook for <API key label>`. `webhooks list` does not show it. It stays after the command ends, until you delete it or the API does, as [Events Without a Listener](#events-without-a-listener) describes.
+
+As soon as the API creates it, the command prints a note on stderr with its ID and the command that deletes it:
+
+```bash
+ahasend webhooks delete YOUR_RESOURCE_ID
+```
+
+The note appears before the command connects, so you see the ID even when connecting then fails.
+
+### Existing Webhooks
+
+With `--webhook-id`, the command listens through a webhook you created. A disabled webhook gets no events, so enable it first:
+
+```bash
+ahasend webhooks update YOUR_RESOURCE_ID --enabled
+ahasend webhooks listen --webhook-id YOUR_RESOURCE_ID
+```
+
+While you listen, the webhook's own URL keeps receiving its events, the test events of `webhooks trigger` included. Listening also turns on streaming for the webhook, and streaming stays on after the command ends, as [Events Without a Listener](#events-without-a-listener) describes.
+
+### Events Without a Listener
+
+A webhook with streaming on keeps it when no listener is connected: the API keeps its events for the next listener, up to the last 100. When 5 minutes pass with no new event, the API drops the kept events. The next `webhooks listen --webhook-id` of the same webhook prints the kept events first, each marked `REPLAY:`.
+
+When an event arrives while 100 events are already kept, the API drops the kept events and turns off streaming for the webhook:
+- A temporary webhook is deleted.
+- A webhook you created keeps sending events to its URL. The next `webhooks listen --webhook-id` turns streaming on again.
+
 ### Available Events
 
-- `message.reception` - Email received by AhaSend
-- `message.delivered` - Email delivered to recipient
-- `message.transient_error` - Temporary delivery failure
-- `message.failed` - Permanent delivery failure
-- `message.bounced` - Email bounced
-- `message.suppressed` - Email suppressed
-- `suppression.created` - New suppression added
-- `domain.dns_error` - DNS resolution failure
-- `message.opened` - Email opened by recipient
-- `message.clicked` - Link clicked in email
+The [`webhooks` event types](/cli/commands/webhooks#event-types) lists every event you can listen for and trigger. See the [event reference](/api-reference/webhooks) for each payload.
+
+## Forwarding Events
+
+### Forward to a Local Endpoint
+
+`--forward-to` sends each event to your handler as an HTTP POST with a JSON body. The URL must be HTTP or HTTPS with a host name and no user name or password; another URL fails with exit code 4. A plain HTTP URL for a host other than `localhost` or a loopback address prints a warning on stderr.
+
+```bash
+# Forward to a local server
+ahasend webhooks listen --forward-to http://localhost:3000/webhook
+
+# Skip SSL certificate verification for a local endpoint with a self-signed certificate
+ahasend webhooks listen \
+  --forward-to https://localhost:3000/webhook \
+  --skip-verify
+```
+
+`--skip-verify` applies only to the `--forward-to` endpoint, and needs it: without `--forward-to`, the command fails with exit code 4. The connection to AhaSend is always verified.
+
+### Forwarding Secret and Signatures
+
+When the connection starts, the banner prints `Forwarding secret (signs forwarded events): <secret>`. The command makes a new secret on each run, also with `--webhook-id`: it is not the secret of that webhook.
+
+Each forwarded request carries the Standard Webhooks headers:
+- `webhook-id` - Unique message identifier
+- `webhook-timestamp` - Unix timestamp
+- `webhook-signature` - HMAC-SHA256 signature for verification
+
+To verify a forwarded event, use the full secret string, as printed, as the raw UTF-8 HMAC key. Do not base64-decode it. See [signature verification](/api-reference/webhooks/security).
+
+### Order and Delivery
+
+The command forwards events one at a time, in the order they arrive, with their body byte for byte as the stream sent it, so the signature covers exactly what the API sent. A slow endpoint does not hold up the stream: up to 100 events, and up to 32 MiB of their data, wait for it, in order. When an event would go over either limit, the command does not forward it and says so on stderr.
+
+A forwarded request is not sent again. When the request fails, the command logs an error on stderr; when it gets a response outside the 2xx range, the command logs a warning. When the stream ends, the command waits for the events not yet forwarded. Press Ctrl+C to skip the wait.
 
 ## Triggering Test Events
 
 ### Development Testing
 
-```bash
-# Trigger single event
-ahasend webhooks trigger YOUR_RESOURCE_ID \
-  --events "message.delivered"
+`webhooks trigger` asks the API to send test events to a webhook. Use the webhook ID that the listener's banner shows to see the events in your terminal.
 
-# Trigger multiple events
+```bash
+# Trigger one event
 ahasend webhooks trigger YOUR_RESOURCE_ID \
-  --events "message.delivered,message.opened,message.clicked"
+  --events message.delivered
+
+# Trigger several events
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events message.delivered,message.opened,message.clicked
 
 # Trigger all available events
 ahasend webhooks trigger YOUR_RESOURCE_ID \
   --all-events
 ```
 
+A disabled webhook gets no events: the API answers that they are queued, and then drops them.
+
 ### Event Simulation Scenarios
 
 ```bash
 # Test successful delivery flow
-ahasend webhooks trigger webhook-id \
-  --events "message.reception,message.delivered,message.opened,message.clicked"
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events message.reception,message.delivered,message.opened,message.clicked
 
 # Test bounce handling
-ahasend webhooks trigger webhook-id \
-  --events "message.reception,message.bounced"
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events message.reception,message.bounced
+
+# Test suppression flow
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events message.suppressed,suppression.created
 
 # Test error scenarios
-ahasend webhooks trigger webhook-id \
-  --events "message.transient_error,message.failed,domain.dns_error"
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events message.transient_error,message.failed,domain.dns_error
 ```
 
 ## Integration Testing
@@ -92,20 +163,23 @@ ahasend webhooks trigger webhook-id \
 ### Development Workflow
 
 ```bash
-# 1. Start webhook listener with event forwarding
+# 1. Start a listener that forwards to your local handler
 ahasend webhooks listen \
   --forward-to http://localhost:3000/api/webhooks/ahasend \
   --events message.delivered,message.bounced,message.failed
 
 # 2. Or use an existing webhook
 ahasend webhooks listen \
-  --webhook-id your-webhook-id \
+  --webhook-id YOUR_RESOURCE_ID \
   --forward-to http://localhost:3000/api/webhooks/ahasend
 
-# 3. Trigger test events (in another terminal)
-ahasend webhooks trigger webhook-id --all-events
+# 3. In another terminal, trigger the same events for the webhook ID in the banner
+#    (the listener of step 1 shows only the events its --events names)
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events message.delivered,message.bounced,message.failed
 
-# 4. Send test email to generate real events
+# 4. Send a sandbox email: AhaSend simulates its delivery and sends the
+#    matching events, without opens or clicks
 ahasend messages send \
   --from test@yourdomain.com \
   --to test@example.com \
@@ -114,48 +188,65 @@ ahasend messages send \
   --sandbox
 ```
 
-### SSL Certificate Verification
+### Scripted Trigger
+
+`webhooks trigger` exits nonzero when the API refuses the request, so a script with `set -e` stops on an API error:
 
 ```bash
-# Skip SSL certificate verification for local endpoints
-ahasend webhooks listen \
-  --forward-to https://localhost:3000/webhook \
-  --skip-verify
+#!/bin/bash
+set -e
+
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events message.delivered,message.bounced,message.failed \
+  --output json > trigger-result.json
+
+echo "Triggered: $(jq -r '.message' trigger-result.json)"
 ```
+
+## Connection and Exit Codes
+
+The listener does not reconnect. It exits with:
+- `0` when the server closes the connection normally, or when you press Ctrl+C
+- `7` when the connection drops, or the server closes it with an error
+- `4` when you decline to take over the stream from another connection
+
+Other failures, such as an invalid flag or an API error while the command sets up the stream, exit as [Exit Codes](/cli/configuration#exit-codes) lists.
+
+When another connection holds the stream, the command asks on stderr whether to force a reconnect, and takes the stream over when you confirm, as [Prompts](/cli/configuration#prompts) describes. The other connection stays open but gets no more events.
+
+A message on the stream that the command cannot read, such as one that is not JSON, is skipped with a warning on stderr, and the command keeps listening.
 
 ## Debugging
 
 ### Output Options
 
 ```bash
-# Show detailed request/response information
-ahasend webhooks listen \
-  --verbose \
-  --debug
+# Show the API requests and responses of the stream setup, and each forward
+ahasend webhooks listen --debug
 
 # Show only event types (slim output)
-ahasend webhooks listen \
-  --slim-output
+ahasend webhooks listen --slim-output
 
-# Filter specific events
-ahasend webhooks listen \
-  --events message.delivered,message.opened
+# Show only some events
+ahasend webhooks listen --events message.delivered,message.opened
 ```
+
+Stdout holds the banner, the `Session established` line and the events, with separator lines between them. Notes, warnings, and the logs of `--verbose` and `--debug` go to stderr.
 
 ### Common Issues
 
-**Signature Verification Failed**: The listener prints its signing secret when it starts. Store that secret in your local handler's configuration; use the full string as the raw UTF-8 HMAC key. Do not base64-decode it. See [signature verification](/api-reference/webhooks/security). The command automatically generates a webhook secret using the Standard Webhooks headers and format, with the full secret as raw UTF-8 bytes
+**Signature Verification Failed**: Use the forwarding secret of the current run, as the banner prints it, as the raw UTF-8 HMAC key. Do not base64-decode it, and do not use the webhook's own secret. Each run prints a new secret.
 
-**Events Not Received**: Check that the webhook URL is correct and the local server is running
+**Events Not Received**: Check that the webhook is enabled, that `--events` does not filter the events out, and that your local server is running. Run with `--debug` to see each forward and its response status.
 
-**Connection Lost**: The command handles disconnections with buffered event replay, automatically reconnecting when possible
+**Connection Lost**: The listener does not reconnect. Start it again with `--webhook-id` and the same webhook ID to receive the [kept events](#events-without-a-listener).
 
 ## Best Practices
 
 1. **Start Simple**: Test with single events before complex flows
 2. **Use Sandbox Mode**: Test with sandbox emails to avoid sending real messages
 3. **Verify Signatures**: Always validate webhook signatures in production
-4. **Log Events**: Keep detailed logs during development for debugging
+4. **Clean Up**: Delete temporary webhooks when you finish testing
 5. **Test Error Cases**: Simulate failures to ensure proper error handling
 
 ## Next Steps

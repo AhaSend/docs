@@ -5,35 +5,215 @@ icon: webhook
 sidebarTitle: "webhooks"
 ---
 
-AhaSend CLI `webhooks` commands let you forward and trigger email event webhooks; this page lists their arguments and flags. For the complete workflow, use the [webhook testing guide](/cli/webhook-testing).
+AhaSend CLI `webhooks` commands let you manage, forward and trigger email event webhooks; this page lists their arguments and flags. For the complete local testing workflow, use the [webhook testing guide](/cli/webhook-testing). For dashboard setup, see [the webhooks guide](/integrations/webhooks).
 
-`webhooks get`, `webhooks update`, `webhooks delete` and `webhooks trigger` take the resource ID as their positional argument. `webhooks create`, `webhooks list` and `webhooks listen` use the flags below. For dashboard setup, see [the webhooks guide](/integrations/webhooks).
+Before running the examples, [log in](/cli/authentication) with an API key that has the read, write and delete [webhook scopes](/api-reference/scopes#webhook-management) for all domains, and replace `YOUR_RESOURCE_ID` with the ID of one of your webhooks. In the `--domains` examples, replace `example.com` and `example.org` with domains in your account; for any other domain, the API answers 400 `invalid domain: <domain>`.
 
-Create and update use short event keys: `reception`, `delivered`, `transient_error`, `failed`, `bounced`, `suppressed`, `opened`, `clicked`, `suppression_created`, and `dns_error`. Listen and trigger use full event types such as `message.delivered`. See the [event reference](/api-reference/webhooks).
+## Overview
+
+```text
+ahasend webhooks [subcommand] [flags]
+```
+
+Available subcommands:
+- `list` - List webhooks
+- `create` - Create a webhook
+- `get` - Get a webhook
+- `update` - Update a webhook
+- `delete` - Delete a webhook
+- `listen` - Listen for webhook events in real-time
+- `trigger` - Trigger webhook events for testing
+
+`webhooks get`, `webhooks update`, `webhooks delete` and `webhooks trigger` take the webhook ID as their positional argument. A webhook ID that is not a UUID fails with exit code 4 before any request. Find IDs with `ahasend webhooks list`.
+
+## Event Types
+
+`--events` on `create`, `update`, `listen` and `trigger` takes each event by its key or by its type, such as `delivered` or `message.delivered`. See the [event reference](/api-reference/webhooks) for the payloads.
+
+| Event key | Event type | Description |
+|---|---|---|
+| `reception` | `message.reception` | Email received by AhaSend |
+| `delivered` | `message.delivered` | Email delivered to recipient |
+| `transient_error` | `message.transient_error` | Temporary delivery failure |
+| `failed` | `message.failed` | Permanent delivery failure |
+| `bounced` | `message.bounced` | Email bounced |
+| `suppressed` | `message.suppressed` | Email suppressed |
+| `opened` | `message.opened` | Email opened by recipient |
+| `clicked` | `message.clicked` | Link clicked in email |
+| `suppression_created` | `suppression.created` | New suppression added |
+| `dns_error` | `domain.dns_error` | DNS configuration error for a domain |
+
+`--events` can be given several times, and each value can hold several events separated by commas, so `--events delivered,bounced` is the same as `--events delivered --events bounced`. An unknown event, or the same event given twice (by its key, its type or both), fails with exit code 4 before any request.
+
+## List Webhooks
+
+```bash
+# List all webhooks
+ahasend webhooks list
+
+# List webhooks with JSON output
+ahasend webhooks list --output json
+
+# List only the enabled webhooks
+ahasend webhooks list --enabled
+
+# List only the disabled webhooks
+ahasend webhooks list --enabled=false
+```
+
+The API applies the `--enabled` filter, so a page holds up to `--limit` matching webhooks. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
+
+## Create Webhook
+
+```bash
+# Create a webhook for three events of every domain
+ahasend webhooks create \
+  --name "Main app webhook" \
+  --url https://app.example.com/webhooks/ahasend \
+  --scope global \
+  --events delivered,bounced,failed
+
+# Create a webhook for the events of one domain
+ahasend webhooks create \
+  --name "Example webhook" \
+  --url https://api.example.com/webhooks/example \
+  --scope scoped --domains example.com \
+  --all-events
+
+# Create a disabled webhook
+ahasend webhooks create \
+  --name "Test webhook" \
+  --url https://test.example.com/webhook \
+  --events delivered \
+  --enabled=false
+```
+
+- `--name` and `--url` are required. When one is missing and stdin is a terminal, the command asks for it. With `--non-interactive`, or when stdin is not a terminal, a missing value fails with exit code 4.
+- On a terminal, without `--events` or `--all-events`, the command also asks for the events. A webhook created without events receives none until `webhooks update` gives it some.
+- `--scope` is `global` unless you set it. A global webhook receives the events of every domain. A `scoped` webhook receives only the events of the domains you give with `--domains`, which it requires. `--domains` without `--scope scoped` fails with exit code 4.
+- A webhook is enabled unless you set `--enabled=false`.
+- `--url` must be an HTTP or HTTPS URL with a host name and no user name or password. Use HTTPS in production: a plain HTTP URL for a host other than `localhost` or a loopback address prints a warning on stderr.
+
+The output shows the webhook's secret once. Save it to [verify the webhook's signatures](/api-reference/webhooks/security); `webhooks get` does not show it.
+
+## Get Webhook
+
+Show a webhook's name, URL, status, events, scope and domains, its timestamps and its call counters (successful calls, failed calls, errors since the last success and the last call time). The output has no secret: the API returns it only when you create the webhook.
+
+```bash
+ahasend webhooks get YOUR_RESOURCE_ID
+
+# Save the webhook's configuration as JSON
+ahasend webhooks get YOUR_RESOURCE_ID --output json > webhook-backup.json
+```
+
+## Update Webhook
+
+Only the flags you set are sent; other settings stay as they are. Give at least one flag.
+
+```bash
+# Change the name and URL
+ahasend webhooks update YOUR_RESOURCE_ID \
+  --name "Updated webhook" \
+  --url https://new-endpoint.example.com/webhook
+
+# Enable the webhook and replace its events
+ahasend webhooks update YOUR_RESOURCE_ID \
+  --enabled --events delivered,bounced,opened
+
+# Disable the webhook
+ahasend webhooks update YOUR_RESOURCE_ID --enabled=false
+
+# Select every event type
+ahasend webhooks update YOUR_RESOURCE_ID --all-events
+
+# Remove every event type
+ahasend webhooks update YOUR_RESOURCE_ID --clear-events
+
+# Limit the webhook to two domains
+ahasend webhooks update YOUR_RESOURCE_ID \
+  --scope scoped --domains example.com,example.org
+
+# Remove the domain restriction
+ahasend webhooks update YOUR_RESOURCE_ID --scope global
+```
+
+- `--events` replaces the webhook's events. `--all-events` selects every event type and `--clear-events` removes them all. These three flags cannot be combined.
+- `--domains` replaces the domains of a scoped webhook. The API ignores it on a global webhook unless you also give `--scope scoped`. `--scope global --domains <domain>` fails with exit code 4.
+- `--scope global` removes the domain restriction.
+
+## Delete Webhook
+
+```bash
+# Delete with a confirmation prompt
+ahasend webhooks delete YOUR_RESOURCE_ID
+
+# Skip the confirmation prompt
+ahasend webhooks delete YOUR_RESOURCE_ID --force
+```
+
+The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it. A deleted webhook cannot be restored.
+
+## Listen for Events
+
+`webhooks listen` streams webhook events to your terminal over a WebSocket connection, and can forward each event to a local endpoint. It prints events as text, whatever `--output` says, and runs until you press Ctrl+C or the connection closes.
+
+```bash
+# Listen through a temporary webhook
+ahasend webhooks listen
+
+# Listen through an existing webhook
+ahasend webhooks listen --webhook-id YOUR_RESOURCE_ID
+
+# Show only opens and clicks, and forward them to a local server
+ahasend webhooks listen \
+  --events message.opened,message.clicked \
+  --forward-to http://localhost:3000/webhook
+```
+
+The API key needs the `webhooks:write:all` scope. Without `--webhook-id`, the API creates a temporary webhook that stays after the command ends. Forwarded events are signed with a forwarding secret that the command prints when it connects. The [webhook testing guide](/cli/webhook-testing) covers temporary webhooks, forwarding, signatures and exit codes.
+
+## Trigger Test Events
+
+`webhooks trigger` asks the API to send test events to a webhook, so you can test your endpoint without waiting for real email events.
+
+```bash
+# Trigger one event
+ahasend webhooks trigger YOUR_RESOURCE_ID --events message.delivered
+
+# Trigger several events
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events message.delivered,message.opened,message.clicked
+
+# Trigger every event type
+ahasend webhooks trigger YOUR_RESOURCE_ID --all-events
+```
+
+Give `--events` or `--all-events`, but not both; without either, the command fails with exit code 4. The output is the API's message. A disabled webhook gets no events: the API answers that they are queued, and then drops them. Enable the webhook first with `ahasend webhooks update YOUR_RESOURCE_ID --enabled`.
 
 ## Command Flags
 
-These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `webhooks create`
 
 | Flag | Description and default |
 |---|---|
-| `--all-events` | Listen for all available event types |
-| `--disabled` | Create webhook in disabled state |
-| `--domains strings` | Limit webhook to specific domains |
-| `--events strings` | Comma-separated list of event types to listen for |
-| `--interactive` | Force interactive mode even when flags are provided |
+| `--all-events` | Select every event type |
+| `--domains strings` | Domain a scoped webhook is limited to (can be used multiple times) |
+| `--enabled` | Enable the webhook (the API enables it when omitted) (default true) |
+| `--events strings` | Event type, such as `delivered` or `message.delivered` (can be used multiple times) |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--name string` | Webhook name (required) |
-| `--non-interactive` | Skip interactive prompts (use flag values only) |
-| `--scope string` | Webhook scope (optional) |
+| `--non-interactive` | Never prompt; fail when a required flag is missing |
+| `--scope string` | Webhook scope: `global` or `scoped` (default `global`) |
 | `--url string` | Webhook URL (required) |
 
 ### `webhooks delete`
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `webhooks get`
 
@@ -43,17 +223,18 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for next page |
-| `--enabled` | Show only enabled webhooks |
-| `--limit int32` | Maximum number of webhooks to return |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--enabled` | Filter by enabled (`--enabled`) or disabled (`--enabled=false`) state |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
 
 ### `webhooks listen`
 
 | Flag | Description and default |
 |---|---|
-| `--events strings` | Filter specific events (client-side) |
+| `--events strings` | Show only this event type, such as `message.opened` or `opened` (can be used multiple times) |
 | `--forward-to string` | Local endpoint to forward events to |
-| `--skip-verify` | Skip SSL certificate verification for local endpoints when forwarding events |
+| `--skip-verify` | Skip SSL certificate verification for local endpoints when forwarding events (needs `--forward-to`) |
 | `--slim-output` | Slim down the payload for printing to the console |
 | `--webhook-id string` | Use existing webhook instead of creating temporary one |
 
@@ -61,23 +242,21 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 
 | Flag | Description and default |
 |---|---|
-| `--all-events` | Trigger all available event types |
-| `--events strings` | Event types to trigger |
+| `--all-events` | Select every event type |
+| `--events strings` | Event type to trigger, such as `message.delivered` or `delivered` (can be used multiple times) |
 
 ### `webhooks update`
 
 | Flag | Description and default |
 |---|---|
-| `--all-events` | Enable all available event types |
-| `--clear-domains` | Clear all domain restrictions |
-| `--disable` | Disable the webhook |
-| `--domains strings` | Set domain restrictions (replaces existing) |
-| `--enable` | Enable the webhook |
-| `--events strings` | Set event types (replaces existing) |
-| `--name string` | Update webhook name |
-| `--no-events` | Disable all event types |
-| `--scope string` | Update webhook scope |
-| `--url string` | Update webhook URL |
+| `--all-events` | Select every event type |
+| `--clear-events` | Remove every event type |
+| `--domains strings` | Domain restriction, replacing all domains (can be used multiple times) |
+| `--enabled` | Enable (`--enabled`) or disable (`--enabled=false`) the webhook |
+| `--events strings` | Event type, such as `delivered` or `message.delivered`, replacing all event types (can be used multiple times) |
+| `--name string` | New webhook name |
+| `--scope string` | New webhook scope: `global` or `scoped` |
+| `--url string` | New webhook URL |
 
 ## Related Guides
 

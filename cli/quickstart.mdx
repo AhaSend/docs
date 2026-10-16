@@ -1,13 +1,11 @@
 ---
 title: "CLI Quickstart: Send Email from the Terminal"
-description: "Send your first email from the command line with the AhaSend CLI: log in with your API key, add and verify a domain, test in sandbox mode, then send for real."
+description: "Send your first email from the command line with the AhaSend CLI: log in with your API key, add and verify a domain, then send test emails in sandbox mode."
 icon: play
 sidebarTitle: "Quickstart"
 ---
 
-This guide will help you send your first email using the AhaSend CLI in just a few minutes.
-
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+This guide helps you send your first email with the AhaSend CLI in a few minutes.
 
 ## Prerequisites
 
@@ -16,6 +14,9 @@ Before you begin, make sure you have:
 1. [Installed the AhaSend CLI](/cli/installation)
 2. An AhaSend account ([sign up here](https://dash.ahasend.com/user/register))
 3. Your API key and Account ID from the [dashboard](https://dash.ahasend.com)
+4. A domain whose DNS records you can change. The examples use `example.com`; replace it with your domain.
+
+The examples send with `--sandbox`, so no email is delivered. [Step 4](#step-4-test-with-sandbox-mode) explains sandbox mode.
 
 ## Step 1: Authentication
 
@@ -26,10 +27,11 @@ First, authenticate with your AhaSend API credentials:
 ahasend auth login
 ```
 
-You'll be prompted to enter:
-- Your API key
+On a terminal, the command asks for:
+- Your API key, hidden as you type it
 - Your Account ID
-- A profile name (default: "default")
+
+The CLI checks that the key belongs to the account before it saves them. [Profiles](/cli/configuration#profiles) says which name the profile gets.
 
 <Tip>
 Your credentials are stored in `~/.ahasend/config.yaml` for future use.
@@ -56,20 +58,20 @@ Before sending emails, you need to add and verify a domain:
 ahasend domains create example.com
 ```
 
-This command will return DNS records that you need to configure, including SPF, DKIM, and DMARC records that must be added to your domain's DNS settings.
+The command prints the DNS records the domain needs, on stderr, and marks each one as required or optional. Add them to your domain's DNS settings.
 
-After configuring your DNS records, verify the domain:
+After configuring your DNS records, check them:
 
 ```bash
-# Verify domain configuration
-ahasend domains verify example.com
+# Check the DNS records again
+ahasend domains check-dns example.com
 
-# Check verification status
+# Show the domain and its status
 ahasend domains get example.com
 ```
 
 <Note>
-Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
+Most records verify within minutes. DNS changes can take up to 48 hours to propagate. Run `ahasend domains check-dns` again until the DNS is valid.
 </Note>
 
 ## Step 3: Send Your First Email
@@ -79,7 +81,7 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
 ```bash
 ahasend messages send --sandbox \
   --from noreply@example.com \
-  --to recipient@email.com \
+  --to recipient@example.com \
   --subject "Hello from AhaSend CLI" \
   --text "This is my first email sent using the AhaSend CLI!"
 ```
@@ -89,7 +91,7 @@ ahasend messages send --sandbox \
 ```bash
 ahasend messages send --sandbox \
   --from noreply@example.com \
-  --to recipient@email.com \
+  --to recipient@example.com \
   --subject "Welcome to AhaSend" \
   --html "<h1>Welcome!</h1><p>Thank you for using AhaSend.</p>"
 ```
@@ -99,7 +101,7 @@ ahasend messages send --sandbox \
 ```bash
 ahasend messages send --sandbox \
   --from noreply@example.com \
-  --to recipient@email.com \
+  --to recipient@example.com \
   --subject "Welcome" \
   --html "<h1>Welcome to AhaSend!</h1><p>We're glad you're here.</p>" \
   --text "Welcome to AhaSend! We're glad you're here."
@@ -119,10 +121,10 @@ ahasend messages send \
 ```
 
 <Info>
-Sandbox mode simulates the entire email sending process without actually delivering emails. Perfect for testing!
+Sandbox mode goes through the sending process but delivers nothing. See [sandbox behavior](/send-api/sandbox).
 </Info>
 
-You can also simulate different outcomes:
+You can also simulate different outcomes with `--sandbox-result`: `deliver` (the default), `bounce`, `defer`, `fail`, or `suppress`. It needs `--sandbox`.
 
 ```bash
 # Simulate a bounce
@@ -148,7 +150,7 @@ ahasend messages send \
 
 ### Prepare Recipients File
 
-Create a CSV file with recipient data (`recipients.csv`):
+Create a CSV file with recipient data (`recipients.csv`). The `email` and `name` columns set the recipient; each other column is a substitution:
 
 ```csv
 email,name,first_name,company
@@ -157,9 +159,9 @@ jane@example.com,Jane Smith,Jane,Tech Inc
 alice@example.com,Alice Johnson,Alice,StartUp Ltd
 ```
 
-### Create an HTML Template
+### Create an HTML File
 
-Create a template file (`welcome.html`):
+Create the HTML content (`welcome.html`):
 
 ```html
 <!DOCTYPE html>
@@ -182,29 +184,30 @@ ahasend messages send --sandbox \
   --from welcome@example.com \
   --recipients recipients.csv \
   --subject "Welcome to {{company}}" \
-  --html-template welcome.html \
+  --html-file welcome.html \
   --progress \
   --show-metrics
 ```
 
-The CLI will:
-- Send personalized emails to each recipient
-- Show a progress bar
-- Display performance metrics
-- Save any failed recipients for retry
+The CLI:
+- Sends a personalized email to each recipient
+- Shows a progress bar on stderr, on a terminal only
+- Prints performance metrics on stderr after the send
+- Saves any failed recipients to a file in `~/.ahasend/` and prints its path, so you can pass it back to `--recipients`
+- Exits with code 0 only when every recipient was sent; [exit codes](/cli/configuration#exit-codes) lists the other codes
 
 ## Step 6: Monitor Your Emails
 
 ### Check Delivery Statistics
 
 ```bash
-# View today's statistics
+# View statistics for the last 7 days
 ahasend stats deliverability
 
 # View statistics for a date range
 ahasend stats deliverability \
-  --from-time 7d \
-  --to-time 0h
+  --from-time 30d \
+  --to-time 7d
 ```
 
 ### List Recent Messages
@@ -213,8 +216,8 @@ ahasend stats deliverability \
 # List recent sent messages
 ahasend messages list
 
-# Filter by status
-ahasend messages list --status delivered
+# Filter by status: sandbox sends have sandbox statuses
+ahasend messages list --status "sandbox delivered"
 ```
 
 ## Common Patterns
@@ -225,12 +228,14 @@ ahasend messages list --status delivered
 # Default plain output
 ahasend domains list
 
-# JSON format for automation
+# JSON format for automation: the API response, unchanged
 ahasend domains list --output json
 
 # CSV format for analysis
 ahasend stats deliverability --output csv > stats.csv
 ```
+
+Every failure exits with a nonzero code. [JSON output](/cli/configuration#json-output) describes what `--output json` prints, errors included, and [stdout and stderr](/cli/configuration#stdout-and-stderr) says where each part of the output goes.
 
 ### Working with Multiple Environments
 
@@ -250,6 +255,8 @@ ahasend messages send --sandbox --profile staging \
 ahasend auth switch production
 ```
 
+[Profiles](/cli/configuration#profiles) says which profile is the default; `ahasend auth switch` changes it.
+
 ### Adding Attachments
 
 ```bash
@@ -264,14 +271,16 @@ ahasend messages send --sandbox \
 
 ### Scheduling Emails
 
+`--schedule` takes a relative time, such as `2h` from now, or an RFC 3339 time. It must be in the future and at most 7 days ahead.
+
 ```bash
-# Schedule for a specific time
+# Schedule for 24 hours from now
 ahasend messages send --sandbox \
   --from reminder@example.com \
   --to user@example.com \
   --subject "Reminder: Meeting Tomorrow" \
   --text "Don't forget about our meeting at 2 PM." \
-  --schedule "<RFC3339 time within the next 7 days>"
+  --schedule 24h
 ```
 
 ## What's Next?
@@ -288,8 +297,8 @@ Now that you've sent your first emails, explore more features:
 <Card title="Batch Processing" href="/cli/batch-processing" icon="layer-group">
   Send high-volume emails efficiently
 </Card>
-<Card title="Templates" href="/cli/templates" icon="file-code">
-  Use templates for personalized emails
+<Card title="Message Content" href="/cli/templates" icon="file-code">
+  Personalize emails with substitutions
 </Card>
 </CardGroup>
 
@@ -302,7 +311,7 @@ If you need help at any point:
 ahasend --help
 
 # Command-specific help
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com --help --text "Docs test"
+ahasend messages send --help
 
 # Check current status
 ahasend auth status

@@ -7,91 +7,147 @@ sidebarTitle: "Route Testing"
 
 Test and debug inbound email routing locally using the AhaSend CLI's WebSocket-based route listener.
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in](/cli/authentication) with an API key that has the read, write and delete [route scopes](/api-reference/scopes#email-routing) for all domains, and `messages:read` for the domain of the route's recipient, which `routes listen` and `routes trigger` need. Replace `example.com` in the recipients with a receiving domain: a domain in your account whose MX record points to AhaSend. Replace `YOUR_RESOURCE_ID` with the ID of one of your routes or of the temporary route the listener creates.
 
 ## Overview
 
 The CLI provides tools for:
-- Listening to inbound email events in real-time using WebSocket connection
+- Listening to inbound email events in real-time over a WebSocket connection
 - Using existing routes or creating temporary routes with recipient patterns
-- Forwarding events to local endpoints for development
+- Forwarding events, signed, to local endpoints for development
 - Displaying events in full or slim output format
-- Handling disconnections with buffered event replay
 - Triggering test route events
+
+Every flag on this page is listed in the [`routes` command reference](/cli/commands/routes#command-flags).
 
 ## Route Listener
 
 ### Basic Usage
 
-Temporary routes need a domain in your account with its AhaSend MX records configured. An existing route must be enabled to emit events. For a disabled test route, start its listener, then run `ahasend routes update YOUR_RESOURCE_ID --enabled` in another terminal; disable it again before stopping the listener. Temporary listeners are enabled automatically.
+`ahasend routes listen` prints each event as text, whatever `--output` says. It runs until you press Ctrl+C or the connection closes. Give exactly one of `--route-id` and `--recipient`.
 
 ```bash
-# Listen with existing route
+# Listen with an existing route
 ahasend routes listen --route-id YOUR_RESOURCE_ID
 
-# Listen with recipient pattern (backend creates temporary route)
+# Listen with a recipient pattern (the API creates a temporary route)
 ahasend routes listen --recipient "*@example.com"
 
 # Listen for local-part patterns
 ahasend routes listen --recipient "support-*@example.com"
 
-# Slim output (minimal event display)
+# Slim output (one line per event)
 ahasend routes listen --route-id YOUR_RESOURCE_ID --slim-output
 ```
 
+The API key needs the `routes:write:all` scope, and `messages:read` for the domain of the route's recipient (`messages:read:all`, or `messages:read:{example.com}`). The recipient's domain must be one of your domains, with its AhaSend MX record configured, for the route to receive email. With `--recipient`, the API checks this before it creates the route: when the domain is not in your account, or its MX record is not configured, the command fails at once with exit code 6 and the API's message, such as `domain 'example.com' MX records are not configured`.
+
+When the connection starts, the command prints a banner with the route ID, the recipient pattern of a temporary route, the forwarding secret and, with `--forward-to`, the forwarding URL.
+
 <Note>
-- Attachment data is not sent over WebSocket for performance reasons. Only email metadata and content are transmitted.
-- The command generates a webhook secret for signing forwarded events using the Standard Webhooks headers and format, with the full secret as raw UTF-8 bytes.
+Attachment data is not sent over the WebSocket. Only email metadata and content are.
 </Note>
+
+### Temporary Routes
+
+With `--recipient`, the API creates a temporary route named `DevMode route for <API key label>`. It is enabled, and `routes list` does not show it. It stays after the command ends, until you delete it or the API does, as [Events Without a Listener](#events-without-a-listener) describes.
+
+As soon as the API creates it, the command prints a note on stderr with its ID and the command that deletes it:
+
+```bash
+ahasend routes delete YOUR_RESOURCE_ID
+```
+
+The note appears before the command connects, so you see the ID even when connecting then fails.
+
+### Existing Routes
+
+With `--route-id`, the command listens through a route you created. A disabled route gets no events, so enable it first:
+
+```bash
+ahasend routes update YOUR_RESOURCE_ID --enabled
+ahasend routes listen --route-id YOUR_RESOURCE_ID
+```
+
+While you listen, the route's own URL keeps receiving every email it matches, the test events of `routes trigger` included. Listening also turns on streaming for the route, and streaming stays on after the command ends, as [Events Without a Listener](#events-without-a-listener) describes.
+
+### Events Without a Listener
+
+A route with streaming on keeps it when no listener is connected: the API keeps its events for the next listener, up to the last 100. When 5 minutes pass with no new event, the API drops the kept events. The next `routes listen --route-id` of the same route prints the kept events first, each marked `REPLAY:`.
+
+When an event arrives while 100 events are already kept, the API drops the kept events and turns off streaming for the route:
+- A temporary route is deleted.
+- A route you created keeps posting emails to its URL. The next `routes listen --route-id` turns streaming on again.
 
 ### Event Type
 
 - `message.routing` - Triggered when an inbound email matches a route
 
+See the [route payload](/api-reference/routes/route-message) for its fields.
+
 ## Event Forwarding
 
 ### Forward to Local Server
 
+`--forward-to` sends each event to your handler as an HTTP POST with a JSON body. The URL must be HTTP or HTTPS with a host name and no user name or password; another URL fails with exit code 4. A plain HTTP URL for a host other than `localhost` or a loopback address prints a warning on stderr.
+
 ```bash
-# Forward events to local endpoint
+# Forward events to a local endpoint
 ahasend routes listen \
   --recipient "support-*@example.com" \
   --forward-to http://localhost:3000/webhook
 
-# Forward with existing route
+# Forward with an existing route
 ahasend routes listen \
   --route-id YOUR_RESOURCE_ID \
   --forward-to http://localhost:3000/webhook
 
-# Skip SSL verification for self-signed certificates
+# Skip SSL verification for a local endpoint with a self-signed certificate
 ahasend routes listen \
   --route-id YOUR_RESOURCE_ID \
   --forward-to https://localhost:8443/webhook \
   --skip-verify
 ```
 
+`--skip-verify` applies only to the `--forward-to` endpoint, and needs it: without `--forward-to`, the command fails with exit code 4. The connection to AhaSend is always verified.
+
 ### Event Headers
 
-Forwarded requests include standard webhook headers:
+When the connection starts, the banner prints `Forwarding secret (signs forwarded events): <secret>`. The command makes a new secret on each run, also with `--route-id`: it is not the secret of that route.
+
+Forwarded requests carry the Standard Webhooks headers:
 - `webhook-id` - Unique message identifier
 - `webhook-timestamp` - Unix timestamp
-- `webhook-signature` - HMAC signature for verification
+- `webhook-signature` - HMAC-SHA256 signature for verification
+
+To verify a forwarded event, use the full secret string, as printed, as the raw UTF-8 HMAC key. Do not base64-decode it. See [signature verification](/api-reference/webhooks/security).
+
+### Order and Delivery
+
+The command forwards events one at a time, in the order they arrive, with their body byte for byte as the stream sent it, so the signature covers exactly what the API sent. A slow endpoint does not hold up the stream: up to 100 events, and up to 32 MiB of their data, wait for it, in order. When an event would go over either limit, the command does not forward it and says so on stderr.
+
+A forwarded request is not sent again. When the request fails, the command logs an error on stderr; when it gets a response outside the 2xx range, the command logs a warning. When the stream ends, the command waits for the events not yet forwarded. Press Ctrl+C to skip the wait.
 
 ## Triggering Test Events
 
 ### Development Testing
 
+`routes trigger` asks the API to send a test `message.routing` event to a route. Use the route ID that the listener's banner shows to see the event in your terminal. The API key needs `messages:read` for the domain of the route's recipient (`messages:read:all`, or `messages:read:{example.com}`); route scopes do not grant it.
+
 ```bash
-# Trigger a message.routing event for testing
 ahasend routes trigger YOUR_RESOURCE_ID
 ```
+
+A disabled route gets no event: the API answers that it is queued, and then drops it.
 
 ### Finding Route IDs
 
 ```bash
-# List all routes to find IDs
+# List your routes to find their IDs
 ahasend routes list
 ```
+
+Temporary routes do not appear in the list. Their ID is in the listener's banner and in the note on stderr.
 
 ## Integration Testing
 
@@ -99,21 +155,22 @@ ahasend routes list
 
 ```bash
 # 1. Create a route for testing
-ahasend routes create --interactive=false \
-  --recipient "test@example.com" \
-  --url "https://app.example.com/webhook" \
-  --name "Test inbound route"
+ahasend routes create --non-interactive \
+  --name "Test inbound route" \
+  --url https://app.example.com/webhook \
+  --recipient "test@example.com"
 
 # 2. Start listening for events
 ahasend routes listen --route-id YOUR_RESOURCE_ID \
   --forward-to http://localhost:3000/webhook
 
-# 3. Trigger test event (in another terminal)
+# 3. In another terminal, trigger a test event
 ahasend routes trigger YOUR_RESOURCE_ID
 
-# 4. Send test email to the route address
-# test@example.com will trigger the route
+# 4. Send an email to test@example.com to trigger the route with a real message
 ```
+
+`routes create` prints the route's signing secret once. Save it to verify the emails the route posts to its `--url`.
 
 ## Output Formats
 
@@ -124,37 +181,44 @@ ahasend routes trigger YOUR_RESOURCE_ID
 ahasend routes listen --route-id YOUR_RESOURCE_ID
 ```
 
+Each event shows its time, its type and its data as indented JSON.
+
 ### Slim Output
 
 ```bash
-# Minimal console display
+# One line per event
 ahasend routes listen --route-id YOUR_RESOURCE_ID --slim-output
 ```
 
-## Common Flags
+Each event shows its time, its type, and the sender, recipient and subject of the email.
 
-| Flag | Description |
-|------|-------------|
-| `--route-id` | Use existing route instead of creating temporary one |
-| `--recipient` | Recipient pattern for temporary route (e.g., *@domain.com) |
-| `--forward-to` | Local endpoint to forward events to |
-| `--skip-verify` | Skip SSL certificate verification for local endpoints when forwarding events |
-| `--slim-output` | Slim down the payload for printing to the console |
+## Connection and Exit Codes
+
+The listener does not reconnect. It exits with:
+- `0` when the server closes the connection normally, or when you press Ctrl+C
+- `7` when the connection drops, or the server closes it with an error
+- `4` when you decline to take over the stream from another connection
+
+Other failures, such as an invalid flag or an API error while the command sets up the stream, exit as [Exit Codes](/cli/configuration#exit-codes) lists.
+
+When another connection holds the stream, the command asks on stderr whether to force a reconnect, and takes the stream over when you confirm, as [Prompts](/cli/configuration#prompts) describes. The other connection stays open but gets no more events.
+
+A message on the stream that the command cannot read, such as one that is not JSON, is skipped with a warning on stderr, and the command keeps listening.
 
 ## Use Cases
 
 ### Testing Inbound Email Processing
 
 ```bash
-# Set up listener for all emails to your domain
-ahasend routes listen --recipient "*@yourdomain.com" \
+# Listen for all emails to your domain
+ahasend routes listen --recipient "*@example.com" \
   --forward-to http://localhost:3000/inbound
 ```
 
 ### Support Ticket System
 
 ```bash
-# Route support emails to local handler
+# Route support emails to a local handler
 ahasend routes listen --recipient "support@example.com" \
   --forward-to http://localhost:3000/tickets/create
 ```
@@ -173,17 +237,19 @@ ahasend routes listen --recipient "tasks@example.com" \
 2. **Verify Signatures**: Always validate webhook signatures in production
 3. **Use listeners for development**: Configure a real route URL for production
 4. **Test with Trigger Command**: Use trigger to test without sending real emails
-5. **Use Slim Output for Monitoring**: Reduce console clutter when monitoring events
+5. **Clean Up**: Delete temporary routes when you finish testing
 
 ## Troubleshooting
 
-**WebSocket Connection Failed**: Check network connectivity and firewall settings
+**WebSocket Connection Failed**: Check network connectivity and firewall settings. The listener connects over `wss://` and uses the proxy set by the `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` environment variables.
 
-**Events Not Received**: Verify the route pattern matches the recipient address
+**Events Not Received**: Verify that the route is enabled, that its pattern matches the recipient address, and that the domain's MX record points to AhaSend.
 
-**Signature Verification Failed**: The listener prints its signing secret when it starts. Store that secret in your local handler's configuration; use the full string as the raw UTF-8 HMAC key. Do not base64-decode it. See [signature verification](/api-reference/webhooks/security). The command automatically generates a webhook secret using the Standard Webhooks headers and format, with the full secret as raw UTF-8 bytes
+**Signature Verification Failed**: Use the forwarding secret of the current run, as the banner prints it, as the raw UTF-8 HMAC key. Do not base64-decode it, and do not use the route's own secret. Each run prints a new secret.
 
-**Route Not Found**: Check route ID with `ahasend routes list`
+**Route Not Found**: Check the route ID with `ahasend routes list`. Temporary routes do not appear there; use the ID from the listener's banner.
+
+**Connection Lost**: The listener does not reconnect. Start it again with `--route-id` and the same route ID to receive the [kept events](#events-without-a-listener).
 
 ## Next Steps
 

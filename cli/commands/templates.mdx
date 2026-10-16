@@ -1,0 +1,244 @@
+---
+title: "ahasend templates: Transactional Templates"
+sidebarTitle: "templates"
+description: "Create, update, publish, and delete AhaSend transactional templates with the CLI, inspect or discard drafts, and list or restore published versions."
+icon: "file-lines"
+---
+
+AhaSend CLI template commands manage transactional templates: the designs stored in AhaSend that `ahasend messages send --template-id` sends.
+
+<Note>
+These commands need CLI v0.3.0 or later. Check your version with `ahasend --version`, and [upgrade](/cli/installation) if it is older.
+</Note>
+
+These commands work on templates stored in your AhaSend account. To send content from local files with substitutions, see the [message content guide](/cli/templates).
+
+## Prerequisites
+
+[Authenticate with a full API key](/cli/authentication). Template tasks need these [scopes](/api-reference/scopes):
+
+| Scope | Commands |
+|---|---|
+| `templates:read` | `templates list`, `templates get`, `templates draft get`, `templates versions list`, `templates versions get` |
+| `templates:write` | `templates create`, `templates update`, `templates publish`, `templates draft discard`, `templates versions restore` |
+| `templates:delete` | `templates delete` |
+
+`messages send --template-id` needs only the send scope of the sender's domain, not a `templates` scope. The shell examples need Bash and jq.
+
+## Drafts, Publishing and Versions
+
+Changes to a template go to its draft, the same draft the dashboard edits. Sends use the published copy, so publish the draft with `--publish` or `templates publish` before you send. A template created without `--publish` has only a draft, and sends of it fail until you publish it.
+
+Every publish is kept as a version. A template keeps its 50 most recent versions, and you can restore any of them into the draft.
+
+## Create, Publish and Send a Test Template
+
+Save this file as `welcome.html`:
+
+```html welcome.html
+<p>Hello from the docs test template.</p>
+```
+
+Then save these commands in one Bash script. Use a sender address on your verified domain in place of `hello@example.com`. The send uses sandbox mode, so nothing is delivered.
+
+```bash
+set -euo pipefail
+TEMPLATE_ID=$(ahasend templates create --name "Docs test template" --subject "Docs test" \
+  --from hello@example.com --from-name "Example" --html-file welcome.html --output json | jq -er '.id')
+ahasend templates draft get "$TEMPLATE_ID"
+ahasend templates publish "$TEMPLATE_ID"
+ahasend templates get "$TEMPLATE_ID"
+ahasend messages send --template-id "$TEMPLATE_ID" --to docs-template-test@example.com --sandbox
+```
+
+`templates get` shows the published copy, with the variables a send must supply, each marked required or optional. The template supplies the content, so `messages send --template-id` takes no content flags; `--from` and `--subject` default to the template's sender and subject. Pass variable values with `--global-substitutions` or a `--recipients` file, as the [messages commands](/cli/commands/messages) describe.
+
+Content comes from files. `--mjml-file` sets the MJML of an advanced template, and `--html-file` the HTML of an html template; you cannot combine them. `--text-file` sets the plain text version, which is otherwise made from the HTML. Give `--editor` when there is neither an MJML nor an HTML file. The editor cannot change after you create the template.
+
+## Update the Draft
+
+Continue the script. `update` sends only the flags you give. Every field but the name goes to the draft; a new name applies at once.
+
+```bash
+ahasend templates update "$TEMPLATE_ID" --subject "Docs test, second version"
+ahasend templates draft get "$TEMPLATE_ID"
+ahasend templates update "$TEMPLATE_ID" --publish
+```
+
+`update --publish` publishes the whole draft, including changes made in the dashboard; on its own it only publishes. To drop a draft instead, run `ahasend templates draft discard "$TEMPLATE_ID" --force`. `draft get` on a template with no draft returns a not found error.
+
+Other update flags:
+
+- `--subject ""` and `--preheader ""` clear those fields.
+- `--from` replaces the sender address and name together. `--clear-from` removes the sender and the reply-to.
+- `--reply-to` needs a template that has a sender. `--clear-reply-to` removes the reply-to.
+- `--regenerate-text` makes the text version again from the HTML.
+
+## List and Restore Versions
+
+Continue the script. `versions list` shows each published version, newest first, without its content. The script reads the ID of the oldest version, its first publish, from the JSON output's `data` array, then shows and restores that version:
+
+```bash
+ahasend templates versions list "$TEMPLATE_ID"
+FIRST_VERSION_ID=$(ahasend templates versions list "$TEMPLATE_ID" --output json | jq -er '.data[-1].id')
+ahasend templates versions get "$TEMPLATE_ID" "$FIRST_VERSION_ID"
+ahasend templates versions restore "$TEMPLATE_ID" "$FIRST_VERSION_ID" --publish --force
+```
+
+<Warning>
+Restoring replaces the template's whole draft, including unpublished changes made in the dashboard. Publish or copy those changes first if you need them.
+</Warning>
+
+With `--publish`, a version that the publish checks refuse is refused before the restore, and the draft is left as it was.
+
+## Delete the Test Template
+
+Finish the script by deleting the template it created. Sends of a deleted template fail.
+
+```bash
+ahasend templates delete "$TEMPLATE_ID" --force
+```
+
+The script stops at the first command that fails, and then deletes nothing. If it stops early, find the test template with `ahasend templates list` and delete it with `templates delete`.
+
+`templates delete`, `templates draft discard` and `templates versions restore` ask for confirmation first; see [prompts](/cli/configuration#prompts).
+
+## Command Flags
+
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `templates create`
+
+```text
+ahasend templates create --name <name> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--editor string` | Editor of the design: `advanced`, `simple` or `html` |
+| `--from string` | Sender email address |
+| `--from-name string` | Sender display name (needs `--from`) |
+| `--html-file string` | Path to the HTML |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--mjml-file string` | Path to the MJML source |
+| `--name string` | Template name (required) |
+| `--preheader string` | Preview text |
+| `--publish` | Publish the draft once it is written |
+| `--reply-to string` | Default reply-to email address (needs `--from`) |
+| `--subject string` | Subject |
+| `--text-file string` | Path to the plain text version |
+
+### `templates delete`
+
+```text
+ahasend templates delete <template-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+
+### `templates draft discard`
+
+```text
+ahasend templates draft discard <template-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+
+### `templates draft get`
+
+```text
+ahasend templates draft get <template-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `templates get`
+
+```text
+ahasend templates get <template-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `templates list`
+
+```text
+ahasend templates list [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+
+### `templates publish`
+
+```text
+ahasend templates publish <template-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+
+### `templates update`
+
+```text
+ahasend templates update <template-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--clear-from` | Remove the sender and the reply-to |
+| `--clear-reply-to` | Remove the reply-to |
+| `--from string` | Sender email address |
+| `--from-name string` | Sender display name (needs `--from`) |
+| `--html-file string` | Path to the HTML |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--mjml-file string` | Path to the MJML source |
+| `--name string` | New template name |
+| `--preheader string` | New preview text (empty clears it) |
+| `--publish` | Publish the draft once it is written |
+| `--regenerate-text` | Make the text version again from the HTML |
+| `--reply-to string` | New default reply-to email address (the template must have a sender; not with `--clear-from`) |
+| `--subject string` | New subject (empty clears it) |
+| `--text-file string` | Path to the plain text version |
+
+### `templates versions get`
+
+```text
+ahasend templates versions get <template-id> <version-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `templates versions list`
+
+```text
+ahasend templates versions list <template-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `templates versions restore`
+
+```text
+ahasend templates versions restore <template-id> <version-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--publish` | Publish the draft once the version is restored |
+
+## Related Guides
+
+- [Create template](/api-reference/templates/create-template), [Publish template](/api-reference/templates/publish-template), [Restore template version](/api-reference/templates/restore-template-version).
+- [Send a template message](/api-reference/messages/create-template-message), [Messages commands](/cli/commands/messages), [Message content guide](/cli/templates).
+- [Campaign templates](/cli/commands/campaigns#campaign-templates), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

@@ -357,6 +357,33 @@ swaks \
   --body "This email uses environment variables for credentials."
 ```
 
+## Send with the AhaSend CLI
+
+The [AhaSend CLI](/cli/installation) can also send a test email over SMTP, with [`ahasend smtp send`](/cli/commands/smtp#send-via-smtp). It connects to `--server`, which defaults to `send.ahasend.com:587`, and starts TLS: at once on port 465, otherwise with STARTTLS when the server offers it. AhaSend's own servers do not offer implicit TLS on port 465, so use port 587, 25 or 2525 with them. It refuses to send the username, the password or the message to a server that offers no STARTTLS, except on `localhost`, `127.0.0.1` or `::1`.
+
+`--password-stdin` reads the password from the first line of stdin, so it stays out of the process list and your shell history:
+
+```bash Sandbox Send with the AhaSend CLI
+printf '%s\n' "$AHASEND_SMTP_PASSWORD" | ahasend smtp send --sandbox \
+  --username "$AHASEND_SMTP_USERNAME" \
+  --password-stdin \
+  --from "$AHASEND_FROM_EMAIL" \
+  --to test@example.com \
+  --subject "Sandbox Test Email" \
+  --text "This email is sent in sandbox mode for testing."
+```
+
+`--test` connects, starts TLS when the server offers it, logs in when you give the username and the password, and quits without sending a message:
+
+```bash Connection Test with the AhaSend CLI
+printf '%s\n' "$AHASEND_SMTP_PASSWORD" | ahasend smtp send --test \
+  --server send.ahasend.com:587 \
+  --username "$AHASEND_SMTP_USERNAME" \
+  --password-stdin
+```
+
+The CLI flags `--sandbox`, `--sandbox-result`, `--tag`, `--track-opens` and `--track-clicks` set the matching AhaSend headers. See [`ahasend smtp`](/cli/commands/smtp) for every flag and exit code.
+
 ## Resources
 
 <CardGroup cols={2}>

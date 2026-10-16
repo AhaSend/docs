@@ -1,0 +1,211 @@
+---
+title: "ahasend lists: Manage Contact Lists"
+sidebarTitle: "lists"
+description: "Create, update, and delete AhaSend contact lists with the CLI, and add, unsubscribe, or remove the contacts on the lists that your campaigns send to."
+icon: "list-ul"
+---
+
+AhaSend CLI list commands manage contact lists, the static lists of contacts that campaigns send to, and the members of each list.
+
+<Note>
+These commands need CLI v0.3.0 or later. Check your version with `ahasend --version`, and [upgrade](/cli/installation) if it is older.
+</Note>
+
+## Prerequisites
+
+[Authenticate with a full API key](/cli/authentication). List tasks need these [scopes](/api-reference/scopes):
+
+| Scope | Commands |
+|---|---|
+| `lists:read` | `lists list`, `lists get`, `lists members list` |
+| `lists:write` | `lists create`, `lists update`, `lists members add`, `lists members set`, `lists members remove` |
+| `lists:delete` | `lists delete` |
+
+`lists members list --include-contacts` also needs `contacts:read`. The examples also create and delete a test contact, which needs `contacts:write` and `contacts:delete`. A contact must exist before you can add it to a list; create contacts with [`ahasend contacts`](/cli/commands/contacts). The shell examples need Bash and jq.
+
+A member is one contact's membership of one list, with its own subscription status: `unconfirmed`, `confirmed`, `unsubscribed` or `complained`. A list's contact count is the number of members a campaign to the list would reach.
+
+## Create and Update a Test List
+
+Save these commands in one Bash script. The script creates a test contact and a test list, and later examples on this page use the same contact and list.
+
+```bash
+set -euo pipefail
+ahasend contacts create docs-list-member-test@example.com --first-name Pat
+LIST_ID=$(ahasend lists create --name "Docs test list" --description "Docs test" --tag docs --output json | jq -er '.id')
+ahasend lists get "$LIST_ID"
+ahasend lists update "$LIST_ID" --name "Docs test list renamed" --tag docs --tag test
+ahasend lists list --name docs
+```
+
+`--tag` can be used more than once and splits on commas, so `--tag docs,test` gives two tags. On `update`, `--tag` replaces all tags, `--clear-tags` removes every tag, and `--description ""` clears the description. `update` sends only the flags you give.
+
+`lists list --name` finds the lists whose name contains the value, in any case.
+
+## Add and List Members
+
+Continue the script. `members add` adds up to 1,000 existing contacts in one request, named with `--email`, `--contact-id`, or both. Each flag can be used more than once and splits on commas.
+
+```bash
+ahasend lists members add "$LIST_ID" --email docs-list-member-test@example.com
+ahasend lists members list "$LIST_ID" --include-contacts
+```
+
+To add contacts from a file instead, save a JSON object whose `data` array names each contact by email or by ID:
+
+```json members.json
+{
+  "data": [
+    {"email": "docs-list-member-test@example.com"}
+  ]
+}
+```
+
+```bash
+ahasend lists members add "$LIST_ID" --file members.json
+```
+
+`--file` cannot be combined with `--email` or `--contact-id`. The command prints the result for each contact: contacts already on the list are skipped, and unknown or invalid ones fail with a reason. It exits with code 1 when any contact failed; skipped contacts are not failures.
+
+`members list` filters by `--email` and `--subscription-status`. To see the lists one contact is on, use `ahasend contacts memberships`.
+
+## Unsubscribe or Remove a Member
+
+`members set` adds one contact to a list or changes its status. Without `--subscription-status`, a new member is confirmed and an existing member keeps its status.
+
+```bash
+ahasend lists members set "$LIST_ID" docs-list-member-test@example.com --subscription-status unsubscribed
+ahasend lists members remove "$LIST_ID" docs-list-member-test@example.com --force
+```
+
+To stop mail to a contact on a list and keep the record, set the status to `unsubscribed`. `members remove` deletes the membership and any unsubscribe it records. A complained membership cannot be changed or removed.
+
+## Delete the Test List
+
+Finish the script by deleting the list and the contact it created.
+
+```bash
+ahasend lists delete "$LIST_ID" --force
+ahasend contacts delete docs-list-member-test@example.com --force
+```
+
+The script stops at the first command that fails, and then deletes nothing. If it stops early, find the test list with `ahasend lists list --name docs` and delete it with `lists delete`, then delete the test contact with the `contacts delete` command above.
+
+The API refuses to delete a list while a campaign that still needs it refers to it.
+
+`lists delete` and `lists members remove` ask for confirmation first; see [prompts](/cli/configuration#prompts).
+
+## Command Flags
+
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `lists create`
+
+```text
+ahasend lists create --name <name> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--description string` | List description |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--name string` | List name (required) |
+| `--tag strings` | Tag for the list (can be used multiple times) |
+
+### `lists delete`
+
+```text
+ahasend lists delete <list-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+
+### `lists get`
+
+```text
+ahasend lists get <list-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `lists list`
+
+```text
+ahasend lists list [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+| `--name string` | Filter by list name: lists whose name contains it, in any case |
+
+### `lists members add`
+
+```text
+ahasend lists members add <list-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--contact-id strings` | ID of a contact to add (can be used multiple times) |
+| `--email strings` | Email address of a contact to add (can be used multiple times) |
+| `--file string` | JSON file containing `{"data":[...]}` |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+
+### `lists members list`
+
+```text
+ahasend lists members list <list-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--email string` | Filter by normalized exact email address |
+| `--include-contacts` | Embed each member's contact |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+| `--subscription-status string` | Filter by membership status: `unconfirmed`, `confirmed`, `unsubscribed` or `complained` |
+
+### `lists members remove`
+
+```text
+ahasend lists members remove <list-id> <id-or-email> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+
+### `lists members set`
+
+```text
+ahasend lists members set <list-id> <id-or-email> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--subscription-status string` | Membership status to write: `confirmed`, `unconfirmed` or `unsubscribed` |
+
+### `lists update`
+
+```text
+ahasend lists update <list-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--clear-tags` | Remove every tag from the list |
+| `--description string` | New list description (empty clears it) |
+| `--name string` | New list name |
+| `--tag strings` | New tag for the list, replacing all tags (can be used multiple times) |
+
+## Related Guides
+
+- [Lists API](/api-reference/lists/overview), [Add contacts to a list](/api-reference/lists/batch-add-list-contacts), [Lists of a contact](/api-reference/lists/get-contact-lists).
+- [Contacts commands](/cli/commands/contacts), [Campaigns commands](/cli/commands/campaigns), [CLI authentication](/cli/authentication).
+- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

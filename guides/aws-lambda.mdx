@@ -183,7 +183,7 @@ export const handler = async (
 };
 ```
 
-A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds. Checking every entry — and failing the response when any is rejected — is what stops dropped mail from being reported to your caller as sent.
+A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (when AhaSend could not queue its message) while the call itself succeeds. A suppressed address is not refused here: its message is queued and reported by a [`message.suppressed` event](/api-reference/webhooks/message-suppressed). Checking every entry — and failing the response when any is rejected — is what stops dropped mail from being reported to your caller as sent.
 
 The `event_id` the caller supplies becomes a stable `Idempotency-Key`, which matters on Lambda specifically: an async invocation is retried up to two times by default, and any client in front of an API Gateway route may retry a 5xx. Without a caller-owned key the SDK generates a fresh one per call, so each retry is a new send. Reuse a key only for the identical payload — the same key with different content returns `422`. Stored results expire after 24 hours and a 5xx releases the key, so persist `event_id` yourself if the welcome email must never go out twice.
 

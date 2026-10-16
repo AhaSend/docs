@@ -5,13 +5,11 @@ icon: key
 sidebarTitle: "Authentication"
 ---
 
-The AhaSend CLI uses profile-based authentication to manage your API credentials and support multiple environments.
-
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+The AhaSend CLI saves your API credentials as profiles, so you can work with several accounts or environments.
 
 ## Getting Started
 
-Create a full API key under **Account Settings → API Keys**, with the scopes needed by your commands, and copy the account ID from account settings. See [API authentication](/api-reference/authentication).
+Create a full API key under **Account Settings → API Keys**, with the scopes your commands need, and copy the account ID from account settings. See [API authentication](/api-reference/authentication).
 
 ### Interactive Login
 
@@ -19,7 +17,13 @@ Create a full API key under **Account Settings → API Keys**, with the scopes n
 ahasend auth login
 ```
 
-You'll be prompted for your API Key, Account ID, and an optional profile name.
+On a terminal, the command asks for your API key and your account ID on stderr, and hides the key as you type it. When stdin is not a terminal, it reads the key and the account ID as two lines of stdin, and empty stdin cancels it with exit code 4; the [auth reference](/cli/commands/auth#command-flags) shows how to pipe them in. [Profiles](/cli/configuration#profiles) says which name the profile gets.
+
+Before it saves anything, the command reads the account to check that the key belongs to the account ID:
+
+- A key the API rejects, or a key of another account, fails with exit code 2.
+- A key whose IP allow list leaves out this machine fails with exit code 6.
+- A key without the scope to read the account belongs to the account, and is saved.
 
 ### Direct Login
 
@@ -30,17 +34,19 @@ ahasend auth login \
   --profile production
 ```
 
+Give both flags or neither: one alone fails with exit code 4. A key passed as a flag can end up in your shell history. Prefer the prompt on your own machine.
+
 ### CI Credentials
 
-The CLI reads no environment variables for credentials. It authenticates through `ahasend auth login` profiles, `--profile`, or `--api-key` with `--account-id`. In CI, store secrets as environment variables and pass them explicitly through flags:
+In CI, skip `auth login`: store the API key and account ID as secrets and pass them with the global flags:
 
 ```bash
 ahasend --api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID" ping
 ```
 
-## Profiles
+The CLI reads no environment variable for credentials or profiles. `--api-key` always uses the production API and cannot be combined with `--profile`. See [CI credentials](/cli/configuration#ci-credentials) for the rules.
 
-Profiles let you manage multiple environments easily.
+## Profiles
 
 ### Creating Profiles
 
@@ -49,35 +55,55 @@ ahasend auth login --profile production
 ahasend auth login --profile staging
 ```
 
+[Profiles](/cli/configuration#profiles) says which profile becomes the default. When a login keeps another profile as the default, its output says how to switch to the new one. To log in to a profile again, run `auth login` with its name; the login replaces the profile's credentials without asking.
+
 ### Switching Profiles
 
 ```bash
-# Change default profile
+# Change the default profile
 ahasend auth switch production
 
-# Use profile for single command
+# Use a profile for a single command
 ahasend messages send --sandbox --profile staging \
   --from test@staging.example.com \
   --to dev@example.com \
   --subject "Test" --text "Docs test"
 ```
 
+`auth switch` checks the profile's key first. When the check fails, it prints a warning on stderr and switches anyway.
+
 ### Check Status
 
 ```bash
+# Status of the default profile
 ahasend auth status
+
+# Status of one profile
+ahasend auth status --profile production
+
+# Names of all profiles
+ahasend auth status --all
 ```
 
-### Remove Profile
+`auth status` shows the profile, its account ID, whether the API accepts its key for that account, and the account. It exits nonzero when the key cannot be verified.
+
+### Remove Profiles
 
 ```bash
-ahasend auth login --profile docs-logout-test
-ahasend auth logout docs-logout-test
+# Remove one profile
+ahasend auth logout staging
+
+# Remove every profile, after a confirmation prompt
+ahasend auth logout --all
 ```
 
-## Configuration
+`auth logout staging` removes the profile at once, without a prompt. You can also name the profile with `--profile`, as in `ahasend auth logout --profile staging`.
 
-Credentials are stored as plaintext in `~/.ahasend/config.yaml`. Protect this file and keep it out of source control.
+`auth logout` without a profile removes the default profile. When you remove the default profile and one profile is left, that profile becomes the default. When several are left, none is the default until you run `ahasend auth switch <profile>`.
+
+## Credential Storage
+
+Profiles live in `~/.ahasend/config.yaml`, which holds your API keys in plain text and is readable by your user only. No `auth` command prints a profile's API key. `apikeys create` and `subaccounts api-keys create` print the new key's secret once, so store it when you create the key. See [Configuration File](/cli/configuration#configuration-file).
 
 <Warning>
 Keep your API keys secure. Never commit credentials to version control.
@@ -92,6 +118,8 @@ ahasend ping
 ahasend auth status
 ```
 
+`ping` checks that the API can be reached and accepts your key. `auth status` also checks that the key belongs to the profile's account.
+
 ## Next Steps
 
 - [Send your first email](/cli/quickstart)
@@ -102,5 +130,5 @@ ahasend auth status
 
 - [Install the CLI](/cli/installation), [REST sending guide](/send-api/send-email), [SMTP settings](/smtp).
 - [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [CLI configuration and output](/cli/configuration).
-- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Domain setup](/domains).
-- [Sandbox behavior](/send-api/sandbox).
+- [auth command reference](/cli/commands/auth), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).
+- [Domain setup](/domains), [Sandbox behavior](/send-api/sandbox).

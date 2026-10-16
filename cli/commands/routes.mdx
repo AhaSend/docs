@@ -5,33 +5,207 @@ icon: route
 sidebarTitle: "routes"
 ---
 
-AhaSend CLI `routes` commands let you forward and trigger inbound email events; this page lists their arguments and flags. For the complete workflow, use the [route testing guide](/cli/route-testing).
+AhaSend CLI `routes` commands let you manage inbound email routes, and forward and trigger their events; this page lists their arguments and flags. For the complete local testing workflow, use the [route testing guide](/cli/route-testing). For dashboard setup, see [the routes guide](/integrations/routing).
 
-`routes get`, `routes update`, `routes delete` and `routes trigger` take the resource ID as their positional argument. `routes create`, `routes list` and `routes listen` use the flags below. For dashboard setup, see [the routes guide](/integrations/routing).
+Before running the examples, [log in](/cli/authentication) with an API key that has the read, write and delete [route scopes](/api-reference/scopes#email-routing) for all domains, and `messages:read` for the domain of the route's recipient, which `routes listen` and `routes trigger` need. Replace `example.com` in the recipients with a receiving domain: a domain in your account whose MX record points to AhaSend. Replace `YOUR_RESOURCE_ID` with the ID of one of your routes.
+
+## Overview
+
+```text
+ahasend routes [subcommand] [flags]
+```
+
+Available subcommands:
+- `list` - List inbound email routes
+- `create` - Create an inbound email route
+- `get` - Get an inbound email route
+- `update` - Update an inbound email route
+- `delete` - Delete an inbound email route
+- `listen` - Listen for inbound email events in real-time
+- `trigger` - Trigger route events for testing
+
+`routes get`, `routes update`, `routes delete` and `routes trigger` take the route ID as their positional argument. A route ID that is not a UUID fails with exit code 4 before any request. Find IDs with `ahasend routes list`.
+
+A route receives email only when its domain's MX record points to AhaSend. The DNS records that `ahasend domains create` prints include that MX record, marked optional; see [domains](/cli/commands/domains#create-domain).
+
+## Recipient Patterns
+
+`--recipient`, on `create`, `update` and `listen`, takes the form `local@domain`. The domain must be one of your domains. The local part cannot be empty, and may be `*` or hold `*` wildcards:
+
+- `support@example.com` - one address
+- `*@example.com` - every address of the domain
+- `support-*@example.com` - every address that starts with `support-`
+
+A value of another form, such as `support@*`, fails with exit code 4 before any request. The API checks that the domain is one of yours. A route's recipient cannot be cleared.
+
+## List Routes
+
+```bash
+# List all routes
+ahasend routes list
+
+# List up to 10 routes
+ahasend routes list --limit 10
+
+# List the routes of one recipient domain
+ahasend routes list --domain example.com
+
+# Show only the enabled routes of the page
+ahasend routes list --enabled
+
+# Show only the disabled routes of the page
+ahasend routes list --enabled=false
+
+# JSON output
+ahasend routes list --output json
+```
+
+- `--domain` filters by recipient domain. An API key scoped to domains requires it.
+- `--enabled` filters the page that the API returned, so a page can hold fewer than `--limit` routes. It cannot be used with `--output json`, which prints the API's response unchanged; filter the routes' `enabled` field instead.
+- Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
+
+## Create Route
+
+```bash
+# Create a route for one address
+ahasend routes create \
+  --name "Support route" \
+  --url https://api.example.com/inbound/support \
+  --recipient "support@example.com"
+
+# Route every address of a domain, with attachments
+ahasend routes create \
+  --name "Help desk" \
+  --url https://api.example.com/support \
+  --recipient "*@example.com" \
+  --include-attachments
+
+# Route with processing options, created disabled
+ahasend routes create \
+  --name "Sales inquiries" \
+  --url https://api.example.com/sales \
+  --recipient "sales-*@example.com" \
+  --include-headers \
+  --group-by-message-id \
+  --strip-replies \
+  --enabled=false
+```
+
+- `--name`, `--url` and `--recipient` are required. When one is missing and stdin is a terminal, the command asks for it. With `--non-interactive`, or when stdin is not a terminal, a missing value fails with exit code 4.
+- A route is enabled unless you set `--enabled=false`. The processing options are off unless you set their flags.
+- `--url` must be an HTTP or HTTPS URL with a host name and no user name or password. Use HTTPS in production: a plain HTTP URL for a host other than `localhost` or a loopback address prints a warning on stderr.
+
+The output shows the route's signing secret once, in every output format. Save it to [verify the signatures](/api-reference/webhooks/security) of the emails the route posts; `routes get` does not show it.
+
+## Get Route
+
+Show a route's name, URL, status, recipient, processing options, timestamps and call counters. The output has no secret: the API returns it only when you create the route.
+
+```bash
+ahasend routes get YOUR_RESOURCE_ID
+
+# Save the route's configuration as JSON
+ahasend routes get YOUR_RESOURCE_ID --output json > route-backup.json
+```
+
+## Update Route
+
+Only the flags you set are sent; other settings stay as they are. Give at least one flag. Each on/off option turns off with `=false`.
+
+```bash
+# Change the name
+ahasend routes update YOUR_RESOURCE_ID --name "New route name"
+
+# Change the webhook URL
+ahasend routes update YOUR_RESOURCE_ID --url https://api.example.com/new-webhook
+
+# Enable or disable the route
+ahasend routes update YOUR_RESOURCE_ID --enabled
+ahasend routes update YOUR_RESOURCE_ID --enabled=false
+
+# Change the recipient pattern
+ahasend routes update YOUR_RESOURCE_ID --recipient "support-*@example.com"
+
+# Turn processing options on
+ahasend routes update YOUR_RESOURCE_ID \
+  --include-attachments \
+  --include-headers \
+  --group-by-message-id
+
+# Turn processing options off
+ahasend routes update YOUR_RESOURCE_ID \
+  --include-attachments=false \
+  --strip-replies=false
+```
+
+## Delete Route
+
+```bash
+# Delete with a confirmation prompt
+ahasend routes delete YOUR_RESOURCE_ID
+
+# Skip the confirmation prompt
+ahasend routes delete YOUR_RESOURCE_ID --force
+```
+
+The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it.
+
+<Warning>
+Deleting a route is irreversible. To keep a route for later, disable it instead: `ahasend routes update YOUR_RESOURCE_ID --enabled=false`.
+</Warning>
+
+## Listen for Inbound Email
+
+`routes listen` streams inbound email events (`message.routing`) to your terminal over a WebSocket connection, and can forward each event to a local endpoint. It prints events as text, whatever `--output` says, and runs until you press Ctrl+C or the connection closes. Give exactly one of `--route-id` and `--recipient`.
+
+```bash
+# Listen through an existing route
+ahasend routes listen --route-id YOUR_RESOURCE_ID
+
+# Listen through a temporary route for a recipient pattern
+ahasend routes listen --recipient "*@example.com"
+
+# Forward events to a local server
+ahasend routes listen --recipient "support-*@example.com" \
+  --forward-to http://localhost:3000/webhook
+```
+
+The API key needs the `routes:write:all` scope, and `messages:read` for the domain of the route's recipient. With `--recipient`, the API creates a temporary route that stays after the command ends. Forwarded events are signed with a forwarding secret that the command prints when it connects. The [route testing guide](/cli/route-testing) covers temporary routes, forwarding, signatures and exit codes.
+
+## Trigger Test Events
+
+`routes trigger` asks the API to send a test `message.routing` event to a route, so you can test your endpoint without sending real email. The API key needs `messages:read` for the domain of the route's recipient (`messages:read:all`, or `messages:read:{example.com}`); route scopes do not grant it.
+
+```bash
+ahasend routes trigger YOUR_RESOURCE_ID
+```
+
+The output is the API's message. A disabled route gets no event: the API answers that it is queued, and then drops it. Enable the route first with `ahasend routes update YOUR_RESOURCE_ID --enabled`.
 
 ## Command Flags
 
-These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `routes create`
 
 | Flag | Description and default |
 |---|---|
-| `--enabled` | Enable the route immediately after creation |
+| `--enabled` | Enable the route (the API enables it when omitted) (default true) |
 | `--group-by-message-id` | Group related emails by message ID (conversation threading) |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--include-attachments` | Include email attachments in webhook payload |
 | `--include-headers` | Include email headers in webhook payload |
-| `--interactive` | Use interactive mode for route configuration (default true) |
-| `--name string` | Route name |
-| `--recipient string` | Recipient filter pattern (e.g., 'support-*@example.com', '*@example.com'); the domain must belong to your account |
+| `--name string` | Route name (required) |
+| `--non-interactive` | Never prompt; fail when a required flag is missing |
+| `--recipient string` | Recipient filter, `local@domain`, such as `support@example.com` or `*@example.com` (required) |
 | `--strip-replies` | Strip reply content from emails |
-| `--url string` | Webhook URL for processing emails |
+| `--url string` | Webhook URL for processing emails (required) |
 
 ### `routes delete`
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt (for automation) |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `routes get`
 
@@ -41,18 +215,20 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for continued results |
-| `--enabled` | Show only enabled routes |
-| `--limit int32` | Maximum number of routes to return (default 50) |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--domain string` | Filter by recipient domain (required with a domain-scoped API key) |
+| `--enabled` | Show only enabled (`--enabled`) or disabled (`--enabled=false`) routes of the page (not with `--output json`) |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
 
 ### `routes listen`
 
 | Flag | Description and default |
 |---|---|
 | `--forward-to string` | Local endpoint to forward events to |
-| `--recipient string` | Recipient pattern for temporary route (e.g., *@domain.com) |
+| `--recipient string` | Recipient pattern for temporary route (e.g., `*@domain.com`) |
 | `--route-id string` | Use existing route instead of creating temporary one |
-| `--skip-verify` | Skip SSL certificate verification for local endpoints when forwarding events |
+| `--skip-verify` | Skip SSL certificate verification for local endpoints when forwarding events (needs `--forward-to`) |
 | `--slim-output` | Slim down the payload for printing to the console |
 
 ### `routes trigger`
@@ -63,20 +239,14 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 
 | Flag | Description and default |
 |---|---|
-| `--clear-recipient` | Clear recipient filter (accept all emails) |
-| `--disabled` | Disable the route |
-| `--enabled` | Enable the route |
-| `--group-by-message-id` | Enable grouping related emails by message ID |
-| `--include-attachments` | Enable including attachments in webhook payload |
-| `--include-headers` | Enable including headers in webhook payload |
-| `--name string` | Update route name |
-| `--no-group-by-message-id` | Disable grouping related emails by message ID |
-| `--no-include-attachments` | Disable including attachments in webhook payload |
-| `--no-include-headers` | Disable including headers in webhook payload |
-| `--no-strip-replies` | Disable stripping reply content from emails |
-| `--recipient string` | Update recipient filter pattern |
-| `--strip-replies` | Enable stripping reply content from emails |
-| `--url string` | Update webhook URL |
+| `--enabled` | Enable (`--enabled`) or disable (`--enabled=false`) the route |
+| `--group-by-message-id` | Group related emails by message ID (`=false` to stop) |
+| `--include-attachments` | Include attachments in the webhook payload (`=false` to stop) |
+| `--include-headers` | Include headers in the webhook payload (`=false` to stop) |
+| `--name string` | New route name |
+| `--recipient string` | New recipient filter, `local@domain`, such as `*@example.com` |
+| `--strip-replies` | Strip reply content from emails (`=false` to stop) |
+| `--url string` | New webhook URL |
 
 ## Related Guides
 

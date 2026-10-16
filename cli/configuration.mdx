@@ -1,70 +1,194 @@
 ---
 title: "CLI Configuration: Config File, Flags, Output"
-description: "Reference for the AhaSend CLI config file (~/.ahasend/config.yaml), profiles and global flags such as --profile, --output and --debug."
+description: "Reference for the AhaSend CLI config file, profiles, global flags, output formats, JSON output, prompts and exit codes, for use in a terminal and in scripts."
 icon: gear
 sidebarTitle: "Configuration"
 ---
 
-The AhaSend CLI stores configuration in `~/.ahasend/config.yaml` and reads credentials from profiles or explicit command-line flags.
-
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+The AhaSend CLI keeps your profiles in a configuration file, and all commands share one set of global flags, output formats and exit codes. This page describes them.
 
 ## Configuration File
 
-The configuration file is automatically created when you authenticate and contains your profiles and preferences:
+`ahasend auth login` creates the configuration file at `~/.ahasend/config.yaml` (Windows: `%USERPROFILE%\.ahasend\config.yaml`). It holds your profiles and the name of the default profile. In this example, each `YOUR_...` value stands for an API key or the ID of its account:
 
 ```yaml
 default_profile: production
 profiles:
   production:
     api_key: "YOUR_API_KEY"
-    account_id: "YOUR_ACCOUNT_ID"
     api_url: "https://api.ahasend.com"
-preferences:
-  output_format: plain
-  color_output: true
+    account_id: "YOUR_ACCOUNT_ID"
+  staging:
+    api_key: "YOUR_STAGING_API_KEY"
+    api_url: "https://api.ahasend.com"
+    account_id: "YOUR_STAGING_ACCOUNT_ID"
 ```
+
+- The file holds your API keys in plain text. The CLI creates `~/.ahasend` with mode `0700` and the file with mode `0600`, so only your user can read them. Keep the file out of source control.
+- The CLI reads only `default_profile` and `profiles`, and in each profile `api_key`, `api_url` and `account_id`. It ignores other keys and keeps them when it saves the file. It does not keep comments.
+- Before any request, the CLI checks the profile it uses: `api_key` must not be empty and must hold only printable ASCII characters, `account_id` must be a UUID, and `api_url` must be empty or an HTTP or HTTPS URL with a host and no path. An empty `api_url` uses the production API, `https://api.ahasend.com`. A profile that fails a check exits with code 3.
+- No environment variable chooses a profile or gives credentials. Use `--profile`, or `--api-key` with `--account-id`.
+
+## Profiles
+
+A profile is a saved API key, account ID and API URL. Commands use the default profile unless you pass `--profile`:
+
+```bash
+ahasend auth login --profile staging
+ahasend domains list --profile staging
+ahasend auth switch staging
+```
+
+- `auth login` saves the profile under the name `default` when you give no `--profile`.
+- `auth login` makes the profile the default when there is no default profile, so the first profile you save becomes the default. Otherwise the default stays; `ahasend auth switch <profile>` changes it.
+- Profile names keep their case and dots. A name that matches no profile exactly finds the one profile that matches it ignoring case, so `--profile work` finds `Work`.
+- A profile that does not exist, or a missing default profile, exits with code 3 before any request.
+
+See [CLI authentication](/cli/authentication) to log in, switch and remove profiles.
 
 ### CI Credentials
 
-The CLI reads no environment variables for credentials. It authenticates through `ahasend auth login` profiles, `--profile`, or `--api-key` with `--account-id`. In CI, store secrets as environment variables and pass them explicitly through flags:
+In CI, store the API key and account ID as secrets and pass them with flags:
 
 ```bash
 ahasend --api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID" ping
 ```
 
-## Output Formats
-
-| Format | Use |
-|---|---|
-| `plain` | Default readable text |
-| `table` | Table view |
-| `json` | Structured output for scripts |
-| `csv` | Export rows for a spreadsheet |
-
-The current CLI's printer reads `--output`, whose default is `plain`; `preferences.output_format` does not override it. Pass the flag for each command. Credentials are plaintext in `~/.ahasend/config.yaml` (Windows: `%USERPROFILE%\.ahasend\config.yaml`); protect this file.
+`--api-key` takes the place of a profile and always uses the production API, `https://api.ahasend.com`. It needs `--account-id`, and you cannot combine it with `--profile`. An empty value, as `"$AHASEND_API_KEY"` gives when the variable is not set, fails with exit code 4. The CLI does not fall back to a profile.
 
 ## Global Flags
 
-Available for all commands:
+These flags work on every command, with one exception: the `auth` commands work on saved profiles, so `auth status`, `auth switch` and `auth logout` refuse `--api-key` and `--account-id` with exit code 4, and `auth login` has its own `--api-key`, `--account-id` and `--profile` flags, which [its page](/cli/commands/auth) describes.
+
+| Flag | Description |
+|---|---|
+| `--api-key string` | API key to use instead of a profile, with `--account-id`. Always uses the production API. Cannot be used with `--profile`. |
+| `--account-id string` | Account ID of `--api-key`. Used only with `--api-key`, which needs it. Must be a UUID. |
+| `--profile string` | Profile to use instead of the default profile. |
+| `--output string` | Output format: `json`, `table`, `plain` or `csv` (default `plain`). |
+| `--no-color` | Turn off colors. |
+| `--verbose` | Log each API request with its method, URL and duration. |
+| `--debug` | Log the full requests and responses, with secrets redacted. |
+| `-h`, `--help` | Show help for the command. |
+| `-v`, `--version` | Show the CLI version, build time and Git commit. |
+
+Colors appear only in log lines and in the `webhooks listen` and `routes listen` output, and only on a terminal. `NO_COLOR` set to a non-empty value, or `TERM=dumb`, also turns them off.
+
+`--verbose` and `--debug` write their logs to stderr. `--debug` logs headers that carry credentials, and body values such as `api_key`, `password` or `secret`, as `[REDACTED]`. It logs at most the first 64 KiB of each body.
+
+## Output Formats
+
+Choose a format with `--output` on each command:
+
+| Format | Output |
+|---|---|
+| `plain` | Labelled lines, one item after another. The default. |
+| `table` | Tables with aligned columns. A list shows a summary of each item. |
+| `json` | The API's response body, unchanged. |
+| `csv` | A header row and one row per item. |
+
+Table and plain output are for reading:
+
+- Times show in your local time zone, with the zone, such as `2026-09-01 12:30:00 CEST`.
+- A field with no value shows `-` in a table and is left out of plain output.
+- A list ends with a line such as `Showing 20 contacts`, then `(more available)` when there is another page, and the `--after <cursor>` and `--before <cursor>` flags that fetch the next and the previous page. An empty page prints a line such as `No contacts found` in place of the list and the `Showing` line.
+
+CSV output is for spreadsheets and data tools:
+
+- Times are in RFC 3339, such as `2026-09-01T10:30:00Z`, and a missing value is an empty cell.
+- CSV output has no pagination line. To page in a script, use `--output json` and read `pagination.next_cursor`.
+- A list with nothing to show prints the header row alone.
+
+### JSON Output
+
+With `--output json`, a command that calls the API prints the API's response body unchanged: the same keys in the same order, including keys the CLI does not know, indented by two spaces. The fields are those of the [API reference](/api-reference). A delete, cancel or wipe whose response has no body prints nothing.
+
+Errors in JSON mode go to stdout:
+
+- An API error whose body is JSON prints that body unchanged.
+- An API error whose body is not JSON, such as an HTML page from a proxy, prints an object with the HTTP status and the request ID:
+
+```json
+{
+  "error": true,
+  "message": "...",
+  "request_id": "...",
+  "status_code": 502
+}
+```
+
+- An error the CLI raises itself, such as an invalid flag, prints an object like this:
+
+```json
+{
+  "error": true,
+  "message": "--after and --before cannot be used together"
+}
+```
+
+Use the exit code to tell success from failure. A command that calls the API more than once, such as `messages send` to more than 100 recipients, prints a JSON array with one element per request. The `auth` commands and `smtp send` print objects of their own, which their pages describe.
+
+`webhooks listen` and `routes listen` ignore `--output`: they always print their event stream as text, for people to read. To process the events in code, forward them to a local endpoint with `--forward-to`.
+
+### Stdout and Stderr
+
+Stdout holds only the command's output. Prompts, warnings, notices and logs go to stderr in every format, with one exception: in table and plain output, the notices that follow a created API key, SMTP credential, webhook or route, such as the one that tells you to save its secret, go to stdout with the output they belong to. Errors go to stderr in table, plain and CSV output, and to stdout in JSON output.
+
+## Lists and Pagination
+
+List commands return one page at a time:
+
+- `--limit` takes 0 to 100. The default, 0, uses the API's page size.
+- `--after <cursor>` fetches the page after a cursor, and `--before <cursor>` the page before it. You cannot combine them.
 
 ```bash
-# Authentication
---api-key string      # AhaSend API key (overrides profile)
---account-id string   # AhaSend Account ID (required with --api-key)
---profile string      # Profile to use (overrides default)
+ahasend contacts list --limit 50
+ahasend contacts list --limit 50 --after YOUR_CURSOR
+```
 
-# Output
---output string       # Output format: table, json, plain, csv (default: plain)
---no-color            # Disable colored output
+Replace `YOUR_CURSOR` with the cursor that the previous page printed after `--after`.
 
-# Logging
---verbose             # Enable verbose output
---debug               # Enable debug mode
+## Prompts
 
-# Help
--h, --help            # Show help
--v, --version         # Show version
+Prompts go to stderr, and the CLI reads the answers from stdin.
+
+### Confirmation
+
+These commands ask for confirmation before they act: every `delete` command, `auth logout --all`, `campaigns send`, `lists members remove`, `messages cancel`, `subaccounts suspend`, `suppressions wipe`, `templates draft discard` and `templates versions restore`. Answer `y` or `yes` to go ahead. Any other answer, or no input, cancels the command with exit code 4. `--force`, or `-f`, skips the prompt; scripts need it.
+
+`webhooks listen` and `routes listen` ask whether to force a reconnect when another connection holds the stream. They have no `--force`: any answer but `y` or `yes`, or no input, exits with code 4.
+
+No other command asks for confirmation. For example, `auth logout <profile>` removes the profile at once, `campaigns unschedule` unschedules the campaign at once, and `auth login` to a profile that exists replaces its credentials.
+
+### Missing Values
+
+Commands that ask for a missing required value, such as `domains create` and `messages send`, ask only when stdin is a terminal. Otherwise, or with `--non-interactive`, a missing value fails with an error such as `--name is required` and exit code 4.
+
+`auth login` works differently: without `--api-key` and `--account-id`, it reads them from stdin even when stdin is not a terminal, and it has no `--non-interactive`. Empty stdin cancels it with exit code 4. See [`auth login`](/cli/commands/auth#command-flags).
+
+## Exit Codes
+
+Every failure exits nonzero, in every output format. An error that the API returns exits by its HTTP status:
+
+| Code | Meaning |
+|---|---|
+| 0 | Success. |
+| 1 | An API error with another status, such as 409 or 5xx; a failed item in a batch or in a command that sends several requests; any other failure. |
+| 2 | Authentication: the API returned 401, or there is no profile and no `--api-key`. |
+| 3 | Configuration: the configuration file cannot be read or written, the profile does not exist or cannot be used, or there is no default profile. |
+| 4 | Validation: the API returned 400 or 422; the CLI found invalid input before any request, such as an unknown flag, a bad value or a missing argument; a prompt was declined or got no answer. |
+| 5 | Not found: the API returned 404. |
+| 6 | Permission: the API returned 403. |
+| 7 | Network: the API cannot be reached, the request timed out, or the connection broke; a `listen` stream dropped; the SMTP server of `smtp send` cannot be reached. |
+| 8 | Rate limit: the API returned 429. |
+| 130 | Interrupted: Ctrl+C or SIGTERM stopped `messages send`, or `messages cancel` of several messages. |
+
+```bash
+if ahasend domains get example.com --output json > domain.json; then
+  echo "Domain found"
+elif [ $? -eq 5 ]; then
+  echo "Domain not found"
+fi
 ```
 
 ## Next Steps

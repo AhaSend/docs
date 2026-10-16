@@ -1,59 +1,74 @@
 ---
 title: "ahasend ping: Test API Connectivity"
-description: "Use ahasend ping to check that the AhaSend CLI can reach the API and that your API key and account ID are valid. Handy for CI health checks."
+description: "Use ahasend ping to check that the AhaSend CLI can reach the API and that the API accepts your API key from this IP address. Handy for CI health checks."
 icon: wifi
 sidebarTitle: "ping"
 ---
 
+Use AhaSend CLI `ping` to check your API connection and API key; this page covers its options and results.
 
-Use AhaSend CLI `ping` to check your API connection and credentials; this page covers its options and results.
-
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in](/cli/authentication), or pass an API key with the global flags: replace `YOUR_API_KEY` and `YOUR_ACCOUNT_ID` with your API key and the ID of its account.
 
 ## Overview
 
-```bash
+```text
 ahasend ping [flags]
 ```
 
-The `ping` command sends a test request to the AhaSend API to verify:
-- Network connectivity to AhaSend servers
-- API key authentication and validity
-- Account access permissions
+The `ping` command sends a ping request to the AhaSend API, which checks that:
+- The API can be reached
+- The API accepts the API key, from this IP address
+
+The API answers a ping before it looks at the account. So `ping` does not check that the key belongs to the account ID, or what the key may do. Run [`ahasend auth status`](/cli/commands/auth) for that.
 
 ## Basic Usage
 
 ```bash
-# Test with current profile
+# Test with the default profile
 ahasend ping
 
-# Test with specific API key
-ahasend ping --api-key aha-sk-... --account-id <account-id>
-
-# Test with specific profile
+# Test with a specific profile
 ahasend ping --profile production
+
+# Test with an API key instead of a profile
+ahasend ping --api-key YOUR_API_KEY --account-id YOUR_ACCOUNT_ID
 ```
 
-## Output Formats
+## Output
+
+Table and plain output print the API's message:
+
+```text
+pong
+```
+
+`--output json` prints the API's response body unchanged:
+
+```json
+{
+  "message": "pong"
+}
+```
+
+CSV output has a `message` column and one row.
+
+## Exit Codes
+
+`ping` uses the CLI's [exit codes](/cli/configuration#exit-codes):
+
+- 0: The API accepts the key.
+- 2: The API rejected the key.
+- 6: The API refused the key with HTTP 403 because the key's IP allow list leaves out this IP address.
+- 7: The API cannot be reached.
 
 ```bash
-# Default plain output
-ahasend ping
-
-# JSON output for automation
-ahasend ping --output json
-
-# Table format
-ahasend ping --output table
+# Fail a CI job when the API or the key does not work
+ahasend --api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID" ping || exit 1
 ```
 
-## Use Cases
+## Command Flags
 
-- **Connection Testing**: Verify network connectivity to AhaSend servers
-- **Authentication Validation**: Check if API key is valid and active
-- **Profile Verification**: Confirm profile configuration is correct
-- **Health Checks**: Include in monitoring scripts and CI/CD pipelines
-- **Troubleshooting**: Debug authentication or connectivity issues
+This command has no command-specific flags. It accepts the [global flags](/cli/configuration#global-flags).
 
 ## Next Steps
 

@@ -1,77 +1,106 @@
 ---
-title: "CLI Email Templates and Variables"
-description: "Personalize emails sent with the AhaSend CLI using template files: global and per-recipient substitutions, if/else conditions, loops, and default values."
+title: "Message Content and Substitutions in the CLI"
+description: "Write the content of emails sent with the AhaSend CLI: text, HTML and AMP files, global and per-recipient substitutions, conditions, loops and defaults."
 icon: file-code
-sidebarTitle: "Templates"
+sidebarTitle: "Message Content"
 ---
 
-The AhaSend CLI uses [MiniJinja templating (Jinja2-compatible syntax)](https://github.com/mitsuhiko/minijinja) for creating personalized emails.
+This guide shows how to give `ahasend messages send` its content, from flags or files, and how to personalize it with substitutions.
 
-Templates are rendered by the AhaSend API using MiniJinja. Subject lines also support substitutions. Use `default` for missing values and test your rendering with sandbox mode; see [API templates](/send-api/send-email#template-variables).
+<Note>
+To send a transactional template stored in your AhaSend account instead, see [Stored Templates](#stored-templates) and the [`ahasend templates` commands](/cli/commands/templates).
+</Note>
 
-| Flag | File |
-|---|---|
-| `--html-template` | HTML content |
-| `--text-template` | Plain text content |
-| `--amp-template` | AMP HTML content |
-| `--global-substitutions` | JSON object shared by recipients |
-| `--recipients` | CSV or JSON recipient data |
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with the ID of a published template in your test account. Create any named content, recipient, or JSON files first. Shell examples use Bash. Sends use sandbox mode.
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+## Content Flags
 
-## Template Basics
+Give each part of the message inline or from a file, not both:
 
-Use double curly braces for variable substitution:
+| Part | Inline | From a file |
+|---|---|---|
+| Plain text | `--text` | `--text-file` |
+| HTML | `--html` | `--html-file` |
+| AMP HTML | `--amp` | `--amp-file` |
 
-```html
-<!-- template.html -->
-<h1>Hello {{first_name}}!</h1>
-<p>Welcome to {{company_name}}.</p>
-<p>Your account type is: {{account_type}}</p>
+- Text or HTML content is required. AMP content is an extra part that goes with one of them.
+- Several parts together make a multipart email.
+- `--text` with `--text-file`, `--html` with `--html-file`, or `--amp` with `--amp-file` fails with exit code 4.
+
+```bash
+ahasend messages send --sandbox \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "Your order" \
+  --html-file order.html \
+  --text-file order.txt
 ```
+
+## Substitution Basics
+
+The subject and the content can hold placeholders in double curly braces. The AhaSend API fills them for each recipient with [MiniJinja](https://github.com/mitsuhiko/minijinja), which uses Jinja2-compatible syntax.
+
+```html welcome.html
+<h1>Hello {{ first_name }}!</h1>
+<p>Welcome to {{ company_name }}.</p>
+<p>Your account type is: {{ account_type }}</p>
+```
+
+The values come from two places:
+
+| Flag | Values |
+|---|---|
+| `--global-substitutions` | A JSON file with one object, shared by every recipient |
+| `--recipients` | A CSV or JSON file with values for each recipient |
+
+A recipient's own value for a key wins over the global value of the same key. The API HTML-escapes values in the HTML and AMP content, so send them as plain text. The subject, custom headers and the text content get values as they are. Use `{{ name|safe }}` only for HTML that your own code builds.
 
 ## Substitution Types
 
 ### Global Substitutions
 
-Applied to all recipients - use for company-wide data:
+Use global substitutions for values that are the same for every recipient. They work with `--to` and with `--recipients`.
 
 ```json company-data.json
 {
-  "company_name": "ACME Corporation",
-  "support_email": "support@acme.com",
-  "year": "2024"
+  "company_name": "Example Inc.",
+  "support_email": "support@example.com",
+  "year": 2026
 }
 ```
 
 ```bash
-ahasend messages send --sandbox --subject "Docs test" \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
-  --html-template template.html \
+  --subject "News from {{ company_name }}" \
+  --html-file welcome.html \
   --global-substitutions company-data.json
 ```
 
 ### Recipient Substitutions
 
-Per-recipient data from CSV/JSON files:
+Use a recipients file for values that differ per recipient. The file's extension, `.csv` or `.json`, sets its format.
 
 <Tabs>
 <Tab title="CSV Format">
 
-```csv
-email,first_name,account_type,balance
-john@example.com,John,premium,1234.56
-jane@example.com,Jane,basic,567.89
+```csv users.csv
+email,name,first_name,account_type
+john@example.com,John Doe,John,premium
+jane@example.com,Jane Smith,Jane,basic
 ```
+
+The `email` column is required, and `name` sets the display name. The two headers can be in any case. Every other column is a substitution, and every value is trimmed. An empty cell sets no value, so the global value of the same name, if any, applies to that recipient.
 
 </Tab>
 <Tab title="JSON Format">
 
-```json
+```json users.json
 [
   {
     "email": "john@example.com",
+    "name": "John Doe",
     "substitution_data": {
       "first_name": "John",
       "account_type": "premium",
@@ -81,39 +110,37 @@ jane@example.com,Jane,basic,567.89
 ]
 ```
 
+Each recipient has an `email`, an optional `name`, and its values in `substitution_data`. Values can be strings, numbers, booleans, lists or objects, and numbers are sent as written.
+
 </Tab>
 </Tabs>
 
 ```bash
-ahasend messages send --sandbox --subject "Docs test" \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --recipients users.csv \
-  --html-template template.html \
+  --subject "Hello {{ first_name }}" \
+  --html-file welcome.html \
   --global-substitutions company-data.json
 ```
 
-## Basic Examples
+A file with no recipients, an invalid address or an unknown JSON key fails with exit code 4 before anything is sent. For a bad entry, the error names its CSV row or JSON index. To send to many recipients, see [batch processing](/cli/batch-processing).
 
-### Simple Template
+## Template Syntax Examples
 
-```html
-<!-- welcome.html -->
-<!DOCTYPE html>
-<html>
-<body>
-    <h1>Welcome {{first_name}}!</h1>
-    <p>Thank you for joining {{company_name}}.</p>
-    <p>Your account type: {{account_type}}</p>
-    <p>Questions? Contact {{support_email}}</p>
-</body>
-</html>
+### Variables and Defaults
+
+`default` gives a value to use when a variable is missing:
+
+```html greeting.html
+<p>Hello {{ first_name|default("there") }},</p>
+<p>Questions? Contact {{ support_email }}.</p>
 ```
 
 ### Conditional Content
 
-```html
-<!-- conditional.html -->
-<h1>Hello {{first_name}}!</h1>
+```html conditional.html
+<h1>Hello {{ first_name }}!</h1>
 
 {% if account_type == "premium" %}
     <p>Thank you for being a Premium member!</p>
@@ -124,49 +151,89 @@ ahasend messages send --sandbox --subject "Docs test" \
 
 ### Lists and Loops
 
-```html
-<!-- order-confirmation.html -->
+A loop needs a list, so its values come from a JSON recipients file or the global substitutions file. CSV cells hold text only.
+
+```html order-confirmation.html
 <h1>Order Confirmation</h1>
-<p>Thank you, {{customer_name}}!</p>
+<p>Thank you, {{ customer_name }}!</p>
 
 <table>
     {% for item in items %}
     <tr>
-        <td>{{item.name}}</td>
-        <td>{{item.quantity}}</td>
-        <td>${{item.price}}</td>
+        <td>{{ item.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.price }}</td>
     </tr>
     {% endfor %}
 </table>
 ```
 
-## Testing Templates
-
-Test templates using sandbox mode:
-
-```bash
-ahasend messages send --subject "Docs test" \
-  --from test@example.com \
-  --to test@example.com \
-  --html-template template.html \
-  --global-substitutions test-data.json \
-  --sandbox
+```json orders.json
+[
+  {
+    "email": "john@example.com",
+    "substitution_data": {
+      "customer_name": "John",
+      "items": [
+        {"name": "Notebook", "quantity": 2, "price": "$8.00"},
+        {"name": "Pen", "quantity": 5, "price": "$1.50"}
+      ]
+    }
+  }
+]
 ```
 
-Then check the AhaSend dashboard to see the rendered message.
+```bash
+ahasend messages send --sandbox \
+  --from orders@example.com \
+  --recipients orders.json \
+  --subject "Your order, {{ customer_name }}" \
+  --html-file order-confirmation.html
+```
+
+## Stored Templates
+
+`--template-id` sends a transactional template that is stored in your AhaSend account, instead of content from flags or files. Create, publish and inspect stored templates with the [`ahasend templates` commands](/cli/commands/templates). `ahasend templates get` lists the variables that a send must supply.
+
+```bash
+ahasend messages send --sandbox \
+  --template-id YOUR_RESOURCE_ID \
+  --recipients users.csv \
+  --global-substitutions company-data.json
+```
+
+- The template supplies the content, so the content flags on this page cannot be used with `--template-id`.
+- `--from` and `--subject` are optional. Without them, the template's sender and subject apply.
+- Substitutions work as on this page: the values of `--global-substitutions` are copied into each recipient's substitutions, and a recipient's own value wins.
+
+## Testing Content
+
+Send to a test address in sandbox mode, which delivers nothing:
+
+```bash
+ahasend messages send --sandbox \
+  --from test@example.com \
+  --to test@example.com \
+  --subject "Content test" \
+  --html-file welcome.html \
+  --global-substitutions test-data.json
+```
+
+Then open the message in the AhaSend dashboard, or run `ahasend messages get` with its Message-ID to see its content. See [`messages get`](/cli/commands/messages#get-a-message).
 
 ## Best Practices
 
-1. **Use meaningful variable names**: `{{customer_first_name}}` not `{{fn}}`
-2. **Provide default values**: `{{name|default("Friend")}}`
-3. **Test with real data**: Use sandbox mode before sending
-4. **Keep templates simple**: Complex logic belongs in your application
-5. **Global vs recipient data**: Company info in global, personal info per recipient
+1. **Use meaningful variable names**: `{{ customer_first_name }}`, not `{{ fn }}`.
+2. **Provide default values**: `{{ name|default("Friend") }}`.
+3. **Test in sandbox mode**: Send to a test address before a real send.
+4. **Keep templates simple**: Complex logic belongs in your application.
+5. **Split global and recipient data**: Company details go in the global file, personal details in the recipients file.
 
 ## Next Steps
 
 - [Learn about batch processing](/cli/batch-processing)
-- [Explore MiniJinja documentation](https://github.com/mitsuhiko/minijinja)
+- [Manage stored templates](/cli/commands/templates)
+- [Explore the MiniJinja documentation](https://github.com/mitsuhiko/minijinja)
 - [View CLI examples](/cli/examples)
 
 ## Related Guides

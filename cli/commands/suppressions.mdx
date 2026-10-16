@@ -8,7 +8,7 @@ sidebarTitle: "suppressions"
 
 AhaSend CLI `suppressions` commands let you inspect and manage blocked recipient addresses; this page explains their options.
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in](/cli/authentication) with an API key that has the `suppressions:read`, `suppressions:write`, `suppressions:delete` and `suppressions:wipe` [scopes](/api-reference/scopes#suppressions), and replace `example.com` in the `--domain` values with a test domain in your account.
 
 ## Overview
 
@@ -17,95 +17,125 @@ ahasend suppressions [subcommand] [flags]
 ```
 
 Available subcommands:
-- `list` - List all suppressed email addresses
-- `create` - Create a new suppression for an email address
+- `list` - List suppressed email addresses
+- `create` - Create a suppression for an email address
 - `check` - Check if an email address is suppressed
-- `delete` - Delete an email address from the suppression list
-- `wipe` - Delete all suppressions from your account
+- `delete` - Delete the suppressions of an email address
+- `wipe` - Delete all suppressions from your account, or from one domain
 
-Suppressions are email addresses that should not receive emails from your account. They can be created automatically (bounces, complaints) or manually (unsubscribes).
+Suppressions are email addresses that should not receive emails from your account. Each suppression applies to one domain: an address can have one suppression per domain, and no suppression covers every domain. Bounces and spam complaints add suppressions automatically, and unsubscribes come from the recipients themselves.
 
-Use suppressions to:
-- View all suppressed email addresses
-- Check if a specific email is suppressed
-- Create new suppressions for email addresses
-- Delete existing suppressions
-- Bulk manage suppressions
+Unsubscribes and spam complaints are protected suppressions. `suppressions wipe` keeps them. `suppressions delete` deletes them like any other suppression. Table, plain and CSV output show whether each suppression is protected.
+
+The commands check each email address and each `--domain` value before they send a request. An invalid value fails with exit code 4. An empty `--domain` fails too; leave the flag out instead.
 
 ## List Suppressions
 
-List suppressed email addresses with filtering and pagination support. Suppressions are email addresses that should not receive emails from your account. They can be filtered by email address, domain, creation time, and exported to JSON format.
+List suppressed email addresses, with cursor pagination. Filter by email address, domain and creation time.
 
 ```bash
-# List all suppressions
+# List suppressions
 ahasend suppressions list
 
-# Search for specific email suppression
+# Search for one email address
 ahasend suppressions list --email user@example.com
 
 # Filter by domain
 ahasend suppressions list --domain example.com
 
-# Export to JSON
-ahasend suppressions list --output json
+# Suppressions created in the last 7 days
+ahasend suppressions list --from-time 7d
 
-# List with pagination
+# Fetch 100 suppressions, then the page after them
 ahasend suppressions list --limit 100
+ahasend suppressions list --limit 100 --after YOUR_CURSOR
+
+# Print the API response as JSON
+ahasend suppressions list --output json
 ```
 
+`--from-time` and `--to-time` take an RFC 3339 time, such as `2026-09-01T00:00:00Z`, or a relative time that counts back from now, such as `24h` or `7d`. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
 
 ## Create Suppression
 
+`--expires` is required. It takes a time after now: a relative time, such as `24h`, `30d`, `1w`, `3mo` or `1y`, or an RFC 3339 time in the future, such as `2027-12-31T23:59:59Z`. A time in the past fails before any request is sent.
+
+Without `--domain`, the API creates a suppression for each domain the account has at that moment. Domains you add later are not covered.
+
 ```bash
-# Create manual suppression
-ahasend suppressions create user@example.com --reason unsubscribe --expires 30d
+# Suppress an address on every current domain for 30 days
+ahasend suppressions create user@example.com --reason "User requested unsubscribe" --expires 30d
 
-# Create bounce suppression
-ahasend suppressions create user@example.com --reason "Manual bounce test" --expires 30d
+# Suppress an address for one domain for 1 year
+ahasend suppressions create user@example.com --domain example.com --reason "Email bounced" --expires 1y
 
-# Create complaint suppression
-ahasend suppressions create user@example.com --reason "Manual complaint test" --expires 30d
+# Suppress an address until a fixed time
+ahasend suppressions create user@example.com --reason "Holiday pause" --expires 2027-12-31T23:59:59Z
 ```
+
+`--reason` holds up to 255 characters. Give your own `--idempotency-key` when a script may retry the command; without it, each run generates a new key.
 
 ## Check Suppression
 
+Without `--domain`, the command shows the address's suppressions on every domain, up to the API's default page of 100. With `--domain`, it shows only the suppression for that domain. It exits with code 0 whether or not the address is suppressed. `--output json` prints the API's list of matching suppressions.
+
 ```bash
+# Check the suppressions of an address on every domain
 ahasend suppressions check user@example.com
+
+# Check the suppression for one domain
+ahasend suppressions check user@example.com --domain example.com
 ```
 
 ## Delete Suppression
 
+With `--domain`, the command deletes only the suppression for that domain. Without it, the command deletes the address's suppressions on every domain, unsubscribes and complaints included.
+
+The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it.
+
 ```bash
+# Suppress a test address on every current domain
 ahasend suppressions create docs-delete-test@example.com --reason "Docs deletion test" --expires 1d
-ahasend suppressions delete docs-delete-test@example.com
+
+# Delete its suppression for one domain, with the confirmation prompt
+ahasend suppressions delete docs-delete-test@example.com --domain example.com
+
+# Delete its other suppressions, on every domain, without the prompt
+ahasend suppressions delete docs-delete-test@example.com --force
 ```
+
+The last step fails with exit code 5 when the address has no suppression left, as in an account with one domain: the API answers 404 when nothing matches.
 
 ## Wipe Suppressions
 
-Remove all suppressions (use with caution):
+`suppressions wipe` deletes every suppression of the account, or of one domain with `--domain`. Protected suppressions (unsubscribes and spam complaints) are kept. The command prints a warning and asks for confirmation unless you give `--force` (`-f`).
+
+Back up first. One list call saves one page of up to 100 suppressions. Repeat it with `--after` set to the page's `pagination.next_cursor`, in place of `YOUR_CURSOR`, until a page has no `next_cursor`. Add `--domain` to back up one domain.
+
+The example below wipes one domain. Replace `example.com` with a test domain in your account: the wipe deletes every suppression of that domain that is not protected.
 
 ```bash
-# Wipe all suppressions
-ahasend suppressions create docs-wipe-test@example.com --domain docs-test.example.com --reason "Docs wipe test" --expires 1d
-ahasend suppressions wipe --force --domain "docs-test.example.com"
+# Suppress a test address for the test domain
+ahasend suppressions create docs-wipe-test@example.com --domain example.com --reason "Docs wipe test" --expires 1d
 
-# Wipe specific type
-ahasend suppressions create docs-wipe-test@example.com --domain docs-test.example.com --reason "Docs wipe test" --expires 1d
-ahasend suppressions wipe --domain "docs-test.example.com" --force
+# Back up the suppressions of that domain, one page at a time
+ahasend suppressions list --domain example.com --limit 100 --output json > backup-1.json
+ahasend suppressions list --domain example.com --limit 100 --after YOUR_CURSOR --output json > backup-2.json
+
+# Wipe the suppressions of that domain, with the confirmation prompt
+ahasend suppressions wipe --domain example.com
+
+# Or wipe them without the prompt, as a script must
+ahasend suppressions wipe --domain example.com --force
 ```
 
 <Warning>
-This action is irreversible and will remove all specified suppressions.
+A wipe cannot be undone. Afterwards, email can be sent to every wiped address again, which can hurt your sender reputation. The backup is for your records only: the CLI cannot import it, and `suppressions create` adds one address at a time.
 </Warning>
-
-## Next Steps
-
-- [Send messages](/cli/commands/messages)
-- [View statistics](/cli/commands/stats)
 
 ## Command Flags
 
-These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `suppressions check`
 
@@ -117,32 +147,41 @@ These flags come from the current CLI. All commands also accept the [global flag
 
 | Flag | Description and default |
 |---|---|
-| `--domain string` | Domain for domain-specific suppression (optional) |
-| `--expires string` | Expiration time (e.g., '30d', '`RFC3339_TIMESTAMP`') [required] |
+| `--domain string` | Suppress the address for this domain only (default: every current domain) |
+| `--expires string` | Expiration time (e.g., `30d`, `2027-12-31T23:59:59Z`) (required) |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--reason string` | Suppression reason (up to 255 characters) |
 
 ### `suppressions delete`
 
 | Flag | Description and default |
 |---|---|
-| `--domain string` | Domain for domain-specific suppression removal (optional) |
-| `--force` | Skip confirmation prompt |
+| `--domain string` | Delete only the suppression for this domain (default: every domain) |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `suppressions list`
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for continued results |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
 | `--domain string` | Filter by specific domain |
-| `--email string` | Email address to search for (optional) |
-| `--limit int32` | Maximum number of suppressions to return (default 50) |
+| `--email string` | Filter by email address |
+| `--from-time string` | Filter suppressions created after this time (RFC3339 or relative like '24h', '7d') |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+| `--to-time string` | Filter suppressions created before this time (RFC3339 or relative) |
 
 ### `suppressions wipe`
 
 | Flag | Description and default |
 |---|---|
 | `--domain string` | Domain to wipe suppressions for |
-| `--force` | Skip all confirmation prompts (DANGEROUS) |
+| `-f`, `--force` | Skip confirmation prompt |
+
+## Next Steps
+
+- [Send messages](/cli/commands/messages)
+- [View statistics](/cli/commands/stats)
 
 ## Related Guides
 

@@ -1,28 +1,34 @@
 ---
 title: "ahasend messages: Send and Track Email"
-description: "Send transactional email from your terminal with the AhaSend CLI: text/HTML, attachments, templates, scheduling, sandbox mode, and batch sends from CSV/JSON."
+description: "Send email from your terminal with the AhaSend CLI: text, HTML and AMP content, stored templates, attachments, scheduling, sandbox mode and batch sends."
 icon: envelope
 sidebarTitle: "messages"
 ---
 
 
-AhaSend CLI `messages` commands let you send, inspect and cancel email messages; this page covers their arguments and flags.
+AhaSend CLI `messages` commands let you send, list, inspect and cancel email messages; this page covers their arguments and flags.
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a template ID or message ID from your test account, as each example needs. Create any named content, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
 
 ## Overview
 
 ```text
-ahasend messages [subcommand] [flags]
+ahasend messages [command] [flags]
 ```
 
 Available subcommands:
-- `send` - Send email messages
-- `list` - List sent messages
-- `get` - Get details for one message
-- `cancel` - Cancel scheduled messages
+- `send` - Send an email message
+- `list` - List messages
+- `get` - Get one message
+- `cancel` - Cancel a scheduled message
 
 ## Send Messages
+
+```text
+ahasend messages send [flags]
+```
+
+A send needs `--from`, `--subject`, a recipient (`--to` or `--recipients`) and text or HTML content. A send with `--template-id` needs only a recipient, because the template supplies the rest; see [Stored Templates](#stored-templates). When a value is missing, the command can ask for it; see [prompts](/cli/configuration#prompts). The command checks every flag and file before it sends anything, so invalid input sends nothing.
 
 ### Basic Usage
 
@@ -40,19 +46,36 @@ ahasend messages send --sandbox \
   --to recipient@example.com \
   --subject "Welcome" \
   --html "<h1>Welcome!</h1><p>Thank you for signing up.</p>"
+
+# Multipart email with HTML and text
+ahasend messages send --sandbox \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "Welcome" \
+  --html "<h1>Welcome!</h1>" \
+  --text "Welcome!"
+```
+
+### Sender and Reply-To
+
+`--from-name` sets the sender's display name and needs `--from`. `--reply-to` sets the address that replies go to. You cannot also set `Reply-To` with `--header`.
+
+```bash
+ahasend messages send --sandbox \
+  --from support@example.com \
+  --from-name "Example Support" \
+  --reply-to help@example.com \
+  --to recipient@example.com \
+  --subject "Your ticket" \
+  --text "We received your request."
 ```
 
 ### Recipients
 
-```bash
-# Single recipient
-ahasend messages send --sandbox \
-  --from sender@example.com \
-  --to user@example.com \
-  --subject "Notification" \
-  --text "Your order has been processed"
+Use `--to` for a simple list of recipients. You can use it multiple times, and each value is split on commas. Use `--recipients` for a CSV or JSON file that gives each recipient a name and substitutions. You cannot combine `--to` and `--recipients`.
 
-# Multiple recipients
+```bash
+# Several recipients
 ahasend messages send --sandbox \
   --from sender@example.com \
   --to user1@example.com \
@@ -60,107 +83,236 @@ ahasend messages send --sandbox \
   --subject "Team Update" \
   --text "Important announcement"
 
-# Batch from file
+# Recipients file with per-recipient substitutions
 ahasend messages send --sandbox \
   --from sender@example.com \
   --recipients users.csv \
-  --subject "Newsletter" \
-  --html-template newsletter.html
+  --subject "Hello {{first_name}}" \
+  --html-file newsletter.html
 ```
 
-### Content Options
+The [message content guide](/cli/templates#recipient-substitutions) describes the recipients file formats. A send to more than 100 recipients is split into several requests; see [batch processing](/cli/batch-processing).
+
+### Content
+
+Give each part of the content inline or from a file, not both:
+
+| Part | Inline | From a file |
+|---|---|---|
+| Plain text | `--text` | `--text-file` |
+| HTML | `--html` | `--html-file` |
+| AMP HTML | `--amp` | `--amp-file` |
+
+Text or HTML content is required. AMP content is an extra part that goes with one of them. Several parts together make a multipart email.
 
 ```bash
-# With template
 ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
-  --subject "Welcome {{name}}" \
-  --html-template welcome.html \
+  --subject "Welcome {{first_name}}" \
+  --html-file welcome.html \
+  --text-file welcome.txt \
   --global-substitutions data.json
+```
 
-# With attachments
+The subject and the content can hold placeholders such as `{{first_name}}`, which the API fills from `--global-substitutions` and the recipients file. See the [message content guide](/cli/templates).
+
+### Stored Templates
+
+`--template-id` sends a transactional template stored in your AhaSend account. Manage stored templates with the [`ahasend templates` commands](/cli/commands/templates).
+
+```bash
+ahasend messages send --sandbox \
+  --template-id YOUR_RESOURCE_ID \
+  --recipients users.csv \
+  --global-substitutions defaults.json
+```
+
+- The template supplies the content, so you cannot use `--text`, `--html`, `--amp`, `--text-file`, `--html-file` or `--amp-file` with it.
+- `--from` and `--subject` are optional. Without them, the template's sender and subject apply.
+- The values of `--global-substitutions` are copied into each recipient's substitutions. A recipient's own value for the same key wins.
+
+### Attachments
+
+`--attach` attaches a regular file, and you can use it multiple times. Each file can be at most 10,485,760 bytes (10 MiB), and the CLI detects its MIME type. Every request carries every attachment. Together, base64-encoded, the attachments can take at most 29 MB of a request; a larger set fails before anything is sent.
+
+```bash
 ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "Invoice" \
   --text "Please find your invoice attached." \
   --attach invoice.pdf
+```
 
-# Scheduled delivery
+### Scheduling
+
+`--schedule` takes an RFC 3339 time in UTC, in the form `YYYY-MM-DDTHH:MM:SSZ`, or a relative time from now, such as `30m` or `2h`. The API takes a future time within 7 days. A time in the past or later than that fails before anything is sent.
+
+```bash
 ahasend messages send --sandbox \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "Reminder" \
   --text "Meeting tomorrow at 2 PM" \
-  --schedule "<RFC3339 time within the next 7 days>"
+  --schedule 2h
 ```
 
-### Testing
+### Headers, Tags and Tracking
+
+- `--header` adds a custom header in `Name: value` format. You can use it multiple times, with each name once, in any case. Put a value that holds a comma in double quotes, such as `--header '"Name: a, b"'`. The command refuses `From`, `Sender`, `To`, `Cc`, `Bcc`, `Subject`, `Message-ID` and the headers AhaSend sets, such as `AhaSend-Sandbox`; use the matching flag instead, such as `--from`, `--sandbox` or `--tag`.
+- `--tag` adds a message tag. You can use it multiple times.
+- `--track-opens` and `--track-clicks` turn tracking on; `--track-opens=false` and `--track-clicks=false` turn it off. Without the flags, your account's tracking setting applies.
 
 ```bash
-# Sandbox mode (no actual sending)
-ahasend messages send \
-  --from test@example.com \
-  --to test@example.com \
-  --subject "Test" \
-  --text "Testing" \
-  --sandbox
+ahasend messages send --sandbox \
+  --from sender@example.com \
+  --to recipient@example.com \
+  --subject "Important Update" \
+  --html-file update.html \
+  --header "X-Campaign-ID: summer" \
+  --tag onboarding \
+  --track-clicks=false
 ```
 
+### Sandbox Mode
+
+`--sandbox` sends in sandbox mode, which delivers nothing. `--sandbox-result` picks the simulated outcome: `deliver` (the default), `bounce`, `defer`, `fail` or `suppress`. It needs `--sandbox`. See [sandbox mode](/send-api/sandbox).
+
+```bash
+ahasend messages send --sandbox --sandbox-result bounce \
+  --from sender@example.com \
+  --to test@example.com \
+  --subject "Test" \
+  --text "Testing"
+```
+
+### Idempotency
+
+`--idempotency-key` makes a retry safe: the API does not act twice on the same request with the same key. Without the flag, the command generates a key. The API keeps a send's result for its key for 24 hours. Reuse a key only to retry the identical request; see [idempotency](/api-reference/idempotency).
+
+```bash
+ahasend messages send --sandbox \
+  --from sender@example.com \
+  --to user@example.com \
+  --subject "Important" \
+  --text "Message" \
+  --idempotency-key "order-1234-confirmation"
+```
+
+### Output and Exit Codes
+
+A send of up to 100 recipients makes one request. Plain output starts with a heading, `Message sent successfully`, `Message sent to N of M recipients` or `Message not sent to any recipient`, then lists each message:
+
+```text
+Message sent to 1 of 2 recipients
+
+Message 1:
+  Recipient: u@example.com
+  ID: <0d371db4-00d0-5eec-851c-e1db1e2b190d@example.com>
+  Status: queued
+
+Message 2:
+  Recipient: rej@example.com
+  Status: error
+  Error: failed to send message: rej@example.com: The message could not be queued because of an internal error. Please try again later or contact support.
+```
+
+With `--output json`, the command prints the API's response body as [JSON output](/cli/configuration#json-output) describes. Each message's `id` is its Message-ID, which `messages get` and `messages cancel` take. Notices, such as where the command saved failed recipients, go to stderr.
+
+The API can accept a request but refuse some recipients in it, when it could not queue their message. Those recipients count as failed. The command saves failed recipients to a file that you can send again; see [failed recipients](/cli/batch-processing#failed-recipients).
+
+The API does not refuse a suppressed address. It queues the message, does not deliver it, and gives the message the status `suppressed`, which `messages list --status suppressed` finds. AhaSend also sends a [`message.suppressed` event](/api-reference/webhooks/message-suppressed) to your webhooks.
+
+A send exits with the [shared exit codes](/cli/configuration#exit-codes). [Exit codes for sends](/cli/batch-processing#exit-codes) gives the codes that report its result.
 
 ## List Messages
+
+```text
+ahasend messages list [flags]
+```
 
 ```bash
 # List recent messages
 ahasend messages list
 
-# With filters
-ahasend messages list --limit 50 --status delivered
+# Messages from the last 24 hours that bounced or failed
+ahasend messages list --from-time 24h --status bounced --status failed
+
+# Messages to every address at one domain
+ahasend messages list --recipient @example.com
+
+# Messages with a tag
+ahasend messages list --tag onboarding --limit 50
 ```
+
+- `--sender` matches the sender address exactly. `--recipient` and `--subject` match every message whose recipient or subject contains the value, case-sensitively, so `--recipient user@example.com` also matches `olduser@example.com`.
+- `--status` can be used multiple times. Valid statuses are `received`, `delivered`, `opened`, `clicked`, `deferred`, `bounced`, `failed`, `suppressed`, `sandbox delivered`, `sandbox deferred`, `sandbox failed`, `sandbox bounced` and `sandbox suppressed`. `delivered` also matches opened and clicked messages, and `opened` also matches clicked ones.
+- `--tag` takes at most 20 tags, none with a comma.
+- `--from-time` and `--to-time` take an RFC 3339 time or a relative time that counts back from now, such as `1h`, `24h` or `7d`.
+- `--limit`, `--after` and `--before` page through the results as [lists and pagination](/cli/configuration#lists-and-pagination) describes. With `--output json`, read the next cursor from `pagination.next_cursor`.
+- `--show-details` adds more fields for each message, such as its direction, attempts and bounce class.
 
 ## Get a Message
 
-```bash
-ahasend messages get YOUR_RESOURCE_ID
+```text
+ahasend messages get <message-id> [flags]
 ```
 
-Attachments are limited to 10 MB per file by the CLI. Scheduling uses RFC3339, in the future and within 7 days. Sandbox outcomes are `deliver`, `bounce`, `defer`, `fail`, and `suppress`; see [sandbox mode](/send-api/sandbox).
+The message ID is the message's UUID or its Message-ID, such as `<550e8400-e29b-41d4-a716-446655440000@example.com>`. Quote a Message-ID in the shell. The output shows the message's status, its delivery attempts, the template it was sent from, and its raw content while your [retention settings](/retention) keep it.
+
+```bash
+ahasend messages get "YOUR_RESOURCE_ID"
+
+# Save the message content to a file
+ahasend messages get "YOUR_RESOURCE_ID" --output json | jq -r .content > message.txt
+```
 
 ## Cancel Messages
 
-```bash
-# Cancel scheduled message
-SCHEDULE=$(python3 -c 'from datetime import datetime,timedelta,timezone; print((datetime.now(timezone.utc)+timedelta(hours=1)).isoformat())')
-TEST_ID=$(ahasend messages send --sandbox --from sender@yourdomain.com --to test@example.com --subject "Cancellation test" --text "Test" --schedule "$SCHEDULE" --output json | jq -er '.data[0].id | ltrimstr("<") | split("@")[0]')
-ahasend messages cancel "$TEST_ID"
+```text
+ahasend messages cancel <message-id>... [flags]
 ```
 
-Use the message UUID for get and cancel commands. If sending returns an ID such as `<UUID@yourdomain.com>`, extract the UUID as shown above.
+Cancel stops a message that still waits in the delivery queue, such as one scheduled for later. It takes one or more UUIDs or Message-IDs. The API answers success for any message it finds, including one already delivered, which the cancel leaves as it is; check a message's status with `messages get`.
+
+The command asks for confirmation first; see [prompts](/cli/configuration#prompts).
+
+```bash
+# Schedule a sandbox message, then cancel it by its Message-ID
+TEST_ID=$(ahasend messages send --sandbox \
+  --from sender@example.com \
+  --to test@example.com \
+  --subject "Cancellation test" \
+  --text "Test" \
+  --schedule 1h \
+  --output json | jq -er '.data[0].id')
+
+# Wait for the API to record the message
+sleep 10
+ahasend messages cancel "$TEST_ID" --force
+```
+
+A message the API does not find fails with exit code 5. The API records a message from its delivery events, so a message you just sent can take a few seconds to appear. Until it does, `messages get` and `messages cancel` cannot find it and exit with code 5; try again shortly.
+
+With several IDs, the command cancels each in turn and prints one result per ID; with `--output json`, it prints a JSON array with the API's response or error body for each ID, or the CLI's [error object](/cli/configuration#json-output) for an ID whose request got no answer. Any failure then exits with code 1. Ctrl+C stops before the next cancel and exits with code 130.
 
 ## Advanced Usage
 
-For detailed information on batch processing and templating:
-
-- [Batch Processing Guide](/cli/batch-processing) - High-volume email sending
-- [Template System](/cli/templates) - MiniJinja templates with Jinja2-compatible syntax
+- [Batch Processing Guide](/cli/batch-processing) - Send to many recipients from a CSV or JSON file
+- [Message Content Guide](/cli/templates) - Content files, variables, conditions and loops
+- [Stored Templates](/cli/commands/templates) - Manage the transactional templates that `--template-id` sends
 - [Examples](/cli/examples) - Real-world use cases
-
-## Next Steps
-
-- [Learn about domains](/cli/commands/domains)
-- [Configure webhooks](/cli/commands/webhooks)
-- [View statistics](/cli/commands/stats)
 
 ## Command Flags
 
-These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `messages cancel`
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `messages get`
 
@@ -170,16 +322,17 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for next page |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
 | `--from-time string` | Filter messages created after this time (RFC3339 or relative like '24h', '7d') |
-| `--limit int` | Maximum number of messages to return (1-100) (default 100) |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
 | `--message-id string` | Filter by message ID header |
-| `--recipient string` | Filter by recipient email address |
-| `--sender string` | Sender email address (must be from your domain) |
+| `--recipient string` | Filter by recipient: addresses that contain the value, such as @example.com |
+| `--sender string` | Filter by sender email address (must be from your domain) |
 | `--show-details` | Show detailed message information |
-| `--status strings` | Filter by message status (can be used multiple times) |
-| `--subject string` | Filter by subject text (partial match) |
-| `--tags strings` | Filter by tags (can be used multiple times) |
+| `--status strings` | Filter by message status: `received`, `delivered`, `opened`, `clicked`, `deferred`, `bounced`, `failed`, `suppressed`, `sandbox delivered`, `sandbox deferred`, `sandbox failed`, `sandbox bounced` or `sandbox suppressed` (can be used multiple times) |
+| `--subject string` | Filter by subject text (matches subjects that contain it) |
+| `--tag strings` | Filter by tag, at most 20, none with a comma (can be used multiple times) |
 | `--to-time string` | Filter messages created before this time (RFC3339 or relative) |
 
 ### `messages send`
@@ -187,29 +340,39 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | Flag | Description and default |
 |---|---|
 | `--amp string` | AMP HTML content |
-| `--amp-template string` | AMP HTML template file path |
-| `--attach strings` | Attachment file paths (can be used multiple times, max 10MB per file) |
-| `--from string` | Sender email address (required) |
+| `--amp-file string` | File with the AMP HTML content |
+| `--attach strings` | File to attach, at most 10,485,760 bytes (10 MiB) (can be used multiple times) |
+| `--from string` | Sender email address (required unless `--template-id` is set) |
+| `--from-name string` | Sender display name (needs `--from`) |
 | `--global-substitutions string` | JSON file with global template variables |
-| `--header strings` | Custom headers in format 'Header-Name: value' (can be used multiple times) |
+| `--header strings` | Custom header in 'Name: value' format, each name once in any case, in double quotes when the value holds a comma: `'"Name: a, b"'`; not `From`, `Sender`, `To`, `Cc`, `Bcc`, `Subject`, `Message-ID` or a header AhaSend sets, such as `AhaSend-Sandbox` (can be used multiple times) |
 | `--html string` | HTML content |
-| `--html-template string` | HTML template file path |
-| `--idempotency-key string` | Idempotency key for duplicate prevention |
-| `--max-concurrency int` | Maximum concurrent sends for batch operations (default 1) |
-| `--max-retries int` | Maximum retry attempts for failed sends (default 3) |
+| `--html-file string` | File with the HTML content |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--max-concurrency int` | Maximum concurrent sends for batch operations (1-10) (default 1) |
+| `--max-retries int` | Times to send a failed request again (0 or more) (default 3) |
+| `--non-interactive` | Never prompt; fail when a required flag is missing |
 | `--progress` | Show progress bar for batch operations (disabled in debug mode) |
 | `--recipients string` | Recipients file (JSON or CSV format) with per-recipient substitutions |
-| `--sandbox` | Send in sandbox mode (for testing) |
-| `--sandbox-result string` | Sandbox result simulation: deliver, bounce, defer, fail, or suppress (only used with --sandbox) (default "deliver") |
-| `--schedule string` | Schedule delivery time in RFC3339 format (e.g., '`RFC3339_TIMESTAMP`') |
-| `--show-metrics` | Show performance metrics after batch operations |
-| `--subject string` | Email subject |
-| `--tags strings` | Tags for categorization (can be used multiple times) |
+| `--reply-to string` | Reply-to email address |
+| `--sandbox` | Send in sandbox mode, which delivers nothing |
+| `--sandbox-result string` | Sandbox result simulation: deliver, bounce, defer, fail or suppress (needs `--sandbox`) (default "deliver") |
+| `--schedule string` | Schedule delivery for a time in RFC3339 format or relative like '30m', '2h' (the API takes a future time within 7 days) |
+| `--show-metrics` | Show performance metrics on stderr after the send |
+| `--subject string` | Email subject (required unless `--template-id` is set) |
+| `--tag strings` | Message tag (can be used multiple times) |
+| `--template-id string` | Send this transactional template; it supplies the content |
 | `--text string` | Plain text content |
-| `--text-template string` | Plain text template file path |
-| `--to strings` | Recipient email addresses (can be used multiple times) |
-| `--track-clicks` | Enable click tracking (default true) |
-| `--track-opens` | Enable open tracking (default true) |
+| `--text-file string` | File with the plain text content |
+| `--to strings` | Recipient email address (can be used multiple times) |
+| `--track-clicks` | Track clicks (`--track-clicks=false` turns it off); the account's setting applies when omitted |
+| `--track-opens` | Track opens (`--track-opens=false` turns it off); the account's setting applies when omitted |
+
+## Next Steps
+
+- [Learn about domains](/cli/commands/domains)
+- [Configure webhooks](/cli/commands/webhooks)
+- [View statistics](/cli/commands/stats)
 
 ## Related Guides
 
