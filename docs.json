@@ -453,6 +453,9 @@
               "cli/commands/auth",
               "cli/commands/ping",
               "cli/commands/contacts",
+              "cli/commands/lists",
+              "cli/commands/templates",
+              "cli/commands/campaigns",
               "cli/commands/subaccounts"
             ]
           },

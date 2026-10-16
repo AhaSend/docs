@@ -151,22 +151,11 @@ def cli_problems(words, commands):
             yield "cli-flag", f"Unknown flag {flag} for ahasend {' '.join(path)}"
 
 
-def load_commands(release, contacts):
+def load_commands(release):
     snapshot = json.loads(release.read_text())
-    if snapshot["source"].get("version") != "v0.2.0":
-        raise ValueError("CLI command source must be the pinned v0.2.0 release")
-    commands = snapshot["commands"]
-    exception = json.loads(contacts.read_text())
-    if exception["source"].get("commit") != "7a47882b56f766ce0cf9a82c447d9319664d5ef4":
-        raise ValueError("Unexpected Contacts exception source")
-    for path, info in exception["commands"].items():
-        if path != "contacts" and not path.startswith("contacts "):
-            raise ValueError("Development exception may only contain Contacts commands")
-        if path in commands:
-            raise ValueError("Contacts is in the release: remove the development exception")
-        commands[path] = info
-    commands[""]["children"].append("contacts")
-    return commands
+    if snapshot["source"].get("version") != "v0.3.0":
+        raise ValueError("CLI command source must be the pinned v0.3.0 release")
+    return snapshot["commands"]
 
 
 def lint(root, commands):
@@ -265,7 +254,7 @@ def main():
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--cli-reference", type=Path, required=True)
     args = parser.parse_args()
-    commands = load_commands(args.cli_reference, Path(__file__).parent / "contacts-cli-exception.json")
+    commands = load_commands(args.cli_reference)
     findings = lint(args.root.resolve(), commands)
     for finding in findings:
         print(finding)

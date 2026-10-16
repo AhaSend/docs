@@ -1,50 +1,47 @@
 ---
 title: "Send Batch Emails from CSV with the CLI"
-description: "Send personalized emails to many recipients from a CSV or JSON file with the AhaSend CLI, with concurrent workers, retries and failure files."
+description: "Send personalized emails to many recipients from a CSV or JSON file with the AhaSend CLI, with concurrent requests, retries and failed recipient files."
 icon: layer-group
 sidebarTitle: "Batch Processing"
 ---
 
 
-This guide shows how to send batches of personalized email with the AhaSend CLI and check the results.
+This guide shows how to send batches of personalized email with `ahasend messages send` and check the results.
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in with a full API key](/cli/authentication) and use your verified sender domain. Create the recipient, content and JSON files that the examples name first. Shell examples use Bash. Sends use sandbox mode.
 
-## Overview
+## How a Batch Is Sent
 
-Batch processing allows you to:
-- Send thousands of personalized emails
-- Use concurrent workers for speed
-- Track progress in real-time
-- Automatically retry failures
-- Generate performance metrics
+A batch is a `messages send` with a recipients file. The command reads and checks the whole file first, so a bad address sends nothing. It then sends the recipients in requests of up to 100 each:
+
+- A send of up to 100 recipients makes one request, with your `--idempotency-key` as given.
+- A larger send makes one request per 100 recipients. Each request gets the key followed by `-` and its number, from 0, such as `my-key-0` and `my-key-1`. Without `--idempotency-key`, the command generates the key.
+- Every request carries the same content, attachments and options.
 
 ## Recipient File Formats
+
+The file's extension, `.csv` or `.json`, sets its format:
 
 <Tabs>
 <Tab title="CSV Format">
 
-Create `recipients.csv`:
-```csv
-email,name,first_name,company,account_type
-john@example.com,John Doe,John,ACME Corp,premium
-jane@example.com,Jane Smith,Jane,Tech Inc,basic
-alice@example.com,Alice Johnson,Alice,StartUp Ltd,enterprise
+```csv recipients.csv
+email,name,first_name,company
+john@example.com,John Doe,John,Example Inc.
+jane@example.com,Jane Smith,Jane,Example Ltd.
 ```
 
 </Tab>
 <Tab title="JSON Format">
 
-Create `recipients.json`:
-```json
+```json recipients.json
 [
   {
     "email": "john@example.com",
     "name": "John Doe",
     "substitution_data": {
       "first_name": "John",
-      "company": "ACME Corp",
-      "account_type": "premium"
+      "company": "Example Inc."
     }
   }
 ]
@@ -53,9 +50,7 @@ Create `recipients.json`:
 </Tab>
 </Tabs>
 
-CSV uses `email` for the address and `name` for the display name. Other columns become template variables. JSON uses `email`, optional `name`, and `substitution_data` for per-recipient variables. The CLI converts these into the API's `substitutions` field.
-
-Save the template files named by a command before running it. Every send needs `--from`, `--subject`, a recipient source, and content.
+The [message content guide](/cli/templates#recipient-substitutions) gives the rules for both formats and for substitutions.
 
 ## Basic Batch Send
 
@@ -63,8 +58,8 @@ Save the template files named by a command before running it. Every send needs `
 ahasend messages send --sandbox \
   --from noreply@example.com \
   --recipients recipients.csv \
-  --subject "Welcome to {{company}}" \
-  --html-template welcome.html \
+  --subject "Welcome to {{ company }}" \
+  --html-file welcome.html \
   --progress \
   --show-metrics
 ```
@@ -73,128 +68,255 @@ ahasend messages send --sandbox \
 
 ### Concurrency Control
 
+`--max-concurrency` sets how many requests are in flight at once, from 1 (the default) to 10. Each request holds up to 100 recipients, so the flag matters only for a send of more than 100 recipients.
+
 ```bash
-# Conservative (1 worker)
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com \
-  --recipients users.csv \
-  --html-template template.html \
-  --max-concurrency 1
-
-# High performance (5 workers; default is 1)
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com \
-  --recipients users.csv \
-  --html-template template.html \
+ahasend messages send --sandbox \
+  --from sender@example.com \
+  --recipients large-list.csv \
+  --subject "Announcement" \
+  --html-file template.html \
   --max-concurrency 5
-
-# Maximum throughput (10 workers)
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com \
-  --recipients users.csv \
-  --html-template template.html \
-  --max-concurrency 10
 ```
 
-The default `--max-concurrency` is 1; the allowed range is 1–10. More workers do not change your [account API limits](/api-reference/rate-limits). Throughput depends on request latency and your sending limits.
+The command limits its own requests to 100 a second, with bursts of up to 200. The [API rate limits](/api-reference/rate-limits) apply per account, so several sends or other API clients that run at the same time on one account can still get HTTP 429, which the command [retries](#automatic-retries). More concurrent requests do not raise those limits; throughput depends on request latency and your sending limits.
 
-### Progress Tracking
+### Progress Bar
+
+`--progress` draws a progress bar on stderr. It shows only when stderr is an interactive terminal and `TERM` is not `dumb`, and never with `--debug`. Notices and `--verbose` logs printed during the send appear above the bar.
 
 ```bash
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com \
+ahasend messages send --sandbox \
+  --from sender@example.com \
   --recipients large-list.csv \
-  --html-template newsletter.html \
+  --subject "Newsletter" \
+  --html-file newsletter.html \
   --max-concurrency 5 \
   --progress
+```
+
+### Metrics
+
+`--show-metrics` prints performance metrics on stderr after the send, in every output format, so JSON output on stdout stays the API's responses alone:
+
+```text
+Performance Metrics:
+   Total messages: 250
+   Successfully sent: 149
+   Failed: 101
+   Success rate: 59.60%
+   Duration: 7.4s
+   Performance: 33.8 emails/sec
+```
+
+`Failed` and `Unknown outcome` appear only when they are not zero. `Performance` is the number of recipients with a result, sent or not, divided by the duration. These metrics come from the send in [Results and Output](#results-and-output), where retries of one request after HTTP 429 add several seconds.
+
+## Results and Output
+
+When the send makes several requests, table and plain output start with a heading, `Message sent successfully`, `Message sent to N of M recipients` or `Message not sent to any recipient`, then count the recipients that succeeded and failed, and add `Unknown: N` when the outcome of some is [unknown](#unknown-outcome). One result follows per request. A request that the API accepted with some recipients refused has the outcome `partial` and lists each refused recipient as `email: reason`:
+
+```text
+Message sent to 149 of 250 recipients
+Succeeded: 149  Failed: 101
+
+┌────────────────────┬─────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│        ITEM        │ OUTCOME │                                                                               ERROR                                                                                │
+├────────────────────┼─────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ recipients 1-100   │ success │ -                                                                                                                                                                  │
+│ recipients 101-200 │ failed  │ rate_limit error (HTTP 429): Too many requests, rate limited.                                                                                                      │
+│ recipients 201-250 │ partial │ rej@example.com: failed to send message: rej@example.com: The message could not be queued because of an internal error. Please try again later or contact support. │
+└────────────────────┴─────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+This is `--output table`; the second request still got HTTP 429 after its retries. Plain output lists the same results as `Result 1:`, `Result 2:` and so on. CSV output has no heading or counts, only one row per request with the columns `item,outcome,error`. When any recipient failed, table, plain and CSV output add a line such as `101 of 250 recipients failed` to stderr.
+
+With `--output json`, the command prints a JSON array with one element per request, in order: the API's response body for a request that succeeded, its error body for one the API refused, and the CLI's [error object](/cli/configuration#json-output) for one that got no answer, such as after a network error or a timeout. A send of one request prints the API's response body alone; see [`messages send` output](/cli/commands/messages#output-and-exit-codes).
+
+```bash
+ahasend messages send --sandbox \
+  --from sender@example.com \
+  --recipients subscribers.csv \
+  --subject "Monthly news" \
+  --html-file template.html \
+  --output json > results.json
 ```
 
 ## Error Handling
 
 ### Automatic Retries
 
+`--max-retries` sets how many times a failed request is sent again, 0 or more. Each request has its own count: with the default of 3, each request goes out at most 4 times. Only these failures are retried:
+
+- HTTP 429
+- HTTP 5xx
+- A network error, except a failed TLS certificate check
+- HTTP 409, when the API is still processing an earlier request with the same idempotency key
+
+A retry waits for the `Retry-After` the API gives, or else one second more per attempt, up to 30 seconds. A wait of more than 5 seconds is announced on stderr. A request that the API asks to retry after more than 5 minutes is not retried. A retry keeps the request's idempotency key, so the API never sends a request twice.
+
 ```bash
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com \
+ahasend messages send --sandbox \
+  --from sender@example.com \
   --recipients users.csv \
-  --html-template template.html \
-  --max-retries 3
+  --subject "Account update" \
+  --html-file template.html \
+  --max-retries 5
 ```
 
-### Failed Recipients Recovery
+### Failed Recipients
 
-Failed recipients are saved as JSON at `~/.ahasend/failed-YYYYMMDD-HHMMSS.json`. Replace the filename below with the actual file from a failed run:
+When any recipient fails or is not sent, the command saves those recipients to a new file in `~/.ahasend/`, named `failed-YYYYMMDD-HHMMSS-<random>.json`. It prints the path on stderr in every output format, before the results:
+
+```text
+Failed recipients saved to /home/me/.ahasend/failed-20261013-111856-396307415.json; send them again with --recipients /home/me/.ahasend/failed-20261013-111856-396307415.json
+```
+
+The file uses the JSON recipients format. Each recipient keeps its name and substitutions, and gets three more keys: `_error` (the error), `_retryable` (whether the error was of a kind the command retries, such as HTTP 429 or a network error; it is `false` for each recipient the API refused) and, when the API answered with an HTTP error status, `_error_code`. `--recipients` reads these keys, so you can pass the file back as it is. When `_retryable` is `false`, read `_error` and fix its cause before you send again.
 
 ```bash
-# If failures occur, retry with saved file
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com \
-  --recipients ~/.ahasend/failed-YYYYMMDD-HHMMSS.json \
-  --html-template campaign.html \
-  --max-retries 5
+# Replace the path with the one the failed run printed
+ahasend messages send --sandbox \
+  --from sender@example.com \
+  --recipients ~/.ahasend/failed-YYYYMMDD-HHMMSS-RANDOM.json \
+  --subject "Account update" \
+  --html-file template.html
+```
+
+Run the command again with the same content and options. Do not reuse the first run's `--idempotency-key`: the API refuses a key with a different request.
+
+A send with no failed recipient writes no file. When the API refuses a request with attachments as too large (HTTP 413), the command sends no more requests, because they carry the same attachments; their recipients go to the file as not sent.
+
+### Unknown Outcome
+
+When the last try of a request leaves it possible that the API took it, the command cannot tell whether that request's recipients were sent. This happens when:
+
+- the API is still processing an earlier request with the same idempotency key (HTTP 409)
+- a gateway answered HTTP 502 or 504
+- the request was written in full but no answer came
+- the API accepted the request with an answer the CLI cannot read
+
+These recipients count as neither sent nor failed. The command saves them to a separate file, `~/.ahasend/unknown-YYYYMMDD-HHMMSS-<random>.json`, which adds `_idempotency_key` to each one, and names the idempotency key on stderr:
+
+```text
+The outcome of the request of 100 recipients (idempotency key order-7-0) is unknown: they may have been sent, and are saved to /home/me/.ahasend/unknown-20261013-111856-118122398.json. Check them with 'ahasend messages list', or run the same command again with --idempotency-key order-7 within 24 hours: the API answers a request it already took with its stored result instead of sending it again
+```
+
+Do not send the unknown file as a new send; its recipients may already have their message. Instead:
+
+- Check the recipients with `ahasend messages list`, such as with `--recipient` and `--from-time`.
+- Or run the same command again, with the same recipients file and the `--idempotency-key` that stderr names, within 24 hours. The API answers each request it already took with its stored result instead of sending it again.
+
+A relative `--schedule`, such as `2h`, stands for a different time on each run. After such a send, stderr also gives the time it stood for; pass that time as `--schedule` when you run the command again.
+
+The CLI never deletes either file. They hold the address, name and substitutions of each recipient, which can be personal data, so delete a file once you no longer need it.
+
+### Interrupting a Send
+
+Ctrl+C, or SIGTERM, stops the send: no new request or retry starts, and the requests in flight finish. The command prints the results of the requests it made and exits with code 130. The recipients of each request that never started go to the failed recipients file with the error `not sent: the send was interrupted`. A request that was waiting to retry keeps the error of its last try: its recipients count as failed, or as [unknown](#unknown-outcome) when that error leaves the outcome unknown. Press Ctrl+C again to stop at once.
+
+## Exit Codes
+
+Every `messages send`, of one request or several, exits with the [shared exit codes](/cli/configuration#exit-codes), and reports its result with these:
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Every recipient was sent |
+| 1 | Some recipients failed, were not sent, or have an unknown outcome |
+| 130 | The send was interrupted by Ctrl+C or SIGTERM |
+
+Invalid input, such as a bad address in the recipients file, sends nothing and exits with code 4. A send of one request that fails exits with the code of its error, such as 5 for HTTP 404 or 7 when the API could not be reached. A send of several requests exits with code 1 when any request fails, whatever its HTTP status.
+
+```bash
+ahasend messages send --sandbox \
+  --from sender@example.com \
+  --recipients users.csv \
+  --subject "Account update" \
+  --text-file update.txt
+status=$?
+if [ "$status" -eq 0 ]; then
+  echo "All recipients sent"
+elif [ "$status" -eq 1 ]; then
+  echo "Some recipients failed: check the files in ~/.ahasend"
+else
+  echo "Send failed with exit code $status"
+fi
 ```
 
 ## Template Personalization
 
-### Global and Per-Recipient Data
+Combine values for every recipient with values per recipient. A recipient's own value wins over the global value of the same key.
 
 ```json global-data.json
 {
-  "company_name": "ACME Corp",
-  "support_email": "support@acme.com"
+  "company_name": "Example Inc.",
+  "support_email": "support@example.com"
 }
 ```
 
 ```bash
 ahasend messages send --sandbox \
-  --from noreply@acme.com \
+  --from noreply@example.com \
   --recipients users.csv \
-  --subject "{{first_name}}, Welcome to {{company_name}}" \
-  --html-template welcome.html \
+  --subject "{{ first_name }}, welcome to {{ company_name }}" \
+  --html-file welcome.html \
   --global-substitutions global-data.json
 ```
+
+`--template-id` sends a stored transactional template to a recipients file in the same way; see the [`ahasend templates` commands](/cli/commands/templates).
 
 ## Best Practices
 
 ### 1. Test with Small Batches First
 
 ```bash
-# Test with first 10 recipients
+# The header row and the first 10 recipients
 head -11 recipients.csv > test-batch.csv
 
-ahasend messages send --subject "Docs test" \
+ahasend messages send --sandbox \
   --from sender@example.com \
   --recipients test-batch.csv \
-  --html-template template.html \
-  --sandbox
+  --subject "Test batch" \
+  --html-file template.html
 ```
 
-### 2. Use Idempotency Keys
+### 2. Use Your Own Idempotency Key in Scripts
+
+With your own key, a script that runs the same send twice does not send it twice: for 24 hours, the API answers a repeated request with its stored result. This holds only when the request is identical. When the content, the recipients file or another option changes, or a relative `--schedule` such as `2h` stands for a different time, the API refuses the key with HTTP 422, and a send of one request exits with code 4.
 
 ```bash
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com \
+ahasend messages send --sandbox \
+  --from sender@example.com \
   --recipients users.csv \
-  --html-template template.html \
-  --idempotency-key "campaign-$(date +%Y%m%d)"
+  --subject "Account update" \
+  --html-file template.html \
+  --idempotency-key "account-update-$(date +%Y%m%d)"
 ```
 
 ### 3. Monitor Performance
 
 ```bash
-# Send with detailed logging
-ahasend messages send --sandbox --subject "Docs test" --from sender@yourdomain.com \
+# Log each API call, and print metrics after the send
+ahasend messages send --sandbox \
+  --from sender@example.com \
   --recipients users.csv \
-  --html-template template.html \
+  --subject "Account update" \
+  --html-file template.html \
   --verbose \
   --show-metrics \
-  --output json
+  --output json > results.json
 ```
 
 ## Troubleshooting
 
-**Slow Performance**: Increase `--max-concurrency` up to 10 workers
+**Slow sends**: Raise `--max-concurrency`, up to 10. It helps only for sends of more than 100 recipients.
 
-**High Failure Rate**: Verify domains and check suppressions list
+**High failure rate**: Read the errors in the results and the `_error` of each recipient in the failed recipients file, and verify your sender domains. A suppressed address does not fail; [`messages send` output](/cli/commands/messages#output-and-exit-codes) says where it shows.
 
-**Memory Issues**: Process large files in smaller chunks
+**Unknown outcomes**: Check the recipients with `ahasend messages list` before you send them again, as [Unknown Outcome](#unknown-outcome) describes.
 
 ## Next Steps
 
-- [Learn about templates](/cli/templates)
+- [Read the message content guide](/cli/templates)
 - [Set up webhook monitoring](/cli/webhook-testing)
 
 ## Related Guides

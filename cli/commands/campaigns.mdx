@@ -1,0 +1,331 @@
+---
+title: "ahasend campaigns: Manage Campaigns"
+sidebarTitle: "campaigns"
+description: "Draft, test, schedule, and send AhaSend campaigns to contact lists with the CLI, read their stats and recipients, and manage reusable campaign templates."
+icon: "bullhorn"
+---
+
+AhaSend CLI campaign commands draft, test, send and report on marketing campaigns, which send to [contact lists](/cli/commands/lists).
+
+<Note>
+These commands need CLI v0.3.0 or later. Check your version with `ahasend --version`, and [upgrade](/cli/installation) if it is older.
+</Note>
+
+## Prerequisites
+
+[Authenticate with a full API key](/cli/authentication). Campaign tasks need these [scopes](/api-reference/scopes):
+
+| Scope | Commands |
+|---|---|
+| `campaigns:read` | `campaigns list`, `campaigns get`, `campaigns stats`, `campaigns recipients` |
+| `campaigns:write` | `campaigns create`, `campaigns update`, `campaigns duplicate` |
+| `campaigns:delete` | `campaigns delete` |
+| `campaigns:send` | `campaigns send`, `campaigns unschedule`, `campaigns test` |
+| `templates:read`, `templates:write`, `templates:delete` | `campaigns templates` commands, as for [transactional templates](/cli/commands/templates#prerequisites) |
+
+The examples also create a test list, which needs `lists:write` and `lists:delete`. The shell examples need Bash and jq.
+
+A campaign is a draft until it is sent, and only a draft can be changed or deleted. A draft shows whether it is ready to send and, when it is not, each issue in the way.
+
+## Draft and Test a Campaign
+
+Save this file as `campaign.html`. A campaign's HTML must use `{{ unsubscribe_url }}` or `{{ unsubscribe_link }}`; see [unsubscribe link](/api-reference/campaigns/overview#unsubscribe-link):
+
+```html campaign.html
+<p>Hello from the docs test campaign.</p>
+<p><a href="{{ unsubscribe_url }}">Unsubscribe</a></p>
+```
+
+Then save these commands in one Bash script. Use a sender address on your verified domain in place of `news@example.com`, and your own inbox in place of `me@example.com`. The script creates an empty test list, so the campaign has no audience, and sends only a test.
+
+```bash
+set -euo pipefail
+LIST_ID=$(ahasend lists create --name "Docs test campaign list" --output json | jq -er '.id')
+CAMPAIGN_ID=$(ahasend campaigns create --name "Docs test campaign" --subject "Docs test" \
+  --preheader "A test campaign" --from news@example.com --from-name "Example" \
+  --list-id "$LIST_ID" --html-file campaign.html --output json | jq -er '.id')
+ahasend campaigns get "$CAMPAIGN_ID"
+ahasend campaigns test "$CAMPAIGN_ID" --to me@example.com
+```
+
+`campaigns get` shows whether a draft is ready and lists each issue as `code: message`, such as a missing sender, list, subject, preview text or design. Fix them with `campaigns update`, which sends only the flags you give. `--list-id` replaces the campaign's lists, `--from` replaces the sender address and name together, and `--subject ""` and `--preheader ""` clear those fields.
+
+`campaigns test` sends to up to 5 addresses, with placeholders for the contact's fields. A campaign with issues is refused, and each issue is listed. Every issue blocks a test except `unsubscribe_link_missing`. The output shows the addresses the mail server accepted and refused, and the command exits with code 1 when any address was refused. When the server's answer could not be read, the test may have gone out, so check the inboxes before you send another.
+
+The API allows 50 test emails a UTC day for each account, one for each address of each test. A test that would pass that limit is refused with `daily test send limit reached` and exit code 8.
+
+## Send or Schedule a Campaign
+
+<Warning>
+`campaigns send` sends the campaign to the members of its lists that a campaign reaches, the contact count that `ahasend lists get` shows. Test the campaign first, and check its lists.
+</Warning>
+
+`campaigns send` sends a draft now, or at the time given with `--schedule`: an RFC 3339 time or a relative one such as `2h`. The API takes a time more than a minute ahead. The campaign then goes through list validation and review before it sends; follow its status with `campaigns get`.
+
+```bash
+ahasend campaigns send YOUR_CAMPAIGN_ID --schedule 2h
+ahasend campaigns get YOUR_CAMPAIGN_ID
+```
+
+`campaigns send` asks for confirmation first, as [prompts](/cli/configuration#prompts) describes. The prompt names the campaign and the send time in your local time zone, and a declined prompt sends nothing.
+
+A campaign with issues is refused with exit code 4, and each issue is listed. With `--output json`, the issues are in the `issues` array of the API's error body.
+
+To stop a validating or scheduled campaign, return it to draft with `campaigns unschedule`. It does not ask for confirmation. A campaign that has queued mail cannot be unscheduled. To change the send time of a scheduled campaign, unschedule it and send it again.
+
+```bash
+ahasend campaigns unschedule YOUR_CAMPAIGN_ID
+```
+
+## Read Results
+
+`campaigns stats` shows a campaign's live counters, its rates and its stored report. The report is recounted from time to time, so check again later for new numbers.
+
+```bash
+ahasend campaigns stats YOUR_CAMPAIGN_ID
+ahasend campaigns recipients YOUR_CAMPAIGN_ID --status Delivered
+ahasend campaigns recipients YOUR_CAMPAIGN_ID --status "Administratively Bounced" --limit 50
+```
+
+`campaigns recipients` needs exactly one of `--status` and `--bounce-classification`. `--status` takes a status that `campaigns stats` counts, in any case, and `--bounce-classification` takes a bounce classification that `campaigns stats` counts, other than `Unknown`. `campaigns list --status draft` lists the campaigns in one status.
+
+## Campaign Templates
+
+Campaign templates are designs that a campaign can copy with `campaigns create --campaign-template-id`. A campaign template has no draft, subject or sender: changes apply at once, and campaigns already made from it keep their own copies. A campaign can be made from a template only once the template has HTML.
+
+Continue the script. These commands make a campaign template from `campaign.html`, start a draft campaign from it, and delete both.
+
+```bash
+CAMPAIGN_TEMPLATE_ID=$(ahasend campaigns templates create --name "Docs test design" --html-file campaign.html --output json | jq -er '.id')
+ahasend campaigns templates get "$CAMPAIGN_TEMPLATE_ID"
+COPY_ID=$(ahasend campaigns create --name "Docs test from design" --campaign-template-id "$CAMPAIGN_TEMPLATE_ID" --output json | jq -er '.id')
+ahasend campaigns delete "$COPY_ID" --force
+ahasend campaigns templates delete "$CAMPAIGN_TEMPLATE_ID" --force
+```
+
+`--campaign-template-id` cannot be combined with `--editor`, `--mjml-file`, `--html-file` or `--text-file`.
+
+## Delete the Test Campaign
+
+Finish the script by deleting the draft campaign, then the test list. The API refuses to delete a list while a campaign that still needs it refers to it.
+
+```bash
+ahasend campaigns delete "$CAMPAIGN_ID" --force
+ahasend lists delete "$LIST_ID" --force
+```
+
+The script stops at the first command that fails, and then deletes nothing. If it stops early, find what it made with `ahasend campaigns list --status draft`, `ahasend campaigns templates list` and `ahasend lists list --name "Docs test"`, and delete each with `campaigns delete`, `campaigns templates delete` or `lists delete`. Delete the campaigns before the list.
+
+`campaigns delete` and `campaigns templates delete` ask for confirmation first; see [prompts](/cli/configuration#prompts). To copy a campaign in any status into a new draft, use `campaigns duplicate`. Without `--name`, the copy is named "Copy of" and the campaign's name.
+
+## Command Flags
+
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `campaigns create`
+
+```text
+ahasend campaigns create --name <name> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--campaign-template-id string` | ID of a campaign template whose design the campaign copies |
+| `--editor string` | Editor of the design: `advanced`, `simple` or `html` |
+| `--from string` | Sender email address |
+| `--from-name string` | Sender display name (needs `--from`) |
+| `--html-file string` | Path to the HTML |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--list-id strings` | ID of a list to send to (can be used multiple times) |
+| `--mjml-file string` | Path to the MJML source |
+| `--name string` | Campaign name, shown in the dashboard only (required) |
+| `--preheader string` | Preview text |
+| `--reply-to string` | Reply-to email address |
+| `--subject string` | Subject |
+| `--text-file string` | Path to the plain text version |
+
+### `campaigns delete`
+
+```text
+ahasend campaigns delete <campaign-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+
+### `campaigns duplicate`
+
+```text
+ahasend campaigns duplicate <campaign-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--name string` | Name of the copy |
+
+### `campaigns get`
+
+```text
+ahasend campaigns get <campaign-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `campaigns list`
+
+```text
+ahasend campaigns list [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+| `--status string` | Filter by campaign status: `draft`, `validating`, `waiting_for_review`, `scheduled`, `sending`, `paused`, `sent`, `canceled` or `failed` |
+
+### `campaigns recipients`
+
+```text
+ahasend campaigns recipients <campaign-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--bounce-classification string` | Bounce classification to list |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+| `--status string` | Recipient status to list: `Processing`, `Queued`, `Deferred`, `Delivered`, `Bounced`, `Failed`, `Administratively Bounced`, `Suppressed`, `Rejected`, `Complained` or `Unsubscribed` |
+
+### `campaigns send`
+
+```text
+ahasend campaigns send <campaign-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--schedule string` | Schedule the send for an RFC3339 or relative time like '2h' (the API takes one more than a minute ahead); sends now when omitted |
+
+### `campaigns stats`
+
+```text
+ahasend campaigns stats <campaign-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `campaigns templates create`
+
+```text
+ahasend campaigns templates create --name <name> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--editor string` | Editor of the design: `advanced`, `simple` or `html` |
+| `--html-file string` | Path to the HTML |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--mjml-file string` | Path to the MJML source |
+| `--name string` | Campaign template name (required) |
+| `--text-file string` | Path to the plain text version |
+
+### `campaigns templates delete`
+
+```text
+ahasend campaigns templates delete <campaign-template-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+
+### `campaigns templates get`
+
+```text
+ahasend campaigns templates get <campaign-template-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `campaigns templates list`
+
+```text
+ahasend campaigns templates list [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+
+### `campaigns templates update`
+
+```text
+ahasend campaigns templates update <campaign-template-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--html-file string` | Path to the HTML |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--mjml-file string` | Path to the MJML source |
+| `--name string` | New campaign template name |
+| `--regenerate-text` | Make the text version again from the HTML |
+| `--text-file string` | Path to the plain text version |
+
+### `campaigns test`
+
+```text
+ahasend campaigns test <campaign-id> --to <address> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--to strings` | Address to send the test to (required; can be used multiple times) |
+
+### `campaigns unschedule`
+
+```text
+ahasend campaigns unschedule <campaign-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+
+### `campaigns update`
+
+```text
+ahasend campaigns update <campaign-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--clear-from` | Remove the sender |
+| `--clear-reply-to` | Remove the reply-to |
+| `--from string` | Sender email address |
+| `--from-name string` | Sender display name (needs `--from`) |
+| `--html-file string` | Path to the HTML |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--list-id strings` | New list to send to, replacing the lists (can be used multiple times) |
+| `--mjml-file string` | Path to the MJML source |
+| `--name string` | New campaign name |
+| `--preheader string` | New preview text (empty clears it) |
+| `--regenerate-text` | Make the text version again from the HTML |
+| `--reply-to string` | New reply-to email address |
+| `--subject string` | New subject (empty clears it) |
+| `--text-file string` | Path to the plain text version |
+
+## Related Guides
+
+- [Campaigns API](/api-reference/campaigns/overview), [Send campaign](/api-reference/campaigns/send-campaign), [Test campaign](/api-reference/campaigns/test-campaign).
+- [Campaign templates API](/api-reference/campaign-templates/create-campaign-template), [Lists commands](/cli/commands/lists), [Transactional templates commands](/cli/commands/templates).
+- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

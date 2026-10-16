@@ -1,6 +1,6 @@
 ---
 title: "ahasend domains: Add and Verify Domains"
-description: "Add, verify, inspect, and delete AhaSend sending domains from the command line, and export the SPF, DKIM, and DMARC records as BIND, Cloudflare, or Terraform."
+description: "Add, verify, update, and delete AhaSend sending domains from the command line, and export their DNS records as BIND, Cloudflare, or Terraform."
 icon: globe
 sidebarTitle: "domains"
 ---
@@ -8,7 +8,7 @@ sidebarTitle: "domains"
 
 AhaSend CLI `domains` commands let you add and verify sending domains; this page covers their arguments and flags.
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in](/cli/authentication) with an API key that has the `domains:read` and `domains:write` [scopes](/api-reference/scopes#domain-management), plus `domains:delete:all` for the delete example, and replace `example.com` with a domain you own and can add DNS records for.
 
 ## Overview
 
@@ -17,17 +17,19 @@ ahasend domains [subcommand] [flags]
 ```
 
 Available subcommands:
-- `list` - List all domains
-- `create` - Add a new domain
-- `get` - Get domain details
-- `verify` - Verify domain DNS configuration
-- `check-dns` - Check published DNS records
-- `edit` - Update domain settings
-- `delete` - Remove a domain
+- `list` - List domains
+- `create` - Create a domain for email sending
+- `get` - Get a domain
+- `verify` - Show a domain's DNS status
+- `check-dns` - Trigger a DNS validation check for a domain
+- `update` - Update a domain's settings
+- `delete` - Delete a domain
+
+A typical setup is: create the domain, add the DNS records the command prints, then run `domains check-dns` until the DNS is valid.
 
 ## List Domains
 
-List all domains in your AhaSend account with their verification status, DNS record status, and other details. The list can be filtered and paginated for large numbers of domains.
+List the domains in your account with their DNS status and sending type.
 
 ```bash
 # List all domains
@@ -36,13 +38,19 @@ ahasend domains list
 # List domains with JSON output
 ahasend domains list --output json
 
-# List domains with pagination
+# List up to 10 domains
 ahasend domains list --limit 10
 
 # Filter by DNS status
 ahasend domains list --status verified
+
+# List only marketing domains
+ahasend domains list --sending-type marketing
 ```
 
+The API filters by whether the DNS is valid, so `--status pending` and `--status failed` both list the domains whose DNS is not valid.
+
+Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
 
 ## Create Domain
 
@@ -50,15 +58,70 @@ ahasend domains list --status verified
 ahasend domains create example.com
 ```
 
-The command prints the exact SPF, DKIM, and DMARC records for your domain. Copy those values; see [domain setup](/domains).
+Without the domain argument, the command asks for it when stdin is a terminal. With `--non-interactive`, or when stdin is not a terminal, a missing domain fails with exit code 4.
+
+The command prints the domain on stdout. The records the domain needs go to stderr, as setup instructions. Each record is marked required or optional. Add every required record. Add an optional record only for the feature its note names: for example, the MX record sends inbound email to AhaSend for [inbound routes](/cli/commands/routes), which changes where email to that name is delivered. For each record, see [domain setup](/domains).
+
+```bash
+# Marketing domain with a custom DKIM selector (Platform Partner accounts only)
+ahasend domains create news.example.com --sending-type marketing --dkim-selector news
+
+# Custom tracking and return-path subdomains
+ahasend domains create example.com --tracking-subdomain click --return-path-subdomain bounce
+
+# Skip the DNS instructions
+ahasend domains create example.com --no-dns-help
+```
+
+`--sending-type marketing`, on `create` and `update`, needs marketing features on your account. Without them, the API answers 400 `sending_type must be transactional`, and the command fails with [exit code](/cli/configuration#exit-codes) 4.
+
+### Export DNS Records
+
+`--format` replaces the setup instructions with the records in a provider format: `bind`, `cloudflare` or `terraform` (version 5 of the Cloudflare Terraform provider). The records also go to stderr. Table output puts a header line above them; plain and CSV output write no header, so you can save the records with `2>`:
+
+```bash
+# Save the records for a zone file
+ahasend domains create example.com --format bind --output plain 2> example.com.zone
+
+# Save the records as Terraform resources
+ahasend domains create example.com --format terraform --output plain 2> ahasend-dns.tf
+```
+
+The output holds every record of the domain, optional ones included. A comment line (`;` in BIND, `#` in the other formats) comes before each optional record, and before the SPF and DMARC records, to say what the record is for or how to add it. The optional records include an MX record for [inbound routes](/cli/commands/routes). The Terraform resources set `zone_id = var.zone_id`, so declare a `zone_id` variable in your configuration.
+
+<Warning>
+Review the file before you import or apply it. Remove the optional records you do not want: the MX record, usually on the domain itself, sends the inbound email of that name to AhaSend instead of your mail server. If the domain has an SPF record or a DMARC record, do not add a second one, which breaks the existing one: merge the AhaSend SPF terms into your record and keep your DMARC record, as [Existing SPF Records](#existing-spf-records) shows.
+</Warning>
+
+`--format` cannot be used with `--no-dns-help` or `--output json`, which print no records. Both combinations fail with exit code 4 before any request.
+
+With `--output json`, the command prints the API's response body unchanged and writes no DNS instructions.
 
 ## Verify Domain
 
-After configuring DNS records:
+`domains verify` shows a domain's DNS status as of its last DNS check. It does not check the DNS again.
 
 ```bash
 ahasend domains verify example.com
+
+# Also print the DNS setup instructions of a valid domain
+ahasend domains verify example.com --show-records
 ```
+
+The output lists the domain and its DNS records. When the DNS is not valid, troubleshooting tips and the setup instructions for each record follow on stderr. `--show-records` prints the setup instructions for a valid domain too. `--output json` leaves them out. The command exits with code 0 whether or not the DNS is valid.
+
+## Check DNS
+
+After you change the DNS records, run `domains check-dns`. It runs a new DNS check. When the domain was checked within the last 60 seconds, the API returns the cached result instead.
+
+```bash
+ahasend domains check-dns example.com
+
+# Also print the DNS setup instructions of a valid domain
+ahasend domains check-dns example.com --show-records
+```
+
+The output, the setup instructions on stderr and the exit code are the same as for `domains verify`.
 
 <Note>
 Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
@@ -66,36 +129,55 @@ Most records verify within minutes. DNS changes can take up to 48 hours to propa
 
 ## Get Domain Details
 
+Show a domain's DNS status and records, sending type, custom subdomains, DKIM selector and DKIM rotation interval. For a paused domain, the output also shows when and why it was paused.
+
 ```bash
 ahasend domains get example.com
+
+# JSON output
+ahasend domains get example.com --output json
 ```
 
-## Check and Edit DNS Settings
+## Update Domain
+
+Change a domain's settings. Only the flags you give are sent; other settings stay as they are. These examples change how a live domain sends, so try them on a test domain, and note the current values with `domains get` first so you can set them back.
 
 ```bash
-ahasend domains check-dns yourdomain.com --verbose
-ahasend domains edit yourdomain.com --tracking-subdomain track
+# Change the tracking subdomain
+ahasend domains update example.com --tracking-subdomain click
+
+# Change several subdomains
+ahasend domains update example.com --tracking-subdomain click --return-path-subdomain mail
+
+# Set the DKIM rotation interval (managed DNS domains on eligible plans only)
+ahasend domains update example.com --dkim-rotation-interval 45
+
+# Switch the domain to marketing sending
+ahasend domains update example.com --sending-type marketing
+
+# Clear the custom DKIM selector of an unverified domain so the default applies
+ahasend domains update example.com --dkim-selector ""
 ```
 
-Tracking and other service subdomains lock after DNS verification. To export records while adding a new test subdomain:
-
-```bash
-ahasend domains create docs-test.yourdomain.com --format terraform
-```
-
-`--format` also accepts `bind` and `cloudflare`; `--no-dns-help` omits DNS help.
+- Each subdomain must be one DNS label: 1-63 letters, digits and hyphens, without a leading or trailing hyphen. Subdomains lock after DNS verification; to change a locked subdomain, contact support.
+- `--dkim-selector` works on Platform Partner accounts only. An empty value clears it. The selector also locks after DNS verification, so the empty-value example works only on a domain that is not verified; to change a locked selector, contact support. The selector cannot change while a DKIM key rotation is in progress.
+- `--dkim-rotation-interval` takes 30 to 180 days.
+- `--sending-type marketing` needs marketing features on your account, as [Create Domain](#create-domain) describes. A sending type change applies to new messages within five minutes.
 
 ## Delete Domain
 
 ```bash
-# Delete with confirmation
-ahasend domains create docs-delete-test.yourdomain.com
-ahasend domains delete docs-delete-test.yourdomain.com
+# Create a test domain, then delete it with a confirmation prompt
+ahasend domains create docs-delete-test.example.com
+ahasend domains delete docs-delete-test.example.com
 
-# Skip confirmation
-ahasend domains create docs-delete-test.yourdomain.com
-ahasend domains delete docs-delete-test.yourdomain.com --force
+# Skip the confirmation prompt
+ahasend domains delete docs-delete-test.example.com --force
 ```
+
+The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it.
+
+The DNS records you added stay with your DNS provider. Remove them there when you no longer need them.
 
 <Warning>
 Deleting a domain is irreversible. You'll need to re-add and re-verify the domain if you want to use it again.
@@ -105,7 +187,7 @@ Deleting a domain is irreversible. You'll need to re-add and re-verify the domai
 
 ### Existing SPF Records
 
-If you already have SPF records, merge them:
+A domain can have only one SPF record. If you already have one, add the AhaSend `include:` term to it instead of adding a second record:
 
 ```text
 # Before
@@ -115,6 +197,8 @@ v=spf1 include:_spf.google.com ~all
 v=spf1 include:_spf.google.com include:spf.ahasend.com ~all
 ```
 
+A name can also have only one DMARC record. If `_dmarc.example.com` already has one, keep it instead of adding the AhaSend one.
+
 ### Subdomains
 
 You can add subdomains for sending:
@@ -123,44 +207,38 @@ You can add subdomains for sending:
 ahasend domains create mail.example.com
 ```
 
-## Next Steps
-
-- [Send emails from verified domains](/cli/commands/messages)
-- [Configure webhooks](/cli/commands/webhooks)
-- [View statistics](/cli/commands/stats)
-
 ## Command Flags
 
-These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `domains check-dns`
 
 | Flag | Description and default |
 |---|---|
-| `--verbose` | Show detailed DNS information |
+| `--show-records` | Print the DNS setup instructions even when the DNS is valid |
 
 ### `domains create`
 
 | Flag | Description and default |
 |---|---|
-| `--format string` | DNS record format (bind, cloudflare, terraform) |
+| `--dkim-private-key-file string` | File with the domain's DKIM private key, an RSA key in PEM form of at least 1024 bits (Platform Partner accounts only) |
+| `--dkim-rotation-interval int` | DKIM rotation interval in days (managed DNS domains on eligible plans only) |
+| `--dkim-selector string` | Custom DKIM selector (Platform Partner accounts only) |
+| `--format string` | DNS record format: `bind`, `cloudflare` or `terraform` (terraform for Cloudflare provider v5); not with `--no-dns-help` or `--output json` |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--media-subdomain string` | Custom media subdomain |
 | `--no-dns-help` | Skip DNS configuration instructions |
+| `--non-interactive` | Never prompt; fail when a required flag is missing |
+| `--return-path-subdomain string` | Custom return-path subdomain |
+| `--sending-type string` | Sending type: `transactional` or `marketing` (default `transactional`) |
+| `--subscription-subdomain string` | Custom subscription management subdomain |
+| `--tracking-subdomain string` | Custom tracking subdomain |
 
 ### `domains delete`
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt (use with caution) |
-
-### `domains edit`
-
-| Flag | Description and default |
-|---|---|
-| `--dkim-rotation-interval int` | DKIM rotation interval in days (managed DNS only, 30-180) |
-| `--media-subdomain string` | Custom media subdomain |
-| `--return-path-subdomain string` | Custom return-path subdomain |
-| `--subscription-subdomain string` | Custom subscription management subdomain |
-| `--tracking-subdomain string` | Custom tracking subdomain |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `domains get`
 
@@ -170,15 +248,35 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for next page |
-| `--limit int32` | Maximum number of domains to return |
-| `--status string` | Filter by DNS status (verified, pending, failed) |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+| `--sending-type string` | Filter by sending type: `transactional` or `marketing` |
+| `--status string` | Filter by DNS status: `verified`, `pending` or `failed` |
+
+### `domains update`
+
+| Flag | Description and default |
+|---|---|
+| `--dkim-rotation-interval int` | DKIM rotation interval in days (managed DNS domains on eligible plans only) |
+| `--dkim-selector string` | Custom DKIM selector; an empty value clears it (Platform Partner accounts only) |
+| `--media-subdomain string` | Custom media subdomain |
+| `--return-path-subdomain string` | Custom return-path subdomain |
+| `--sending-type string` | Sending type: `transactional` or `marketing` |
+| `--subscription-subdomain string` | Custom subscription management subdomain |
+| `--tracking-subdomain string` | Custom tracking subdomain |
 
 ### `domains verify`
 
 | Flag | Description and default |
 |---|---|
-| `--verbose` | Show detailed DNS information |
+| `--show-records` | Print the DNS setup instructions even when the DNS is valid |
+
+## Next Steps
+
+- [Send emails from verified domains](/cli/commands/messages)
+- [Configure webhooks](/cli/commands/webhooks)
+- [View statistics](/cli/commands/stats)
 
 ## Related Guides
 

@@ -1,12 +1,12 @@
 ---
 title: "AhaSend CLI: Send Email from Your Terminal"
-description: "The AhaSend CLI (ahasend) is an open-source tool for macOS, Linux and Windows to send transactional email and manage domains, webhooks and routes."
+description: "The AhaSend CLI (ahasend) is an open-source tool for macOS, Linux and Windows to send email and manage domains, templates, campaigns, contacts and webhooks."
 icon: book
 sidebarTitle: "Overview"
 ---
 
 
-The AhaSend CLI lets you send email, manage domains and credentials, and test webhooks and routes from your terminal.
+The AhaSend CLI lets you send email, manage domains, templates, campaigns, contacts and credentials, and test webhooks and routes from your terminal.
 
 <Note>
 The AhaSend CLI is available on [GitHub](https://github.com/AhaSend/ahasend-cli) and supports Linux, macOS, and Windows.
@@ -16,45 +16,49 @@ The AhaSend CLI is available on [GitHub](https://github.com/AhaSend/ahasend-cli)
 
 <CardGroup>
 <Card title="Email Sending" icon="envelope">
-  Send single or batch emails with templates, attachments, and scheduling
+  Send single or batch emails with substitutions, stored templates, attachments, and scheduling
 </Card>
 <Card title="Domain Management" icon="globe">
-  Add, verify, and manage sending domains with DNS configuration
+  Add, check, and manage sending domains and their DNS records
 </Card>
-<Card title="Webhook Management" icon="webhook">
-  Configure, test, and monitor real-time event notifications
+<Card title="Templates and Campaigns" icon="bullhorn">
+  Store transactional templates, and draft, test, and send campaigns to contact lists
+</Card>
+<Card title="Contacts and Lists" icon="address-book">
+  Manage contacts, import them in batches, and organize them in lists
+</Card>
+<Card title="Webhooks and Routes" icon="webhook">
+  Configure event notifications and inbound routes, and test them locally
 </Card>
 <Card title="Analytics" icon="chart-line">
-  Comprehensive email statistics and reporting
+  Deliverability, bounce, and delivery time statistics
 </Card>
 </CardGroup>
 
 ## Why Use the CLI?
 
-The AhaSend CLI provides several advantages:
-
-- **Automation-Ready**: Perfect for CI/CD pipelines and scripted workflows
-- **Batch Processing**: High-performance concurrent operations with progress tracking
-- **Multiple Output Formats**: JSON, table, CSV, and plain text for different use cases
-- **Profile Management**: Easily switch between production, staging, and development environments
-- **Interactive Testing**: Built-in webhook listeners and route testing for development
-- **Debug Support**: Comprehensive logging for troubleshooting
+- **Scripting**: Exit codes tell the kind of failure, and `--output json` prints the API response unchanged
+- **Batch Sending**: Concurrent sends with a progress bar, and a file of failed recipients to send again
+- **Output Formats**: Plain text, table, JSON, and CSV
+- **Profiles**: Switch between accounts, such as production and staging
+- **Local Testing**: Webhook and route listeners that forward events to a server on your machine
+- **Logging**: `--verbose` and `--debug` logs on stderr, with credentials redacted
 
 ## Quick Example
 
-First [add a sending domain and configure its DNS records](/cli/quickstart#step-2-add-a-sending-domain). Replace `example.com` below with that verified domain, then send a sandbox email:
+Log in, check a sending domain you [added and configured](/cli/quickstart#step-2-add-a-sending-domain), and send a sandbox email. Replace `example.com` below with that domain:
 
 ```bash
 # Authenticate with your API key
 ahasend auth login
 
-# Check your domain's verification status
-ahasend domains verify example.com
+# Check your domain's DNS records
+ahasend domains check-dns example.com
 
-# Send an email
+# Send an email in sandbox mode
 ahasend messages send --sandbox \
   --from noreply@example.com \
-  --to user@recipient.com \
+  --to user@example.com \
   --subject "Hello from AhaSend" \
   --text "Welcome to AhaSend!"
 ```
@@ -62,52 +66,77 @@ ahasend messages send --sandbox \
 ## Core Capabilities
 
 ### Email Operations
-- Send single or batch emails with templates
-- Support for HTML, plain text, and AMP content
-- Attachment handling up to 10MB per file
-- Scheduled delivery with timezone support
-- Sandbox mode for testing without sending
+- Send to recipients given with `--to`, or to a JSON or CSV recipients file with per-recipient substitutions
+- HTML, plain text, and AMP content, inline or from files
+- Stored transactional templates with `--template-id`
+- Attachments up to 10 MiB per file
+- Scheduled delivery up to 7 days ahead
+- Sandbox mode for testing without delivering email
+- Message search, details, and cancellation of scheduled messages
 
 ### Domain Management
-- Add and configure sending domains
-- Automatic DNS record generation
-- Domain verification status tracking
-- SPF, DKIM, and DMARC configuration
+- Add sending domains and print the DNS records they need, also in BIND, Cloudflare, and Terraform formats
+- Check DNS records and track verification status
+- Set the sending type, DKIM, and custom subdomains
+
+### Templates and Campaigns
+- Store transactional templates, edit drafts, publish them, and restore earlier versions
+- Draft, test, send, or schedule campaigns to contact lists
+- Campaign statistics, recipients, and campaign templates
+
+### Contacts and Lists
+- Create, update, and delete contacts, or import them in batches
+- Create contact lists, and add, set, or remove their members
 
 ### Webhook & Route Management
-- Real-time webhook event listeners
-- Development webhook testing and triggering
+- Stream webhook and route events to your terminal, and forward them to a local server
+- Trigger test webhook and route events
 - Inbound email route configuration
-- WebSocket-based event streaming
 
 ### Analytics & Reporting
 - Deliverability statistics
-- Bounce rate analysis
+- Bounce statistics
 - Delivery time metrics
-- Export to CSV for further analysis
+- CSV output for spreadsheets
 
 ## Supported Platforms
 
 The CLI is distributed as a single binary with no external dependencies:
 
-- **Linux**: x86_64 prebuilt; ARM64 via `go install` or a source build
 - **macOS**: Intel and Apple Silicon
-- **Windows**: x86_64
+- **Linux**: x86_64 and ARM64
+- **Windows**: x64 and ARM64
+
+Install it with Homebrew, Scoop, npm, an install script, a .deb or .rpm package, or a binary download. See [Installation](/cli/installation).
 
 ## Integration with AhaSend Services
 
-The CLI seamlessly integrates with all AhaSend services:
+The CLI covers these AhaSend services:
 
-- **API**: Full compatibility with AhaSend API v2
-- **SMTP**: Credential management and testing
-- **Webhooks**: Real-time event processing
-- **Routes**: Inbound email handling
-- **Suppressions**: List management
+- **API**: Commands call AhaSend API v2
+- **SMTP**: Create SMTP credentials and send test messages over SMTP
+- **Webhooks**: Configure webhooks and test event processing
+- **Routes**: Configure inbound email handling
+- **Suppressions**: List, add, check, and delete suppressed addresses
+- **API Keys and Sub-accounts**: Manage API keys and their scopes, and sub-accounts with their own API keys
 
-## More Command Groups
+## Command Groups
 
-- [Contacts](/cli/commands/contacts): create, update, list, get, delete, and batch-import account contacts (development build; see the page for availability).
+- [Messages](/cli/commands/messages): send, list, get, and cancel messages.
+- [Domains](/cli/commands/domains): create, check, verify, update, and delete sending domains.
+- [Templates](/cli/commands/templates): store transactional templates, with drafts and versions.
+- [Campaigns](/cli/commands/campaigns): draft, test, send, and report on campaigns, and manage campaign templates.
+- [Contacts](/cli/commands/contacts): create, update, list, get, delete, and batch-import account contacts.
+- [Lists](/cli/commands/lists): manage contact lists and their members.
+- [Webhooks](/cli/commands/webhooks): configure, listen to, and trigger webhooks.
+- [Routes](/cli/commands/routes): configure, listen to, and trigger inbound routes.
+- [Suppressions](/cli/commands/suppressions): list, create, check, delete, and wipe suppressions.
+- [SMTP](/cli/commands/smtp): manage SMTP credentials and send test messages.
+- [API Keys](/cli/commands/apikeys): manage API keys, their scopes, and IP allow lists.
+- [Statistics](/cli/commands/stats): deliverability, bounce, and delivery time statistics.
 - [Sub-accounts](/cli/commands/subaccounts): manage child accounts, usage, pauses, and their API keys.
+- [Authentication](/cli/commands/auth): log in, switch, check, and log out profiles.
+- [Ping](/cli/commands/ping): test the connection to the API.
 
 ## Next Steps
 
@@ -129,7 +158,6 @@ The CLI seamlessly integrates with all AhaSend services:
 ## Support
 
 - **GitHub Issues**: [Report bugs or request features](https://github.com/AhaSend/ahasend-cli/issues)
-- **Documentation**: You're reading it!
 - **Email Support**: support@ahasend.com
 
 ## Related Guides

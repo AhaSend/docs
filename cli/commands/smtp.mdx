@@ -5,9 +5,9 @@ icon: server
 sidebarTitle: "smtp"
 ---
 
-Manage SMTP credentials for sending emails through AhaSend's SMTP service.
+AhaSend CLI `smtp` commands let you manage SMTP credentials and send test emails through AhaSend's SMTP server; this page lists their arguments and flags. For host, ports and TLS, see [SMTP settings](/smtp). For dashboard setup, see [SMTP credential setup](/smtp/credentials).
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in](/cli/authentication) with an API key that has the read, write and delete [SMTP credential scopes](/api-reference/scopes#smtp-credentials) for all domains, and replace `YOUR_RESOURCE_ID` with the ID of one of your SMTP credentials. In the scoped credential example, replace `notifications.example.com` with a domain in your account; for any other domain, the API answers 400 `invalid domain: <domain>`. In the `smtp send` examples, replace `sender@example.com` with an address on your verified sender domain; the sends use sandbox mode. The delete example needs [jq](https://jqlang.org).
 
 ## Overview
 
@@ -16,44 +16,44 @@ ahasend smtp [subcommand] [flags]
 ```
 
 Available subcommands:
-- `list` - List all SMTP credentials
-- `create` - Create a new SMTP credential
-- `get` - Get details of a specific SMTP credential
+- `list` - List SMTP credentials
+- `create` - Create an SMTP credential
+- `get` - Get an SMTP credential
 - `delete` - Delete an SMTP credential
 - `send` - Send an email via SMTP protocol
-
-SMTP credentials allow you to send emails using standard SMTP protocol through any email client or application that supports SMTP. This is useful for integrating AhaSend with legacy systems, mail servers, or applications that only support SMTP.
-
-Use SMTP credentials to:
-- Send emails from email clients (Outlook, Thunderbird, etc.)
-- Integrate with applications that only support SMTP
-- Use AhaSend from programming languages without SDK support
-- Send transactional emails from servers that support STARTTLS and AUTH PLAIN
 
 ## List SMTP Credentials
 
 ```bash
+# List SMTP credentials
 ahasend smtp list
+
+# Fetch 10 credentials, then the page after them
+ahasend smtp list --limit 10
+ahasend smtp list --limit 10 --after YOUR_CURSOR
 ```
+
+Passwords are never shown. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
 
 ## Create SMTP Credential
 
 ```bash
-# Global SMTP credential
-ahasend smtp create --name "Main Server" --scope global
+# Global credential, which can send from any verified domain
+ahasend smtp create --name "Main Server"
 
-# Domain-specific credential
+# Scoped credential, which can send only from the domains you give
 ahasend smtp create \
   --name "Notifications" \
   --scope scoped \
-  --domains "notifications.example.com"
+  --domains notifications.example.com
 
 # Sandbox credential for testing
-ahasend smtp create \
-  --name "Development" \
-  --scope global \
-  --sandbox
+ahasend smtp create --name "Development" --sandbox
 ```
+
+`--scope` is `global` (the default) or `scoped`. `--scope scoped` needs at least one `--domains`, and `--domains` needs `--scope scoped`. Repeat `--domains`, or separate domains with commas, to allow several.
+
+The output shows the generated password once. It cannot be retrieved later, so save it. When `--name` is missing, the command asks for it, as [Missing Values](/cli/configuration#missing-values) describes.
 
 ## Get SMTP Details
 
@@ -61,7 +61,11 @@ ahasend smtp create \
 ahasend smtp get YOUR_RESOURCE_ID
 ```
 
+The password shows as `[HIDDEN]` in table and plain output.
+
 ## Delete SMTP Credential
+
+Applications that use the credential lose access at once. The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it.
 
 ```bash
 TEST_ID=$(ahasend smtp create --name "Docs deletion test" --sandbox --non-interactive --output json | jq -er '.id')
@@ -70,62 +74,113 @@ ahasend smtp delete "$TEST_ID"
 
 ## Send via SMTP
 
-Send email using SMTP protocol for testing:
+`smtp send` sends one email over SMTP, to test SMTP credentials. It connects to `--server`, which defaults to `send.ahasend.com:587`. Give `--server` as `host:port`, or as `host` for port 587.
 
-Set `SMTP_USERNAME` and `SMTP_PASSWORD` in your shell from the values returned when you created the sandbox credential. The CLI cannot retrieve an existing credential's password from its ID; pass both values explicitly.
+A send needs `--from`, a recipient (`--to`, `--cc` or `--bcc`), `--subject`, content (`--text`, `--html`, `--text-file` or `--html-file`), `--username` and the password. When one is missing, the command asks for it, as [Missing Values](/cli/configuration#missing-values) describes, and hides the password as you type.
+
+Set `SMTP_USERNAME` and `SMTP_PASSWORD` in your shell from the values returned when you created the sandbox credential. The CLI cannot retrieve an existing credential's password.
 
 ```bash
-# Basic SMTP send
-ahasend smtp send --sandbox \
+# Send a sandbox email, with the password from an environment variable
+printf '%s\n' "$SMTP_PASSWORD" | ahasend smtp send --sandbox \
   --username "$SMTP_USERNAME" \
-  --password "$SMTP_PASSWORD" \
+  --password-stdin \
   --from sender@example.com \
   --to recipient@example.com \
   --subject "SMTP Test" \
   --text "Testing SMTP sending"
 
-# Test SMTP connection
-ahasend smtp send \
-  --test \
+# Simulate a bounce in sandbox mode
+printf '%s\n' "$SMTP_PASSWORD" | ahasend smtp send --sandbox --sandbox-result bounce \
   --username "$SMTP_USERNAME" \
-  --password "$SMTP_PASSWORD" \
-  --server send.ahasend.com:587 \
+  --password-stdin \
   --from sender@example.com \
   --to recipient@example.com \
-  --subject "Connection test" \
-  --text "This message is built but not sent"
+  --subject "Bounce test" \
+  --text "This send simulates a bounce"
 ```
 
-Each SMTP credential provides:
-- Username and password for authentication
-- Scope (global or domain-specific)
-- Sandbox mode option for testing
-- Standard SMTP server configuration
+### Password Input
 
-## Next Steps
+Other users of the machine can see `--password` in the process list, and your shell may keep it in its history. `--password-stdin` reads the password from the first line of stdin instead, without its line break. With it, the command asks for no value, so a missing flag fails as with `--non-interactive`. `--password` and `--password-stdin` cannot be used together.
 
-- [Send messages via API](/cli/commands/messages)
-- [Manage API keys](/cli/commands/apikeys)
+### Encryption
+
+The command starts TLS at once on port 465, and otherwise with STARTTLS when the server offers it. It never sends the username, the password or the message without TLS, except to `localhost`, `127.0.0.1` or `::1`. When any other server offers no STARTTLS, the command fails before it logs in, with exit code 1. It also fails with exit code 1 when the server offers no login (AUTH). AhaSend's server offers STARTTLS on ports 587, 25 and 2525, and does not offer implicit TLS on port 465; see [SMTP settings](/smtp).
+
+The command logs in with CRAM-MD5 when the server offers it, with LOGIN when the server offers LOGIN but not PLAIN, and with PLAIN otherwise. For AhaSend's own servers, see [SMTP settings](/smtp).
+
+### Test the Connection
+
+`--test` connects to `--server`, starts TLS when the server offers it, logs in when you give the username and the password, and quits. It sends no message, so it needs no message flags, and the message flags have no effect. Without `--username` and the password, it tests only the connection: a server that offers no STARTTLS then passes the test, over a connection without TLS.
+
+```bash
+# Test the connection and the login
+printf '%s\n' "$SMTP_PASSWORD" | ahasend smtp send --test \
+  --username "$SMTP_USERNAME" \
+  --password-stdin
+
+# Test only the connection to a server
+ahasend smtp send --test --server send.ahasend.com:587
+```
+
+```text
+SMTP Test Result:
+  Connection: Successful
+  Authentication: Passed
+  Status: No message was sent
+```
+
+Without credentials, Authentication shows `Not tested (no --username and --password)`. A failed login shows Authentication as `Failed`, with the reason in the Error row, and exits with code 1. The reason is the server's reply when the server refused the login, and the CLI's own message when the server offered no STARTTLS or no AUTH. When the server closes the connection during the login, the command exits with code 7.
+
+### Headers
+
+Headers such as `AhaSend-Track-Opens`, `AhaSend-Tags` and `AhaSend-Sandbox` control AhaSend features over SMTP; see [special headers](/smtp/special-headers). The flags `--track-opens`, `--track-clicks`, `--tag`, `--sandbox` and `--sandbox-result` set them. `--header` can set such a header only when its flag is not given. `--sandbox` sets both `AhaSend-Sandbox` and `AhaSend-Sandbox-Result`, so with `--sandbox`, `--header` cannot set `AhaSend-Sandbox-Result` even without `--sandbox-result`.
+
+`--header` cannot set `From`, `Sender`, `To`, `Cc`, `Bcc`, `Subject`, `Mime-Version`, `Content-Type` or `Content-Transfer-Encoding`, which the command builds itself. It can set `Date` and `Message-ID`. Header names ignore case, and each name may be given once. A header value that holds a comma goes in double quotes inside the shell quotes, as in `--header '"X-Note: first, second"'`.
+
+### Results and Exit Codes
+
+When the server refuses any recipient, nothing is sent, and the error names the recipient.
+
+A sent message's output shows its Message-ID: the one `--header` gave, or the one the command sets, a UUID at the domain of `--from`, such as `<0d371db4-00d0-5eec-851c-e1db1e2b190d@example.com>`. AhaSend keeps it, so [`messages get`](/cli/commands/messages#get-a-message) finds the message by it.
+
+`--output json` prints the CLI's own result object, not an API response, with the same keys as CSV output:
+
+- After a sent message: `success` (`true`) and `message_id`.
+- After a test that passed or failed: `test_mode` (`true`), `success` (whether the test passed), `connected` (whether it connected to the server), `authenticated` (whether it logged in) and `error` (why it failed, or an empty string).
+
+A failed send prints no result object: it prints the error object that [JSON Output](/cli/configuration#json-output) describes.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | The message was sent, or the test passed |
+| 1 | The server refused the send or the login, offered no STARTTLS, or offered no login |
+| 4 | Invalid input, such as a missing flag, an invalid `--from` address or an invalid `--server` |
+| 7 | The server could not be reached, stopped answering or closed the connection |
+
+Exit code 7 after the whole message was sent means the server may have accepted it. Check whether it arrived before you send it again.
 
 ## Command Flags
 
-These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `smtp create`
 
 | Flag | Description and default |
 |---|---|
-| `--domains strings` | Allowed domains for scoped credentials (comma-separated) |
+| `--domains strings` | Allowed domain for a scoped credential (can be used multiple times) |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--name string` | Credential name (required) |
-| `--non-interactive` | Disable interactive prompts |
+| `--non-interactive` | Never prompt; fail when a required flag is missing |
 | `--sandbox` | Create as sandbox credential for testing |
-| `--scope string` | Credential scope (global or scoped) (default "global") |
+| `--scope string` | Credential scope: global or scoped (default "global") |
 
 ### `smtp delete`
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `smtp get`
 
@@ -135,38 +190,45 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for continued results |
-| `--limit int32` | Maximum number of credentials to return (1-100) (default 50) |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
 
 ### `smtp send`
 
 | Flag | Description and default |
 |---|---|
-| `--attach strings` | File attachments (can be used multiple times) |
-| `--bcc strings` | BCC recipients |
-| `--cc strings` | CC recipients |
-| `--credential-id string` | Use specific SMTP credential by ID |
-| `--from string` | From email address |
-| `--header strings` | Custom headers (format: 'Name: value') |
+| `--attach strings` | File to attach (can be used multiple times) |
+| `--bcc strings` | BCC recipient (can be used multiple times) |
+| `--cc strings` | CC recipient (can be used multiple times) |
+| `--from string` | Sender email address (required) |
+| `--header strings` | Custom header in `Name: value` format, each name once in any case, in double quotes when the value holds a comma: `'"Name: a, b"'`; not From, Sender, To, Cc, Bcc, Subject or the MIME headers (can be used multiple times) |
 | `--html string` | HTML content |
-| `--html-file string` | Read HTML content from file |
-| `--password string` | SMTP password |
-| `--sandbox` | Send in sandbox mode |
-| `--sandbox-result string` | Sandbox result simulation: deliver, bounce, defer, fail, or suppress (only used with --sandbox) (default "deliver") |
+| `--html-file string` | File with the HTML content |
+| `--non-interactive` | Never prompt; fail when a required flag is missing |
+| `--password string` | SMTP password (required, except by `--test`); other users of the machine can see it in the process list, so prefer `--password-stdin` |
+| `--password-stdin` | Read the SMTP password from the first line of stdin, in place of `--password`; the command then asks for nothing |
+| `--sandbox` | Send in sandbox mode, which delivers nothing |
+| `--sandbox-result string` | Sandbox result simulation: deliver, bounce, defer, fail or suppress (needs `--sandbox`) (default "deliver") |
 | `--server string` | SMTP server address (default "send.ahasend.com:587") |
-| `--subject string` | Email subject |
-| `--tags strings` | Message tags |
-| `--test` | Test SMTP connection and message building (don't send email) |
+| `--subject string` | Email subject (required) |
+| `--tag strings` | Message tag (can be used multiple times) |
+| `--test` | Connect to `--server`, and log in when `--username` and `--password` are given, then quit without sending |
 | `--text string` | Plain text content |
-| `--text-file string` | Read text content from file |
-| `--to strings` | Recipient email addresses (can be used multiple times) |
-| `--track-clicks` | Enable click tracking |
-| `--track-opens` | Enable open tracking |
-| `--username string` | SMTP username (uses credential from account if not provided) |
+| `--text-file string` | File with the plain text content |
+| `--to strings` | Recipient email address (can be used multiple times) |
+| `--track-clicks` | Track clicks (`--track-clicks=false` turns it off); the account's setting applies when omitted |
+| `--track-opens` | Track opens (`--track-opens=false` turns it off); the account's setting applies when omitted |
+| `--username string` | SMTP username (required, except by `--test`) |
+
+## Next Steps
+
+- [Send messages via API](/cli/commands/messages)
+- [Manage API keys](/cli/commands/apikeys)
 
 ## Related Guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [SMTP credential setup](/smtp/credentials).
 - [SMTP credential API](/api-reference/smtp-credentials/create-smtp-credential), [SMTP settings](/smtp), [CLI configuration and output](/cli/configuration).
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Domain setup](/domains).
-- [Sandbox behavior](/send-api/sandbox), [Tracking setup](/tracking/open-tracking).
+- [Sandbox behavior](/send-api/sandbox), [Tracking setup](/tracking/open-tracking), [Command-line SMTP sending](/smtp/cli).

@@ -1,27 +1,23 @@
 ---
 title: "ahasend subaccounts: Manage Sub-Accounts"
-sidebarTitle: "Sub-Accounts"
+sidebarTitle: "subaccounts"
 description: "Create and manage AhaSend sub-accounts with the CLI, check pooled usage, pause test accounts, and issue or revoke their scoped API keys."
 icon: "building"
 ---
 
 AhaSend CLI sub-account commands let Platform Partners manage child accounts and their API keys from a parent account.
 
-<Note>
-Sub-account creation is currently blocked by a CLI/API mismatch: the CLI requires a full website URL, while the API requires a bare domain. Wait for a compatible CLI/API release before running the create-first workflow below. The remaining management commands work with an existing sub-account; you can create one through the [API](/api-reference/sub-accounts/create-sub-account).
-</Note>
-
 ## Prerequisites
 
-Use a [full parent-account API key](/api-reference/authentication) with the matching [sub-account scopes](/api-reference/scopes). Sub-accounts are available to [Platform Partners](/scale/sub-accounts); [contact sales](mailto:sales@ahasend.com) about access. The shell examples need Bash and jq.
+Use a [full parent-account API key](/api-reference/authentication) with the matching [sub-account scopes](/api-reference/scopes): `sub-accounts:read`, `sub-accounts:write`, `sub-accounts:delete`, `sub-accounts:suspend` (also for `unpause-domain`) and `sub-accounts:usage`, and for keys `sub-account-api-keys:read`, `sub-account-api-keys:write` and `sub-account-api-keys:delete`. Sub-accounts are available to [Platform Partners](/scale/sub-accounts); [contact sales](mailto:sales@ahasend.com) about access. The shell examples need Bash and jq.
 
 ## Create and Manage a Test Sub-Account
 
-After the creation issue above is fixed, save the following three examples in one Bash script. The script stops if creation fails, and only updates or deletes the test account it creates.
+The examples that use `$TEST_SUBACCOUNT_ID` make one Bash script: this one, the first one in [Manage a Test Sub-Account API Key](#manage-a-test-sub-account-api-key) and the one in [Delete the Test Sub-Account](#delete-the-test-sub-account). Save them in that order. The script stops if creation fails, and only updates or deletes the test account it creates. The other examples use placeholders: replace `YOUR_RESOURCE_ID` with a sub-account ID and `YOUR_KEY_ID` with the ID of one of its API keys.
 
 ```bash
 set -euo pipefail
-TEST_SUBACCOUNT_ID=$(ahasend subaccounts create --name "Docs test" --website https://example.com --monthly-credit 100 --output json | jq -er '.id')
+TEST_SUBACCOUNT_ID=$(ahasend subaccounts create --name "Docs test" --website example.com --monthly-credit 100 --output json | jq -er '.id')
 ahasend subaccounts list
 ahasend subaccounts get "$TEST_SUBACCOUNT_ID"
 ahasend subaccounts update "$TEST_SUBACCOUNT_ID" --name "Docs updated test"
@@ -30,7 +26,11 @@ ahasend subaccounts unsuspend "$TEST_SUBACCOUNT_ID"
 ahasend subaccounts usage
 ```
 
+`--website` takes a domain, such as `example.com`. An `http` or `https` URL also works: the command sends only its host, in lowercase. `--output json` prints the API's response, so `jq` reads the new sub-account's `id` from it.
+
 Usage `allocated_cost` is a proportional share of the parent's pooled invoice, not standalone pricing. A monthly credit of 0 means no cap.
+
+`suspend` asks for confirmation unless you pass `--force`; a script needs it. `pause` is an alias of `suspend`, and `resume` and `unpause` are aliases of `unsuspend`. A suspension that AhaSend started can only be lifted by AhaSend support.
 
 ## Manage a Test Sub-Account API Key
 
@@ -44,6 +44,25 @@ ahasend subaccounts api-keys update "$TEST_SUBACCOUNT_ID" "$TEST_KEY_ID" --label
 ahasend subaccounts api-keys delete "$TEST_SUBACCOUNT_ID" "$TEST_KEY_ID" --force
 ```
 
+`subaccounts apikeys` is an alias of `subaccounts api-keys`. A sub-account's key cannot have the `sub-accounts:` or `sub-account-api-keys:` scopes; asking for one fails with exit code 4 before any request. A scope ending in `{domain}` takes one of the sub-account's domains, such as `messages:send:{example.com}`.
+
+`--scope` and `--ip-allow-list` can be repeated, and each splits on commas. To limit a key to one network, or to allow it from any IP again:
+
+```bash
+ahasend subaccounts api-keys update YOUR_RESOURCE_ID YOUR_KEY_ID --ip-allow-list 203.0.113.0/24
+ahasend subaccounts api-keys update YOUR_RESOURCE_ID YOUR_KEY_ID --clear-ip-allow-list
+```
+
+## Unpause a Sub-Account Domain
+
+AhaSend pauses a domain, for example when too many of its recent emails bounced. To let a sub-account's domain send again:
+
+```bash
+ahasend subaccounts unpause-domain YOUR_RESOURCE_ID example.com
+```
+
+Unpausing a domain that is not paused changes nothing and prints the domain. A change can take some minutes to apply to new email.
+
 ## Delete the Test Sub-Account
 
 After the preceding create-first workflow, remove only its test account:
@@ -52,21 +71,26 @@ After the preceding create-first workflow, remove only its test account:
 ahasend subaccounts delete "$TEST_SUBACCOUNT_ID" --force
 ```
 
-Deletion removes the sub-account from list results. Current billing-period usage still belongs to the parent invoice.
+Deletion is a soft delete: the sub-account can no longer be used and leaves list results, but AhaSend keeps its historical data. Current billing-period usage still belongs to the parent invoice. Without `--force`, the command asks for confirmation; answer `y` or `yes`.
 
-## Commands and Flags
+## Command Flags
+
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags). List commands page as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
 
 ### `subaccounts api-keys create`
 
 ```text
-ahasend subaccounts api-keys create <sub-account-id> [flags]
+ahasend subaccounts api-keys create <sub-account-id> --label <label> --scope <scope> [flags]
 ```
 
 | Flag | Description and default |
 |---|---|
-| `--idempotency-key string` | Idempotency key for safe retries (auto-generated if not provided) |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--ip-allow-list strings` | CIDR block or IP address allowed to use the key (can be used multiple times) |
 | `--label string` | Label for the API key (required) |
-| `--scope strings` | Scopes to grant (required, can be used multiple times) |
+| `--scope strings` | Scope to grant (required; can be used multiple times) |
+
+The secret is shown once, in every output format, and cannot be read again. Within 5 minutes, a retry with the same idempotency key returns the original key with its secret.
 
 ### `subaccounts api-keys delete`
 
@@ -76,7 +100,7 @@ ahasend subaccounts api-keys delete <sub-account-id> <key-id> [flags]
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `subaccounts api-keys get`
 
@@ -84,7 +108,7 @@ ahasend subaccounts api-keys delete <sub-account-id> <key-id> [flags]
 ahasend subaccounts api-keys get <sub-account-id> <key-id> [flags]
 ```
 
-No command-specific flags. See [global flags](/cli/configuration#global-flags).
+No command-specific flags. Table and plain output show the secret as `[HIDDEN]`.
 
 ### `subaccounts api-keys list`
 
@@ -94,8 +118,9 @@ ahasend subaccounts api-keys list <sub-account-id> [flags]
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for next page |
-| `--limit int32` | Maximum number of API keys to return |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
 
 ### `subaccounts api-keys update`
 
@@ -105,21 +130,25 @@ ahasend subaccounts api-keys update <sub-account-id> <key-id> [flags]
 
 | Flag | Description and default |
 |---|---|
+| `--clear-ip-allow-list` | Remove the IP allow list so the key works from any IP |
+| `--ip-allow-list strings` | New CIDR block or IP address allowed to use the key, replacing the list (can be used multiple times) |
 | `--label string` | New label for the API key |
-| `--scope strings` | New scopes to grant (replaces existing scopes) |
+| `--scope strings` | New scope to grant, replacing all scopes (can be used multiple times) |
+
+Give at least one flag. `--scope` replaces all scopes: to add one, list the existing scopes and the new one.
 
 ### `subaccounts create`
 
 ```text
-ahasend subaccounts create [flags]
+ahasend subaccounts create --name <name> --website <domain> [flags]
 ```
 
 | Flag | Description and default |
 |---|---|
-| `--idempotency-key string` | Idempotency key for safe retries (auto-generated if not provided) |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--monthly-credit int` | Monthly credit allocation (0-1000000000) |
 | `--name string` | Sub-account name (required) |
-| `--website string` | Sub-account website (required) |
+| `--website string` | Sub-account website domain, e.g. example.com (required) |
 
 ### `subaccounts delete`
 
@@ -129,7 +158,7 @@ ahasend subaccounts delete <sub-account-id> [flags]
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `subaccounts get`
 
@@ -137,7 +166,7 @@ ahasend subaccounts delete <sub-account-id> [flags]
 ahasend subaccounts get <sub-account-id> [flags]
 ```
 
-No command-specific flags. See [global flags](/cli/configuration#global-flags).
+No command-specific flags.
 
 ### `subaccounts list`
 
@@ -147,8 +176,9 @@ ahasend subaccounts list [flags]
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for next page |
-| `--limit int32` | Maximum number of sub-accounts to return |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
 
 ### `subaccounts suspend`
 
@@ -156,10 +186,20 @@ ahasend subaccounts list [flags]
 ahasend subaccounts suspend <sub-account-id> [flags]
 ```
 
+Alias: `pause`.
+
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt |
+| `-f`, `--force` | Skip confirmation prompt |
 | `--reason string` | Reason for the suspension (required) |
+
+### `subaccounts unpause-domain`
+
+```text
+ahasend subaccounts unpause-domain <sub-account-id> <domain> [flags]
+```
+
+No command-specific flags.
 
 ### `subaccounts unsuspend`
 
@@ -167,7 +207,7 @@ ahasend subaccounts suspend <sub-account-id> [flags]
 ahasend subaccounts unsuspend <sub-account-id> [flags]
 ```
 
-No command-specific flags. See [global flags](/cli/configuration#global-flags).
+Aliases: `resume`, `unpause`. No command-specific flags.
 
 ### `subaccounts update`
 
@@ -179,7 +219,9 @@ ahasend subaccounts update <sub-account-id> [flags]
 |---|---|
 | `--monthly-credit int` | New monthly credit allocation (0-1000000000) |
 | `--name string` | New sub-account name |
-| `--website string` | New sub-account website |
+| `--website string` | New sub-account website domain, e.g. example.com |
+
+Only the flags you give change, and at least one is needed. `--monthly-credit 0` is sent as 0.
 
 ### `subaccounts usage`
 
@@ -187,8 +229,7 @@ ahasend subaccounts update <sub-account-id> [flags]
 ahasend subaccounts usage [flags]
 ```
 
-No command-specific flags. See [global flags](/cli/configuration#global-flags).
-
+No command-specific flags.
 
 ## Related Guides
 

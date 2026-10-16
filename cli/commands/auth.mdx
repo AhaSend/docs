@@ -5,13 +5,49 @@ icon: user-shield
 sidebarTitle: "auth"
 ---
 
-AhaSend CLI `auth` commands let you log in and switch saved profiles; this page lists their arguments and flags. For the complete workflow, use the [authentication guide](/cli/authentication).
+AhaSend CLI `auth` commands log you in and manage your saved profiles; this page lists their arguments, flags and output. For the complete workflow, use the [authentication guide](/cli/authentication).
 
-`auth logout` takes a profile name; `auth switch` takes the profile to activate. `auth login` and `auth status` use the profile flags below. Credential storage and CI authentication are covered in [CLI authentication](/cli/authentication).
+## Overview
+
+```text
+ahasend auth login [flags]
+ahasend auth status [flags]
+ahasend auth switch <profile> [flags]
+ahasend auth logout [profile] [flags]
+```
+
+- `auth login` checks the API key against the account and saves it as a profile. [Profiles](/cli/configuration#profiles) says which name the profile gets and when it becomes the default.
+- `auth status` shows whether the API accepts a profile's key for its account. It reads the configuration file and never changes it.
+- `auth switch` makes a profile the default. It checks the profile's key first, and warns on stderr but switches anyway when the check fails.
+- `auth logout` removes the default profile, the profile you name as the argument or with `--profile`, or every profile with `--all`. Only `--all` asks for confirmation; one profile is removed at once.
+
+The `auth` commands do not take the global `--api-key` and `--account-id` flags; see [Global Flags](/cli/configuration#global-flags). `auth switch` takes the profile as its argument only; `--profile` fails with exit code 4.
+
+## Examples
+
+```bash
+# Log in, saving the profile "production"
+ahasend auth login --profile production
+
+# Show the status of the default profile
+ahasend auth status
+
+# List the names of all profiles
+ahasend auth status --all
+
+# Make "production" the default profile
+ahasend auth switch production
+
+# Remove one profile
+ahasend auth logout --profile production
+
+# Remove every profile without the confirmation prompt
+ahasend auth logout --all --force
+```
 
 ## Command Flags
 
-These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `auth login`
 
@@ -19,25 +55,102 @@ These flags come from the current CLI. All commands also accept the [global flag
 |---|---|
 | `--account-id string` | AhaSend Account ID |
 | `--api-key string` | AhaSend API key (not recommended, use interactive prompt) |
-| `--api-url string` | AhaSend API URL (default "https://api.ahasend.com") |
+| `--api-url string` | AhaSend API URL (default `https://api.ahasend.com`) |
 | `--profile string` | Profile name to save credentials under |
+
+`--account-id` must be a UUID. Give `--api-key` and `--account-id` together or not at all; one alone fails with exit code 4. Logging in to a profile that exists replaces its credentials without asking.
+
+Without `--api-key` and `--account-id`, the command reads the API key and then the account ID. On a terminal, it asks for them and hides the key as you type it. Otherwise it reads them as two lines of stdin, so a script can pipe them in:
+
+```bash
+printf '%s\n%s\n' "$AHASEND_API_KEY" "$AHASEND_ACCOUNT_ID" | ahasend auth login --profile ci
+```
+
+Empty stdin cancels the login with `operation cancelled` and exit code 4. The command has no `--non-interactive`.
 
 ### `auth logout`
 
 | Flag | Description and default |
 |---|---|
 | `--all` | Logout from all profiles |
+| `-f`, `--force` | Skip confirmation prompt |
+
+`--all` asks for confirmation; answer `y` or `yes`. `--force` without `--all` fails with exit code 4, and so do `--all` with a profile and two different profiles.
 
 ### `auth status`
 
 | Flag | Description and default |
 |---|---|
-| `--all` | Show status for all profiles |
+| `--all` | List the names of all profiles |
 | `--profile string` | Show status for specific profile |
 
 ### `auth switch`
 
-This command has no command-specific flags. See [global flags](/cli/configuration#global-flags).
+This command has no command-specific flags.
+
+## Output
+
+No `auth` command prints the API key, in any format.
+
+### `auth login`, `auth switch` and `auth logout`
+
+Table and plain output print one line that says what the command did, such as `Switched to profile 'production'`. With `--output json`, the command prints the profile it acted on and that line:
+
+```json
+{
+  "profile": "production",
+  "success": true,
+  "message": "Switched to profile 'production'"
+}
+```
+
+`profile` is empty for `auth logout --all`, and for `auth logout` when there are no profiles. CSV output has the columns `profile,success,message` and one row.
+
+### `auth status`
+
+With `--output json`, `auth status` prints an object with these keys:
+
+| Key | Value |
+|---|---|
+| `profile` | The profile name |
+| `account_id` | The profile's account ID |
+| `valid` | `true` when the API accepts the key for the account, `false` when it refuses it, and `null` when the check could not tell, such as when the API cannot be reached |
+| `error` | Why the check failed; left out when it did not fail |
+| `note` | Set when the key is valid but cannot read the account; left out otherwise |
+| `account` | The account, as the [Get Account](/api-reference/accounts/get-account) endpoint returns it, or `null` when it could not be read |
+
+Table and plain output start with an `Authentication Status` section that shows `Profile`, `Account ID`, `Valid` (`Yes` or `No`; when the check could not tell, the value is empty in table output and the line is left out of plain output) and, when set, `Note`. Why a check failed is not a row: it is the error line on stderr. When the account could be read, `Account Details`, `Email Settings` and `Data Retention` sections follow. CSV output has one row, with the columns `profile`, `account_id`, `valid`, `error` and `note`, then a column for each account field.
+
+With `--all`, `--output json` prints the profile names:
+
+```json
+{
+  "profiles": ["default", "production"]
+}
+```
+
+When there are no profiles, the command exits with code 0. Table and plain output print `No authentication profiles found`, then a line that says to run `ahasend auth login`. CSV output prints nothing, and `--output json` prints:
+
+```json
+{
+  "empty": true,
+  "message": "No authentication profiles found"
+}
+```
+
+With `--all` and no profiles, table and plain output print `No authentication profiles found`, `--output json` prints an empty `profiles` array, and CSV output prints the `profile` header row alone.
+
+## Exit Codes
+
+The `auth` commands use the CLI's [exit codes](/cli/configuration#exit-codes). In particular:
+
+- 2: The API rejected the key, or the key belongs to another account.
+- 3: The profile does not exist, there is no default profile, or the configuration file cannot be read or written.
+- 4: A flag or argument is missing or not valid, or a prompt was declined or got no answer.
+- 6: The API refuses the key from this IP address.
+- 7: The API cannot be reached.
+
+`auth status` prints the status even when the check fails, and then exits with the code of that failure.
 
 ## Related Guides
 

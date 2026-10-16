@@ -1,129 +1,313 @@
 ---
 title: "Install the AhaSend CLI (macOS, Linux, Windows)"
-description: "Install the AhaSend CLI on macOS, Linux, or Windows from a prebuilt binary, with go install, or from source, then enable shell completion and verify it works."
+description: "Install the AhaSend CLI on macOS, Linux or Windows with Homebrew, Scoop, npm, an install script, a .deb or .rpm package, or a binary download."
 icon: download
 sidebarTitle: "Installation"
 ---
 
-The AhaSend CLI can be installed through multiple methods. Choose the one that best fits your system and workflow.
+Install the AhaSend CLI with the tool you already use. The package managers, the install scripts and the downloads all install the same release binary.
 
-## System Requirements
+## Choose a Method
 
-- **Go Version**: 1.26.1 or later (for building from source)
-- **Operating Systems**: Linux, macOS, Windows
+| Method | Command | Platforms |
+|---|---|---|
+| [Homebrew](#homebrew) | `brew install ahasend/tap/ahasend` | macOS, Linux |
+| [Install script](#install-script-macos-and-linux) | `curl -fsSL https://ahasend.com/install.sh \| sh` | macOS, Linux |
+| [PowerShell script](#powershell-script-windows) | `irm https://ahasend.com/install.ps1 \| iex` | Windows |
+| [Scoop](#scoop) | Add the AhaSend bucket, then `scoop install ahasend/ahasend` | Windows |
+| [npm](#npm) | `npm install -g @ahasend/cli` | macOS, Linux, Windows |
+| [.deb package](#debian-and-ubuntu-deb) | `sudo apt install ./ahasend_<version>_<arch>.deb` | Debian, Ubuntu |
+| [.rpm package](#fedora-and-rhel-rpm) | `sudo dnf install ./ahasend-<version>-1.<arch>.rpm` | Fedora, RHEL |
+| [Binary download](#binary-download) | Download from the [releases page](https://github.com/AhaSend/ahasend-cli/releases) | All |
+| [Go](#go-install) | `go install github.com/AhaSend/ahasend-cli@latest`, then rename the binary to `ahasend` | All |
 
-| Platform | Prebuilt architectures |
+Each release has prebuilt binaries for macOS, Linux and Windows, on both x86_64 and ARM64. The binaries have no dependencies.
+
+After you install, check the version:
+
+```bash
+ahasend --version
+```
+
+## Homebrew
+
+```bash
+brew install ahasend/tap/ahasend
+```
+
+Use the full name `ahasend/tap/ahasend`. Homebrew adds the AhaSend tap and installs shell completion for bash, zsh and fish.
+
+```bash
+# Upgrade
+brew upgrade ahasend/tap/ahasend
+
+# Uninstall
+brew uninstall ahasend
+brew untap ahasend/tap
+```
+
+## Install Script (macOS and Linux)
+
+```bash
+curl -fsSL https://ahasend.com/install.sh | sh
+```
+
+The script downloads the latest release for your system, checks it against the release's `checksums.txt`, and installs it in `~/.local/bin` (or `$XDG_BIN_HOME` when it is set). It never uses `sudo` and never changes your shell profile. If the folder is not on your `PATH`, it prints the line to add, unless you pass `--quiet`.
+
+Pass options after `sh -s --`:
+
+```bash
+# Install a given version
+curl -fsSL https://ahasend.com/install.sh | sh -s -- --version v0.3.0
+
+# Install into another folder
+curl -fsSL https://ahasend.com/install.sh | sh -s -- --install-dir ~/bin
+```
+
+| Option | Environment variable | What it does |
+|---|---|---|
+| `--version <tag>` | `AHASEND_VERSION` | Installs this release, such as `v0.3.0`. The default is the latest release. |
+| `--install-dir <dir>` | `AHASEND_INSTALL_DIR` | Installs into this folder. |
+| `--quiet` | | Prints only errors. |
+| `--no-color` | | Prints without colors. |
+
+If a package manager installed `ahasend` in the target folder, the script stops and tells you to upgrade it with that package manager, naming the command when it knows it, or to choose another folder with `--install-dir`.
+
+To read the script before you run it, download it first:
+
+```bash
+curl -fsSLO https://github.com/AhaSend/ahasend-cli/releases/latest/download/install.sh
+less install.sh
+sh install.sh
+```
+
+To upgrade, run the script again, with the same `--install-dir` if you used one. To uninstall, delete `ahasend` from the folder it installed into, by default:
+
+```bash
+rm ~/.local/bin/ahasend
+```
+
+## PowerShell Script (Windows)
+
+```powershell
+irm https://ahasend.com/install.ps1 | iex
+```
+
+The script works in Windows PowerShell 5.1 and PowerShell 7. It downloads the latest release for your system (x64 or ARM64), checks it against the release's `checksums.txt`, and installs it in `%LOCALAPPDATA%\Programs\AhaSend\bin`. It does not change your `PATH`: if the folder is not on it, the script prints the command that adds it, unless you pass `-Quiet`. Run that command, then open a new terminal. With `-Quiet`, use the `PATH` command in the [binary download](#binary-download) steps.
+
+Pass parameters like this:
+
+```powershell
+& ([scriptblock]::Create((irm https://ahasend.com/install.ps1))) -Version v0.3.0
+```
+
+| Parameter | Environment variable | What it does |
+|---|---|---|
+| `-Version <tag>` | `AHASEND_VERSION` | Installs this release, such as `v0.3.0`. The default is the latest release. |
+| `-InstallDir <dir>` | `AHASEND_INSTALL_DIR` | Installs into this folder. |
+| `-Quiet` | | Prints only errors. |
+
+If the target folder is one that a package manager manages, such as Scoop's or npm's, the script stops and prints the command that upgrades `ahasend` with that tool instead, even when `ahasend` is not there yet.
+
+To read the script before you run it, download it first:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/AhaSend/ahasend-cli/releases/latest/download/install.ps1" -OutFile install.ps1
+notepad install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+To upgrade, run the script again, with the same `-InstallDir` if you used one. To uninstall, delete `ahasend.exe` from the folder it installed into. With the default folder, delete the whole `AhaSend` folder:
+
+```powershell
+Remove-Item -Recurse "$env:LOCALAPPDATA\Programs\AhaSend"
+```
+
+If you added the folder to your user `PATH`, the entry stays there. To remove it, open **Edit environment variables for your account** from the Start menu, select `Path` under your user variables, click **Edit**, and delete the entry that ends in `AhaSend\bin`.
+
+## Scoop
+
+```powershell
+scoop bucket add ahasend https://github.com/AhaSend/scoop-bucket
+scoop install ahasend/ahasend
+```
+
+```powershell
+# Upgrade
+scoop update
+scoop update ahasend
+
+# Uninstall
+scoop uninstall ahasend
+```
+
+## npm
+
+Needs Node.js 18 or later.
+
+```bash
+npm install -g @ahasend/cli
+```
+
+Or run it once without installing:
+
+```bash
+npx @ahasend/cli --version
+```
+
+pnpm and Bun work the same way (`pnpm add -g @ahasend/cli`, `bun add -g @ahasend/cli`). The launcher runs with Node.js, so Bun also needs Node.js 18 or later. pnpm needs a global bin folder, which `pnpm setup` creates once.
+
+The package installs the binary for your system as an optional dependency. If you install with optional dependencies turned off (for example `--omit=optional`), `ahasend` stops with a message that says so.
+
+```bash
+# Upgrade
+npm install -g @ahasend/cli@latest
+
+# Uninstall
+npm uninstall -g @ahasend/cli
+```
+
+<Note>
+With npm, `ahasend` runs through a small Node.js launcher, which passes the binary's exit code through. Two signal cases differ from the other install methods:
+
+- A `SIGINT` sent to the launcher process alone, by a tool that signals one process, does not reach the CLI. Ctrl+C in a terminal works as usual.
+- A tool that sends `SIGTERM` to the whole process group, such as `timeout`, makes the CLI receive it twice. `messages send` and `messages cancel` of several messages treat a second `SIGTERM` as "stop now", so they skip their clean stop.
+
+If either case matters to you, for example under a process supervisor, install the binary another way.
+</Note>
+
+## Debian and Ubuntu (.deb)
+
+These commands download the package of the latest release for your architecture (`amd64` or `arm64`) and install it. To install another release, replace the first line with that version, such as `VERSION=0.3.0`.
+
+```bash
+VERSION=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/AhaSend/ahasend-cli/releases/latest | sed 's|.*/tag/v||')
+ARCH=$(dpkg --print-architecture)
+curl -fsSLO "https://github.com/AhaSend/ahasend-cli/releases/download/v${VERSION}/ahasend_${VERSION}_${ARCH}.deb"
+sudo apt install "./ahasend_${VERSION}_${ARCH}.deb"
+```
+
+The package installs `/usr/bin/ahasend` and shell completion for bash, zsh and fish. There is no apt repository, so `apt upgrade` does not upgrade it. To upgrade, run the same commands again. To uninstall:
+
+```bash
+sudo apt remove ahasend
+```
+
+## Fedora and RHEL (.rpm)
+
+These commands download the package of the latest release for your architecture (`x86_64` or `aarch64`) and install it. To install another release, replace the first line with that version, such as `VERSION=0.3.0`.
+
+```bash
+VERSION=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/AhaSend/ahasend-cli/releases/latest | sed 's|.*/tag/v||')
+ARCH=$(uname -m)
+curl -fsSLO "https://github.com/AhaSend/ahasend-cli/releases/download/v${VERSION}/ahasend-${VERSION}-1.${ARCH}.rpm"
+sudo dnf install "./ahasend-${VERSION}-1.${ARCH}.rpm"
+```
+
+The package installs `/usr/bin/ahasend` and shell completion for bash, zsh and fish. There is no dnf repository, so `dnf upgrade` does not upgrade it. To upgrade, run the same commands again. To uninstall:
+
+```bash
+sudo dnf remove ahasend
+```
+
+## Binary Download
+
+Every release has a binary for each system, with the same name in every release:
+
+| System | Binary |
 |---|---|
-| macOS | x86_64 and ARM64 |
-| Linux | x86_64 |
-| Windows | x86_64 |
-
-Linux and Windows ARM64 require `go install` or a source build.
-
-## Installation Methods
+| macOS, Apple Silicon | `ahasend-darwin-arm64` |
+| macOS, Intel | `ahasend-darwin-amd64` |
+| Linux, x86_64 | `ahasend-linux-amd64` |
+| Linux, ARM64 | `ahasend-linux-arm64` |
+| Windows, x64 | `ahasend-windows-amd64.exe` |
+| Windows, ARM64 | `ahasend-windows-arm64.exe` |
 
 <Tabs>
-<Tab title="Binary Download">
+<Tab title="macOS and Linux">
 
-### Download Pre-built Binary
+Set `FILE` to the binary for your system, then download it and `checksums.txt`, check it, and install it:
 
-The quickest way to get started is to download a pre-built binary for your platform.
-
-1. Download the appropriate binary for your platform from the [GitHub releases page](https://github.com/AhaSend/ahasend-cli/releases):
-   - **Linux x64**: `ahasend-linux-amd64`
-   - **macOS Intel**: `ahasend-darwin-amd64`  
-   - **macOS Apple Silicon**: `ahasend-darwin-arm64`
-   - **Windows x64**: `ahasend-windows-amd64.exe`
-
-2. Rename and make executable (Linux/macOS):
 ```bash
+FILE=ahasend-linux-amd64
+curl -fsSLO "https://github.com/AhaSend/ahasend-cli/releases/latest/download/$FILE"
+curl -fsSLO https://github.com/AhaSend/ahasend-cli/releases/latest/download/checksums.txt
+
 # Linux
-mv ahasend-linux-amd64 ahasend
-chmod +x ahasend
-
-# macOS Intel
-mv ahasend-darwin-amd64 ahasend
-chmod +x ahasend
-
-# macOS Apple Silicon
-mv ahasend-darwin-arm64 ahasend
-chmod +x ahasend
+sha256sum --ignore-missing -c checksums.txt
+# macOS
+shasum -a 256 --ignore-missing -c checksums.txt
 ```
 
-3. Move to your PATH:
-```bash
-# Linux/macOS
-sudo mv ahasend /usr/local/bin/
+If the check prints `OK` for the file, install it. If it prints `FAILED`, delete the file and do not run it.
 
-# Or add to your user bin directory
+```bash
+chmod +x "$FILE"
 mkdir -p ~/.local/bin
-mv ahasend ~/.local/bin/
-# Add ~/.local/bin to your PATH if not already there
+mv "$FILE" ~/.local/bin/ahasend
 ```
 
-4. For Windows:
+If `~/.local/bin` is not on your `PATH`, add this line to your shell's startup file (such as `~/.bashrc` or `~/.zshrc`):
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+In fish, run this once instead:
+
+```fish
+fish_add_path ~/.local/bin
+```
+
+<Note>
+macOS blocks a binary that you download with a browser, because Apple has not notarized it. Remove the download flag from the file before you run it:
+
+```bash
+xattr -d com.apple.quarantine ~/.local/bin/ahasend
+```
+
+A binary downloaded with `curl` does not get the flag. Homebrew, the install script and npm installs do not need this step.
+</Note>
+
+</Tab>
+<Tab title="Windows">
+
+Use `ahasend-windows-arm64.exe` instead of `ahasend-windows-amd64.exe` on ARM64. These commands download the binary and `checksums.txt`, check the binary, and move it into `%LOCALAPPDATA%\Programs\AhaSend\bin`:
+
 ```powershell
-# Rename to remove platform suffix (optional)
-ren ahasend-windows-amd64.exe ahasend.exe
+$file = 'ahasend-windows-amd64.exe'
+$ProgressPreference = 'SilentlyContinue'
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/AhaSend/ahasend-cli/releases/latest/download/$file" -OutFile $file
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/AhaSend/ahasend-cli/releases/latest/download/checksums.txt" -OutFile checksums.txt
 
-# Move to a directory in your PATH or add current directory to PATH
+# Prints True when the binary matches checksums.txt
+(Get-FileHash $file).Hash -eq ((Select-String -Path checksums.txt -Pattern "  $file$").Line -split ' ')[0]
 ```
 
-5. Verify the installation:
-```bash
-ahasend --help
+If it prints `True`, move the binary into place. If it prints `False`, delete the file and do not run it.
+
+```powershell
+$dir = "$env:LOCALAPPDATA\Programs\AhaSend\bin"
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+Move-Item -Force $file "$dir\ahasend.exe"
 ```
+
+Add the folder to your user `PATH`, keeping the names such as `%USERPROFILE%` that your `PATH` already holds:
+
+```powershell
+$key = 'HKCU:\Environment'; $path = (Get-Item $key).GetValue('Path', '', 'DoNotExpandEnvironmentNames'); Set-ItemProperty $key Path ((@($path, '%LOCALAPPDATA%\Programs\AhaSend\bin') -ne '') -join ';') -Type ExpandString; [Environment]::SetEnvironmentVariable('AHASEND_PATH_CHANGED', $null, 'User')
+```
+
+Then open a new terminal.
 
 </Tab>
-<Tab title="Build from Source">
+</Tabs>
 
-### Build from Source
+To upgrade, run the download, check and move commands again; the `PATH` is already set. To uninstall, delete the binary. On Windows, also remove the folder from your user `PATH`, as the [PowerShell script](#powershell-script-windows) section describes.
 
-Build the public source to contribute or target another supported platform. Contacts require a later CLI release; the supplied local development build includes them, but public v0.2.0 and its current public source do not.
+## Go Install
 
-#### Prerequisites
-
-- Go 1.26.1 or later
-- Make (optional but recommended)
-- Git
-
-#### Build Steps
-
-1. Clone the repository:
-```bash
-git clone https://github.com/AhaSend/ahasend-cli.git
-cd ahasend-cli
-```
-
-2. Build the CLI:
-```bash
-# Using Make (recommended)
-make build
-
-# Or using Go directly
-go build -o bin/ahasend .
-```
-
-3. Install to your PATH:
-```bash
-# Using Make
-sudo cp bin/ahasend /usr/local/bin/ahasend
-
-# Or manually
-sudo cp ./bin/ahasend /usr/local/bin/
-```
-
-4. Verify the installation:
-```bash
-ahasend --help
-```
-
-</Tab>
-<Tab title="Go Install">
-
-### Install with Go
-
-If you have Go installed, you can use `go install`:
+Needs Go 1.26 or later.
 
 ```bash
 go install github.com/AhaSend/ahasend-cli@latest
@@ -135,217 +319,62 @@ This installs a binary named `ahasend-cli` into `GOBIN`, or `$(go env GOPATH)/bi
 mv "$(go env GOPATH)/bin/ahasend-cli" "$(go env GOPATH)/bin/ahasend"
 ```
 
-Make sure that directory is in your PATH:
+Make sure that directory is on your `PATH`. A `go install` build prints `dev` as its version, because only release builds carry a version number. To upgrade, run both commands again.
+
+## Build from Source
+
+Needs Go 1.26 or later, Git, and Make (optional).
 
 ```bash
-export PATH=$PATH:$(go env GOPATH)/bin
+git clone https://github.com/AhaSend/ahasend-cli.git
+cd ahasend-cli
+make build
+mkdir -p ~/.local/bin
+cp bin/ahasend ~/.local/bin/ahasend
 ```
 
-</Tab>
-</Tabs>
+Without Make, run `go build -o bin/ahasend .` instead of `make build`. If `~/.local/bin` is not on your `PATH`, add it as the [binary download](#binary-download) steps show.
 
 ## Verify the Download
 
-Download the binary and `checksums.txt` from the same [release](https://github.com/AhaSend/ahasend-cli/releases). On Linux, verify the binary before installing it:
+Every release has a `checksums.txt` with the SHA-256 of each file. The install scripts check it for you, and the [binary download](#binary-download) steps check it before they move the file. For any other file from a release, such as a .deb or .rpm package, download `checksums.txt` from the same [release](https://github.com/AhaSend/ahasend-cli/releases) into the same folder, then run, before you rename the file:
 
 ```bash
-sha256sum --ignore-missing --check checksums.txt
+# Linux
+sha256sum --ignore-missing -c checksums.txt
+
+# macOS
+shasum -a 256 --ignore-missing -c checksums.txt
 ```
 
-On macOS, use `shasum -a 256 ahasend-darwin-arm64` (or the Intel filename) and compare its result to the matching line in `checksums.txt`. The releases page lists the current version.
-
-## Platform-Specific Instructions
-
-### Linux
-
-<Tabs>
-<Tab title="Ubuntu/Debian">
+GitHub also records where each release file was built. With the [GitHub CLI](https://cli.github.com), check a file with:
 
 ```bash
-# Download the binary
-wget https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64
-
-# Make executable and install
-chmod +x ahasend-linux-amd64
-sudo mv ahasend-linux-amd64 /usr/local/bin/ahasend
-
-# Verify
-ahasend --help
+gh attestation verify ahasend-linux-amd64 --repo AhaSend/ahasend-cli
 ```
-
-</Tab>
-<Tab title="Fedora/RHEL">
-
-```bash
-# Download the binary
-curl -LO https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64
-
-# Make executable and install
-chmod +x ahasend-linux-amd64
-sudo mv ahasend-linux-amd64 /usr/local/bin/ahasend
-
-# Verify
-ahasend --help
-```
-
-</Tab>
-<Tab title="Arch Linux">
-
-```bash
-# Download the binary
-wget https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-linux-amd64
-
-# Install to user directory
-mkdir -p ~/.local/bin
-mv ahasend-linux-amd64 ~/.local/bin/ahasend
-chmod +x ~/.local/bin/ahasend
-
-# Add to PATH if needed
-echo 'export PATH=$PATH:~/.local/bin' >> ~/.bashrc
-source ~/.bashrc
-
-# Verify
-ahasend --help
-```
-
-</Tab>
-</Tabs>
-
-### macOS
-
-<Tabs>
-<Tab title="Intel Mac">
-
-```bash
-# Download the binary
-curl -LO https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-darwin-amd64
-
-# Make executable and install
-chmod +x ahasend-darwin-amd64
-sudo mv ahasend-darwin-amd64 /usr/local/bin/ahasend
-
-# Verify
-ahasend --help
-```
-
-</Tab>
-<Tab title="Apple Silicon">
-
-```bash
-# Download the binary
-curl -LO https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-darwin-arm64
-
-# Make executable and install
-chmod +x ahasend-darwin-arm64
-sudo mv ahasend-darwin-arm64 /usr/local/bin/ahasend
-
-# Verify
-ahasend --help
-```
-
-</Tab>
-</Tabs>
-
-<Note>
-On macOS, you may need to allow the binary in Security & Privacy settings if you see a security warning.
-</Note>
-
-### Windows
-
-<Tabs>
-<Tab title="PowerShell">
-
-```powershell
-# Download the binary
-Invoke-WebRequest -Uri "https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-windows-amd64.exe" -OutFile "ahasend.exe"
-
-# Create a directory for the CLI
-New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\AhaSend"
-
-# Move the executable
-Move-Item -Path ".\ahasend.exe" -Destination "$env:LOCALAPPDATA\AhaSend\ahasend.exe"
-
-# Add to PATH (User scope; no admin rights needed)
-[Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:LOCALAPPDATA\AhaSend", [EnvironmentVariableTarget]::User)
-
-# Verify (open new PowerShell window)
-ahasend --help
-```
-
-</Tab>
-<Tab title="Command Prompt">
-
-```batch
-:: Download using curl (Windows 10+)
-curl -LO https://github.com/AhaSend/ahasend-cli/releases/latest/download/ahasend-windows-amd64.exe
-
-:: Create directory
-mkdir "%LOCALAPPDATA%\AhaSend"
-
-:: Move executable
-move ahasend-windows-amd64.exe "%LOCALAPPDATA%\AhaSend\ahasend.exe"
-
-:: Add to PATH manually through System Properties > Environment Variables
-:: Add %LOCALAPPDATA%\AhaSend to your PATH
-
-:: Verify (open new command prompt)
-ahasend --help
-```
-
-</Tab>
-</Tabs>
 
 ## Shell Completion
 
-The CLI supports shell completion for bash, zsh, fish, and PowerShell.
+Homebrew and the .deb and .rpm packages install completion for bash, zsh and fish. For other install methods, or for PowerShell, generate it with `ahasend completion`.
 
 <Tabs>
 <Tab title="Bash">
 
-**Linux:**
 ```bash
-# Install system-wide (requires sudo)
-sudo mkdir -p /etc/bash_completion.d
-ahasend completion bash | sudo tee /etc/bash_completion.d/ahasend > /dev/null
-
-# Or install for current user
-mkdir -p ~/.bash_completion.d
-ahasend completion bash > ~/.bash_completion.d/ahasend
-echo "source ~/.bash_completion.d/ahasend" >> ~/.bashrc
-source ~/.bashrc
+mkdir -p ~/.local/share/bash-completion/completions
+ahasend completion bash > ~/.local/share/bash-completion/completions/ahasend
 ```
 
-**macOS:**
-```bash
-# Install system-wide (requires brew and bash-completion)
-brew install bash-completion
-ahasend completion bash > $(brew --prefix)/etc/bash_completion.d/ahasend
-
-# Reload shell
-exec bash
-```
+This needs version 2 of the `bash-completion` package, which most Linux systems have.
 
 </Tab>
 <Tab title="Zsh">
 
-**Linux:**
 ```bash
-# Install completion for your user
 mkdir -p ~/.zsh/completions
 ahasend completion zsh > ~/.zsh/completions/_ahasend
 echo 'fpath=(~/.zsh/completions $fpath)' >> ~/.zshrc
 echo 'autoload -Uz compinit && compinit' >> ~/.zshrc
-
-# Reload shell
-exec zsh
-```
-
-**macOS:**
-```bash
-# Install to homebrew's zsh completions directory
-ahasend completion zsh > $(brew --prefix)/share/zsh/site-functions/_ahasend
-
-# Reload shell
 exec zsh
 ```
 
@@ -353,139 +382,74 @@ exec zsh
 <Tab title="Fish">
 
 ```bash
-# Generate completion script (works on Linux and macOS)
 mkdir -p ~/.config/fish/completions
 ahasend completion fish > ~/.config/fish/completions/ahasend.fish
-
-# Reload shell
-exec fish
 ```
 
 </Tab>
 <Tab title="PowerShell">
 
 ```powershell
-# Generate completion script
-ahasend completion powershell > ahasend.ps1
-
-# Source it in your profile
-Add-Content $PROFILE "& $(Get-Location)\ahasend.ps1"
-
-# Reload profile
+New-Item -ItemType Directory -Force -Path (Split-Path $PROFILE) | Out-Null
+ahasend completion powershell | Out-File -Encoding utf8 "$(Split-Path $PROFILE)\ahasend-completion.ps1"
+Add-Content $PROFILE ". `"$(Split-Path $PROFILE)\ahasend-completion.ps1`""
 . $PROFILE
 ```
 
-</Tab>
-</Tabs>
-
-## Verifying Installation
-
-After installation, verify that the CLI is working correctly:
-
-```bash
-# View help
-ahasend --help
-
-# Test API connectivity (after authentication)
-ahasend ping
-```
-
-## Updating the CLI
-
-To update to the latest version:
-
-<Tabs>
-<Tab title="Binary">
-
-Download and replace the existing binary with the latest version from the [releases page](https://github.com/AhaSend/ahasend-cli/releases).
-
-</Tab>
-<Tab title="From Source">
-
-```bash
-cd ahasend-cli
-git pull origin main
-make clean build
-sudo cp bin/ahasend /usr/local/bin/ahasend
-```
-
-</Tab>
-<Tab title="Go Install">
-
-```bash
-go install github.com/AhaSend/ahasend-cli@latest
-mv "$(go env GOPATH)/bin/ahasend-cli" "$(go env GOPATH)/bin/ahasend"
-"$(go env GOPATH)/bin/ahasend" --help
-```
+Windows PowerShell 5.1 runs profile scripts only when the execution policy allows them. If `. $PROFILE` fails, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
 </Tab>
 </Tabs>
 
-## Uninstallation
+## Remove Your Configuration
 
-To remove the AhaSend CLI from your system:
+Uninstalling the CLI leaves your profiles in `~/.ahasend` (`%USERPROFILE%\.ahasend` on Windows). Delete that folder to remove them:
 
 ```bash
-# Remove the binary
-sudo rm /usr/local/bin/ahasend
-
-# Remove configuration (optional)
+# macOS and Linux
 rm -rf ~/.ahasend
+```
 
-# Remove shell completions (if installed)
-# Location depends on your shell and installation method
+```powershell
+# Windows
+Remove-Item -Recurse "$env:USERPROFILE\.ahasend"
 ```
 
 ## Troubleshooting
 
 ### Command Not Found
 
-If you get "command not found" after installation:
+The install folder is not on your `PATH`. The install scripts print the line to add, unless you ran them with `--quiet` or `-Quiet`. To add the folder yourself on macOS and Linux, put this line, with your folder, in your shell's startup file, such as `~/.bashrc` or `~/.zshrc`, and open a new terminal:
 
-1. Check if the binary is in your PATH:
 ```bash
-which ahasend
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-2. If not found, add the installation directory to your PATH:
-```bash
-# For bash
-echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
-source ~/.bashrc
+In fish, run this once instead, with your folder:
 
-# For zsh
-echo 'export PATH=$PATH:/usr/local/bin' >> ~/.zshrc
-source ~/.zshrc
+```fish
+fish_add_path ~/.local/bin
 ```
 
-### Permission Denied
+On Windows, use the `PATH` command in the [binary download](#binary-download) steps, with your folder.
 
-If you get permission errors:
+### More Than One Copy
 
-1. Make sure the binary is executable:
+If `ahasend --version` shows an older version than you installed, another copy comes first on your `PATH`. List every copy:
+
 ```bash
-chmod +x /path/to/ahasend
-```
-
-2. Use sudo for system-wide installation:
-```bash
-sudo mv ahasend /usr/local/bin/
-```
-
-### Version Conflicts
-
-If you have multiple versions installed:
-
-1. Check all locations:
-```bash
+# macOS and Linux
 which -a ahasend
 ```
 
-2. Remove old versions and keep only the latest.
+```powershell
+# Windows
+Get-Command ahasend -All
+```
+
+Remove the copies you do not use, with the tool that installed them. A manual install may also have put a copy in `/usr/local/bin` on macOS and Linux, or in `%LOCALAPPDATA%\AhaSend` on Windows; delete it there.
 
 ## Next Steps
-
-Once installed, you're ready to:
 
 1. [Set up authentication](/cli/authentication)
 2. [Start with the quick start guide](/cli/quickstart)

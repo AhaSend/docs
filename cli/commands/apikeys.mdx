@@ -8,7 +8,7 @@ sidebarTitle: "apikeys"
 
 AhaSend CLI `apikeys` commands let you create, inspect, update and revoke API keys; this page covers their arguments and flags.
 
-Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with a resource UUID from your test account. Create any named template, recipient, attachment, or JSON files first. Shell examples use Bash; examples that read JSON with `jq` need jq installed. Sends use sandbox mode.
+Before running the examples, [log in](/cli/authentication) with an API key that has the `api-keys:read`, `api-keys:write` and `api-keys:delete` [scopes](/api-reference/scopes#api-key-management). Replace `YOUR_RESOURCE_ID` with the ID of an API key, and `example.com` in the scopes with a domain in your account. The delete example needs [jq](https://jqlang.org).
 
 ## Overview
 
@@ -17,44 +17,103 @@ ahasend apikeys [subcommand] [flags]
 ```
 
 Available subcommands:
-- `list` - List all API keys
-- `create` - Create a new API key
-- `get` - Get detailed information about a specific API key
-- `update` - Update an existing API key
+- `list` - List API keys
+- `create` - Create an API key
+- `get` - Get details of an API key
+- `update` - Update an API key's label, scopes or IP allow list
 - `delete` - Delete an API key
 
 API keys are used to authenticate requests to the AhaSend API. You can create multiple API keys with different scopes and labels to organize access for different applications or team members.
 
 Each API key has:
 - A unique identifier and secret
-- Configurable scopes (permissions) - see [API Key Scopes](/api-reference/scopes)
-- Optional labels for organization
+- Scopes (permissions) that define what the key can do; see [Scopes](#scopes)
+- A label that names it, required when you create it
+- An optional IP allow list that limits where the key can be used; see [IP Allow Lists](#ip-allow-lists)
 - Creation and last used timestamps
 
 ## List API Keys
 
 ```bash
+# List API keys
 ahasend apikeys list
+
+# Fetch 10 keys, then the page after them
+ahasend apikeys list --limit 10
+ahasend apikeys list --limit 10 --after YOUR_CURSOR
 ```
 
+Table output shows each key's label, ID, public key, scopes and last use. Plain and CSV output add the IP allow list and the creation and update times. Secrets are never shown. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
+
 ## Create API Key
+
+`--label` and at least one `--scope` are required.
 
 ```bash
 # Send messages from any domain
 ahasend apikeys create --label "Production API" --scope "messages:send:all"
 
-# Multiple specific scopes
+# Read-only analytics key
 ahasend apikeys create \
   --label "Analytics Only" \
   --scope "statistics-transactional:read:all" \
-  --scope "suppressions:read"
+  --scope "messages:read:all"
 
 # Domain-specific messaging
 ahasend apikeys create \
   --label "Newsletter Service" \
   --scope "messages:send:{example.com}" \
-  --scope "suppressions:write"
+  --scope "suppressions:read"
+
+# Key usable only from specific IPs
+ahasend apikeys create \
+  --label "Production servers" \
+  --scope "messages:send:all" \
+  --ip-allow-list 203.0.113.0/24 \
+  --ip-allow-list 2001:db8::1
 ```
+
+The output shows the key's secret once. Save it at once: it cannot be retrieved later. A retry with the same `--idempotency-key` within 5 minutes returns the same response, secret included. After that, create a new key if you lose the secret.
+
+`--label` holds up to 255 characters.
+
+## Scopes
+
+Give each scope with its own `--scope`, or separate scopes with commas. Scope names are case-sensitive; the domain of a scope is compared ignoring case. The CLI checks every scope before it sends the request: a scope the API does not accept, or a scope given twice, fails with exit code 4. Follow the principle of least privilege, and grant only the scopes the key needs.
+
+A scope that ends in `{domain}` takes one of your domains in its place, such as `messages:send:{example.com}`. The domain must exist in your account. Quote such a scope, as the examples do, so your shell passes the braces unchanged.
+
+| Area | Scopes |
+|---|---|
+| Messages | `messages:send:all`, `messages:send:{domain}`, `messages:cancel:all`, `messages:cancel:{domain}`, `messages:read:all`, `messages:read:{domain}` |
+| Domains | `domains:read`, `domains:write`, `domains:delete:all`, `domains:delete:{domain}` |
+| Accounts | `accounts:read`, `accounts:write`, `accounts:billing`, `accounts:members:read`, `accounts:members:add`, `accounts:members:update`, `accounts:members:remove` |
+| Webhooks | `webhooks:read:all`, `webhooks:read:{domain}`, `webhooks:write:all`, `webhooks:write:{domain}`, `webhooks:delete:all`, `webhooks:delete:{domain}` |
+| Routes | `routes:read:all`, `routes:read:{domain}`, `routes:write:all`, `routes:write:{domain}`, `routes:delete:all`, `routes:delete:{domain}` |
+| Suppressions | `suppressions:read`, `suppressions:write`, `suppressions:delete`, `suppressions:wipe` |
+| Templates | `templates:read`, `templates:write`, `templates:delete` |
+| Campaigns | `campaigns:read`, `campaigns:write`, `campaigns:delete`, `campaigns:send` |
+| Contacts | `contacts:read`, `contacts:write`, `contacts:delete` |
+| Lists | `lists:read`, `lists:write`, `lists:delete` |
+| SMTP credentials | `smtp-credentials:read:all`, `smtp-credentials:read:{domain}`, `smtp-credentials:write:all`, `smtp-credentials:write:{domain}`, `smtp-credentials:delete:all`, `smtp-credentials:delete:{domain}` |
+| Statistics | `statistics-transactional:read:all`, `statistics-transactional:read:{domain}` |
+| API keys | `api-keys:read`, `api-keys:write`, `api-keys:delete` |
+| Sub-accounts | `sub-accounts:read`, `sub-accounts:write`, `sub-accounts:delete`, `sub-accounts:suspend`, `sub-accounts:usage` |
+| Sub-account API keys | `sub-account-api-keys:read`, `sub-account-api-keys:write`, `sub-account-api-keys:delete` |
+
+`ahasend apikeys create --help` lists the same scopes. See [Permission scopes](/api-reference/scopes) for what each one allows.
+
+## IP Allow Lists
+
+`--ip-allow-list` limits the source IPs that can authenticate with the key. Each entry is a CIDR block, such as `203.0.113.0/24`, or a bare IPv4 or IPv6 address, such as `2001:db8::1`. Repeat the flag, or separate entries with commas. Without it, the key works from any IP, which table and plain output show as `any`.
+
+The CLI checks the list before it sends the request. These fail with exit code 4:
+- An empty value
+- An entry that is not an IP address or CIDR block
+- A block that allows every IP, such as `0.0.0.0/0` or `::/0`; leave the list empty instead
+- More than 100 distinct entries, the API's limit
+
+A request with the key from an IP outside the list fails with HTTP 403 (exit code 6). See [IP allow lists](/security/ip-allow-lists) for how the API applies the list.
 
 ## Get API Key Details
 
@@ -62,17 +121,35 @@ ahasend apikeys create \
 ahasend apikeys get YOUR_RESOURCE_ID
 ```
 
+The key ID must be a UUID. Table and plain output show the secret key as `[HIDDEN]`.
+
 ## Update API Key
 
+`update` changes only the flags you give, and needs at least one. Do not replace the scopes of the key the CLI is logged in with unless the new scopes keep the `api-keys` scopes you need: otherwise that key can no longer change itself back. `--scope` replaces all of the key's scopes: to add a scope, give every existing scope plus the new one. `--ip-allow-list` replaces the whole list, and `--clear-ip-allow-list` removes it so the key works from any IP. The secret cannot be changed; create a new key and delete the old one instead.
+
 ```bash
-# Update label
+# Update the label
 ahasend apikeys update YOUR_RESOURCE_ID --label "Updated Label"
 
-# Update scope
-ahasend apikeys update YOUR_RESOURCE_ID --scope "messages:send:{example.com}"
+# Replace the scopes
+ahasend apikeys update YOUR_RESOURCE_ID \
+  --scope "messages:send:{example.com}" \
+  --scope "messages:read:{example.com}"
+
+# Replace the IP allow list
+ahasend apikeys update YOUR_RESOURCE_ID --ip-allow-list 203.0.113.0/24
+
+# Remove the IP allow list so the key works from any IP
+ahasend apikeys update YOUR_RESOURCE_ID --clear-ip-allow-list
 ```
 
+`--ip-allow-list` and `--clear-ip-allow-list` cannot be used together.
+
+The API refuses to give the key you are calling with an IP allow list that leaves out your current IP, so you cannot lock yourself out. The update fails with HTTP 409, exit code 1.
+
 ## Delete API Key
+
+The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it.
 
 ```bash
 TEST_ID=$(ahasend apikeys create --label "Docs deletion test" --scope "accounts:read" --output json | jq -er '.id')
@@ -83,28 +160,24 @@ ahasend apikeys delete "$TEST_ID"
 Deleting an API key is irreversible. Applications using this key will lose access immediately.
 </Warning>
 
-## Next Steps
-
-- [Learn about API Key Scopes](/api-reference/scopes)
-- [Authenticate with the CLI](/cli/authentication)
-- [Send messages](/cli/commands/messages)
-
 ## Command Flags
 
-These flags come from the current CLI. All commands also accept the [global flags](/cli/configuration#global-flags).
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
 ### `apikeys create`
 
 | Flag | Description and default |
 |---|---|
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--ip-allow-list strings` | CIDR block or IP address allowed to use the key (can be used multiple times) |
 | `--label string` | Label for the API key (required) |
-| `--scope strings` | Scopes to grant (required, can be used multiple times) |
+| `--scope strings` | Scope to grant (required; can be used multiple times) |
 
 ### `apikeys delete`
 
 | Flag | Description and default |
 |---|---|
-| `--force` | Skip confirmation prompt |
+| `-f`, `--force` | Skip confirmation prompt |
 
 ### `apikeys get`
 
@@ -114,15 +187,24 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 
 | Flag | Description and default |
 |---|---|
-| `--cursor string` | Pagination cursor for next page |
-| `--limit int32` | Maximum number of API keys to return (1-100) (default 20) |
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
 
 ### `apikeys update`
 
 | Flag | Description and default |
 |---|---|
+| `--clear-ip-allow-list` | Remove the IP allow list so the key works from any IP |
+| `--ip-allow-list strings` | New CIDR block or IP address allowed to use the key, replacing the list (can be used multiple times) |
 | `--label string` | New label for the API key |
-| `--scope strings` | New scopes to grant (replaces existing scopes) |
+| `--scope strings` | New scope to grant, replacing all scopes (can be used multiple times) |
+
+## Next Steps
+
+- [Learn about API Key Scopes](/api-reference/scopes)
+- [Authenticate with the CLI](/cli/authentication)
+- [Send messages](/cli/commands/messages)
 
 ## Related Guides
 
