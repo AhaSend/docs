@@ -40,7 +40,7 @@ ahasend routes listen --recipient "support-*@example.com"
 ahasend routes listen --route-id YOUR_RESOURCE_ID --slim-output
 ```
 
-The API key needs the `routes:write:all` scope, and `messages:read` for the domain of the route's recipient (`messages:read:all`, or `messages:read:{example.com}`). The recipient's domain must be one of your domains, with its AhaSend MX record configured, for the route to receive email. With `--recipient`, the API checks this before it creates the route: when the domain is not in your account, or its MX record is not configured, the command fails at once with exit code 6 and the API's message, such as `domain 'example.com' MX records are not configured`.
+The API key needs the `routes:write:all` scope, and `messages:read` for the domain of the route's recipient (`messages:read:all`, or `messages:read:{example.com}`). The recipient's domain must be one of your domains, with its AhaSend MX record configured, for the route to receive email. With `--recipient`, the API checks this before it creates the route, and the command fails at once with the API's message: with exit code 4 when the domain is not in your account (`domain 'example.com' not found or not owned by this account`), and with exit code 6 when its MX record is not configured (`domain 'example.com' MX records are not configured`).
 
 When the connection starts, the command prints a banner with the route ID, the recipient pattern of a temporary route, the forwarding secret and, with `--forward-to`, the forwarding URL.
 
