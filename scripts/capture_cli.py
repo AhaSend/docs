@@ -63,8 +63,8 @@ def main():
     build = subprocess.run(["go", "version", "-m", binary], capture_output=True,
                            text=True, check=True).stdout
     module = re.search(r"\bmod\s+github.com/AhaSend/ahasend-cli\s+(\S+)\s+(\S+)", build)
-    if not module or module[1] != "v0.2.0" or module[2] != "h1:Kj87jOuqApnhYuisUuCUvoDcDlYW/aLIrHsjsB/a7ds=":
-        raise SystemExit("Expected go install github.com/AhaSend/ahasend-cli@v0.2.0 with the recorded module checksum")
+    if not module or module[1] != "v0.3.0" or module[2] != "h1:mRYdIE46lOe9nWIGXxcd+Zn7tZrY/3r+PZW8EAaW6+I=":
+        raise SystemExit("Expected go install github.com/AhaSend/ahasend-cli@v0.3.0 with the recorded module checksum")
     source = {"module": "github.com/AhaSend/ahasend-cli", "version": module[1], "checksum": module[2]}
     commands = capture(binary)
     args.output.parent.mkdir(parents=True, exist_ok=True)
