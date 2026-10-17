@@ -5,7 +5,7 @@ description: "Check AhaSend's EU data location, free email allowance, plan featu
 icon: "circle-info"
 ---
 
-AhaSend is a European transactional email service for developers: send through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, with data stored in the EU and 1,000 free emails per month.
+AhaSend is a European email service for developers: send transactional email through a REST API, SMTP relay, CLI or the official Node.js and Go SDKs, and newsletters and campaigns with Campaign Builder, with data stored in the EU and 1,000 free emails per month shared by both.
 
 ## Company and Service
 
@@ -23,7 +23,7 @@ AhaSend is a European transactional email service for developers: send through a
 
 | Feature | Free | Pro | Max |
 |---|---|---|---|
-| Emails included per month | 1,000 | 25,000 | 100,000 |
+| Emails included per month, transactional and campaigns combined | 1,000 | 25,000 | 100,000 |
 | [Sending domains](/domains) | 3 | Unlimited | Unlimited |
 | [Metadata retention](/retention) | 1–7 days | 1–14 days | 1–30 days |
 | [Message data retention](/retention) | 1–7 days | 0–14 days (0 needs approval) | 0–30 days (0 needs approval) |
@@ -32,8 +32,9 @@ AhaSend is a European transactional email service for developers: send through a
 | [Bring your own IP](/scale/byoip) | No | No | Add-on |
 | [S3 archiving](/retention/s3), [DSN reports](/integrations/dsn-reports), [OIDC single sign-on](/security/sso) | No | No | Yes |
 | [Sub-accounts](/scale/sub-accounts), [DNS whitelabel](/scale/dns-whitelabel), [per-domain DKIM selectors and bring-your-own DKIM](/api-reference/domains/create-domain) | Platform Partners | Platform Partners | Platform Partners |
+| [Campaign Builder](/api-reference/campaigns/overview): contacts and lists, campaign templates, scheduling and test sends, campaign reports, [marketing domains](/deliverability#which-sending-type-should-my-domain-use) with a separate [daily marketing limit](/deliverability/marketing-limit) | Yes | Yes | Yes |
 | Support | Community, best effort | Every day 9:00–21:00 CEST | Premium, 4-hour response time |
-| [API](/send-api/send-email), [SMTP](/smtp), [sandbox](/send-api/sandbox), [webhooks](/integrations/webhooks), [inbound routing](/integrations/routing), [tracking](/tracking/open-tracking), [2FA](/security/2fa) and [2FA enforcement](/security/2fa-enforcement), [scoped keys](/security/scoped-credentials), [IP allow lists](/security/ip-allow-lists), [Reputation Shield](/security/reputation-shield), [signed webhooks and routes](/api-reference/webhooks/security), [automatic DKIM rotation](/domains) | Yes | Yes | Yes |
+| [API](/send-api/send-email), [SMTP](/smtp), [transactional templates](/send-api/templates), [sandbox](/send-api/sandbox), [webhooks](/integrations/webhooks), [inbound routing](/integrations/routing), [tracking](/tracking/open-tracking), [2FA](/security/2fa) and [2FA enforcement](/security/2fa-enforcement), [scoped keys](/security/scoped-credentials), [IP allow lists](/security/ip-allow-lists), [Reputation Shield](/security/reputation-shield), [signed webhooks and routes](/api-reference/webhooks/security), [automatic DKIM rotation](/domains) | Yes | Yes | Yes |
 
 Platform Partner features require the Platform Partner program. [Contact sales](mailto:sales@ahasend.com) about access.
 
@@ -47,6 +48,9 @@ New accounts keep message metadata and message data for 7 days. Zero data retent
 | API request limit | 100 requests per second with bursts of 200 | [API rate limits](/api-reference/rate-limits) |
 | Statistics, stream and trigger endpoints | 1 request per second | [API rate limits](/api-reference/rate-limits) |
 | Create Message recipients | Up to 100 per request | [Send email](/send-api/send-email) |
+| Create Template Message recipients | Up to 100 per request | [Transactional templates](/send-api/templates) |
+| Campaign lists | 1 to 50 lists per campaign | [Campaigns](/api-reference/campaigns/overview) |
+| Template content size | MJML, HTML and custom text each up to 200 KB | [Transactional templates](/send-api/templates) |
 | Scheduled sending | First attempt within 7 days; expiry within 8 days | [Create Message](/api-reference/messages/create-message) |
 | SMTP host | `send.ahasend.com` | [SMTP settings](/smtp) |
 | SMTP ports and encryption | 25, 587 and 2525 with STARTTLS; 465 with implicit TLS | [SMTP settings](/smtp) |
@@ -64,6 +68,6 @@ Hourly sending limits apply to transactional mail. They start low for new accoun
 ## Related Guides
 
 - [Start sending](/quickstart), [Domain setup](/domains), [Send-only API keys](/send-api/credentials).
-- [Sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
+- [Sending guide](/send-api/send-email), [Transactional templates](/send-api/templates), [Campaigns](/api-reference/campaigns/overview), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).
 - [SDK and framework guides](/guides), [Product releases](/changelog), [Retention rules](/retention).
 - [Tracking setup](/tracking/open-tracking), [Sandbox behavior](/send-api/sandbox), [Dedicated IP availability](/scale/dedicated-ips).
