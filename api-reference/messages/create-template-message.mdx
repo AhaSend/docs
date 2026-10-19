@@ -37,6 +37,9 @@ When the template's design uses `unsubscribe_url`, each recipient gets its own u
 **Other fields:**
 `attachments`, `headers`, `tags`, `tracking`, `retention`, `schedule`, `sandbox` and `sandbox_result` follow the rules of [Create Message](/api-reference/messages/create-message). The response is the same per-recipient list. When sending from the domain is paused, the request is refused with `403`. A sandbox message is accepted from a paused domain.
 
+**Template check:**
+Every message is checked with the template engine before it is sent. Content that the check refuses is answered with `400`, and nothing of the request is sent. When the check cannot run right now, the API answers `503` with a `Retry-After` header: send the same request again after that delay. See [API errors](/api-reference/errors#400-bad-request).
+
 This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 
 ## Related Guides

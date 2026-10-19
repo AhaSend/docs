@@ -109,6 +109,8 @@ Sending a template needs a key that can send from the sender's domain: `messages
 | `400 the template has no subject, publish one on the template page or pass subject` | No `subject` in the request and none published on the template | Set a subject on the template page, or send `subject` |
 | `400 missing required template variables: anna@example.com needs first_name, order_id` | A recipient lacks a required variable. No message in the request is sent | Add the value, or give the variable a fallback in the design |
 | `400 from is required because the template has no default sender` | No `from` in the request and none on the template | Set a default sender on the template page, or send `from` |
+| `400 anna@example.com: the message could not be rendered: <reason>` | The [template check](/api-reference/errors#400-bad-request) refused the template with this recipient's values. No message in the request is sent | Fix the design or the recipient's values |
+| `503 the message could not be checked right now; try again in a moment` | The template check could not run right now. Nothing was sent | Wait for the `Retry-After` delay, then send the same request again with the same `Idempotency-Key` |
 | `403` | The key cannot send from the sender's domain, or the domain is paused | Check the key's scopes and the domain's status |
 | `403 this api key is not authorized to send messages` | No `from` in the request and the key can send from no domain | Send `from`, or give the key a send scope |
 

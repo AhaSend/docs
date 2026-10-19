@@ -20,21 +20,23 @@ The AhaSend API sends a test of a draft campaign. Access requires `campaigns:sen
 - The campaign must be a draft. Any other status answers `409`.
 - A campaign with issues is refused with `400`, and the response holds the issues. The issue `unsubscribe_link_missing` does not stop a test. See [Issues](/api-reference/campaigns/overview#issues).
 - The domain of the sender must be verified and not paused. If not, the test is refused with `400`.
+- Every test is checked with the template engine before it is sent. Content that the check refuses is answered with `400`, and nothing is sent. See [API errors](/api-reference/errors#400-bad-request).
 - An account that is blocked until a person acts, for example a sub-account in the `parent-suspended` status, whose parent account is suspended, cannot send tests: the test is refused with `400`. An account that is blocked only until it pays, for example one with no credits left, can still send tests, because tests use no credits.
 
 **Daily limit:**
 - Your account can send 50 test emails per day (UTC). Each address of a test counts as one test email. Test sends from the API and from the dashboard count together.
 - The API refuses the whole test when its addresses would take the day's total over 50. For example, with 48 test emails used, a test to 5 addresses is refused, and a test to 2 addresses is sent.
 - The API answers `429` when it refuses a test for the limit. Its message currently reads `daily test send limit reached`. Backoff does not clear this `429`. A test to fewer addresses can still fit in the test emails left for the day, as in the example above. Otherwise, the limit clears when the UTC day changes. To plan for it, keep count of the test emails you send each UTC day. A `429` from Test Campaign that stays after backoff is the daily limit.
-- An address that the mail server refused still counts, and so does a test with `result_unknown`. A test that sent nothing (`502`) does not count.
+- An address that the mail server refused still counts, and so does a test with `result_unknown`. A test that sent nothing does not count: a `502`, a `503`, or a `400` from the template check.
 
 **Response:**
 - `sent_to` lists the addresses that the mail server accepted, and `failed` lists the addresses it refused, each with the reason. An address in `failed` is given as the mail server reported it, so it can differ from the addresses in `to`.
 - When `result_unknown` is `true`, the mail server took the request, but its answer could not be read. The test may have gone out, and `sent_to` and `failed` are empty. Check the inboxes before you send another test.
 - When the mail server could not take the test, the API answers `502` and nothing was sent. Retry the request.
+- When the template check could not run right now, the API answers `503` with a `Retry-After` header, and nothing was sent. Retry the request after that delay.
 
 **Idempotency:**
-This operation accepts an `Idempotency-Key` header. A `2xx` answer is stored, so a retry with the same key replays it and sends nothing again. Unlike other operations, a `4xx` answer is not stored. A retry with the same key, for example after the daily limit resets, gets a new answer. A `502` is not stored either, so you can retry it with the same key. See [Idempotency](/api-reference/idempotency).
+This operation accepts an `Idempotency-Key` header. A `2xx` answer is stored, so a retry with the same key replays it and sends nothing again. Unlike other operations, a `4xx` answer is not stored. A retry with the same key, for example after the daily limit resets, gets a new answer. A `502` or a `503` is not stored either, so you can retry it with the same key. See [Idempotency](/api-reference/idempotency).
 
 ## Related Guides
 

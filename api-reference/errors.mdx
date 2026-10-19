@@ -74,6 +74,14 @@ Common causes include invalid JSON, missing required fields, or parameters that 
 }
 ```
 
+**Template check:** [Create Message](/api-reference/messages/create-message), [Create Template Message](/api-reference/messages/create-template-message), [Create Conversation](/api-reference/messages/create-conversation) and [Test Campaign](/api-reference/campaigns/test-campaign) check every message with the template engine before they send it. The request is refused with `400`, and nothing of it is sent, when a message's content cannot be rendered with a recipient's values, calls `random`, `randrange`, `lipsum` or `now`, uses `namespace`, passes a work, output, memory or time limit, or has a recipient address the check cannot read. The message is `<email>: the message could not be rendered: <reason>`, or has no `<email>: ` when no recipient had started rendering. Fix the content or the recipient's values before you send the request again.
+
+```json
+{
+  "message": "john@example.com: the message could not be rendered: unknown function: nosuch"
+}
+```
+
 #### 401 Unauthorized
 
 Authentication failed or is missing.
@@ -232,9 +240,17 @@ These errors indicate a problem on our end. If you consistently receive 500 erro
 
 #### 503 Service Unavailable
 
-The service could not finish the request. Retry it later.
+The service could not finish the request. Retry it later. When the response has a `Retry-After` header, wait that number of seconds before you retry.
 
-The transactional template operations answer `503` with a `Retry-After` header when the template kept changing while the request ran, for example while it was edited in the dashboard. Retry the request after that delay.
+**Template check busy:** [Create Message](/api-reference/messages/create-message), [Create Template Message](/api-reference/messages/create-template-message), [Create Conversation](/api-reference/messages/create-conversation) and [Test Campaign](/api-reference/campaigns/test-campaign) answer `503` with a `Retry-After` header when the template check could not run right now, because the service was busy or the check failed. Nothing was sent, and nothing is known to be wrong with the message. Send the same request again after the delay. If the request has an `Idempotency-Key`, use the same key: a `503` is not stored under it.
+
+```json
+{
+  "message": "the message could not be checked right now; try again in a moment"
+}
+```
+
+**Template changing:** the transactional template operations answer `503` with a `Retry-After` header when the template kept changing while the request ran, for example while it was edited in the dashboard. Retry the request after that delay.
 
 ```json
 {
@@ -303,7 +319,7 @@ When your API key doesn't have sufficient permissions:
 ### Error Handling
 - Always check the HTTP status code first
 - Show the `message` field to people; do not branch on its text, which can change
-- Implement appropriate retry logic for 5xx errors
+- Retry 5xx errors with backoff. When a `503` has a `Retry-After` header, wait that number of seconds first
 - Respect rate limits when receiving 429 responses
 
 ### Common Fixes
@@ -312,6 +328,7 @@ When your API key doesn't have sufficient permissions:
 - **403 errors**: Verify your API key has the required scopes
 - **404 errors**: Confirm the resource exists and belongs to your account
 - **429 errors**: Implement exponential backoff in your retry logic
+- **503 errors**: Wait for the `Retry-After` delay, then send the same request again
 
 <Note>
 Error messages are designed to be descriptive and actionable. They provide specific guidance on what needs to be corrected in your request.
