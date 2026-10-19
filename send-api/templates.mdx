@@ -43,6 +43,40 @@ Write a variable in the design as `{{ first_name }}`. The templating language is
 - **Reserved names.** AhaSend supplies `email` (the recipient's address) and, when the design uses it, `unsubscribe_url`. A value you give for these is replaced.
 - **Subject and headers.** A `{{ variable }}` in the subject or in a custom header resolves from the same values. A variable with no value becomes empty.
 
+### Kinds of Variables
+
+Each variable in `variables` on [Get Template](/api-reference/templates/get-template) has a `kind` that says what to send for it:
+
+| `kind` | What to send | Used in the design like |
+| --- | --- | --- |
+| `value` | Text or a number. It appears in the email. | `{{ first_name }}` |
+| `condition` | Any value. It only decides whether a part of the email is shown, and it never appears in the email. | `{% if vip %} … {% endif %}` |
+| `list` | An array. A part of the email is repeated once for each element. | `{% for item in items %} … {% endfor %}` |
+
+For a `condition`, send a value that is not empty, such as `true` or `"yes"`, to show the part. Leave it out, or send `""`, `false`, `0`, `null`, `[]` or `{}`, to hide it. The strings `"false"` and `"0"` are not empty, so they show the part. When the design compares the value, for example `{% if plan == "gold" %}`, send a value that meets the comparison to show the part.
+
+A `list` variable also has `item_fields`: the fields the repeated part uses from each element. For example, an order confirmation that shows one row per product has this variable:
+
+```json
+{ "name": "items", "required": true, "kind": "list", "item_fields": ["name", "price"] }
+```
+
+Send each element as an object with those fields:
+
+```json
+"substitutions": {
+  "first_name": "Anna",
+  "items": [
+    { "name": "Linen shirt", "price": "€49" },
+    { "name": "Canvas tote", "price": "€19" }
+  ]
+}
+```
+
+When `item_fields` is `["value"]`, the repeated part shows each element as it is, so you can send plain values, such as `["new", "sale"]`. When `item_fields` is empty, the repeated part uses nothing from its elements: send one element of any kind for each repeat.
+
+A [template version](/api-reference/templates/get-template-version) published before kinds were recorded shows every variable as `value`. Publish the template again to record the kinds.
+
 ### Unsubscribe Link
 
 When the design uses `{{ unsubscribe_url }}`, each recipient gets its own link, and the message carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, so the unsubscribe button of mail clients works. The button suppresses the recipient for the sending domain; the link opens a confirmation page first. Most transactional email should not have an unsubscribe link; use it for templates that are optional for the recipient, such as digests.

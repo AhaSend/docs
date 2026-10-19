@@ -8,6 +8,8 @@ description: "Retrieve one published version of an AhaSend transactional templat
 
 The AhaSend API returns one published version of a template with its content. Access requires `templates:read`.
 
+A version's `variables` are as saved when the version was published. A version published before variable kinds were recorded shows every variable with `kind` `value` and no `item_fields`. Publish the template again to get a version that records them.
+
 To bring a version back, use [Restore Template Version](/api-reference/templates/restore-template-version).
 
 ## Related Guides
