@@ -50,7 +50,7 @@ Each variable in `variables` on [Get Template](/api-reference/templates/get-temp
 | `kind` | What to send | Used in the design like |
 | --- | --- | --- |
 | `value` | Text or a number. It appears in the email. | `{{ first_name }}` |
-| `condition` | Any value. It only decides whether a part of the email is shown, and it never appears in the email. | `{% if vip %} … {% endif %}` |
+| `condition` | A value that is not empty to show a part, or nothing to hide it. It only decides whether a part of the email is shown, and it never appears in the email. | `{% if vip %} … {% endif %}` |
 | `list` | An array. A part of the email is repeated once for each element. | `{% for item in items %} … {% endfor %}` |
 
 For a `condition`, send a value that is not empty, such as `true` or `"yes"`, to show the part. Leave it out, or send `""`, `false`, `0`, `null`, `[]` or `{}`, to hide it. The strings `"false"` and `"0"` are not empty, so they show the part. When the design compares the value, for example `{% if plan == "gold" %}`, send a value that meets the comparison to show the part.
@@ -75,7 +75,7 @@ Send each element as an object with those fields:
 
 When `item_fields` is `["value"]`, the repeated part shows each element as it is, so you can send plain values, such as `["new", "sale"]`. When `item_fields` is empty, the repeated part uses nothing from its elements: send one element of any kind for each repeat.
 
-A [template version](/api-reference/templates/get-template-version) published before kinds were recorded shows every variable as `value`. Publish the template again to record the kinds.
+A [template version](/api-reference/templates/get-template-version) published before kinds were recorded shows every variable as `value`. Save and publish the template again to get a version that records them: a published template has no draft, so make an edit and save it first.
 
 ### Unsubscribe Link
 
