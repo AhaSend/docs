@@ -336,7 +336,7 @@ HTTP `202` means the request was accepted for processing. Inspect every item's `
 
 | HTTP status | Meaning |
 |---|---|
-| 400 | Invalid JSON or request fields |
+| 400 | Invalid JSON or request fields, or content the [template check](/api-reference/errors#400-bad-request) cannot render |
 | 401 | Missing or invalid credentials |
 | 403 | Scope, account, or IP allow list prevents access |
 | 404 | Account or resource was not found |
@@ -344,6 +344,7 @@ HTTP `202` means the request was accepted for processing. Inspect every item's `
 | 422 | This idempotency key was used with a different method, path or body |
 | 429 | Account API request limit exceeded |
 | 500 | Server error; retry with the same idempotency key |
+| 503 | The template check could not run, and nothing was sent; wait for `Retry-After`, then retry with the same idempotency key |
 
 Error responses have a human-readable `message` field. Its text can change; do not parse it as a machine error code.
 

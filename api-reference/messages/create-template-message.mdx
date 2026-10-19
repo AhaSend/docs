@@ -25,6 +25,7 @@ Authorization uses the domain of the sender, `from.email` or the template's defa
 
 **Variables:**
 - Each recipient's `substitutions` hold its values for the template's variables. They are the only place for these values: a `substitutions` object at the top of the request is refused with `400`.
+- Each variable's `kind` in [Get Template](/api-reference/templates/get-template) says what to send: text or a number for `value`, any value that shows or hides a part of the email for `condition`, and an array for `list`. A `list` variable's `item_fields` name the fields of each element. See [kinds of variables](/send-api/templates#kinds-of-variables).
 - Each recipient must give a value for each required variable of the template. The `variables` list of [Get Template](/api-reference/templates/get-template) shows which variables are required. A variable that the design wraps in a fallback is not required. An empty value counts as a value.
 - When a recipient does not give a required variable, the request is refused with `400`, and no message is sent. The error names each recipient and the variables it does not give, for example `missing required template variables: user@example.com needs first_name, order_id`.
 - A value for a name that the template does not use is accepted. Your `subject` and `headers` resolve from the same values, and a `{{ name }}` with no value becomes empty.
@@ -36,6 +37,9 @@ When the template's design uses `unsubscribe_url`, each recipient gets its own u
 
 **Other fields:**
 `attachments`, `headers`, `tags`, `tracking`, `retention`, `schedule`, `sandbox` and `sandbox_result` follow the rules of [Create Message](/api-reference/messages/create-message). The response is the same per-recipient list. When sending from the domain is paused, the request is refused with `403`. A sandbox message is accepted from a paused domain.
+
+**Template check:**
+Every message is checked with the template engine before it is sent. Content that the check refuses is answered with `400`, and nothing of the request is sent. When the check cannot run right now, the API answers `503` with a `Retry-After` header: send the same request again after that delay. See [API errors](/api-reference/errors#400-bad-request).
 
 This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 
