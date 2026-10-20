@@ -1,0 +1,85 @@
+---
+title: "Testing, Review and Sending a Campaign"
+sidebarTitle: "Test, Review and Send"
+description: "Send a test of an AhaSend campaign, fix the issues the campaign page lists, send now or schedule, and see what the list and content review before sending does."
+icon: "paper-plane"
+---
+
+A campaign goes out in four steps: a test to yourself, the checks on the campaign page, a send or schedule, and AhaSend's own review of the list and the content. This page explains each step, the statuses a campaign passes through, and what to do when it is held, paused or needs a change.
+
+## Test Sends
+
+Click **Send Test** on the campaign page and enter up to 3 addresses or pick up to 3 of your contacts; through the [API](/api-reference/campaigns/test-campaign), up to 5 addresses. A contact you pick gets the email with its own values. A typed address gets placeholder text in place of the contact fields, such as `--PLACEHOLDER for First Name--`. A click on the unsubscribe link in a test unsubscribes nobody.
+
+Rules for tests:
+
+- A test needs a complete campaign, with one exception: the unsubscribe link may still be missing. Any other open issue blocks the test as well as the send, so the test is a real rehearsal.
+- Your account can send 50 test emails per day (UTC), counted per address, from the dashboard and the API together.
+- Test emails count against your [daily marketing limit](/campaigns/marketing-limit), but not against your plan's monthly volume.
+
+## Issues
+
+The campaign page lists what is missing before the campaign can go out. The same list comes back as `issues` from the [API](/api-reference/campaigns/get-campaign).
+
+| Issue | What to fix |
+|---|---|
+| Sender missing | Set a sender on a verified domain that is not paused |
+| Lists missing | Choose at least one list that still exists |
+| Subject or preview text missing | Fill them in |
+| Design missing | Open the editor and make a design; an imported HTML design needs HTML |
+| Text broken | The subject, preview text or design has template syntax that cannot be rendered, for example an unclosed `{{` |
+| Unsubscribe link missing | Put `{{ unsubscribe_url }}` back in the design |
+| Text unchecked | The campaign could not be checked right now; nothing is known to be wrong. Check again in a moment |
+
+## Send Now or Schedule
+
+**Schedule & Send** sends the campaign now or at a date and time you choose. A scheduled campaign shows your daily marketing limit, so you can see whether it fits in one day.
+
+Some sends are refused on the spot, with a message that says why: a send time less than a minute ahead, a sender domain that is not verified or is paused, and lists on which no contact can receive the campaign.
+
+Changed your mind? Click **Cancel** on a scheduled campaign, or **Cancel Validation** while its lists are checked, and it returns to draft, where you can edit it and send it again. Through the API, use [Unschedule Campaign](/api-reference/campaigns/unschedule-campaign). A paused, canceled or failed campaign that sent nothing has a **Return to Draft** button. Once a campaign has started sending, it cannot go back to draft; to send the same email again, duplicate it.
+
+## Review
+
+AhaSend's marketing infrastructure is shared by the campaigns of all customers, so AhaSend checks campaigns before they go out. The check protects your delivery from other senders' bad lists, and theirs from yours.
+
+**When the list is checked.** AhaSend checks the lists of a campaign when a list was never checked, was last checked 90 or more days ago, or has more than 10% new contacts since its last check, and for every campaign of an account younger than 30 days. Otherwise the campaign goes straight to its send time.
+
+**The list.** AhaSend checks a sample of the contacts, or all of them on a small list: is the address well-formed, does its domain accept mail, is the domain on AhaSend's list of known bad domains, and, where possible, does the mailbox exist. Sampled addresses that cannot receive mail are left out of the send. Addresses on catch-all domains, which accept mail for any address, cannot be confirmed; they still get the campaign.
+
+**The content.** When the list is checked, a language model that runs on AhaSend's own servers also checks the content for spam, phishing or cold outreach. AhaSend does not accept cold outreach: email to people who did not ask for it. See the [terms of service](https://ahasend.com/terms).
+
+**The result.**
+
+- More than 4% of the sample cannot receive mail: the campaign is **paused** for poor list quality, and its page shows how many sampled contacts are invalid. Clean the list, then click **Return to Draft** and schedule the campaign again, or contact support.
+- A borderline list, a large list that is mostly catch-all addresses, content that looks like spam, or an account that has sent fewer than 3 campaigns: the campaign shows **Awaiting Review**. A sender domain with a poor record, or an earlier rejected review, can also hold it. A person looks at it, usually within 1 to 2 business days. After the review, the campaign continues to its send time, or it returns to draft with the reviewer's notes on its page.
+- Otherwise, the campaign continues to its send time.
+
+Contact [support](mailto:support@ahasend.com) if you want to discuss a paused or held campaign.
+
+## Statuses
+
+| Status | Meaning |
+|---|---|
+| Draft | Being prepared. Only a draft can be edited, tested, sent or deleted. |
+| Validating | Scheduled; the lists are being checked. Can be canceled back to draft. |
+| Awaiting review | Held for a person to [review](#review). Cannot be canceled. The API calls this status `waiting_for_review`. |
+| Scheduled | Accepted, waiting for its send time. Can be canceled back to draft. |
+| Sending | Going out now. |
+| Paused | Sending stopped; the page says why, for example poor list quality. |
+| Sent | Every message was sent. The report is complete. |
+| Canceled | Stopped before it finished; the page says why. |
+| Failed | Could not be sent; the page says why. |
+
+## The Daily Marketing Limit
+
+Campaigns do not send faster than your account's [daily marketing limit](/campaigns/marketing-limit). When the limit is used up, the campaign waits and continues when capacity comes back; a campaign larger than the limit continues over the next days. The report shows an estimated finish and, while the campaign waits, the time it continues. The limit starts low for new accounts and grows with your plan, account age, volume and a low spam rate; support can raise it.
+
+## After the Send
+
+Open the report for delivered, opens, clicks, unsubscribes, complaints and bounces. See [reports](/campaigns/reports). Unsubscribes and spam complaints that mailbox providers report back are processed for you: the contact leaves that list and gets no more campaigns from it.
+
+## Related Guides
+
+- [Creating a campaign](/campaigns/create), [Reports](/campaigns/reports), [Daily marketing limit](/campaigns/marketing-limit).
+- [Campaigns API](/api-reference/campaigns/overview), [Test Campaign](/api-reference/campaigns/test-campaign), [Send Campaign](/api-reference/campaigns/send-campaign).

@@ -1,6 +1,6 @@
 ---
 title: "Unsubscribe Links and One-Click Headers"
-sidebarTitle: "Unsubscribe Links"
+sidebarTitle: "Unsubscribe (API and SMTP)"
 description: "Learn when AhaSend adds one-click List-Unsubscribe headers, how to add a signed unsubscribe link with {{unsubscribe_url}}, and what a click does."
 icon: "bell-slash"
 ---
@@ -15,10 +15,10 @@ The unsubscribe headers let mail clients show their own unsubscribe button. Gmai
 |---|---|
 | API and SMTP mail from a domain with the sending type marketing | Always |
 | API and SMTP mail from a domain with the sending type transactional | Only when the message uses `{{unsubscribe_url}}` |
-| Campaigns | They use their own unsubscribe link and headers. This page does not apply to them |
+| Campaigns | They use their own unsubscribe link and headers. See [the unsubscribe link in a campaign](/campaigns/create#the-unsubscribe-link) |
 | [Sandbox](/send-api/sandbox) mail and mail to a suppressed address | No. AhaSend does not deliver this mail |
 
-To choose the sending type of a domain, see [which sending type to use](/deliverability#which-sending-type-should-my-domain-use).
+To set the sending type of a domain, see [sending type](/domains#sending-type).
 
 The headers look like this:
 
@@ -84,7 +84,7 @@ Yes. AhaSend keeps your headers as they are when all of these are true:
 - At least one link is `https`.
 - The message has `List-Unsubscribe-Post: List-Unsubscribe=One-Click`.
 
-Your endpoint must then accept the one-click POST. See [how to add one-click unsubscribe](/deliverability#how-do-i-add-one-click-unsubscribe).
+Your endpoint must then accept the one-click POST. See [building your own unsubscribe endpoint](#building-your-own-unsubscribe-endpoint).
 
 If your headers do not meet these rules, and the message needs the unsubscribe headers, AhaSend replaces them. The new `List-Unsubscribe` header has only the AhaSend link, so that each unsubscribe adds a suppression in AhaSend. AhaSend does not keep your links, also not a `mailto:` link.
 
@@ -104,6 +104,14 @@ List-Unsubscribe-Post: List-Unsubscribe=One-Click
 ```
 
 AhaSend does not examine or change the headers of transactional mail that does not use `{{unsubscribe_url}}`.
+
+### Building Your Own Unsubscribe Endpoint
+
+Implement an HTTPS endpoint that accepts the standard one-click POST and saves the opt-out without requiring login, cookies or another confirmation. Use a hard-to-guess token tied to the recipient and list, and do not unsubscribe on a GET request, because link scanners may visit it. The endpoint must accept the form body `List-Unsubscribe=One-Click`, save the preference, return success promptly and handle repeated requests safely. Also include a visible unsubscribe link in the email body.
+
+With the [REST API](/api-reference/messages/create-message), set the two headers in the `headers` object; with SMTP, add them as message headers. Check that a received message's DKIM signature covers both headers, as [RFC 8058](https://www.rfc-editor.org/rfc/rfc8058.html) requires; AhaSend signs them together with the rest of the message.
+
+Yahoo currently accepts a `mailto:` unsubscribe method too, while recommending POST; the HTTPS POST method meets Gmail's one-click mechanism as well. On a marketing domain, AhaSend replaces a header that has only a `mailto:` link, as [shown above](#can-i-use-my-own-list-unsubscribe-header). Process opt-outs promptly and stop future sends to that address. Keep durable preferences in your app, and add an AhaSend [suppression](/bounces) when the address must be blocked for the sending domain as a whole.
 
 ## What Happens When a Recipient Unsubscribes?
 

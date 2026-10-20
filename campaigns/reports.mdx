@@ -1,0 +1,50 @@
+---
+title: "Campaign Reports"
+sidebarTitle: "Reports"
+description: "Read an AhaSend campaign report: delivered, opens, clicks, unsubscribes, complaints and bounces, deliverability per list, bounce reasons, exports and webhooks."
+icon: "chart-line"
+---
+
+Every campaign has a report, live while it sends and complete when it is done. This page explains the numbers, how opens and clicks are counted, and how to get the data out.
+
+## The Numbers
+
+| Number | Meaning |
+|---|---|
+| Sent to | The contacts the campaign went to, after the [list checks](/campaigns/test-and-send#review) left out addresses that cannot receive mail |
+| Delivered | Messages the recipient's mail server accepted. Inbox placement is not guaranteed |
+| Deferred | Messages the recipient's server asked AhaSend to retry later; they move to delivered or bounced as the retries complete |
+| Bounced | Messages the recipient's server refused, or returned after accepting them |
+| Failed | Messages AhaSend could not deliver, for example because they expired in the queue |
+| Suppressed | Recipients that AhaSend did not send to because of an existing [suppression](/bounces) |
+| Opens | Recipients who opened the email, and the total number of opens |
+| Clicks | Recipients who clicked a link, and the total number of clicks |
+| Unsubscribes | Recipients who used the unsubscribe link or their mail client's unsubscribe button |
+| Complaints | Recipients who reported the email as spam, as reported back by their mailbox provider |
+
+Open and click rates count unique recipients out of delivered messages. Bounce and deferral rates use the number of recipients as their base. Opens and clicks that AhaSend recognizes as bots, such as security scanners that open every link, are left out.
+
+On a sent campaign's page, the **View email** button next to the design opens the email as recipients got it.
+
+## Deliverability per List
+
+When a campaign goes to more than one list, the report shows recipients and delivered per list. A list with a lower delivery rate than the others usually has older or less well-sourced addresses; the bounce reasons below tell you which.
+
+## Bounce Reasons
+
+The report groups bounces by classification: invalid recipient, inactive mailbox, bad domain, quota issues, policy related, authentication failed, and so on. Behind each classification are the recipients, with the reason the receiving server gave. See [bounce classifications](/bounces) for what each one means and what to do.
+
+## Opens and Clicks per Contact
+
+The contact page shows the campaigns a contact received, opened and clicked. Use it when a recipient asks what they were sent, or to see how an individual engages.
+
+## Export and Webhooks
+
+Export a report as CSV or PDF from the campaign page. To follow campaign events in your own systems as they happen, use [webhooks](/integrations/webhooks): delivered, bounced, opened and clicked events of campaign messages arrive like those of your transactional mail.
+
+Through the API, [Get Campaign Stats](/api-reference/campaigns/get-campaign-stats) returns the counters and rates, and [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients) returns the recipients in one status or with one bounce classification.
+
+## Related Guides
+
+- [Testing, review and sending](/campaigns/test-and-send), [Contacts and lists](/campaigns/contacts-and-lists), [Bounces and suppressions](/bounces).
+- [Campaigns API](/api-reference/campaigns/overview), [Webhooks](/integrations/webhooks), [Open tracking](/tracking/open-tracking) and [click tracking](/tracking/click-tracking).
