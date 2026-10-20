@@ -7,12 +7,12 @@ sidebarTitle: "Roadmap"
 
 The AhaSend roadmap shows active work, planned improvements and shipped features, with links to the available documentation.
 
-<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 13 October 2026</p>
+<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 20 October 2026</p>
 
 <div className="rm">
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (3)</h2>
+      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (6)</h2>
     </div>
 
     <div className="rm-list">
@@ -20,8 +20,38 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
+          <p className="rm-title"><a href="/mcp-server">MCP server</a> <span className="rm-tag is-new">New feature</span></p>
+          <p>Connect Claude, ChatGPT, Cursor, VS Code, Codex or Mistral Vibe to your account at mcp.ahasend.com/mcp. Log in through the browser, choose what the agent may do, and let it send email, debug bounces, set up domains and build campaigns. A campaign only goes out after you confirm it.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/send-api/templates">Transactional Templates</a> <span className="rm-tag is-new">New feature</span></p>
+          <p>Store an email design once and send it by ID through the API, with values per recipient. Draft and publish, the last 50 versions restorable, built in the Simple Editor, the Advanced Editor or from your own HTML.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/smtp#does-ahasend-support-port-465">SMTP on port 465</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>send.ahasend.com accepts SMTP with implicit TLS on port 465, for clients and devices that cannot use STARTTLS.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
           <p className="rm-title"><a href="https://ahasend.com/campaign-builder">Campaign Builder</a> <span className="rm-tag is-product">New product</span></p>
-          <p>Send marketing campaigns to your contact lists with a Simple or a Full editor, reusable templates, contacts and lists in the Management API and a report per campaign. Live for every account.</p>
+          <p>Send newsletters and campaigns to your contact lists with the Simple Editor or the Advanced Editor, reusable templates, contacts and lists in the Management API and a report per campaign. Included in every plan.</p>
           <span className="rm-date">Q4 2026</span>
         </div>
       </div>
@@ -50,11 +80,55 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-active" id="active">Active (2)</h2>
+      <h2 className="rm-badge is-active" id="active">Active (1)</h2>
     </div>
 
     <div className="rm-list">
       <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Internal infrastructure improvements 🤫 <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Work under the hood that you will notice as faster delivery and fewer surprises, not as a new button. More when it ships.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div className="rm-head">
+      <h2 className="rm-badge is-planned" id="planned">Planned (37)</h2>
+    </div>
+
+    <div className="rm-list">
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Whitelabel dashboard on your own domain <span className="rm-tag is-new">New feature</span></p>
+          <p>Serve the dashboard to your customers under a hostname of your own (CNAME), next to the DNS whitelabeling that exists today. For Platform Partners.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Recipient pages in the recipient's language <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Unsubscribe pages, and later profile and subscribe pages, shown in the recipient's language, Danish first.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Dashboard in more languages <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>The dashboard in Danish and other languages next to English.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
         <div className="rm-accent" />
 
         <div>
@@ -63,23 +137,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         </div>
       </div>
 
-      <div className="rm-card is-active">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">MCP server for transactional email and the Campaign Builder <span className="rm-tag is-new">New feature</span></p>
-          <p>Let AI assistants send transactional email and create and manage campaigns, templates and lists through a Model Context Protocol server.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div className="rm-head">
-      <h2 className="rm-badge is-planned" id="planned">Planned (33)</h2>
-    </div>
-
-    <div className="rm-list">
       <div className="rm-card is-planned">
         <div className="rm-accent" />
 
