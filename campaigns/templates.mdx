@@ -1,7 +1,7 @@
 ---
 title: "Campaign Templates and the Two Editors"
 sidebarTitle: "Templates and Editors"
-description: "Build a catalog of campaign templates in AhaSend, start campaigns and new templates from it, and choose between the Simple editor and the Advanced editor."
+description: "Build a catalog of campaign templates in AhaSend, start campaigns and new templates from it, and choose between the Simple Editor and the Advanced Editor."
 icon: "palette"
 ---
 
@@ -21,15 +21,15 @@ Because each campaign copies the design, a template is a starting point, not a l
 
 ## Simple Editor
 
-The Simple editor works like a document. You type, and add an image, a button, a divider or columns where you need them. Use it for emails where the words matter more than the layout: an update from the founder, a short announcement, a plain newsletter.
+The Simple Editor works like a document. You type, and add an image, a button, a divider or columns where you need them. Use it for emails where the words matter more than the layout: an update from the founder, a short announcement, a plain newsletter.
 
-A design made in the Simple editor can only be changed in the Simple editor. Through the API and the MCP server you can still change the name, subject, preview text and sender of a campaign made from it, but not the design itself.
+A design made in the Simple Editor can only be changed in the Simple Editor. Through the API and the MCP server you can still change the name, subject, preview text and sender of a campaign made from it, but not the design itself.
 
 ## Advanced Editor
 
-The Advanced editor builds the email from [MJML](https://mjml.io) blocks that you drag in and style one by one: columns, images, buttons, text, dividers, social links and groups. MJML is the open-source markup made for responsive email, so the result works across email clients without hand-written table HTML.
+The Advanced Editor builds the email from [MJML](https://mjml.io) blocks that you drag in and style one by one: columns, images, buttons, text, dividers, social links and groups. MJML is the open-source markup made for responsive email, so the result works across email clients without hand-written table HTML.
 
-Use the Advanced editor when the design matters, when you have an MJML or HTML design from another tool, or when a developer maintains the design in code. You can import and export MJML and HTML at any time.
+Use the Advanced Editor when the design matters, when you have an MJML or HTML design from another tool, or when a developer maintains the design in code. You can import and export MJML and HTML at any time.
 
 Both editors can add a **View in browser** link and write right to left, for Arabic, Hebrew and Persian.
 
@@ -37,7 +37,7 @@ Both editors can add a **View in browser** link and write right to left, for Ara
 
 Bring a design from another tool as MJML or HTML:
 
-- **MJML** from a tool that exports it, such as Klaviyo or Mailjet, opens in the Advanced editor with its blocks intact.
+- **MJML** from a tool that exports it, such as Klaviyo or Mailjet, opens in the Advanced Editor with its blocks intact.
 - **HTML** opens as an HTML design. You edit the source, not blocks.
 
 Images and stylesheets in an imported design must use full `https://` URLs that stay online; AhaSend does not copy them. Replace the unsubscribe link of the other tool with `{{ unsubscribe_url }}`, and remove placeholders that only the other tool understands, such as its delivery or view-in-browser tags; otherwise they appear in the email as plain text. See [the unsubscribe link](/campaigns/create#the-unsubscribe-link).
