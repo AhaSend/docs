@@ -111,7 +111,7 @@ Implement an HTTPS endpoint that accepts the standard one-click POST and saves t
 
 With the [REST API](/api-reference/messages/create-message), set the two headers in the `headers` object; with SMTP, add them as message headers. Check that a received message's DKIM signature covers both headers, as [RFC 8058](https://www.rfc-editor.org/rfc/rfc8058.html) requires; AhaSend signs them together with the rest of the message.
 
-Yahoo currently accepts a `mailto:` unsubscribe method too, while recommending POST; the HTTPS POST method meets Gmail's one-click mechanism as well. Process opt-outs promptly and stop future sends to that address. Keep durable preferences in your app, and add an AhaSend [suppression](/bounces) when the address must be blocked for the sending domain as a whole.
+Yahoo currently accepts a `mailto:` unsubscribe method too, while recommending POST; the HTTPS POST method meets Gmail's one-click mechanism as well. On a marketing domain, AhaSend replaces a header that has only a `mailto:` link, as [shown above](#can-i-use-my-own-list-unsubscribe-header). Process opt-outs promptly and stop future sends to that address. Keep durable preferences in your app, and add an AhaSend [suppression](/bounces) when the address must be blocked for the sending domain as a whole.
 
 ## What Happens When a Recipient Unsubscribes?
 

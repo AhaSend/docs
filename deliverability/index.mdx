@@ -71,7 +71,7 @@ A password reset requested by a user is different from a newsletter. Decide whet
 
 It depends on how the mail is sent:
 
-- **Campaigns** always have one: Campaign Builder adds the signed link and the one-click headers, and will not send a campaign without the link. See [the unsubscribe link in a campaign](/campaigns/create#the-unsubscribe-link).
+- **Campaigns** always have one: Campaign Builder adds a link for each recipient and the one-click headers, and will not send a campaign without the link. See [the unsubscribe link in a campaign](/campaigns/create#the-unsubscribe-link).
 - **API or SMTP mail from a marketing domain** gets the one-click headers from AhaSend. Add the visible link in the body yourself, with `{{unsubscribe_url}}` for a signed AhaSend link, or with your own unsubscribe endpoint.
 - **API or SMTP mail from a transactional domain** gets the link and the headers only when you put `{{unsubscribe_url}}` in the content.
 

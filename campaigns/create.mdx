@@ -9,7 +9,7 @@ A campaign is one email to one or more lists. This page walks through the parts 
 
 ## Name and Start Point
 
-Under **Marketing > Campaigns**, click **Create Campaign**. Give it a name that you will recognize in the list later, such as "October newsletter"; recipients never see it. Then choose where the design comes from: a blank design in the Simple or Advanced Editor, or a copy of one of your [campaign templates](/campaigns/templates).
+Under **Marketing > Campaigns**, click **Create Campaign**. Give it a name that you will recognize in the list later, such as "October newsletter"; recipients never see it. Under **Start From**, start from scratch or from a copy of one of your [campaign templates](/campaigns/templates).
 
 To send a campaign again, for example next month's edition, **duplicate** an existing campaign instead. The copy is a new draft with the same sender, lists, subject and design.
 
@@ -25,7 +25,7 @@ Use a subdomain for your campaigns, such as `news.yourdomain.com`, and keep your
 
 ## Recipients
 
-Choose 1 to 50 [lists](/campaigns/contacts-and-lists). The campaign page shows how many contacts the campaign will reach: the subscribed, enabled contacts on those lists that have not unsubscribed from everything and whose address was not found invalid.
+Choose one or more [lists](/campaigns/contacts-and-lists); through the API, up to 50. The campaign page shows how many contacts the campaign will reach: the subscribed, enabled contacts on those lists that have not unsubscribed from everything and whose address was not found invalid. A contact on more than one of the lists counts once per list in that number, but gets the email once.
 
 To send to part of a list, filter the list with advanced search and **Save as new list**, then choose that list here.
 
@@ -35,7 +35,7 @@ The subject is what the inbox shows first. The preview text is the line most inb
 
 ## Design
 
-Open the editor from the campaign page. The design is the campaign's own copy, so changes here never affect the template it came from. See [the two editors](/campaigns/templates) for what each one does, and for importing MJML or HTML.
+A campaign started from scratch gets its design on the campaign page: choose the Simple Editor, the Advanced Editor, or **Custom HTML** to upload your own HTML. The design is the campaign's own copy, so changes here never affect the template it came from. See [the two editors](/campaigns/templates) for what each one does, and for importing MJML or HTML.
 
 ### Personalization
 
@@ -46,25 +46,25 @@ Hi {{ first_name }},
 Here is the October update for {{ company_name }}.
 ```
 
-The standard fields are `email`, `first_name` and `last_name`; your [custom fields](/campaigns/contacts-and-lists#custom-fields) are available under their own names. Give a default for contacts where the field is empty:
+The standard fields are `email`, `first_name` and `last_name`; your [custom fields](/campaigns/contacts-and-lists#custom-fields) are available under their key, shown as the template variable under **Marketing > Contact fields**. Give a default for contacts where the field is empty:
 
 ```text
 Hi {{ first_name|default("there") }},
 ```
 
-Personalization works in the design, the subject and the preview text. The test send shows the placeholders with sample values, and the editor's preview lets you step through real contacts of your lists. Template syntax that cannot be rendered, such as an unclosed brace, blocks the send with the issue `text_broken`.
+Personalization works in the design, the subject and the preview text. To check the result, click **Preview** on the campaign page and choose a contact, or [send a test](/campaigns/test-and-send#test-sends) to one of your contacts. Template syntax that cannot be rendered, such as an unclosed brace, blocks the send with the issue `text_broken`.
 
 ### The Unsubscribe Link
 
-Every campaign must have an unsubscribe link in its HTML. New designs start with one in the footer; if you remove it, put it back with `{{ unsubscribe_url }}`:
+Every campaign must have an unsubscribe link in its HTML. New Simple Editor designs start with one in the footer. In the Advanced Editor, add it from the link dialog under **Automatic Links**, or write `{{ unsubscribe_url }}`:
 
 ```html
 <a href="{{ unsubscribe_url }}">Unsubscribe</a>
 ```
 
-Each recipient gets their own signed link, and AhaSend adds the one-click `List-Unsubscribe` headers that Gmail and Yahoo expect from bulk senders. A recipient who unsubscribes is unsubscribed from the list the campaign went to. A campaign without the link has the issue `unsubscribe_link_missing` and cannot be sent; a test can still go out, so you can test a design before the footer is done.
+Each recipient gets their own link, and AhaSend adds the one-click `List-Unsubscribe` headers that Gmail and Yahoo expect from bulk senders. A recipient who unsubscribes is unsubscribed from the list the campaign went to. A campaign without the link has the issue `unsubscribe_link_missing` and cannot be sent; a test can still go out, so you can test a design before the footer is done.
 
-In a test send, the unsubscribe link leads to a contact that does not exist, so clicking it in a test unsubscribes nobody.
+Clicking the unsubscribe link in a test send unsubscribes nobody.
 
 This section is about campaigns. For the unsubscribe link and headers of mail you send through the API or SMTP, see [unsubscribe links and one-click headers](/campaigns/unsubscribe).
 
