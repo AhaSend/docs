@@ -50,6 +50,8 @@ Each sending domain has a sending type: transactional or marketing. A new domain
 
 The sending type affects your deliverability. If you send both kinds of mail, use a separate [subdomain](#should-transactional-mail-use-a-separate-subdomain) for each kind.
 
+The sending type applies to mail you send through the API or SMTP. Campaigns made with [Campaign Builder](/campaigns) always go out over the marketing infrastructure, from any verified domain, so they need no change to the sending type.
+
 <Warning>
 Do not send marketing mail from a transactional domain. It can get your account paused.
 </Warning>
@@ -72,7 +74,7 @@ A password reset requested by a user is different from a newsletter. Decide whet
 
 ## How Do I Add One-Click Unsubscribe?
 
-AhaSend adds a signed one-click unsubscribe link to API and SMTP mail from a domain with the [sending type](#which-sending-type-should-my-domain-use) marketing. For mail from a transactional domain, put `{{unsubscribe_url}}` in the content: AhaSend then adds the link and the headers. The same variable gives you the visible link in the body. See [unsubscribe links](/deliverability/unsubscribe).
+AhaSend adds a signed one-click unsubscribe link to API and SMTP mail from a domain with the [sending type](#which-sending-type-should-my-domain-use) marketing. For mail from a transactional domain, put `{{unsubscribe_url}}` in the content: AhaSend then adds the link and the headers. The same variable gives you the visible link in the body. See [unsubscribe links](/campaigns/unsubscribe).
 
 To use your own unsubscribe endpoint instead, implement an HTTPS endpoint that accepts the standard unsubscribe POST and saves the opt-out without requiring login, cookies or another confirmation. Use a hard-to-guess token tied to the recipient and list. Do not unsubscribe on a GET request, because link scanners may visit it.
 

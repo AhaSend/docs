@@ -1,0 +1,36 @@
+---
+title: "Campaigns Through the API, CLI and MCP Server"
+sidebarTitle: "API, CLI and MCP"
+description: "Automate Campaign Builder: push contacts from your app, manage lists and templates, and create, test and send campaigns with the API, CLI or MCP server."
+icon: "code"
+---
+
+Everything in Campaign Builder is available outside the dashboard: contacts, lists, campaign templates and campaigns are resources of the Management API, with commands in the CLI and tools in the MCP server. The dashboard, the API, the CLI and the MCP server all work on the same data, so a contact pushed from your app shows up in the dashboard at once, and a campaign drafted by an AI tool is there for you to review.
+
+## Typical Automations
+
+- **Keep contacts in sync.** Push each new signup from your app or website as it happens with [Create Contact](/api-reference/contacts/create-contact), or import up to 1,000 at once with [Batch Upsert Contacts](/api-reference/contacts/batch-upsert-contacts). Add them to lists with [Batch Add List Contacts](/api-reference/lists/batch-add-list-contacts). Existing contacts are updated, not duplicated.
+- **Mirror unsubscribes.** When a user opts out in your app, set `unsubscribed: true` with [Update Contact](/api-reference/contacts/update-contact), or unsubscribe from one list with [Add or Update a List Contact](/api-reference/lists/upsert-list-contact).
+- **Generate a campaign.** Create the campaign from a template with [Create Campaign](/api-reference/campaigns/create-campaign), fill the content from your CMS, send a test with [Test Campaign](/api-reference/campaigns/test-campaign), and schedule it with [Send Campaign](/api-reference/campaigns/send-campaign). The campaign goes through the same [checks and review](/campaigns/test-and-send#review) as one made in the dashboard.
+- **Pull the results.** Read the counters and rates with [Get Campaign Stats](/api-reference/campaigns/get-campaign-stats), and the recipients behind a count with [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients). For events as they happen, use [webhooks](/integrations/webhooks).
+
+## API
+
+The [Campaigns API overview](/api-reference/campaigns/overview) walks through a campaign from draft to report, with the statuses, the issues and the idempotency rules. The [Contacts API](/api-reference/contacts/overview) and [Lists API](/api-reference/lists/overview) overviews explain contacts, memberships and consent.
+
+You need an API key with the `contacts`, `lists`, `campaigns` and, for templates, `templates` scopes; legacy v1 keys cannot be used. See [permission scopes](/api-reference/scopes). The official [Node.js](/guides/nodejs-sdk) and [Go](/guides/go-sdk) SDKs cover these endpoints.
+
+## CLI
+
+The CLI has a command group for each resource: [`ahasend contacts`](/cli/commands/contacts), [`ahasend lists`](/cli/commands/lists) and [`ahasend campaigns`](/cli/commands/campaigns), the last one including `campaigns templates`. Use them for scripts and one-off jobs, such as a nightly import from your database or a test send from a deploy pipeline.
+
+## MCP Server
+
+With the [MCP server](/mcp-server), an AI tool such as Claude, ChatGPT or Cursor can do the same work in plain language: build a list from an export you hand it, import an MJML file as a template, fill a campaign from your blog posts, send you a test and schedule the send. Connect the tool with the **Marketer** preset, which reads everything and manages templates, contacts, lists and campaigns.
+
+Two things to know: a campaign only goes out after your AI tool shows you the send time, the number of contacts, the name, the subject, the sender and the lists and you confirm, and a design made in the Simple editor can be changed only in the dashboard.
+
+## Related Guides
+
+- [Campaign Builder overview](/campaigns), [Creating a campaign](/campaigns/create), [Testing, review and sending](/campaigns/test-and-send).
+- [Campaigns API](/api-reference/campaigns/overview), [CLI quickstart](/cli/quickstart), [MCP server](/mcp-server).

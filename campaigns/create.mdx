@@ -1,0 +1,76 @@
+---
+title: "Creating a Campaign"
+sidebarTitle: "Creating a Campaign"
+description: "Create an AhaSend campaign: name, sender and reply-to, lists, subject and preview text, design, personalization with contact fields and the unsubscribe link."
+icon: "pen-to-square"
+---
+
+A campaign is one email to one or more lists. This page walks through the parts of a campaign, in the order the campaign page shows them. You can fill them in any order and come back later; a campaign stays a draft until you send or schedule it.
+
+## Name and Start Point
+
+Under **Marketing > Campaigns**, click **Create Campaign**. Give it a name that you will recognize in the list later, such as "October newsletter"; recipients never see it. Then choose where the design comes from: a blank design in the Simple or Advanced editor, or a copy of one of your [campaign templates](/campaigns/templates).
+
+To send a campaign again, for example next month's edition, **duplicate** an existing campaign instead. The copy is a new draft with the same sender, lists, subject and design.
+
+## Sender and Reply-To
+
+The sender is a name and an address on one of your verified sending domains, for example `Your Company <news@yourdomain.com>`. The domain must have valid DNS records and must not be paused. Any verified domain can send a campaign, whatever its [sending type](/domains#sending-type): campaigns always go out over the marketing infrastructure.
+
+Set a reply-to address that someone reads. Replies to a newsletter are often the most useful feedback you get.
+
+<Tip>
+Use a subdomain for your campaigns, such as `news.yourdomain.com`, and keep your transactional mail on another one. Recipients and mailbox providers then see two senders with two reputations. See [separate subdomains](/deliverability#should-transactional-mail-use-a-separate-subdomain).
+</Tip>
+
+## Recipients
+
+Choose 1 to 50 [lists](/campaigns/contacts-and-lists). The campaign page shows how many contacts the campaign will reach: the subscribed, enabled contacts on those lists that have not unsubscribed from everything and whose address was not found invalid.
+
+To send to part of a list, filter the list with advanced search and **Save as new list**, then choose that list here.
+
+## Subject and Preview Text
+
+The subject is what the inbox shows first. The preview text is the line most inboxes show after the subject; without one, the inbox shows the first words of the email instead, often the view-in-browser link. Both are required before the campaign can be sent, and both can use [personalization](#personalization).
+
+## Design
+
+Open the editor from the campaign page. The design is the campaign's own copy, so changes here never affect the template it came from. See [the two editors](/campaigns/templates) for what each one does, and for importing MJML or HTML.
+
+### Personalization
+
+Write a contact field between double braces and each recipient sees their own value:
+
+```text
+Hi {{ first_name }},
+Here is the October update for {{ company_name }}.
+```
+
+The standard fields are `email`, `first_name` and `last_name`; your [custom fields](/campaigns/contacts-and-lists#custom-fields) are available under their own names. Give a default for contacts where the field is empty:
+
+```text
+Hi {{ first_name|default("there") }},
+```
+
+Personalization works in the design, the subject and the preview text. The test send shows the placeholders with sample values, and the editor's preview lets you step through real contacts of your lists. Template syntax that cannot be rendered, such as an unclosed brace, blocks the send with the issue `text_broken`.
+
+### The Unsubscribe Link
+
+Every campaign must have an unsubscribe link in its HTML. New designs start with one in the footer; if you remove it, put it back with `{{ unsubscribe_url }}`:
+
+```html
+<a href="{{ unsubscribe_url }}">Unsubscribe</a>
+```
+
+Each recipient gets their own signed link, and AhaSend adds the one-click `List-Unsubscribe` headers that Gmail and Yahoo expect from bulk senders. A recipient who unsubscribes is unsubscribed from the list the campaign went to. A campaign without the link has the issue `unsubscribe_link_missing` and cannot be sent; a test can still go out, so you can test a design before the footer is done.
+
+In a test send, the unsubscribe link leads to a contact that does not exist, so clicking it in a test unsubscribes nobody.
+
+## Saving
+
+The editors save as you work, and the campaign page saves each part when you confirm it. The page lists what is still missing before the campaign can go out. The same campaign can be edited in the dashboard and through the [API](/api-reference/campaigns/update-campaign); both change the same draft.
+
+## Related Guides
+
+- [Testing, review and sending](/campaigns/test-and-send), [Contacts and lists](/campaigns/contacts-and-lists), [Templates and editors](/campaigns/templates).
+- [Campaigns API](/api-reference/campaigns/overview), [Domain setup](/domains), [Deliverability best practices](/deliverability).

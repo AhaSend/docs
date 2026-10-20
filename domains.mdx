@@ -49,7 +49,24 @@ Without proper domain setup, your emails will either be **rejected outright** or
 **Subdomain recommendation:** Use a subdomain like `email.yourcompany.com` instead of your main domain for transactional emails. This separates configuration and monitoring; mailbox providers can still consider the parent domain’s reputation. See [sending subdomains](/deliverability#should-transactional-mail-use-a-separate-subdomain).
 </Tip>
 
-Each domain has a sending type, transactional or marketing. Choose the type that matches the mail you send from the domain. See [which sending type to use](/deliverability#which-sending-type-should-my-domain-use).
+## Sending Type
+
+Each domain has a sending type: **transactional** or **marketing**. A new domain is transactional. Set it in the domain's settings in the dashboard, or with `sending_type` in the [API](/api-reference/domains/create-domain), to match the mail you send from the domain through the API or SMTP:
+
+| You send from the domain | Sending type | What AhaSend does |
+|---|---|---|
+| Password resets, receipts, notifications: mail a recipient expects from their own actions | Transactional | Sends over the transactional infrastructure with the hourly sending limit |
+| Newsletters, promotions, announcements through the API or SMTP | Marketing | Sends over the marketing infrastructure with the [daily marketing limit](/campaigns/marketing-limit), and adds one-click [unsubscribe headers](/campaigns/unsubscribe) to every message |
+
+Campaigns made with [Campaign Builder](/campaigns) do not depend on this setting. They always go out over the marketing infrastructure, from any verified domain, whatever its sending type. The sending type matters for marketing mail that you send yourself, from your own tool, through the API or SMTP: that mail must come from a marketing domain.
+
+For that mail, the visible unsubscribe link and the handling of opt-outs are your responsibility: put `{{unsubscribe_url}}` in the content for a signed AhaSend link that adds a suppression when it is used, or use your own unsubscribe endpoint with the one-click headers, and keep the opt-out in your own data. See [how to add one-click unsubscribe](/deliverability#how-do-i-add-one-click-unsubscribe).
+
+<Warning>
+Marketing mail from a transactional domain, a newsletter sent through the API or SMTP for example, can get your account paused. Give marketing mail its own subdomain, such as `news.yourcompany.com`, set that subdomain to marketing, and keep your transactional mail on its own domain. See [which sending type to use](/deliverability#which-sending-type-should-my-domain-use).
+</Warning>
+
+A change of the sending type takes effect for new messages. It does not lift a [pause](#why-is-sending-paused-on-my-domain).
 
 ## Prerequisites
 

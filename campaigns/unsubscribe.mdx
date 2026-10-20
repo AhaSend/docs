@@ -15,10 +15,10 @@ The unsubscribe headers let mail clients show their own unsubscribe button. Gmai
 |---|---|
 | API and SMTP mail from a domain with the sending type marketing | Always |
 | API and SMTP mail from a domain with the sending type transactional | Only when the message uses `{{unsubscribe_url}}` |
-| Campaigns | They use their own unsubscribe link and headers. This page does not apply to them |
+| Campaigns | They use their own unsubscribe link and headers. See [the unsubscribe link in a campaign](/campaigns/create#the-unsubscribe-link) |
 | [Sandbox](/send-api/sandbox) mail and mail to a suppressed address | No. AhaSend does not deliver this mail |
 
-To choose the sending type of a domain, see [which sending type to use](/deliverability#which-sending-type-should-my-domain-use).
+To set the sending type of a domain, see [sending type](/domains#sending-type).
 
 The headers look like this:
 

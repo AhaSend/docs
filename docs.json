@@ -60,8 +60,6 @@
             "group": "Delivery and Troubleshooting",
             "pages": [
               "deliverability/index",
-              "deliverability/marketing-limit",
-              "deliverability/unsubscribe",
               "bounces",
               "troubleshooting",
               "glossary"
@@ -97,6 +95,20 @@
               "send-api/sandbox",
               "send-api/send-email",
               "send-api/templates"
+            ]
+          },
+          {
+            "group": "Campaign Builder",
+            "pages": [
+              "campaigns/index",
+              "campaigns/contacts-and-lists",
+              "campaigns/templates",
+              "campaigns/create",
+              "campaigns/test-and-send",
+              "campaigns/reports",
+              "campaigns/marketing-limit",
+              "campaigns/unsubscribe",
+              "campaigns/api-and-automation"
             ]
           },
           {
@@ -714,6 +726,14 @@
     {
       "source": "/api-reference/routes/retry-policy",
       "destination": "/api-reference/webhooks/retry-policy"
+    },
+    {
+      "source": "/deliverability/marketing-limit",
+      "destination": "/campaigns/marketing-limit"
+    },
+    {
+      "source": "/deliverability/unsubscribe",
+      "destination": "/campaigns/unsubscribe"
     }
   ]
 }

@@ -1,0 +1,50 @@
+---
+title: "Campaign Templates and the Two Editors"
+sidebarTitle: "Templates and Editors"
+description: "Build a catalog of campaign templates in AhaSend, start campaigns and new templates from it, and choose between the Simple editor and the Advanced editor."
+icon: "palette"
+---
+
+A campaign template is a reusable email design. Most newsletters look the same every month, so you design once, save it under **Marketing > Templates**, and start every campaign from it. This page explains the template catalog, the two editors, and importing designs from another tool.
+
+Campaign templates are not [transactional templates](/send-api/templates). Transactional templates are for the email your application sends by ID, such as password resets and receipts, with drafts, versions and the Create Template Message endpoint. The two live in different menus and are different resources in the API.
+
+## Your Template Catalog
+
+Under **Marketing > Templates** you keep as many templates as you want: a newsletter, a product update, a promotion, one per brand or per language. From the catalog you can:
+
+- **Start a campaign** from a template. The campaign gets its own copy of the design. Editing the template later changes nothing in a campaign you already made, and you can delete the template without an effect on its campaigns.
+- **Start a new template** from an existing one, for example a Christmas version of your newsletter, or a second-brand version with another logo.
+- **Save a campaign's design as a template**, so a design you made in a campaign becomes the base for the next ones.
+
+Because each campaign copies the design, a template is a starting point, not a live dependency. That also means a fix in the template does not reach campaigns that already exist: duplicate the campaign from the fixed template, or make the fix in the campaign as well.
+
+## Simple Editor
+
+The Simple editor works like a document. You type, and add an image, a button, a divider or columns where you need them. Use it for emails where the words matter more than the layout: an update from the founder, a short announcement, a plain newsletter.
+
+A design made in the Simple editor can only be changed in the Simple editor. Through the API and the MCP server you can still change the name, subject, preview text and sender of a campaign made from it, but not the design itself.
+
+## Advanced Editor
+
+The Advanced editor builds the email from [MJML](https://mjml.io) blocks that you drag in and style one by one: columns, images, buttons, text, dividers, social links and groups. MJML is the open-source markup made for responsive email, so the result works across email clients without hand-written table HTML.
+
+Use the Advanced editor when the design matters, when you have an MJML or HTML design from another tool, or when a developer maintains the design in code. You can import and export MJML and HTML at any time.
+
+Both editors can add a **View in browser** link and write right to left, for Arabic, Hebrew and Persian.
+
+## Importing a Design
+
+Bring a design from another tool as MJML or HTML:
+
+- **MJML** from a tool that exports it, such as Klaviyo or Mailjet, opens in the Advanced editor with its blocks intact.
+- **HTML** opens as an HTML design. You edit the source, not blocks.
+
+Images and stylesheets in an imported design must use full `https://` URLs that stay online; AhaSend does not copy them. Replace the unsubscribe link of the other tool with `{{ unsubscribe_url }}`, and remove placeholders that only the other tool understands, such as its delivery or view-in-browser tags; otherwise they appear in the email as plain text. See [the unsubscribe link](/campaigns/create#the-unsubscribe-link).
+
+Through the API, [Create Campaign Template](/api-reference/campaign-templates/create-campaign-template) takes `mjml` or `html`, and the [MCP server](/mcp-server) can import a file you hand to your AI tool.
+
+## Related Guides
+
+- [Campaign Builder overview](/campaigns), [Creating a campaign](/campaigns/create), [Testing, review and sending](/campaigns/test-and-send).
+- [Campaign Templates API](/api-reference/campaign-templates/get-campaign-templates), [Transactional templates](/send-api/templates).
