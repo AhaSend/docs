@@ -11,25 +11,25 @@ Campaign templates are not [transactional templates](/send-api/templates). Trans
 
 ## Your Template Catalog
 
-Under **Marketing > Templates** you keep as many templates as you want: a newsletter, a product update, a promotion, one per brand or per language. From the catalog you can:
+Under **Marketing > Templates** you keep as many templates as you want: a newsletter, a product update, a promotion, one per brand or per language. You can:
 
-- **Start a campaign** from a template. The campaign gets its own copy of the design. Editing the template later changes nothing in a campaign you already made, and you can delete the template without an effect on its campaigns.
-- **Start a new template** from an existing one, for example a Christmas version of your newsletter, or a second-brand version with another logo.
-- **Save a campaign's design as a template**, so a design you made in a campaign becomes the base for the next ones.
+- **Start a campaign** from a template: in **Create Campaign** on the Campaigns page, choose the template under **Start From**. The campaign gets its own copy of the design. Editing the template later changes nothing in a campaign you already made, and you can delete the template without an effect on its campaigns.
+- **Start a new template** from an existing one with **Duplicate Template**, for example a Christmas version of your newsletter, or a second-brand version with another logo.
+- **Save a campaign's design as a template** with **Save as Template** on the campaign page, so a design you made in a campaign becomes the base for the next ones.
 
-Because each campaign copies the design, a template is a starting point, not a live dependency. That also means a fix in the template does not reach campaigns that already exist: duplicate the campaign from the fixed template, or make the fix in the campaign as well.
+Because each campaign copies the design, a template is a starting point, not a live dependency. That also means a fix in the template does not reach campaigns that already exist: create a new campaign from the fixed template, or make the fix in the campaign as well.
 
 ## Simple Editor
 
 The Simple Editor works like a document. You type, and add an image, a button, a divider or columns where you need them. Use it for emails where the words matter more than the layout: an update from the founder, a short announcement, a plain newsletter.
 
-A design made in the Simple Editor can only be changed in the Simple Editor. Through the API and the MCP server you can still change the name, subject, preview text and sender of a campaign made from it, but not the design itself.
+A design made in the Simple Editor can only be changed in the Simple Editor. Through the API and the MCP server you can still change the other parts of a campaign made from it, such as the name, subject, preview text, sender and lists, but not the design itself.
 
 ## Advanced Editor
 
-The Advanced Editor builds the email from [MJML](https://mjml.io) blocks that you drag in and style one by one: columns, images, buttons, text, dividers, social links and groups. MJML is the open-source markup made for responsive email, so the result works across email clients without hand-written table HTML.
+The Advanced Editor builds the email from [MJML](https://mjml.io) blocks that you drag in and style one by one: columns, text, images, buttons, dividers, spacers, social links, navigation bars and hero sections. MJML is the open-source markup made for responsive email, so the result works across email clients without hand-written table HTML.
 
-Use the Advanced Editor when the design matters, when you have an MJML or HTML design from another tool, or when a developer maintains the design in code. You can import and export MJML and HTML at any time.
+Use the Advanced Editor when the design matters, when you have an MJML design from another tool, or when a developer maintains the design in code. Paste MJML in with **Import MJML**; **Export** shows the MJML and the HTML to copy.
 
 Both editors can add a **View in browser** link and write right to left, for Arabic, Hebrew and Persian.
 
@@ -37,10 +37,10 @@ Both editors can add a **View in browser** link and write right to left, for Ara
 
 Bring a design from another tool as MJML or HTML:
 
-- **MJML** from a tool that exports it, such as Klaviyo or Mailjet, opens in the Advanced Editor with its blocks intact.
-- **HTML** opens as an HTML design. You edit the source, not blocks.
+- **MJML** from a tool that exports it, such as Klaviyo or Mailjet: paste it into the Advanced Editor with **Import MJML**. It opens as blocks. A few MJML components, such as `mj-accordion`, `mj-carousel` and `mj-table`, are not supported.
+- **HTML**: choose **Custom HTML** and upload an `.html` file, or a zip with the HTML, its images and a text version. AhaSend hosts the images from the zip. To change the design, upload a new version; there is no editor for it.
 
-Images and stylesheets in an imported design must use full `https://` URLs that stay online; AhaSend does not copy them. Replace the unsubscribe link of the other tool with `{{ unsubscribe_url }}`, and remove placeholders that only the other tool understands, such as its delivery or view-in-browser tags; otherwise they appear in the email as plain text. See [the unsubscribe link](/campaigns/create#the-unsubscribe-link).
+Images and stylesheets that the design links to must use full `https://` URLs that stay online; AhaSend does not copy them. Replace the unsubscribe link of the other tool with `{{ unsubscribe_url }}`, and remove placeholders that only the other tool understands, such as its delivery or view-in-browser tags; otherwise they appear in the email as plain text. See [the unsubscribe link](/campaigns/create#the-unsubscribe-link).
 
 Through the API, [Create Campaign Template](/api-reference/campaign-templates/create-campaign-template) takes `mjml` or `html`, and the [MCP server](/mcp-server) can import a file you hand to your AI tool.
 

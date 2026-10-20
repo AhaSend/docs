@@ -9,7 +9,7 @@ A campaign goes out in four steps: a test to yourself, the checks on the campaig
 
 ## Test Sends
 
-Click **Send Test** on the campaign page and enter 1 to 5 addresses. Each address gets the email as a recipient would, with sample values in place of the contact fields. The links in a test lead to a contact that does not exist, so a click on the unsubscribe link in a test unsubscribes nobody.
+Click **Send Test** on the campaign page and enter up to 3 addresses or pick up to 3 of your contacts; through the [API](/api-reference/campaigns/test-campaign), up to 5 addresses. A contact you pick gets the email with its own values. A typed address gets placeholder text in place of the contact fields, such as `--PLACEHOLDER for First Name--`. A click on the unsubscribe link in a test unsubscribes nobody.
 
 Rules for tests:
 
@@ -37,28 +37,36 @@ The campaign page lists what is missing before the campaign can go out. The same
 
 Some sends are refused on the spot, with a message that says why: a send time less than a minute ahead, a sender domain that is not verified or is paused, and lists on which no contact can receive the campaign.
 
-Changed your mind? **Unschedule** a scheduled campaign and it returns to draft, where you can edit it and send it again. Once a campaign is sending, it cannot go back to draft; to send the same email again, duplicate it.
+Changed your mind? Click **Cancel** on a scheduled campaign, or **Cancel Validation** while its lists are checked, and it returns to draft, where you can edit it and send it again. Through the API, use [Unschedule Campaign](/api-reference/campaigns/unschedule-campaign). A paused, canceled or failed campaign that sent nothing has a **Return to Draft** button. Once a campaign has started sending, it cannot go back to draft; to send the same email again, duplicate it.
 
 ## Review
 
-AhaSend's marketing infrastructure is shared by the campaigns of all customers, so every campaign is checked before it goes out. The check protects your delivery from other senders' bad lists, and theirs from yours.
+AhaSend's marketing infrastructure is shared by the campaigns of all customers, so AhaSend checks campaigns before they go out. The check protects your delivery from other senders' bad lists, and theirs from yours.
 
-**The list.** Every address is checked: is it well-formed, does its domain accept mail, is the domain on AhaSend's list of known bad domains, and, where possible, does the mailbox exist. Addresses that cannot receive mail are left out of the send; addresses the check could not reach keep their status and still get the campaign. Addresses on catch-all domains, which accept mail for any address, cannot be confirmed and are shown as Catch-all in the list check on the report, next to Risky; they still get the campaign. A list with a high bounce risk, or a large list that is mostly catch-all addresses, is held for review before anything is sent.
+**When the list is checked.** AhaSend checks the lists of a campaign when a list was never checked, was last checked 90 or more days ago, or has more than 10% new contacts since its last check, and for every campaign of an account younger than 30 days. Otherwise the campaign goes straight to its send time.
 
-**The content.** A language model that AhaSend fine-tuned and runs on its own servers in European datacenters helps catch campaigns that look like spam, phishing or cold outreach. AhaSend does not accept cold outreach: email to people who did not ask for it. See the [terms of service](https://ahasend.com/terms).
+**The list.** AhaSend checks a sample of the contacts, or all of them on a small list: is the address well-formed, does its domain accept mail, is the domain on AhaSend's list of known bad domains, and, where possible, does the mailbox exist. Sampled addresses that cannot receive mail are left out of the send. Addresses on catch-all domains, which accept mail for any address, cannot be confirmed; they still get the campaign.
 
-A campaign that passes continues to its send time. A campaign that is held shows the status **waiting for review** and the reason on its page. A person looks at it; when the review is done, the campaign continues, or it is canceled with the reason on its page. Contact [support](mailto:support@ahasend.com) if you want to discuss a held campaign.
+**The content.** When the list is checked, a language model that runs on AhaSend's own servers also checks the content for spam, phishing or cold outreach. AhaSend does not accept cold outreach: email to people who did not ask for it. See the [terms of service](https://ahasend.com/terms).
+
+**The result.**
+
+- More than 4% of the sample cannot receive mail: the campaign is **paused** for poor list quality, and its page shows how many sampled contacts are invalid. Clean the list, then click **Return to Draft** and schedule the campaign again, or contact support.
+- A borderline list, a large list that is mostly catch-all addresses, content that looks like spam, or an account that has sent fewer than 3 campaigns: the campaign shows **Awaiting Review**. A sender domain with a poor record, or an earlier rejected review, can also hold it. A person looks at it, usually within 1 to 2 business days. After the review, the campaign continues to its send time, or it returns to draft with the reviewer's notes on its page.
+- Otherwise, the campaign continues to its send time.
+
+Contact [support](mailto:support@ahasend.com) if you want to discuss a paused or held campaign.
 
 ## Statuses
 
 | Status | Meaning |
 |---|---|
 | Draft | Being prepared. Only a draft can be edited, tested, sent or deleted. |
-| Validating | Scheduled; the lists are being checked. Can be unscheduled. |
-| Waiting for review | Held for a review of the list or the content. Cannot be unscheduled. |
-| Scheduled | Accepted, waiting for its send time. Can be unscheduled. |
+| Validating | Scheduled; the lists are being checked. Can be canceled back to draft. |
+| Awaiting review | Held for a person to [review](#review). Cannot be canceled. The API calls this status `waiting_for_review`. |
+| Scheduled | Accepted, waiting for its send time. Can be canceled back to draft. |
 | Sending | Going out now. |
-| Paused | Sending stopped for now; the page says why. |
+| Paused | Sending stopped; the page says why, for example poor list quality. |
 | Sent | Every message was sent. The report is complete. |
 | Canceled | Stopped before it finished; the page says why. |
 | Failed | Could not be sent; the page says why. |

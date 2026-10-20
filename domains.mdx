@@ -51,7 +51,7 @@ Without proper domain setup, your emails will either be **rejected outright** or
 
 ## Sending Type
 
-Each domain has a sending type: **transactional** or **marketing**. A new domain is transactional. Set it in the domain's settings in the dashboard, or with `sending_type` in the [API](/api-reference/domains/create-domain), to match the mail you send from the domain through the API or SMTP:
+Each domain has a sending type: **transactional** or **marketing**. A new domain is transactional. Set it in the domain's settings in the dashboard, or with `sending_type` in [Create Domain](/api-reference/domains/create-domain) or [Update Domain](/api-reference/domains/update-domain), to match the mail you send from the domain through the API or SMTP:
 
 | You send from the domain | Sending type | What AhaSend does |
 |---|---|---|
@@ -66,7 +66,7 @@ For that mail, the visible unsubscribe link and the handling of opt-outs are you
 Marketing mail from a transactional domain, a newsletter sent through the API or SMTP for example, can get your account paused. Give marketing mail its own subdomain, such as `news.yourcompany.com`, set that subdomain to marketing, and keep your transactional mail on its own domain. See [why the two should stay apart](/deliverability#which-sending-type-should-my-domain-use).
 </Warning>
 
-A change of the sending type takes effect for new messages. It does not lift a [pause](#why-is-sending-paused-on-my-domain).
+A change of the sending type applies to new messages within five minutes. It does not lift a [pause](#why-is-sending-paused-on-my-domain).
 
 ## Prerequisites
 
