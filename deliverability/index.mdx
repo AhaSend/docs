@@ -43,17 +43,12 @@ A separate subdomain makes operations easier to manage; it does not guarantee th
 
 ## Which Sending Type Should My Domain Use?
 
-Each sending domain has a sending type: transactional or marketing. A new domain is transactional. We recommend that you choose the sending type of each domain to match the mail that you send from it:
+Each sending domain is transactional or marketing. The type decides which infrastructure and sending limit the domain's API and SMTP mail uses, and whether that mail gets one-click unsubscribe headers. Match it to the mail you send: transactional for messages a recipient expects from their own actions, marketing for newsletters, promotions and announcements. If you send both kinds, use a separate [subdomain](#should-transactional-mail-use-a-separate-subdomain) for each, so the two reputations stay apart.
 
-- **Transactional:** messages that a recipient expects from their own actions, such as password resets and receipts.
-- **Marketing:** newsletters, promotions, announcements and other marketing mail.
-
-The sending type affects your deliverability. If you send both kinds of mail, use a separate [subdomain](#should-transactional-mail-use-a-separate-subdomain) for each kind.
-
-The sending type applies to mail you send through the API or SMTP. Campaigns made with [Campaign Builder](/campaigns) always go out over the marketing infrastructure, from any verified domain, so they need no change to the sending type.
+Campaigns made with [Campaign Builder](/campaigns) always use the marketing infrastructure, whatever the domain's type. How to set the type, and what each setting does, is on [sending type](/domains#sending-type).
 
 <Warning>
-Do not send marketing mail from a transactional domain. It can get your account paused.
+Do not send marketing mail through the API or SMTP from a transactional domain. It can get your account paused.
 </Warning>
 
 ## What Do Gmail and Yahoo Require?
@@ -74,19 +69,12 @@ A password reset requested by a user is different from a newsletter. Decide whet
 
 ## How Do I Add One-Click Unsubscribe?
 
-AhaSend adds a signed one-click unsubscribe link to API and SMTP mail from a domain with the [sending type](#which-sending-type-should-my-domain-use) marketing. For mail from a transactional domain, put `{{unsubscribe_url}}` in the content: AhaSend then adds the link and the headers. The same variable gives you the visible link in the body. See [unsubscribe links](/campaigns/unsubscribe).
+It depends on how the mail is sent:
 
-To use your own unsubscribe endpoint instead, implement an HTTPS endpoint that accepts the standard unsubscribe POST and saves the opt-out without requiring login, cookies or another confirmation. Use a hard-to-guess token tied to the recipient and list. Do not unsubscribe on a GET request, because link scanners may visit it.
+- **Campaigns** always have one: Campaign Builder adds the signed link and the one-click headers, and will not send a campaign without the link. See [the unsubscribe link in a campaign](/campaigns/create#the-unsubscribe-link).
+- **API or SMTP mail from a marketing domain** gets the one-click headers from AhaSend. Add the visible link in the body yourself, with `{{unsubscribe_url}}` for a signed AhaSend link, or with your own unsubscribe endpoint.
+- **API or SMTP mail from a transactional domain** gets the link and the headers only when you put `{{unsubscribe_url}}` in the content.
 
-The message needs these two headers. This is a format example: replace the URL with your working endpoint and recipient token before sending. AhaSend keeps headers in this form as they are.
-
-```text
-List-Unsubscribe: <https://example.com/unsubscribe/RECIPIENT_TOKEN>
-List-Unsubscribe-Post: List-Unsubscribe=One-Click
-```
-
-With the [REST API](/api-reference/messages/create-message), set them in the `headers` object; with SMTP, add them as message headers. Your endpoint must accept the form body `List-Unsubscribe=One-Click`, save the preference, return success promptly and handle repeated requests safely. Also include a visible unsubscribe link in the email body. Check a received message's DKIM signature covers both unsubscribe headers, as required by [RFC 8058](https://www.rfc-editor.org/rfc/rfc8058.html).
-
-Yahoo currently accepts a mailto unsubscribe method too, while recommending POST. Using the HTTPS POST method above meets Gmail's one-click mechanism as well. Process opt-outs promptly and stop future jobs for that list. Keep durable preferences in your app; use an AhaSend [suppression](/bounces) if the address must be blocked across the relevant sending domain too. DNS subscription records alone do not implement your application's opt-out logic.
+Whichever you use, keep the opt-out in your own data too, so the address is left out of your next send. The rules for `{{unsubscribe_url}}`, for your own `List-Unsubscribe` headers and for building your own endpoint are on [unsubscribe links and one-click headers](/campaigns/unsubscribe).
 
 <EmailConceptRelated />
