@@ -26,6 +26,7 @@ The import maps the columns of your file to the contact fields: email, first nam
 - A contact that already exists is updated, not duplicated.
 - An empty cell never wipes a value you already have.
 - A contact that unsubscribed from everything stays unsubscribed. A contact that unsubscribed from a list is not put back on that list by a new import.
+- The address column can be named `email` or `Email Address`, so a Mailchimp export imports as it is. From Mailchimp, import only the subscribed contacts file: the unsubscribed and cleaned files have no status column, so their contacts would come in as subscribed.
 - Save the file as UTF-8. If names with accents or non-Latin letters look wrong in the preview, the file was saved in another encoding; export it again as CSV UTF-8. Check in the preview that the columns are separated correctly before you confirm the import.
 
 Import into a list when the file is a list, for example your newsletter subscribers. Import on the Contacts page when you only want the contacts in your account, and add them to lists later.
@@ -90,7 +91,9 @@ Contacts and [suppressions](/bounces) are separate records. A suppression you ad
 
 Advanced search filters a list on any field, with AND and OR rules and groups, relative dates such as "7 days ago", and checks for empty fields. Use it to see who matches, and to send to just those contacts: click **Save as new list** and the matching contacts are copied to a new list.
 
-The new list is a copy, made when you save it. Contacts that match later are not added, and every contact keeps its status: a contact who unsubscribed stays unsubscribed on the new list too.
+The new list is a copy, made when you save it. The contacts are copied in the background, and the new list's page shows when the copy is done. Contacts that match later are not added, and every contact keeps its status: a contact who unsubscribed stays unsubscribed on the new list too.
+
+The **Send Campaign** button on a list page starts a campaign for the whole list, also when a search narrows what you see. To send to the matching contacts only, save them as a new list first.
 
 ## Export
 

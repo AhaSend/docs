@@ -29,10 +29,13 @@ The campaign page lists what is missing before the campaign can go out. The same
 | Design missing | Open the editor and make a design; an imported HTML design needs HTML |
 | Text broken | The subject, preview text or design has template syntax that cannot be rendered, for example an unclosed `{{` |
 | Unsubscribe link missing | Put `{{ unsubscribe_url }}` back in the design |
+| Text unchecked | The campaign could not be checked right now; nothing is known to be wrong. Check again in a moment |
 
 ## Send Now or Schedule
 
 **Schedule & Send** sends the campaign now or at a date and time you choose. A scheduled campaign shows your daily marketing limit, so you can see whether it fits in one day.
+
+Some sends are refused on the spot, with a message that says why: a send time less than a minute ahead, a sender domain that is not verified or is paused, and lists on which no contact can receive the campaign.
 
 Changed your mind? **Unschedule** a scheduled campaign and it returns to draft, where you can edit it and send it again. Once a campaign is sending, it cannot go back to draft; to send the same email again, duplicate it.
 
@@ -40,7 +43,7 @@ Changed your mind? **Unschedule** a scheduled campaign and it returns to draft, 
 
 AhaSend's marketing infrastructure is shared by the campaigns of all customers, so every campaign is checked before it goes out. The check protects your delivery from other senders' bad lists, and theirs from yours.
 
-**The list.** Every address is checked: is it well-formed, does its domain accept mail, is the domain on AhaSend's list of known bad domains, and, where possible, does the mailbox exist. Addresses that cannot receive mail are left out of the send. A list with a high bounce risk is held for review before anything is sent.
+**The list.** Every address is checked: is it well-formed, does its domain accept mail, is the domain on AhaSend's list of known bad domains, and, where possible, does the mailbox exist. Addresses that cannot receive mail are left out of the send; addresses the check could not reach keep their status and still get the campaign. Addresses on catch-all domains, which accept mail for any address, cannot be confirmed and are shown as Catch-all in the list check on the report, next to Risky; they still get the campaign. A list with a high bounce risk, or a large list that is mostly catch-all addresses, is held for review before anything is sent.
 
 **The content.** A language model that AhaSend fine-tuned and runs on its own servers in European datacenters helps catch campaigns that look like spam, phishing or cold outreach. AhaSend does not accept cold outreach: email to people who did not ask for it. See the [terms of service](https://ahasend.com/terms).
 
