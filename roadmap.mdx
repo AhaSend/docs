@@ -12,7 +12,7 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
 <div className="rm">
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (6)</h2>
+      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (7)</h2>
     </div>
 
     <div className="rm-list">
@@ -42,6 +42,16 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title"><a href="/smtp#does-ahasend-support-port-465">SMTP on port 465</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>send.ahasend.com accepts SMTP with implicit TLS on port 465, for clients and devices that cannot use STARTTLS.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/scale/sub-accounts">Zero-day retention for sub accounts</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Sub accounts inherit the option to set message data retention to zero when the parent account is allowed to.</p>
           <span className="rm-date">Q4 2026</span>
         </div>
       </div>
@@ -89,7 +99,7 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
 
         <div>
           <p className="rm-title">Internal infrastructure improvements 🤫 <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Work under the hood that you will notice as faster delivery and fewer surprises, not as a new button. More when it ships.</p>
+          <p>Work on the platform itself rather than on new features: databases, resilience and tooling. Nothing you need to do, and more detail when it ships.</p>
         </div>
       </div>
     </div>
@@ -105,8 +115,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Whitelabel dashboard on your own domain <span className="rm-tag is-new">New feature</span></p>
-          <p>Serve the dashboard to your customers under a hostname of your own (CNAME), next to the DNS whitelabeling that exists today. For Platform Partners.</p>
+          <p className="rm-title">Usage endpoint <span className="rm-tag is-new">New feature</span></p>
+          <p>Read your message usage per account and per domain through the Management API, the same way sub accounts can today.</p>
         </div>
       </div>
 
@@ -114,8 +124,17 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Recipient pages in the recipient's language <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Unsubscribe pages, and later profile and subscribe pages, shown in the recipient's language, Danish first.</p>
+          <p className="rm-title">Marketing Automation 1.0 <span className="rm-tag is-product">New product</span></p>
+          <p>Triggered, multi-step email journeys that go beyond one-off campaigns.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Campaign Builder improvements <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Unsubscribe pages, and later profile and subscribe pages, in the recipient's language, Danish first; and clearer information in the dashboard when a campaign is paused for list quality.</p>
         </div>
       </div>
 
@@ -125,24 +144,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Dashboard in more languages <span className="rm-tag is-improvement">Improvement</span></p>
           <p>The dashboard in Danish and other languages next to English.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Zero-day retention for sub accounts <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Sub accounts inherit the option to set message data retention to zero when the parent account is allowed to.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Usage endpoint <span className="rm-tag is-new">New feature</span></p>
-          <p>Read your message usage per account and per domain through the Management API, the same way sub accounts can today.</p>
         </div>
       </div>
 
@@ -179,15 +180,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Usage alerting <span className="rm-tag is-new">New feature</span></p>
           <p>Get notified by email or webhook when a domain sends more than usual or crosses a volume you set.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Marketing Automation 1.0 <span className="rm-tag is-product">New product</span></p>
-          <p>Triggered, multi-step email journeys that go beyond one-off campaigns.</p>
         </div>
       </div>
 
@@ -242,6 +234,15 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">All dashboard features visible on every plan <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Every dashboard feature visible to all users, disabled only where your plan doesn't include it.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Whitelabel dashboard on your own domain <span className="rm-tag is-new">New feature</span></p>
+          <p>Serve the dashboard to your customers under a hostname of your own (CNAME), next to the DNS whitelabeling that exists today. For Platform Partners.</p>
         </div>
       </div>
 
@@ -431,6 +432,15 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Wildcard subdomains for sending domains <span className="rm-tag is-new">New feature</span></p>
           <p>Verify a domain once and send from any of its subdomains.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Retry delivery for failed messages <span className="rm-tag is-new">New feature</span></p>
+          <p>Retry the delivery of a failed message from the dashboard, within its retention period.</p>
         </div>
       </div>
     </div>
