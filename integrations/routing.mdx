@@ -756,6 +756,23 @@ The workflow functions below use application-owned callbacks such as `createSupp
     ```
   </Accordion>
 
+  <Accordion title="What Messages Does AhaSend Reject?" icon="ban">
+    AhaSend checks every message that arrives at `mx.ahasend.com` before it is queued for your route. A message that fails a check is refused during the SMTP transaction with a permanent error, so the sender's server returns it as a bounce and nothing reaches your endpoint. The bounce text quotes our reply:
+
+    | Check | SMTP reply | What it means |
+    |---|---|---|
+    | Neither domain is ours | `556` | No AhaSend account owns the recipient's domain or the sender's domain. Usually a typo in the address, or a domain whose MX points to AhaSend without being added to an account. |
+    | Not exactly one `From` address | `550` | The message has no `From` header, or more than one address in it. |
+    | Fails the sender's DMARC policy | `550` | The `From` domain publishes `p=reject` or `p=quarantine`, and neither SPF nor DKIM aligns with that domain. |
+    | No SPF or DKIM pass | `550` | The `From` domain has no DMARC record, or one with `p=none`, and the message has neither a passing SPF result nor a valid DKIM signature for any domain. |
+    | Bare line endings | `552` | Lines end in LF instead of CRLF, which the SMTP standard requires. Typical of a script that writes the message by hand. |
+    | Larger than 20 MiB | `552` | The whole message, attachments included after base64 encoding. See [SMTP limits](/smtp). |
+
+    The authentication checks keep forged mail out of your application: a message that passes was sent by a server the `From` domain authorizes. A sender whose domain has no SPF, no DKIM and no DMARC is refused; they need at least SPF or DKIM, which Gmail and Microsoft require of them anyway.
+
+    A rejected message is not stored and does not appear in your message log; the sender's bounce is the only record.
+  </Accordion>
+
   <Accordion title="Route Disabled" icon="ban">
     **Automatic Route Disabling:**
     - AhaSend disables routes after more than 100 consecutive failed attempts
