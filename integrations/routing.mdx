@@ -756,7 +756,7 @@ The workflow functions below use application-owned callbacks such as `createSupp
     ```
   </Accordion>
 
-  <Accordion title="Sender Got a Bounce From AhaSend (Message Rejected)" icon="ban">
+  <Accordion title="What Messages Does AhaSend Reject?" icon="ban">
     AhaSend checks every message that arrives at `mx.ahasend.com` before it is queued for your route. A message that fails a check is refused during the SMTP transaction with a permanent error, so the sender's server returns it as a bounce and nothing reaches your endpoint. The bounce text quotes our reply:
 
     | Check | SMTP reply | What it means |
