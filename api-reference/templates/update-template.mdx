@@ -15,19 +15,21 @@ The AhaSend API changes a transactional template. Access requires `templates:wri
 
 **Fields:**
 - A field that you leave out does not change. The one exception is the text beside a new design: see **Text**. `from` replaces the address and the name together, so a `from` without `name` clears the name. A `reply_to` needs a sender, so `from: null` also clears `reply_to`.
-- Each field is compared with the draft, or with the published template when there is no draft. Fields equal to those values leave the draft and the published content as they are, but `publish: true` still publishes an existing draft. A change that makes the draft equal to the published template removes the draft: `has_draft` becomes `false`, and Get Template Draft answers `404`.
+- Each field is compared with the draft, or with the published template when there is no draft. Fields equal to those values leave the draft and the published content as they are, but `publish: true` still publishes an existing draft. A change that makes the draft equal to the published template removes the draft: `has_draft` becomes `false`, and [Get Template](/api-reference/templates/get-template) answers the published copy.
 - A request with no field, or with only `publish: false`, is refused with `400`.
-- You can send back a non-null `content` of [Get Template Draft](/api-reference/templates/get-template-draft), or of [Get Template](/api-reference/templates/get-template) when `has_draft` is `false`. While a draft exists, Get Template answers the published `content`, and sending it back replaces the draft's design and text. Leave out `content` when you do not change it. For a `simple` template, send back only `content.text`: you can change its design only in the dashboard.
+- You can send back a non-null `content` of [Get Template](/api-reference/templates/get-template), the working copy, as it is. While a draft exists, a design equal to the published copy's, which [Get Published Template](/api-reference/templates/get-published-template) returns, takes the published copy's stored design, and a draft that then equals the published copy is removed. Leave out `content` when you do not change it.
+- For a `simple` template, change the design in `content.markup`, as [AhaML](/send-api/ahaml). Its `content.html` is made from the design: beside `markup` it is ignored, and without `markup` it is ignored when it equals the stored HTML and refused otherwise. An empty `content.html` is refused, as for every editor.
 
 **Text:**
-- When you send a new `content.mjml` or `content.html` and leave out `content.text`, a text written by hand stays, and a text made from the HTML is made again from the new HTML.
+- When you send a new `content.mjml`, `content.html` or `content.markup` and leave out `content.text`, a text written by hand stays, and a text made from the HTML is made again from the new HTML.
 - Send `content.text` as `null` to make the text again from the new HTML, also when the text was written by hand.
 - A text written by hand that stays must still render. If it holds a `{{`, `{%` or `{#` that cannot be rendered, the request is refused with `400`.
 
 **Content rules:**
 - MJML must pass strict validation. For a validation error, the message gives the line of each problem.
-- Images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
-- The MJML, the HTML and a text written by hand can each be at most 200 KB.
+- AhaML must follow the [AhaML rules](/send-api/ahaml). A refused write lists the problems in `errors`, each with its line and column when it has a place in the AhaML. See [AhaML errors](/send-api/ahaml#errors).
+- In MJML and HTML, images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. AhaML URLs follow the [AhaML URL rules](/send-api/ahaml#urls). The API cannot upload files.
+- The MJML, the HTML, the AhaML and a text written by hand can each be at most 200 KB.
 
 If the template changes in the dashboard or through another request while this request runs, the API tries again. If that continues, the API answers `503` with a `Retry-After` header. Retry the request after that delay.
 
@@ -36,4 +38,4 @@ This operation accepts an `Idempotency-Key` header. A retry with the same key re
 ## Related Guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
-- [Get Template Draft](/api-reference/templates/get-template-draft), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Get Template](/api-reference/templates/get-template), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -94,7 +94,8 @@
               "send-api/credentials",
               "send-api/sandbox",
               "send-api/send-email",
-              "send-api/templates"
+              "send-api/templates",
+              "send-api/ahaml"
             ]
           },
           {
@@ -194,10 +195,10 @@
                 "pages": [
                   "api-reference/templates/create-template",
                   "api-reference/templates/get-template",
+                  "api-reference/templates/get-published-template",
                   "api-reference/templates/get-templates",
                   "api-reference/templates/update-template",
                   "api-reference/templates/publish-template",
-                  "api-reference/templates/get-template-draft",
                   "api-reference/templates/discard-template-draft",
                   "api-reference/templates/get-template-versions",
                   "api-reference/templates/get-template-version",
@@ -715,6 +716,10 @@
     ]
   },
   "redirects": [
+    {
+      "source": "/api-reference/templates/get-template-draft",
+      "destination": "/api-reference/templates/get-template"
+    },
     {
       "source": "/smtp/sandbox",
       "destination": "/send-api/sandbox"

@@ -5,7 +5,7 @@ description: "Automate Campaign Builder: push contacts from your app, manage lis
 icon: "code"
 ---
 
-Contacts, lists, campaign templates and campaigns are resources of the Management API, with commands in the CLI and tools in the MCP server. Two things stay in the dashboard: defining custom fields, under **Marketing > Contact fields**, and editing Simple Editor designs. The dashboard, the API, the CLI and the MCP server all work on the same data, so a contact pushed from your app shows up in the dashboard at once, and a campaign drafted by an AI tool is there for you to review.
+Contacts, lists, campaign templates and campaigns are resources of the Management API, with commands in the CLI and tools in the MCP server. Defining custom fields, under **Marketing > Contact fields**, stays in the dashboard. Simple Editor designs are read and written as [AhaML](/send-api/ahaml) through the API. The dashboard, the API, the CLI and the MCP server all work on the same data, so a contact pushed from your app shows up in the dashboard at once, and a campaign drafted by an AI tool is there for you to review.
 
 ## Typical Automations
 
@@ -28,7 +28,7 @@ The CLI has a command group for each resource: [`ahasend contacts`](/cli/command
 
 With the [MCP server](/mcp-server), an AI tool such as Claude, ChatGPT or Cursor can do the same work in plain language: build a list from an export you hand it, import an MJML file as a template, fill a campaign from your blog posts, send you a test and schedule the send. Connect the tool with the **Marketer** preset, which reads everything and manages templates, contacts, lists and campaigns.
 
-Important to know: a campaign only goes out after your consent. Before the agent sends or schedules one, your AI tool shows you the send time, the number of contacts, the name, the subject, the sender and the lists, and nothing is sent until you say yes. Also, a design made in the Simple Editor can be changed only in the dashboard.
+Important to know: a campaign only goes out after your consent. Before the agent sends or schedules one, your AI tool shows you the send time, the number of contacts, the name, the subject, the sender and the lists, and nothing is sent until you say yes. Also, the agent cannot change a design made in the Simple Editor.
 
 ## Related Guides
 

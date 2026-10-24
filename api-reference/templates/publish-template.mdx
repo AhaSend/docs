@@ -8,7 +8,7 @@ description: "Publish the draft of an AhaSend transactional template so that sen
 
 The AhaSend API publishes the draft of a template. [Create Template Message](/api-reference/messages/create-template-message) sends it from then on, and the template keeps it as a new version. Access requires `templates:write`.
 
-The API and the dashboard edit the same draft. A publish publishes the whole draft, including changes made in the dashboard. To see what a publish will publish, use [Get Template Draft](/api-reference/templates/get-template-draft) first.
+The API and the dashboard edit the same draft. A publish publishes the whole draft, including changes made in the dashboard. To see what a publish will publish, use [Get Template](/api-reference/templates/get-template) first: while `has_draft` is `true`, it returns the draft.
 
 A template with no draft and with published content stays as it is, so you can repeat the request safely. A template with no draft and no published content is refused with `400`. So is a draft with no content, and a draft whose design or text holds a `{{`, `{%` or `{#` that cannot be rendered. The operation takes no request body.
 

@@ -8,7 +8,7 @@ description: "List the transactional templates in your AhaSend account, newest f
 
 The AhaSend API returns the account's transactional templates. Access requires `templates:read`.
 
-Each template is listed without its `content`. To read the content, use [Get Template](/api-reference/templates/get-template). When `has_draft` is `true`, the template has changes that are not published yet.
+Each template is listed as its published copy, without its `content`. When `has_draft` is `true`, the template has changes that are not published yet. To read the content, use [Get Template](/api-reference/templates/get-template), which returns the draft while one exists, or [Get Published Template](/api-reference/templates/get-published-template).
 
 Campaign templates are not in this list. To list them, use [List Campaign Templates](/api-reference/campaign-templates/get-campaign-templates).
 
