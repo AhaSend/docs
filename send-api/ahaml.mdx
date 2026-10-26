@@ -1,0 +1,641 @@
+---
+title: "AhaSend Markup (AhaML)"
+sidebarTitle: "AhaML"
+description: "AhaML is the XML text form of AhaSend Simple Editor designs. Read and write email designs through the API: tags, attributes, rules and error codes."
+icon: "code"
+---
+
+AhaSend Markup, AhaML for short, is a text form of the designs that the Simple Editor makes. You read a design as AhaML and write one back as AhaML through the API, in `content.markup`, without the editor's own JSON.
+
+AhaML is XML. Each tag is one part of the design, such as a paragraph, a button or a bold word, and each attribute is one of its settings.
+
+```xml
+<Email version="1">
+  <Theme containerMaxWidth="640" linkColor="#0b57d0"/>
+  <Heading level="1">Welcome, <Var name="first_name" fallback="there"/></Heading>
+  <Paragraph><Bold>Order</Bold> <Var name="order_id"/> has shipped.</Paragraph>
+  <Repeat each="items">
+    <Paragraph><Var name="title"/>: <Var name="price"/></Paragraph>
+  </Repeat>
+  <Section showIf="plan" operator="equals" value="pro" backgroundColor="#eef4ff">
+    <Paragraph>Thanks for being a Pro customer.</Paragraph>
+  </Section>
+  <Button url="https://example.com/orders/{{ order_id }}">Track your order</Button>
+  <Footer>You get this email because you have an account.</Footer>
+</Email>
+```
+
+## How reads and writes work
+
+The design is stored in the editor's own form. A read prints it as AhaML, and a write turns the AhaML back into that form, so the editor opens a design written as AhaML as it opens any other.
+
+- A read prints one fixed form: the same design always gives the same AhaML, byte for byte.
+- AhaML that a read gave, sent back unchanged, keeps the stored design as it is.
+- A write sets the whole design. What the AhaML does not give takes its default; nothing of the stored design is kept.
+- A write checks the whole AhaML and refuses it with the problems it finds, up to the first 100, each with its line, column and path when it has a place in the AhaML. A syntax error, and a few other problems, stop the check and come back alone (see [Errors](#errors)).
+- A write is checked by the rules of this page also when it sends back a design it read: a design made in the editor that breaks a rule, such as one with an image on `http:`, must be fixed before it can be written as AhaML.
+
+## The document
+
+- `Email` is the root. It takes `version` and `dir`.
+- `Theme` is optional. When it is there, it is the first child of `Email`, and there is at most one. A write without `Theme` gives the default theme, as an empty `<Theme/>` does. A read prints no `Theme` when every setting is at its default.
+- The other children of `Email` are blocks.
+- Tag names are case-sensitive.
+
+## Versions
+
+`<Email version="1">` names the version of AhaML. A write may leave `version` out, which means the current version. A read always prints it.
+
+A new tag, attribute or value is added to the current version. Only a change that breaks AhaML that works today makes a new version. When a new version comes, a write in the old version still works.
+
+## Tags
+
+"Blocks" are `Paragraph`, `Heading`, `BulletList`, `OrderedList`, `Quote`, `Divider`, `Button`, `Image`, `Spacer`, `Section`, `Columns`, `Repeat` and `Footer`. They, `ListItem` and `Column` each stand on their own line in the AhaML a read prints. "Text and inline tags" are text, `Var`, `InlineImage`, `Br` and the mark tags: `Link`, `Color`, `Highlight`, `Bold`, `Italic`, `Underline`, `Strike` and `Code`.
+
+| Tag | What it is | Holds | Stands in |
+|---|---|---|---|
+| `Email` | The root of every design. | one or more blocks | nothing: it is the root |
+| `Paragraph` | A paragraph of text. | any text and inline tags | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Heading` | A heading of level 1, 2 or 3. | any text and inline tags | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `BulletList` | A list with bullets. | one or more `ListItem` | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `OrderedList` | A numbered list. | one or more `ListItem` | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `ListItem` | One item of a list. | one `Paragraph`, then any blocks | `BulletList` or `OrderedList` |
+| `Quote` | A quoted passage. | one or more blocks | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Divider` | A horizontal line. | nothing | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Button` | A button with a link. | one or more text and inline tags | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Image` | An image. | nothing | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Spacer` | Empty vertical space. | nothing | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Section` | A box around blocks, with a background, padding, margin and border. | one or more blocks | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Columns` | A row of columns. | one or more `Column` | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Column` | One column of a row. | one or more blocks | `Columns` |
+| `Repeat` | Blocks repeated once for each item of a list. | one or more blocks | `Email`, `ListItem`, `Quote`, `Section` or `Column` |
+| `Footer` | Small text at the end of the email. | any text and inline tags | `Email`, `ListItem`, `Quote`, `Section`, `Column` or `Repeat` |
+| `Theme` | The design's theme: sizes, colors, paddings and font. At most one, as the first child of `Email`. | nothing | `Email` |
+| `Var` | A variable, filled in when the email is sent. | nothing | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `InlineImage` | A small image inside a line of text. | nothing | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Br` | A line break. | nothing | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Link` | A link around text. | text and inline tags | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Color` | A text color. | text and inline tags | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Highlight` | A background color behind text. | text and inline tags | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Bold` | Text in bold. | text and inline tags | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Italic` | Text in italics. | text and inline tags | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Underline` | Underlined text. | text and inline tags | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Strike` | Struck-through text. | text and inline tags | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+| `Code` | Text in a monospace font, with no other mark. | text and inline tags | `Paragraph`, `Heading`, `Button` or `Footer`, also inside mark tags |
+
+A `Repeat` may not hold another `Repeat`, at any depth.
+
+A tag that must hold content refuses to be empty. Any other tag may be empty, as an empty paragraph is: `<Paragraph/>`.
+
+## Attributes
+
+An attribute that is not given takes its default. A read leaves out each attribute that is at its default, apart from a required one, which it always prints: `<Heading level="1">` keeps its `level`. "Not set" means that the tag gives no value of its own: the theme's value applies where the theme has one, as for a font or a button color, and otherwise there is none, as for an `alt` or a `fallback`.
+
+The `dir` of a block is `ltr`, `rtl` or `auto`, and its default is the `dir` of `Email`. So a right-to-left design gives `dir="rtl"` on `Email`, and a read prints `dir` on another tag only when its direction differs.
+
+### `Email`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `version` | The AhaML version. A write may leave it out; a read always prints it. | `1` | `1` |
+| `dir` | The direction of the design. Each block takes it unless it gives its own. | `ltr`, `rtl` or `auto` | `ltr` |
+
+### `Paragraph`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `textAlign` | The alignment of the text. | `left`, `center` or `right` | not set |
+| `fontFamily` | The font of the text. | a font name | not set |
+| `fontFallback` | The font used where the font of the text is not available. | `Arial`, `Helvetica`, `Verdana`, `Georgia`, `Times New Roman`, `serif`, `sans-serif`, `monospace`, `cursive` or `fantasy` | not set |
+| `fontSize` | The font size, in pixels. | a number from 8 to 200 | not set |
+| `fontWeight` | The font weight. | `400`, `500`, `600`, `700` or `800` | not set |
+| `lineHeight` | The line height, as a multiple of the font size. | a number from 0.5 to 3 | not set |
+| `fontStyle` | The font style. | `normal` or `italic` | not set |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Paragraph` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `Heading`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `level` | The level of the heading. | `1`, `2` or `3` | required |
+| `textAlign` | The alignment of the text. | `left`, `center` or `right` | not set |
+| `fontFamily` | The font of the text. | a font name | not set |
+| `fontFallback` | The font used where the font of the text is not available. | `Arial`, `Helvetica`, `Verdana`, `Georgia`, `Times New Roman`, `serif`, `sans-serif`, `monospace`, `cursive` or `fantasy` | not set |
+| `fontSize` | The font size, in pixels. | a number from 8 to 200 | not set |
+| `fontWeight` | The font weight. | `400`, `500`, `600`, `700` or `800` | not set |
+| `lineHeight` | The line height, as a multiple of the font size. | a number from 0.5 to 3 | not set |
+| `fontStyle` | The font style. | `normal` or `italic` | not set |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Heading` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `BulletList`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`BulletList` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `OrderedList`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `start` | The number of the first item. The editor keeps it; the email numbers the items from 1. | any whole number | `1` |
+| `type` | The numbering: digits, letters or roman numerals. The editor keeps it; the email numbers with digits. | `1`, `a`, `A`, `i` or `I` | not set |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`OrderedList` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `ListItem`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+### `Quote`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `fontFamily` | The font of the text. | a font name | not set |
+| `fontFallback` | The font used where the font of the text is not available. | `Arial`, `Helvetica`, `Verdana`, `Georgia`, `Times New Roman`, `serif`, `sans-serif`, `monospace`, `cursive` or `fantasy` | not set |
+| `fontSize` | The font size, in pixels. | a number from 8 to 200 | not set |
+| `fontWeight` | The font weight. | `400`, `500`, `600`, `700` or `800` | not set |
+| `lineHeight` | The line height, as a multiple of the font size. | a number from 0.5 to 3 | not set |
+| `fontStyle` | The font style. | `normal` or `italic` | not set |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+### `Divider`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Divider` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `Button`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `url` | The link the button opens. Empty draws the button with an empty link. | a link URL, or empty | empty |
+| `kind` | `tight` fits the button to its text; `full-width` fills the width. | `tight` or `full-width` | `tight` |
+| `alignment` | Where the button stands. | `left`, `center` or `right` | not set |
+| `backgroundColor` | The background color of the button. Not set, the theme's button color applies. | a color | not set |
+| `color` | The text color of the button. Not set, the theme's button text color applies. | a color | not set |
+| `paddingTop` | The space inside, above the text, in pixels. Not set, the theme's button padding applies. | a number from 0 to 100 | not set |
+| `paddingRight` | The space inside, right of the text, in pixels. Not set, the theme's button padding applies. | a number from 0 to 100 | not set |
+| `paddingBottom` | The space inside, below the text, in pixels. Not set, the theme's button padding applies. | a number from 0 to 100 | not set |
+| `paddingLeft` | The space inside, left of the text, in pixels. Not set, the theme's button padding applies. | a number from 0 to 100 | not set |
+| `borderStyle` | The style of the border. | `solid`, `dashed` or `dotted` | `solid` |
+| `borderColor` | The color of the border. | a color | `#000000` |
+| `borderTopWidth` | The width of the top border, in pixels. | a number from 0 to 8 | `0` |
+| `borderRightWidth` | The width of the right border, in pixels. | a number from 0 to 8 | `0` |
+| `borderBottomWidth` | The width of the bottom border, in pixels. | a number from 0 to 8 | `0` |
+| `borderLeftWidth` | The width of the left border, in pixels. | a number from 0 to 8 | `0` |
+| `borderTopLeftRadius` | The radius of the top-left corner, in pixels. | a number from 0 to 9,999 | `9999` |
+| `borderTopRightRadius` | The radius of the top-right corner, in pixels. | a number from 0 to 9,999 | `9999` |
+| `borderBottomRightRadius` | The radius of the bottom-right corner, in pixels. | a number from 0 to 9,999 | `9999` |
+| `borderBottomLeftRadius` | The radius of the bottom-left corner, in pixels. | a number from 0 to 9,999 | `9999` |
+| `fontFamily` | The font of the text. | a font name | not set |
+| `fontFallback` | The font used where the font of the text is not available. | `Arial`, `Helvetica`, `Verdana`, `Georgia`, `Times New Roman`, `serif`, `sans-serif`, `monospace`, `cursive` or `fantasy` | not set |
+| `fontSize` | The font size, in pixels. | a number from 8 to 200 | not set |
+| `fontWeight` | The font weight. | `400`, `500`, `600`, `700` or `800` | not set |
+| `lineHeight` | The line height, as a multiple of the font size. | a number from 0.5 to 3 | not set |
+| `fontStyle` | The font style. | `normal` or `italic` | not set |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Button` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `Image`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `src` | The image URL. Empty is the editor's image placeholder, which shows no image. | an image URL, or empty | required |
+| `alt` | The text shown where the image does not load. | text, up to 1,000 characters | not set |
+| `title` | The text shown when the pointer rests on it. | text, up to 1,000 characters | not set |
+| `width` | The width of the image: a percent of the width it stands in, a number of pixels, or `auto`. | `5%` to `100%`, a number of pixels from 0 to 9,999, or `auto` | `100%` |
+| `height` | A height in pixels that the editor keeps. The email scales the image by its width. | a number from 0 to 9,999 | not set |
+| `align` | Where the image stands. | `left`, `center` or `right` | `left` |
+| `externalLink` | The link the image opens. Empty is no link. | a link URL, or empty | not set |
+| `borderStyle` | The style of the border. | `solid`, `dashed` or `dotted` | `solid` |
+| `borderColor` | The color of the border. | a color | `#000000` |
+| `borderTopWidth` | The width of the top border, in pixels. | a number from 0 to 8 | `0` |
+| `borderRightWidth` | The width of the right border, in pixels. | a number from 0 to 8 | `0` |
+| `borderBottomWidth` | The width of the bottom border, in pixels. | a number from 0 to 8 | `0` |
+| `borderLeftWidth` | The width of the left border, in pixels. | a number from 0 to 8 | `0` |
+| `borderTopLeftRadius` | The radius of the top-left corner, in pixels. | a number from 0 to 9,999 | `0` |
+| `borderTopRightRadius` | The radius of the top-right corner, in pixels. | a number from 0 to 9,999 | `0` |
+| `borderBottomRightRadius` | The radius of the bottom-right corner, in pixels. | a number from 0 to 9,999 | `0` |
+| `borderBottomLeftRadius` | The radius of the bottom-left corner, in pixels. | a number from 0 to 9,999 | `0` |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Image` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `Spacer`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `height` | The height of the space, in pixels. | a number from 1 to 1,000 | `8` |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Spacer` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `Section`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `backgroundColor` | The background color. | a color, or empty for none | `#f7f7f7` |
+| `align` | Where the content stands. | `left`, `center` or `right` | `left` |
+| `paddingTop` | The space inside, above the content, in pixels. | a number from 0 to 100 | `0` |
+| `paddingRight` | The space inside, right of the content, in pixels. | a number from 0 to 100 | `0` |
+| `paddingBottom` | The space inside, below the content, in pixels. | a number from 0 to 100 | `0` |
+| `paddingLeft` | The space inside, left of the content, in pixels. | a number from 0 to 100 | `0` |
+| `marginTop` | The space outside, above the section, in pixels. | a number from 0 to 100 | `0` |
+| `marginRight` | The space outside, right of the section, in pixels. | a number from 0 to 100 | `0` |
+| `marginBottom` | The space outside, below the section, in pixels. | a number from 0 to 100 | `20` |
+| `marginLeft` | The space outside, left of the section, in pixels. | a number from 0 to 100 | `0` |
+| `borderStyle` | The style of the border. | `solid`, `dashed` or `dotted` | `solid` |
+| `borderColor` | The color of the border. | a color | `#e2e2e2` |
+| `borderTopWidth` | The width of the top border, in pixels. | a number from 0 to 8 | `2` |
+| `borderRightWidth` | The width of the right border, in pixels. | a number from 0 to 8 | `2` |
+| `borderBottomWidth` | The width of the bottom border, in pixels. | a number from 0 to 8 | `2` |
+| `borderLeftWidth` | The width of the left border, in pixels. | a number from 0 to 8 | `2` |
+| `borderTopLeftRadius` | The radius of the top-left corner, in pixels. | a number from 0 to 9,999 | `0` |
+| `borderTopRightRadius` | The radius of the top-right corner, in pixels. | a number from 0 to 9,999 | `0` |
+| `borderBottomRightRadius` | The radius of the bottom-right corner, in pixels. | a number from 0 to 9,999 | `0` |
+| `borderBottomLeftRadius` | The radius of the bottom-left corner, in pixels. | a number from 0 to 9,999 | `0` |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Section` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `Columns`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `gap` | The space between the columns, in pixels. | a number from 0 to 100 | `8` |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Columns` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `Column`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `width` | The width of the column, as a percent of the row. Not set, the columns share the width. | a number from 10 to 100 | not set |
+| `verticalAlign` | Where the content of the column stands, from top to bottom. | `top`, `middle` or `bottom` | `top` |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+### `Repeat`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `each` | The name of the list whose items the blocks repeat for. | a variable name | required |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+`Repeat` also takes the rule attributes `showIf`, `hideIf`, `operator` and `value` (see [Show-if and hide-if](#show-if-and-hide-if)).
+
+### `Footer`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `textAlign` | The alignment of the text. | `left`, `center` or `right` | `left` |
+| `fontFamily` | The font of the text. | a font name | not set |
+| `fontFallback` | The font used where the font of the text is not available. | `Arial`, `Helvetica`, `Verdana`, `Georgia`, `Times New Roman`, `serif`, `sans-serif`, `monospace`, `cursive` or `fantasy` | not set |
+| `fontSize` | The font size, in pixels. | a number from 8 to 200 | not set |
+| `fontWeight` | The font weight. | `400`, `500`, `600`, `700` or `800` | not set |
+| `lineHeight` | The line height, as a multiple of the font size. | a number from 0.5 to 3 | not set |
+| `fontStyle` | The font style. | `normal` or `italic` | not set |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+### `Var`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `name` | The name of the variable. | a variable name | required |
+| `fallback` | The text shown when the variable has no value. | text without template syntax, up to 1,000 characters | not set |
+| `label` | The name the editor shows for the variable. | text, up to 1,000 characters | not set |
+| `required` | Whether the editor marks the variable as required. | `true` or `false` | `true` |
+| `hideDefaultValue` | Whether the editor hides the fallback. | `true` or `false` | `false` |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+### `InlineImage`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `src` | The image URL. Empty shows no image. | an image URL, or empty | empty |
+| `alt` | The text shown where the image does not load. | text, up to 1,000 characters | not set |
+| `title` | The text shown when the pointer rests on the image. The editor keeps it; the email does not use it. | text, up to 1,000 characters | not set |
+| `width` | The width of the image, in pixels. | a number from 10 to 96 | `20` |
+| `height` | The height of the image, in pixels. | a number from 10 to 96 | `20` |
+| `externalLink` | The link the image opens. Empty is no link. | a link URL, or empty | not set |
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+### `Br`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `dir` | The direction of the text, when it differs from the `Email` `dir`. | `ltr`, `rtl` or `auto` | the `Email` `dir` |
+
+### `Link`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `href` | The link URL. | a link URL | required |
+| `target` | Where the link opens. The editor keeps it; the email opens every link in a new window. | `_blank`, `_self`, `_parent` or `_top` | `_blank` |
+| `title` | The text shown when the pointer rests on the link. The editor keeps it; the email does not use it. | text, up to 1,000 characters | not set |
+
+### `Color`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `value` | The color of the text. | a color | required |
+
+### `Highlight`
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `value` | The color behind the text. | a color | required |
+
+### `Bold`
+
+`Bold` takes no attributes.
+
+### `Italic`
+
+`Italic` takes no attributes.
+
+### `Underline`
+
+`Underline` takes no attributes.
+
+### `Strike`
+
+`Strike` takes no attributes.
+
+### `Code`
+
+`Code` takes no attributes.
+
+## The theme
+
+`Theme` sets the look of the whole email. A setting it does not give takes its default.
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `containerBackgroundColor` | The background color of the email's content. | a color | `#ffffff` |
+| `containerMaxWidth` | The largest width of the email's content, in pixels. | a number from -999,999 to 999,999 | `600` |
+| `containerMinWidth` | The smallest width of the email's content, in pixels. | a number from -999,999 to 999,999 | `300` |
+| `containerBorderRadius` | The corner radius of the email's content, in pixels. | a number from -999,999 to 999,999 | `6` |
+| `containerBorderWidth` | The border width of the email's content, in pixels. | a number from -999,999 to 999,999 | `0` |
+| `containerBorderColor` | The border color of the email's content. | a color | `#eaeaea` |
+| `containerPaddingTop` | The space inside the email's content, at the top, in pixels. | a number from -999,999 to 999,999 | `25` |
+| `containerPaddingRight` | The space inside the email's content, at the right, in pixels. | a number from -999,999 to 999,999 | `50` |
+| `containerPaddingBottom` | The space inside the email's content, at the bottom, in pixels. | a number from -999,999 to 999,999 | `25` |
+| `containerPaddingLeft` | The space inside the email's content, at the left, in pixels. | a number from -999,999 to 999,999 | `50` |
+| `bodyBackgroundColor` | The background color around the email's content. | a color | `#ffffff` |
+| `bodyPaddingTop` | The space around the email's content, at the top, in pixels. | a number from -999,999 to 999,999 | `25` |
+| `bodyPaddingRight` | The space around the email's content, at the right, in pixels. | a number from -999,999 to 999,999 | `0` |
+| `bodyPaddingBottom` | The space around the email's content, at the bottom, in pixels. | a number from -999,999 to 999,999 | `25` |
+| `bodyPaddingLeft` | The space around the email's content, at the left, in pixels. | a number from -999,999 to 999,999 | `0` |
+| `buttonBackgroundColor` | The background color of the buttons that set none. | a color | `#000000` |
+| `buttonColor` | The text color of the buttons that set none. | a color | `#ffffff` |
+| `buttonPaddingTop` | The top padding of the buttons that set none, in pixels. | a number from -999,999 to 999,999 | `10` |
+| `buttonPaddingRight` | The right padding of the buttons that set none, in pixels. | a number from -999,999 to 999,999 | `32` |
+| `buttonPaddingBottom` | The bottom padding of the buttons that set none, in pixels. | a number from -999,999 to 999,999 | `10` |
+| `buttonPaddingLeft` | The left padding of the buttons that set none, in pixels. | a number from -999,999 to 999,999 | `32` |
+| `linkColor` | The color of links. | a color | `#111827` |
+| `fontFamily` | The font of the email. | a font name | `Inter` |
+| `fontFallback` | The font used where the font of the email is not available. | `Arial`, `Helvetica`, `Verdana`, `Georgia`, `Times New Roman`, `serif`, `sans-serif`, `monospace`, `cursive` or `fantasy` | `sans-serif` |
+| `webFontUrl` | The URL of the font file. | a font URL | `https://cdn.jsdelivr.net/fontsource/fonts/inter:vf@latest/latin-wght-normal.woff2` |
+| `webFontFormat` | The format of the font file. | `woff`, `woff2`, `truetype`, `opentype`, `embedded-opentype` or `svg` | `woff2` |
+| `listMarkerColor` | The color of list bullets and numbers. | a color | `#d1d5dc` |
+
+`fontFamily`, `fontFallback`, `webFontUrl` and `webFontFormat` are one group:
+
+- A `Theme` with none of them has the default font.
+- A `Theme` with any of them needs `fontFamily` and `fontFallback`, and `webFontUrl` and `webFontFormat` come together or not at all.
+- A font with no web font file uses the font installed on the reader's device, or the fallback.
+
+```xml
+<Email version="1">
+  <Theme fontFamily="Georgia" fontFallback="serif"/>
+  <Paragraph>A design in Georgia.</Paragraph>
+</Email>
+```
+
+## Text and whitespace
+
+Text follows the whitespace rules of HTML:
+
+- Each run of spaces, tabs and newlines is one space, also across the edge of a mark tag.
+- Spaces at the start and the end of a block's text are removed, and so are spaces just before and just after a `<Br/>`.
+- `<Br/>` is the only line break.
+
+So you can indent AhaML as you like. Whitespace between blocks is ignored, and other text where only blocks may go is refused.
+
+Marks can nest in any order, and a read prints them nested in one order: `Link`, `Color`, `Highlight`, `Bold`, `Italic`, `Underline`, `Strike`, `Code`, from outer to inner. A mark may not stand inside the same mark, such as `Bold` inside `Bold`. `Code` takes no other mark. A mark tag with no text adds nothing.
+
+```xml
+<Email version="1">
+  <Paragraph>Read <Link href="https://example.com/terms"><Bold>the terms</Bold> first</Link>, then <Color value="#d32f2f">reply</Color>.<Br/>Thanks!</Paragraph>
+</Email>
+```
+
+Marks around a `Var`, an `InlineImage` or a `<Br/>` are kept in the design, as the editor keeps them, but the email draws the value, the image or the line break without them. To make a value bold or a link, mark the text around it. To link an inline image, give it `externalLink`.
+
+## Variables
+
+`<Var name="first_name" fallback="there"/>` is the only way to write a variable in text. It is filled in when the email is sent, and shows its `fallback` when the variable has no value.
+
+`{{ name }}` written as plain text stays plain text, and a write gives the warning `jinja_in_text`. The editor shows it as text. It is still filled in when the email is sent, unless it holds a character that HTML escapes (`'`, `"`, `<`, `>` or `&`), which breaks it.
+
+These are refused as `text_not_allowed_here`, because they would break the email when it is sent:
+
+- text that ends with `{` just before a `Var`. Put a space between them.
+- a whole `{{ }}` or `{% %}` pair across a change of marks, an `InlineImage` or a `<Br/>`.
+- a `{{` or `{%` that is not closed in its own text, before the end of its block and before the next `Var`.
+
+A `fallback` may not hold `{{`, `{%` or `{#`, and may not end with `{`.
+
+URLs take variables as `{{ name }}` pieces, as in `https://example.com/orders/{{ order_id }}` (see [URLs](#urls)).
+
+## Show-if and hide-if
+
+The blocks that take a rule show or hide by the value of a variable when the email is sent:
+
+| Attribute | Meaning | Values | Default |
+|---|---|---|---|
+| `showIf` | Shows the tag only when the rule on this variable holds. | a variable name | not set |
+| `hideIf` | Hides the tag when the rule on this variable holds. | a variable name | not set |
+| `operator` | How the variable is tested. | `is_true`, `is_false`, `equals`, `not_equals`, `contains`, `not_contains`, `starts_with`, `ends_with`, `greater_than` or `less_than` | `is_true` |
+| `value` | The value the variable is tested against. | text, up to 1,000 characters | not set |
+
+- A tag takes `showIf` or `hideIf`, not both.
+- `value` is required for every operator except `is_true` and `is_false`, and refused for those two. An empty `value=""` is a value.
+- For `greater_than` and `less_than`, `value` is a number, such as `5` or `1.5`. An empty value is 0.
+- `operator` or `value` without `showIf` or `hideIf` is refused.
+
+```xml
+<Email version="1">
+  <Paragraph showIf="plan" operator="equals" value="pro">Thanks for being a Pro customer.</Paragraph>
+  <Button url="https://example.com/upgrade" hideIf="plan" operator="equals" value="pro">Upgrade</Button>
+  <Paragraph showIf="cart_total" operator="greater_than" value="50">Your order ships free.</Paragraph>
+</Email>
+```
+
+## Repeated blocks
+
+`<Repeat each="items">` repeats its blocks once for each item of the list `items`.
+
+Inside a `Repeat`, a name such as `<Var name="title"/>` reads the item's `title` first, and the top-level `title` when the item has none. In a list of plain values, not objects, `<Var name="value"/>` is the item.
+
+```xml
+<Email version="1">
+  <Repeat each="items">
+    <Paragraph><Bold>Item:</Bold> <Var name="title"/>, <Var name="price"/></Paragraph>
+  </Repeat>
+  <Repeat each="tags">
+    <Paragraph><Var name="value"/></Paragraph>
+  </Repeat>
+</Email>
+```
+
+## Values
+
+### Names
+
+`Var` `name`, `showIf`, `hideIf`, `each` and the names in URL pieces start with an ASCII letter (`a` to `z`, `A` to `Z`) or `_`, and hold only ASCII letters, the digits `0` to `9` and `_`: `first_name`, `order_id`, `_total`. Letters of other languages are refused in names.
+
+### URLs
+
+- `Link` `href`, `Button` `url` and `externalLink` take `http:`, `https:`, `mailto:` and `tel:` URLs. `Button` `url` may also be empty, which draws the button with an empty link, as the editor does for a button with no URL. `externalLink` may be empty, for no link.
+- `Image` `src` and `InlineImage` `src` take `https:` URLs only. They may be empty, for the editor's image placeholder.
+- `webFontUrl` takes an `https:` URL with none of `'`, `"`, `(`, `)`, `<`, `>`, `\`, `;`, `{`, `}`, spaces or control characters.
+- A URL may hold `{{ name }}` pieces, one name in each, or be one `{{ name }}` alone. `{{ }}` holds no filters or other template syntax.
+- Relative URLs, other schemes such as `javascript:` and `data:`, a URL with a space at its start or end, and a URL that holds a control character, also inside a `{{ }}` piece, are refused. So is a `{{ }}` piece that holds a line or paragraph separator (U+2028, U+2029).
+- Write `&` in a URL as `&amp;`, as everywhere in XML.
+
+### Colors
+
+A color is `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(r, g, b)`, `rgba(r, g, b, a)` or `transparent`. `Section` `backgroundColor` may also be empty, for no background. A read prints a color as it is stored.
+
+### Sizes
+
+Sizes are plain numbers with no unit, and mean pixels. `Column` `width` is a percent of the row. `Image` `width` takes a percent such as `50%`, a number of pixels or `auto`.
+
+### Font names
+
+Unlike a name, a `fontFamily` takes letters of any language. It holds letters, digits, spaces, `-` and `_` only, and starts with a letter or digit, as in `Open Sans` or `Noto Sans JP`. A `fontFallback` is one of the listed fonts.
+
+## Escaping, entities and comments
+
+- In text, write `&` as `&amp;` and `<` as `&lt;`. In attribute values, write `&` as `&amp;`, `<` as `&lt;` and `"` as `&quot;`.
+- The five XML entities (`&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;`) and numeric references such as `&#160;` work. Other named entities, such as `&nbsp;`, and `<!DOCTYPE>` are refused.
+- An XML declaration, `<?xml version="1.0"?>`, may stand at the start, and is ignored. A declaration of another version, such as 1.1, is `syntax`. Other processing instructions are refused.
+- AhaML that holds a lone UTF-16 surrogate, half of a pair with no other half, is `syntax` at that place.
+- Comments are allowed, and dropped.
+
+## What a read prints
+
+A read prints the stored design as the email draws it. So some designs come back in another form, which draws the same email, apart from the margins and the boxes noted below:
+
+- Text comes back by the rules of [Text and whitespace](#text-and-whitespace).
+- A `Color` mark with no color comes back as the paragraph color, `#374151`. A `Highlight` with no color, an empty color and an image with no source draw nothing, and are left out.
+- A theme setting the stored design lacks comes back at the value the email is drawn with.
+- A section padding or margin, or a border width or radius, that the editor keeps as one value for all four sides comes back with all four sides at that value.
+- A setting an older editor stored that the email does not use, such as a color on a list item, is left out.
+- A paragraph, heading or footer whose text draws nothing, such as spaces alone, is left out. An empty paragraph, which draws a blank line, stays. When the only text is characters XML cannot hold and one of them draws a line, the block comes back as one line: an empty paragraph, or a heading or footer holding a `<Br/>`.
+- A rule whose result is known before the email is sent, such as one on a name that is not valid, is left out when it always shows its block, and the block is left out with it when it always hides it. A `Repeat` whose list name is not a valid name is left out with its blocks.
+- A rule whose action is neither show nor hide is left out, as the email always shows its block. A `value` stored with `is_true` or `is_false` is left out, as those operators do not read it.
+- Characters XML cannot hold, such as U+000B, are left out of text and attribute values. Most of them draw a small box in the email, which the read-back email lacks. U+0000 draws nothing, and U+000B and U+000C draw one only after text in a mark.
+- A `{{ }}` piece of a URL that the editor stored with the variable's label comes back with the name alone, as `{{ name }}`.
+
+A block left out as above can take its bottom margin with it where no block next to it draws as large a margin: at the start or the end of the tag that holds it, or after a `Spacer`, a `Columns` or a `Section` with no bottom margin.
+
+A design made by an older editor comes back with every setting it lacks at its default, as the editor fills them when it opens the design. This is the one case where an edit can change the sent email beyond what the edit itself changes: a write stores the filled settings, as the next save in the dashboard would. AhaML sent back unchanged keeps the stored design.
+
+A design AhaML cannot show reads with `markup` null and `markup_error` set:
+
+- `no_design`: the design has no blocks yet. A write with `markup` makes one.
+- `html_block`: the design holds an HTML block. Remove it in the dashboard to work on the design as AhaML.
+- `unmapped_block`: the design holds a block that AhaML has no tag for.
+- `bad_stored_value`: the design holds a value that AhaML cannot write. The message names the tag and the attribute. A section whose padding or border width the editor keeps as one value, but whose left and right sides still differ from it, gives this too: those sides size the section's content.
+- `renderer_unavailable`: AhaML could not be made just now. Try the read again.
+- `rate_limited`: the account is over the limit of AhaML reads and writes. Try the read again later.
+
+## Limits
+
+| What | Most |
+|---|---|
+| The AhaML | 200 KB |
+| The elements (tags) in the AhaML | 2,000 |
+| The levels of nesting, `Email` included | 24 |
+| A URL | 2,048 characters |
+| A text value: `alt`, `title`, `label` or `fallback`, or a rule `value` | 1,000 characters |
+| Any other attribute value, such as a color or a name | 200 characters |
+| The design the AhaML makes | 1 MB |
+| The HTML the design renders to | 200 KB |
+| The problems listed in one answer | 100 |
+
+Each `Link`, `Color` and `Highlight` is copied onto every text and line break inside it, so a long `href` around many lines makes a large design.
+
+## Errors
+
+A refused write answers 400 with the problems in document order, up to the first 100, and a message that says how many there are:
+
+```json
+{
+  "message": "content.markup has 1 problem",
+  "errors": [
+    {
+      "code": "unknown_attribute",
+      "message": "Paragraph has no attribute \"color\"",
+      "line": 4,
+      "column": 14,
+      "path": "Email > Section[2] > Paragraph[1]",
+      "hint": "wrap the text in <Color value=\"...\"> instead"
+    }
+  ]
+}
+```
+
+- `code` and `message` are always there. `line`, `column` and `path` are there when the problem has a place in the AhaML: `too_large`, `rendered_too_large` and `broken_template_syntax` have none.
+- `line` and `column` start at 1 and count characters. They give the start of the problem: the `<` of a tag, the first letter of an attribute or the first character of a text.
+- `path` names each tag with its place among the siblings of the same tag.
+- `hint` is there when a fix is known.
+- AhaML that is not well-formed XML gives one problem, where reading stopped. A problem with a limit, a `<!DOCTYPE>`, an entity or a processing instruction also comes back alone.
+
+| Error code | Meaning |
+|---|---|
+| `syntax` | The text is not well-formed XML, such as a tag that is not closed or a bare `&`. |
+| `doctype` | The AhaML holds a `<!DOCTYPE>`. |
+| `entity` | The AhaML uses a named entity other than the five of XML, such as `&nbsp;`. Write `&#160;` instead. |
+| `processing_instruction` | The AhaML holds a processing instruction other than an XML declaration at the start. |
+| `unsupported_version` | `version` names a version that is not known. |
+| `unknown_tag` | The tag is not an AhaML tag. |
+| `tag_not_allowed_here` | The tag may not stand inside its parent, or `Theme` is not the first child of `Email`. |
+| `text_not_allowed_here` | Text, an inline tag or a mark stands where only blocks may go, or template syntax in text cannot render (see [Variables](#variables)). |
+| `missing_content` | A tag that must hold content holds none, such as `<Columns/>` or `<Button/>`. |
+| `mark_not_allowed_here` | A mark the tag does not allow, a mark inside the same mark, or `Code` together with another mark. |
+| `unknown_attribute` | The tag has no such attribute. |
+| `missing_attribute` | A required attribute is missing, or the font attributes of `Theme` are not complete. |
+| `bad_value` | The value is outside what the attribute takes, or too long. |
+| `bad_name` | A variable name does not match the name rule. |
+| `bad_fallback` | A `fallback` holds template syntax or ends with `{`. |
+| `bad_url` | The URL does not meet the URL rules. |
+| `bad_color` | The value is not a color. |
+| `rule_conflict` | Both `showIf` and `hideIf`, `operator` or `value` without a rule, or a `value` the operator does not take. |
+| `repeat_in_repeat` | A `Repeat` stands inside another `Repeat`. |
+| `too_many_elements` | The AhaML holds more elements than the limit. |
+| `too_deep` | The AhaML nests deeper than the limit. |
+| `too_large` | The AhaML, or the design it makes, is larger than the limit. |
+| `rendered_too_large` | The HTML the design renders to is larger than the limit. |
+| `broken_template_syntax` | The HTML holds `{{`, `{%` or `{#` that cannot render. |
+
+A write that is taken can still give warnings, in `markup_warnings`, in the same form with no `hint`:
+
+| Warning code | Meaning |
+|---|---|
+| `jinja_in_text` | Text holds `{{`, `{%` or `{#`. It stays plain text; write a variable as `<Var name="..."/>`. |

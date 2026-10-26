@@ -1,0 +1,18 @@
+---
+title: "Get a Published Transactional Template via the API"
+sidebarTitle: "Get Published Template"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/templates/{template_id}/published"
+description: "Retrieve the published copy of an AhaSend transactional template, the one sends use, with its content, sender and the variables a send must give."
+---
+
+
+The AhaSend API returns the published copy of a template. [Create Template Message](/api-reference/messages/create-template-message) sends this copy, and each recipient must give a value for every required name in `variables`. Each variable's `kind` says what to send for it; see [kinds of variables](/send-api/templates#kinds-of-variables). Read this copy to build a send. Access requires `templates:read`.
+
+When `has_draft` is `true`, the template has changes that are not published yet. [Get Template](/api-reference/templates/get-template) returns them. A template that was never published has `content: null`.
+
+Campaign templates have their own endpoints, and the ID of a campaign template answers `404` here.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Template](/api-reference/templates/get-template).
+- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -2,7 +2,7 @@
 title: "Create a Campaign Template via the API"
 sidebarTitle: "Create Template"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/campaign-templates"
-description: "Create an AhaSend campaign template from MJML or HTML, or as an empty design for the dashboard's editor, so that new campaigns can copy its design."
+description: "Create an AhaSend campaign template from MJML, HTML or AhaML, or as an empty design for the dashboard's editor, so that new campaigns can copy its design."
 ---
 
 
@@ -12,15 +12,16 @@ A campaign template has no draft, no versions, no subject and no sender. The req
 
 **Editor:**
 - `content.mjml` creates an `advanced` campaign template, and `content.html` creates an `html` campaign template.
-- Without `content.mjml` or `content.html`, set `editor`. An `editor` that does not agree with the content is refused.
+- `content.markup` creates a `simple` campaign template from [AhaML](/send-api/ahaml). A `content.html` beside it is ignored, and a `content.mjml` beside it is refused.
+- Without `content.mjml`, `content.html` or `content.markup`, set `editor`. An `editor` that does not agree with the content is refused.
 - Without `content`, the campaign template gets an empty design, which you can complete in the dashboard's editor.
 - You cannot change the editor after you create the campaign template.
-- You can change the design of a `simple` campaign template only in the dashboard.
 
 **Content rules:**
 - MJML must pass strict validation. For a validation error, the message gives the line of each problem.
-- Images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
-- The MJML, the HTML and a text written by hand can each be at most 200 KB.
+- AhaML must follow the [AhaML rules](/send-api/ahaml). A refused write lists the problems in `errors`, each with its line and column when it has a place in the AhaML. See [AhaML errors](/send-api/ahaml#errors).
+- In MJML and HTML, images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. AhaML URLs follow the [AhaML URL rules](/send-api/ahaml#urls). The API cannot upload files.
+- The MJML, the HTML, the AhaML and a text written by hand can each be at most 200 KB.
 - A campaign can copy the campaign template only when the campaign template has HTML.
 
 This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).

@@ -2,13 +2,15 @@
 title: "Get a Transactional Template via the API"
 sidebarTitle: "Get Template"
 openapi: "/openapi.yaml GET /v2/accounts/{account_id}/templates/{template_id}"
-description: "Retrieve an AhaSend transactional template by ID: the published copy that sends use, with its content, sender and the variables a send uses."
+description: "Retrieve an AhaSend transactional template by ID as its working copy: the draft while one exists, with its content, sender and variables."
 ---
 
 
-The AhaSend API returns the published copy of a template. [Create Template Message](/api-reference/messages/create-template-message) sends this copy, and each recipient must give a value for every required name in `variables`. Each variable's `kind` says what to send for it; see [kinds of variables](/send-api/templates#kinds-of-variables). Access requires `templates:read`.
+The AhaSend API returns the working copy of a template: its draft while it has one, and its published copy otherwise. `has_draft` says which. Access requires `templates:read`.
 
-When `has_draft` is `true`, the template has changes that are not published yet. To read them, use [Get Template Draft](/api-reference/templates/get-template-draft).
+[Update Template](/api-reference/templates/update-template) changes this copy, so you can read a template, change it and send it back. While a draft exists, `updated_at` here can differ from the one [List Templates](/api-reference/templates/get-templates) shows, because the list shows the published copy.
+
+Sends use the published copy. To build a send, read [Get Published Template](/api-reference/templates/get-published-template): its `variables` are the ones each recipient must give.
 
 Campaign templates have their own endpoints, and the ID of a campaign template answers `404` here. To read one, use [Get Campaign Template](/api-reference/campaign-templates/get-campaign-template).
 

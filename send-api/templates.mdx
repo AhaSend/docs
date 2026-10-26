@@ -26,19 +26,19 @@ Transactional templates are separate from [campaign templates](/api-reference/ca
 
 In the dashboard, open **Transactional → Templates** and create a template. Choose how to build the design:
 
-- **Simple Editor**: write the email like a document. Its design can only be changed in the dashboard.
+- **Simple Editor**: write the email like a document. The API reads and writes its design as [AhaML](/send-api/ahaml).
 - **Advanced Editor**: design the email in MJML.
 - **Upload**: your own HTML file, or a zip with the HTML and its images (the `html` editor in the API).
 
 Each template has its own page with its ID, the variables the design uses, a sample API request, a preview with your sample values, a test send, a default sender and subject, and its delivery statistics for the last 30 days.
 
-You can also create a template through the API with [Create Template](/api-reference/templates/create-template), from MJML (`content.mjml`) or HTML (`content.html`). Images and stylesheets must use full `https://` URLs; the API cannot upload files. The MJML, the HTML and a custom text version can each be at most 200 KB.
+You can also create a template through the API with [Create Template](/api-reference/templates/create-template), from MJML (`content.mjml`), HTML (`content.html`) or [AhaML](/send-api/ahaml) (`content.markup`). Images and stylesheets must use full `https://` URLs; the API cannot upload files. The MJML, the HTML, the AhaML and a custom text version can each be at most 200 KB.
 
 ## Variables
 
-Write a variable in the design as `{{ first_name }}`. The templating language is [MiniJinja](https://github.com/mitsuhiko/minijinja), the same as for [Create Message](/send-api/send-email).
+Write a variable in the design as `{{ first_name }}`, or in AhaML as a `Var` tag (see [Variables](/send-api/ahaml#variables)). The templating language is [MiniJinja](https://github.com/mitsuhiko/minijinja), the same as for [Create Message](/send-api/send-email).
 
-- **Required or optional.** Every variable is required unless the design gives it a fallback, for example `{{ first_name|default("there") }}`. The template page and [Get Template](/api-reference/templates/get-template) list each variable with `required: true` or `false`.
+- **Required or optional.** Every variable is required unless the design gives it a fallback, for example `{{ first_name|default("there") }}`, or a non-empty `fallback` on an AhaML `Var`. The `required` attribute of a `Var` does not make it optional. The template page and [Get Template](/api-reference/templates/get-template) list each variable with `required: true` or `false`.
 - **Escaping.** In the HTML body, every value is HTML-escaped. To insert a value as HTML, write `{{ content|safe }}` in the design. The subject, the headers and the text body get values as they are.
 - **Reserved names.** AhaSend supplies `email` (the recipient's address) and, when the design uses it, `unsubscribe_url`. A value you give for these is replaced.
 - **Subject and headers.** A `{{ variable }}` in the subject or in a custom header resolves from the same values. A variable with no value becomes empty.
@@ -89,9 +89,9 @@ Every edit, in the dashboard or through the API, goes to the template's **draft*
   A template that was never published cannot be sent, and changes you save are not sent until you click **Publish** (or call [Publish Template](/api-reference/templates/publish-template)). Check the preview and send a test from the template page first.
 </Warning>
 
-- The dashboard and the API edit the same draft. A publish publishes the whole draft, including dashboard changes. [Get Template Draft](/api-reference/templates/get-template-draft) shows what a publish will publish; [Discard Template Draft](/api-reference/templates/discard-template-draft) throws it away.
+- The dashboard and the API edit the same draft. A publish publishes the whole draft, including dashboard changes. [Get Template](/api-reference/templates/get-template) returns the draft while one exists, so it shows what a publish will publish; [Discard Template Draft](/api-reference/templates/discard-template-draft) throws it away.
 - Each publish makes a version. A template keeps its 50 most recent versions. Preview any of them on the template page or with [Get Template Version](/api-reference/templates/get-template-version), and bring one back with [Restore Template Version](/api-reference/templates/restore-template-version).
-- `has_draft` on [Get Template](/api-reference/templates/get-template) tells you whether unpublished changes are waiting.
+- `has_draft` tells you whether unpublished changes are waiting. [Get Published Template](/api-reference/templates/get-published-template) returns the copy that sends use; read it to build a send.
 
 ## Send a Template
 

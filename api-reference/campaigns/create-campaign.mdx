@@ -2,7 +2,7 @@
 title: "Create a Campaign via the API"
 sidebarTitle: "Create Campaign"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/campaigns"
-description: "Create a draft AhaSend marketing campaign with its sender, lists, subject, preview text and design, from MJML, HTML or a campaign template."
+description: "Create a draft AhaSend marketing campaign with its sender, lists, subject, preview text and design, from MJML, HTML, AhaML or a campaign template."
 ---
 
 
@@ -12,16 +12,17 @@ Only `name` is required. You can set all other fields in this request, or later 
 
 **Design:**
 The design comes from one source:
-- `content.mjml` creates an `advanced` design, and `content.html` creates an `html` design. With `content` that has neither, set `editor`. An `editor` that does not agree with the content is refused.
+- `content.mjml` creates an `advanced` design, and `content.html` creates an `html` design. `content.markup` creates a `simple` design from [AhaML](/send-api/ahaml): a `content.html` beside it is ignored, and a `content.mjml` beside it is refused. With `content` that has none of them, set `editor`. An `editor` that does not agree with the content is refused.
 - `editor` without `content` creates an empty design, which you can complete in the dashboard's editor.
 - `template_id` copies the design of a [campaign template](/api-reference/campaign-templates/create-campaign-template). The copy belongs to the campaign: later changes to the campaign template do not change it. A campaign template with no HTML is refused. A `template_id` that names no campaign template of your account is refused with `400` `campaign template not found`. `template_id` cannot go with `editor` or `content`.
 - Without any of them, the campaign has no design yet.
 
 **Content rules:**
 - MJML must pass strict validation. For a validation error, the message gives the line of each problem.
-- Images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. The API cannot upload files.
-- The MJML, the HTML and a text written by hand can each be at most 200 KB.
-- The HTML must have an unsubscribe link before you can send the campaign. See [Unsubscribe link](/api-reference/campaigns/overview#unsubscribe-link).
+- AhaML must follow the [AhaML rules](/send-api/ahaml). A refused write lists the problems in `errors`, each with its line and column when it has a place in the AhaML. See [AhaML errors](/send-api/ahaml#errors).
+- In MJML and HTML, images and stylesheets must use full `https://` URLs, such as `https://example.com/logo.png`. The API refuses relative paths, such as `images/logo.png`, and `http:`, `//`, `data:`, `cid:` and other schemes. A URL that starts with a template variable, such as `{{ logo_url }}`, is allowed. AhaML URLs follow the [AhaML URL rules](/send-api/ahaml#urls). The API cannot upload files.
+- The MJML, the HTML, the AhaML and a text written by hand can each be at most 200 KB.
+- The HTML must have an unsubscribe link before you can send the campaign. In AhaML, write it as `<Link href="{{ unsubscribe_url }}">…</Link>`. See [Unsubscribe link](/api-reference/campaigns/overview#unsubscribe-link).
 
 **Sender, subject and lists:**
 - `from.email` must be on a domain of your account with valid DNS records. A paused domain is accepted here, but Send Campaign and Test Campaign refuse it.
