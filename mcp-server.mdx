@@ -110,7 +110,7 @@ On the connection page, choose a preset:
 |--------|---------------|
 | **Read-only** | Look at messages, domains, statistics, templates and settings, and change nothing |
 | **Developer** | Read everything, send email, and manage domains, webhooks, routes, suppressions and templates |
-| **Marketer** | Read everything, and manage templates, contacts, lists and campaigns, including sending campaigns |
+| **Marketer** | Read everything, and manage templates, contacts, lists, segments and campaigns, including sending campaigns |
 | **Full** | Do everything the MCP server can do |
 | **Custom** | Do what you choose, permission by permission |
 
@@ -131,15 +131,15 @@ The tools cover:
 - **Diagnostics:** list and read messages, find out why an email failed, and read deliverability, bounce and delivery time statistics.
 - **Domains:** add a domain, show the DNS records to add, check the DNS, and change or delete a domain.
 - **Templates:** create, change, publish and restore transactional templates and campaign templates. The agent reads and writes a Simple Editor design as [AhaML](/send-api/ahaml).
-- **Contacts and lists:** create, change and delete contacts and lists, and add contacts to lists.
-- **Campaigns:** create, change, test, send, schedule and unschedule campaigns, and read their statistics and recipients.
+- **Contacts, lists and segments:** create, change and delete contacts, lists and segments, add contacts to lists, preview a segment's rules before saving them, and read a segment's members.
+- **Campaigns:** create, change, test, send, schedule and unschedule campaigns to lists and segments, with excluded lists and segments, and read their statistics and recipients.
 - **Management:** webhooks, routes, suppressions, SMTP credentials and sub-accounts.
 
 The agent cannot create API keys or SMTP credentials, change account settings, billing or team members, remove all suppressions at once, or delete or suspend sub-accounts. Do these in the dashboard.
 
 ## Safety Rules
 
-- **A campaign sends only after you say yes.** Before the agent sends or schedules a campaign, your AI tool shows you a question with the send time, the number of contacts, the campaign name, the subject, the sender and the lists. The campaign is sent only if you answer yes. If your AI tool cannot show the question, the agent sends nothing and gives you a link to the campaign in the dashboard, where you send it yourself.
+- **A campaign sends only after you say yes.** Before the agent sends or schedules a campaign, your AI tool shows you a question with the send time, the number of contacts, the campaign name, the subject, the sender, and the lists and segments it sends to or excludes. The campaign is sent only if you answer yes. If your AI tool cannot show the question, the agent sends nothing and gives you a link to the campaign in the dashboard, where you send it yourself.
 - **One email goes to 50 recipients or fewer.** The agent cannot send one email to more than 50 recipients. Use a campaign to send to more people.
 - **Received email is hidden.** See [Received Email](#received-email).
 
@@ -167,3 +167,5 @@ A connection also ends when the user who connected it loses access to the accoun
 If the account is paused, if two-factor authentication is required and your user does not have it, or if your email address is not confirmed, every tool returns a message that says what to fix in the dashboard. The connection stays. When you fix the cause, the tools work again.
 
 If your AI tool asks you to log in again, the connection has ended. Connect the tool again.
+
+A connection keeps the permissions you chose when you connected it. If the agent does not see the segment tools, or gives you a dashboard link for a campaign that uses segments, the connection has no segment permissions. Connect the tool again, and choose a preset or permissions that include segments.

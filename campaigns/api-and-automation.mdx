@@ -5,7 +5,7 @@ description: "Automate Campaign Builder: push contacts from your app, manage lis
 icon: "code"
 ---
 
-Contacts, lists, campaign templates and campaigns are resources of the Management API, with commands in the CLI and tools in the MCP server. Defining custom fields, under **Marketing > Contact fields**, stays in the dashboard. Simple Editor designs are read and written as [AhaML](/send-api/ahaml) through the API and the MCP server; some designs, such as one with an HTML block, cannot be read as AhaML (see [what a read prints](/send-api/ahaml#what-a-read-prints)). The dashboard, the API, the CLI and the MCP server all work on the same data, so a contact pushed from your app shows up in the dashboard at once, and a campaign drafted by an AI tool is there for you to review.
+Contacts, lists, segments, campaign templates and campaigns are resources of the Management API, with tools in the MCP server. The CLI has commands for all of them except segments. Defining custom fields, under **Marketing > Contact fields**, stays in the dashboard. Simple Editor designs are read and written as [AhaML](/send-api/ahaml) through the API and the MCP server; some designs, such as one with an HTML block, cannot be read as AhaML (see [what a read prints](/send-api/ahaml#what-a-read-prints)). The dashboard, the API, the CLI and the MCP server all work on the same data, so a contact pushed from your app shows up in the dashboard at once, and a campaign drafted by an AI tool is there for you to review.
 
 ## Typical Automations
 
@@ -16,9 +16,9 @@ Contacts, lists, campaign templates and campaigns are resources of the Managemen
 
 ## API
 
-The [Campaigns API overview](/api-reference/campaigns/overview) walks through a campaign from draft to report, with the statuses, the issues and the idempotency rules. The [Contacts API](/api-reference/contacts/overview) and [Lists API](/api-reference/lists/overview) overviews explain contacts, memberships and consent.
+The [Campaigns API overview](/api-reference/campaigns/overview) walks through a campaign from draft to report, with the statuses, the issues and the idempotency rules. The [Contacts API](/api-reference/contacts/overview) and [Lists API](/api-reference/lists/overview) overviews explain contacts, memberships and consent, and the [Segments API](/api-reference/segments/overview) overview explains segment rules and who a campaign to a segment reaches.
 
-You need an API key with the `contacts`, `lists`, `campaigns` and, for templates, `templates` scopes; legacy v1 keys cannot be used. See [permission scopes](/api-reference/scopes). The official [Node.js](/guides/nodejs-sdk) and [Go](/guides/go-sdk) SDKs cover these endpoints.
+You need an API key with the `contacts`, `lists`, `segments`, `campaigns` and, for templates, `templates` scopes; legacy v1 keys cannot be used. See [permission scopes](/api-reference/scopes). The official [Node.js](/guides/nodejs-sdk) and [Go](/guides/go-sdk) SDKs cover these endpoints.
 
 ## CLI
 
@@ -26,9 +26,9 @@ The CLI has a command group for each resource: [`ahasend contacts`](/cli/command
 
 ## MCP Server
 
-With the [MCP server](/mcp-server), an AI tool such as Claude, ChatGPT or Cursor can do the same work in plain language: build a list from an export you hand it, import an MJML file as a template, fill a campaign from your blog posts, send you a test and schedule the send. Connect the tool with the **Marketer** preset, which reads everything and manages templates, contacts, lists and campaigns.
+With the [MCP server](/mcp-server), an AI tool such as Claude, ChatGPT or Cursor can do the same work in plain language: build a list from an export you hand it, import an MJML file as a template, fill a campaign from your blog posts, send you a test and schedule the send. Connect the tool with the **Marketer** preset, which reads everything and manages templates, contacts, lists, segments and campaigns.
 
-Important to know: a campaign only goes out after your consent. Before the agent sends or schedules one, your AI tool shows you the send time, the number of contacts, the name, the subject, the sender and the lists, and nothing is sent until you say yes. Also, if a design was already open in the dashboard before the agent changed it, any save there, after an edit or from **Save and quit**, replaces the agent's change; reload the editor before you work in it.
+Important to know: a campaign only goes out after your consent. Before the agent sends or schedules one, your AI tool shows you the send time, the number of contacts, the name, the subject, the sender, and the lists and segments, and nothing is sent until you say yes. Also, if a design was already open in the dashboard before the agent changed it, any save there, after an edit or from **Save and quit**, replaces the agent's change; reload the editor before you work in it.
 
 ## Related Guides
 
