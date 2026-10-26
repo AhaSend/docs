@@ -1,0 +1,28 @@
+---
+title: "contact.created Webhook Event"
+sidebarTitle: "Contact Created"
+openapi: "/webhooks.yaml webhook contact.created"
+description: "The contact.created webhook fires when a contact is created in AhaSend through the API or the dashboard. CSV imports send no event. Payload and setup."
+---
+
+
+AhaSend sends this event when a contact is created, through the API or the dashboard.
+
+`data.contact` is the contact as it was created. A contact that is created with `unsubscribed: true` sends only this event. A contact created through the API or the dashboard has no sending domain, so only webhooks for all your domains get this event.
+
+**No event**: Contacts that a CSV import creates.
+
+**Setting**: `on_contact_created` (Contact Created in the dashboard).
+
+**Requirements**:
+- Your account has the marketing features. Contact events cannot be turned on without them.
+- A webhook with this event on needs an API key with `contacts:read` when you create or update it through the API. See [contact events](/api-reference/webhooks#contact-events).
+
+**When it's sent**: When a contact is created.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).

@@ -1,0 +1,31 @@
+---
+title: "suppression.deleted Webhook Event"
+sidebarTitle: "Suppression Deleted"
+openapi: "/webhooks.yaml webhook suppression.deleted"
+description: "The suppression.deleted webhook fires when an AhaSend suppression is deleted through the API, the dashboard or by support. Payload, origin and exceptions."
+---
+
+
+AhaSend sends this event when a suppression is deleted. Future emails to the address are attempted again.
+
+**Why suppressions are deleted**:
+- You delete a suppression through the API (`origin: api`). A request without a domain deletes the suppressions of the address on every domain of your account, and sends one event for each.
+- You delete a suppression in the dashboard (`origin: dashboard`)
+- AhaSend support deletes a suppression (`origin: system`)
+
+`data` is the suppression as it was right before the delete, and `timestamp` is the time of the delete.
+
+**No event**:
+- [Wiping the suppressions](/api-reference/suppressions/wipe-suppressions) of your account or of a domain. After a wipe, read the list again with [List Suppressions](/api-reference/suppressions/get-suppressions).
+- The removal of expired suppressions. `data.expires_at` of `suppression.created` already says when the suppression ends.
+
+**Setting**: `on_suppression_deleted` (Suppression Deleted in the dashboard).
+
+**When it's sent**: When a suppression is deleted.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Suppression durations](/bounces#suppression-duration).

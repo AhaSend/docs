@@ -1,0 +1,24 @@
+---
+title: "message.unsubscribed Webhook Event"
+sidebarTitle: "Unsubscribed"
+openapi: "/webhooks.yaml webhook message.unsubscribed"
+description: "The message.unsubscribed webhook fires when a recipient unsubscribes from an AhaSend campaign email through its link or one-click unsubscribe. Payload."
+---
+
+
+AhaSend sends this event when the recipient unsubscribes through the unsubscribe link of your campaign email, or through the one-click unsubscribe of their email client (RFC 8058). This event is sent for campaign email only.
+
+`data.unsubscribe.method` is `one_click` for a one-click unsubscribe, and `link` for any other unsubscribe request, for example through the link. `data.campaign_id`, `data.list_id` and `data.segment_id` say which campaign sent the email and how it reached the recipient.
+
+**Repeats**: AhaSend sends this event for every unsubscribe request that it accepts for the message, also when the recipient is already unsubscribed, and again when the recipient uses the same link a second time. It sends at most one event per message in each 10-minute period. Drop the repeats by `type` and `data.id`. The [contact events](/api-reference/webhooks/contact-unsubscribed) of the same request are sent only when the request changes something, and they are not limited this way, so a contact event can arrive without a `message.unsubscribed` of its own.
+
+**Setting**: `on_unsubscribed` (Message Unsubscribed in the dashboard).
+
+**When it's sent**: When AhaSend accepts an unsubscribe request for the message.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Unsubscribe links](/campaigns/unsubscribe), [Contacts API](/api-reference/contacts/overview).

@@ -65,7 +65,7 @@ This enables you to:
 
 ## Which Events Can I Receive?
 
-Choose delivery, bounce, deferral, failure, suppression, open, click and domain-DNS events when configuring your webhook. The [event reference](/api-reference/webhooks#event-types) lists every event, its filter flag and its payload. Inbound routes use the separate [`message.routing` event](/api-reference/routes/route-message).
+Choose delivery, bounce, deferral, failure, suppression, open, click, unsubscribe, spam complaint, contact and domain-DNS events when configuring your webhook. Contact events are available to accounts with the marketing features. The [event reference](/api-reference/webhooks#event-types) lists every event, its filter flag and its payload. Inbound routes use the separate [`message.routing` event](/api-reference/routes/route-message).
 
 ## Understanding Message Lifecycle
 
@@ -158,6 +158,8 @@ Configure webhooks in your AhaSend dashboard to start receiving event notificati
     - Select "I'll choose which events to send"
     - Pick individual event types you need
     - More efficient for targeted use cases
+
+    **Send changes made by:** Choose whose contact and suppression changes the webhook gets: the recipient, the API, the dashboard or AhaSend. See [origin](/api-reference/webhooks#origin).
   </Step>
 
   <Step title="Create and Verify" icon="check">
@@ -490,10 +492,11 @@ events or fixtures you control.
   "timestamp": "2024-05-06T12:57:06.451529527Z",
   "data": {
     "account_id": "4cdd7bdd-294e-4762-892f-83d40abf5a87",
+    "origin": "system",
     "recipient": "bounced@example.com",
     "created_at": "2024-05-06T12:57:06.451529617Z",
     "expires_at": "2024-06-05T12:57:06.451529617Z",
-    "reason": "Too many hard bounces",
+    "reason": "Invalid Recipient",
     "sending_domain": "yourcompany.com"
   }
 }

@@ -5,7 +5,7 @@ description: "Reference for AhaSend email webhooks: every event type (delivered,
 icon: "webhook"
 ---
 
-AhaSend webhook events report email delivery, engagement, suppression and domain changes; this reference lists every event and its payload. Use the [webhook setup guide](/integrations/webhooks) to configure an endpoint.
+AhaSend webhook events report email delivery, engagement, suppression, contact and domain changes; this reference lists every event and its payload. Use the [webhook setup guide](/integrations/webhooks) to configure an endpoint.
 
 Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
@@ -21,8 +21,19 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 | `message.suppressed` | `on_suppressed` | A suppression prevents sending | [Reference](/api-reference/webhooks/message-suppressed) |
 | `message.opened` | `on_opened` | The tracking image is requested | [Reference](/api-reference/webhooks/message-opened) |
 | `message.clicked` | `on_clicked` | A tracked link is requested | [Reference](/api-reference/webhooks/message-clicked) |
-| `suppression.created` | `on_suppression_created` | A suppression is created | [Reference](/api-reference/webhooks/suppression-created) |
+| `message.unsubscribed` | `on_unsubscribed` | A recipient unsubscribes from a campaign email | [Reference](/api-reference/webhooks/message-unsubscribed) |
+| `message.complained` | `on_complained` | A campaign email is reported as spam | [Reference](/api-reference/webhooks/message-complained) |
+| `suppression.created` | `on_suppression_created` | A suppression is created or gets a new reason | [Reference](/api-reference/webhooks/suppression-created) |
+| `suppression.deleted` | `on_suppression_deleted` | A suppression is deleted | [Reference](/api-reference/webhooks/suppression-deleted) |
 | `domain.dns_error` | `on_dns_error` | A sending domain has a DNS error | [Reference](/api-reference/webhooks/domain-dns_error) |
+| `contact.created` | `on_contact_created` | A contact is created | [Reference](/api-reference/webhooks/contact-created) |
+| `contact.updated` | `on_contact_updated` | A field of a contact changes | [Reference](/api-reference/webhooks/contact-updated) |
+| `contact.deleted` | `on_contact_deleted` | A contact is deleted | [Reference](/api-reference/webhooks/contact-deleted) |
+| `contact.added_to_list` | `on_contact_added_to_list` | A contact is added to a list | [Reference](/api-reference/webhooks/contact-added_to_list) |
+| `contact.removed_from_list` | `on_contact_removed_from_list` | A contact is removed from a list | [Reference](/api-reference/webhooks/contact-removed_from_list) |
+| `contact.subscribed` | `on_contact_subscribed` | A list membership is confirmed, or the unsubscribe from all lists is cleared | [Reference](/api-reference/webhooks/contact-subscribed) |
+| `contact.unsubscribed` | `on_contact_unsubscribed` | A contact unsubscribes from a list or from all lists | [Reference](/api-reference/webhooks/contact-unsubscribed) |
+| `contact.complained` | `on_contact_complained` | A contact reports a campaign email as spam | [Reference](/api-reference/webhooks/contact-complained) |
 
 Inbound routing has a separate [`message.routing` event](/api-reference/routes/route-message).
 
@@ -36,6 +47,55 @@ All webhook events use a consistent JSON structure:
 
 Events contain `type`, `webhook_id`, `timestamp`, and an event-specific `data` object. The payload `webhook_id` identifies the configured endpoint; the `webhook-id` header identifies the delivery across retries. Inbound routes use `route_id` instead of `webhook_id`. Use the payload reference for each event above.
 
+## Message Events
+
+Transactional and campaign messages send the same message events with the same payload. The events of a campaign message also carry `campaign_id`, `list_id` and `segment_id`. `message.unsubscribed` and `message.complained` are sent for campaign email only.
+
+AhaSend reads the message when it sends a message event. When the message is deleted before then, or for a campaign message its campaign recipient or its contact, the event is not sent. An event of a campaign message is also not sent when it happens before AhaSend has logged that it received the message.
+
+## Contact Events
+
+Contact events report changes to your contacts and to their list memberships. They are available to accounts with the marketing features. Every contact event carries the `contact` and its `origin`. The events that can be about a list membership (`contact.added_to_list`, `contact.removed_from_list`, `contact.subscribed`, `contact.unsubscribed` and `contact.complained`) also carry the `list` and the `list_contact`.
+
+- **Real changes only**: A write that leaves the contact and its memberships as they were sends nothing. One write sends one event for each kind of change that it makes. A spam complaint about a campaign sent to a segment is the exception: it sends `contact.complained` whatever the contact's state.
+- **Unsubscribe from all lists**: The contact's `unsubscribed` field unsubscribes the contact from all lists. When it changes to `true`, AhaSend sends `contact.unsubscribed`, or `contact.complained` for a spam complaint about a campaign sent to a segment. When it changes to `false`, AhaSend sends `contact.subscribed`. These events are not about one list, so their `list` and `list_contact` are `null`. A recipient of a campaign sent to a segment who unsubscribes or reports spam unsubscribes from all lists, and the event also carries `campaign_id` and `segment_id`.
+- **Domains**: A webhook limited to some of your domains gets a contact event only when an email from one of those domains caused it: an unsubscribe, a complaint, or a bounce that disables the contact. A change made through the API or the dashboard, or by email validation, has no domain and goes only to webhooks for all domains.
+- **API key scopes**: Through the API, a webhook with any contact event on needs an API key with `contacts:read`. The list events also need `lists:read`. Without them, [Create Webhook](/api-reference/webhooks/create-webhook) and [Update Webhook](/api-reference/webhooks/update-webhook) answer `403`. Turning a contact event on for an account without the marketing features answers `400`. A key without these scopes can still turn the contact events off or disable the webhook.
+
+## Origin
+
+Contact and suppression events carry `origin`, which says who made the change:
+
+- `recipient`: the contact or recipient, through an unsubscribe link, a one-click unsubscribe, or a spam complaint
+- `api`: you, through the AhaSend API
+- `dashboard`: you, through the AhaSend dashboard
+- `system`: AhaSend, for example after a bounce, an expired message or an email validation, or when AhaSend support makes the change
+
+AhaSend can add an origin, so keep a fallback for a value you do not know. Message events and `domain.dns_error` have no `origin`.
+
+**Origin filter**: Each webhook has an `origins` setting, the list of origins whose contact and suppression events it gets. The default is `null`, which means every origin. A list that holds all four origins is saved as `null`, so that an origin added later reaches the webhook too. An empty list is refused: to stop contact or suppression events, turn them off. Events without an `origin` always pass the filter. In the dashboard, the setting is **Send changes made by**.
+
+<Warning>
+  **Prevent loops**: A handler that writes to the AhaSend API every time it receives `contact.updated` receives its own write as a new `contact.updated` event, with `origin: api`. Make sure that the handler does not write again when the contact already has the values it wants, or leave `api` out of the webhook's `origins`.
+</Warning>
+
+## Event Order
+
+Events are not delivered in the order in which they happened, and a later event can arrive first. Order the events by their `timestamp`. For a contact or a suppression event it is the time of the change; for `message.unsubscribed` and `message.complained`, the time of the unsubscribe request or of the spam complaint report.
+
+## Changes That Send No Event
+
+- A change of a membership's status to `unconfirmed`
+- Importing contacts from a CSV file
+- Saving a contact search as a list
+- Removing a contact field from all contacts
+- Email validation results. A validation that blocks a contact changes its `status`, and that sends `contact.updated`.
+- The memberships that are deleted with their contact: `contact.deleted` says that the contact and all its memberships are gone
+- Deleting a list: the list's memberships are kept
+- A repeat of an existing suppression that does not change its reason
+- [Wiping suppressions](/api-reference/suppressions/wipe-suppressions). After a wipe, read the list again with [List Suppressions](/api-reference/suppressions/get-suppressions).
+- The removal of expired suppressions: `suppression.created` already gave the `expires_at`
+
 ## Delivery and Verification
 
 Check [signatures](/api-reference/webhooks/security) before trusting a payload, and use the [retry policy](/api-reference/webhooks/retry-policy) to handle duplicate or failed deliveries. Manage endpoints with [Create Webhook](/api-reference/webhooks/create-webhook), [List Webhooks](/api-reference/webhooks/get-webhooks), [Update Webhook](/api-reference/webhooks/update-webhook) and [Delete Webhook](/api-reference/webhooks/delete-webhook).
@@ -45,4 +105,4 @@ Check [signatures](/api-reference/webhooks/security) before trusting a payload, 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
 - [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing), [Signature verification](/api-reference/webhooks/security).
 - [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
-- [Tracking setup](/tracking/open-tracking).
+- [Tracking setup](/tracking/open-tracking), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).

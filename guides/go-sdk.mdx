@@ -293,7 +293,7 @@ func newWebhookHandler(store webhookStore) http.Handler {
 
 Signature timestamp validation is not replay protection: the same signed request can be delivered again inside the tolerance window. After verification, atomically commit the `webhook-id` and a durable work/outbox record, retaining IDs for at least the webhook delivery and retry horizon. A duplicate should receive `2xx` without running the handler again; a storage failure should receive `5xx`. Process the durable work idempotently outside the request. Apply concurrency and request-rate limits at the reverse proxy so concurrent maximum-size bodies cannot exhaust the application. Never log the raw body, signature, event object, subject, recipient, or whole verification error.
 
-Events implement `webhooks.WebhookEvent` with `GetType()` and `GetTimestamp()`. The SDK covers the message, suppression, domain, and route event types. Helpers such as `webhooks.IsMessageEvent()` and `webhooks.GetMessageEventData()` handle common message events without a full type switch.
+Events implement `webhooks.WebhookEvent` with `GetType()` and `GetTimestamp()`. The SDK covers the message, suppression, domain, contact, and route event types. Helpers such as `webhooks.IsMessageEvent()` and `webhooks.GetMessageEventData()` handle common message events without a full type switch.
 
 ## Framework Guides
 

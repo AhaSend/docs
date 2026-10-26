@@ -2,28 +2,40 @@
 title: "suppression.created Webhook Event"
 sidebarTitle: "Suppression Created"
 openapi: "/webhooks.yaml webhook suppression.created"
-description: "The suppression.created webhook fires when AhaSend adds an address to your suppression list, for example after hard bounces. Includes reason and expiry."
+description: "The suppression.created webhook fires when AhaSend suppresses an address, for example after a hard bounce, or when a suppression gets a new reason."
 ---
 
 
-AhaSend sends this event when a suppression is created for an email address.
+AhaSend sends this event when a suppression is created for an email address, or when an existing suppression gets a new reason.
 
 **Why suppressions are created**:
-- Multiple hard bounces from the same email address
-- Repeated soft bounces over time
-- Manual suppression through the API or dashboard
+- A hard bounce from the email address (`origin: system`)
+- A message to the address that fails with temporary errors on several delivery attempts until it expires (`origin: system`)
+- The recipient reports a transactional email as spam (reason `FBL Complaint Report`, `origin: recipient`)
+- The recipient unsubscribes through the unsubscribe link of a transactional email (reason `Unsubscribed`, `origin: recipient`)
+- You create a suppression through the API (`origin: api`). A request without a domain creates a suppression on each domain of your account, and sends one event for each.
 
-**Auto-expiration**: Suppression duration depends on the cause: most bounces last 30 days, temporary delivery failures 7 days, messages that expire after repeated attempts 15 days, and spam complaints are effectively permanent. Suppressions created through the API use the required `expires_at` value.
+A bounce or an expired message does not suppress the address when the receiving server rejected the message for policy reasons (for example a blocklist or a spam filter), when the failure was on AhaSend's side, or, for transactional email, when a later message to the address was delivered.
+
+An unsubscribe from a campaign email or a spam complaint about one creates no suppression. It sends [contact events](/api-reference/webhooks#contact-events) instead.
+
+**Expiration**: A suppression after delivery errors expires after at most 30 days, depending on the error. A suppression after an unsubscribe or a spam complaint is effectively permanent. A suppression made through the API expires at the `expires_at` of its request. See [suppression durations](/bounces#suppression-duration).
 
 **Impact**: Future emails to this address will be automatically suppressed until the suppression expires or is manually removed.
 
-**When it's sent**: When a new suppression is added to your account.
+`data` is the suppression as it was right after the change, and `timestamp` is the time of the change. For a suppression that got a new reason, `data.created_at` stays the time the suppression was first created, so store suppressions by `data.recipient` and `data.sending_domain`.
 
-Suppression duration depends on its cause, rather than a single fixed expiry. See [suppression durations](/bounces#suppression-duration).
+**No event**:
+- A repeat of an existing suppression, such as a second bounce or a second click on the same unsubscribe link, even when it moves the expiry later
+- The removal of expired suppressions. `data.expires_at` already says when the suppression ends.
+
+**Setting**: `on_suppression_created` (Suppression Created in the dashboard).
+
+**When it's sent**: When a new suppression is added to your account, or when an existing suppression gets a new reason, for example when a recipient unsubscribes after a bounce.
 
 ## Related Guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
 - [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
 - [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
-- [API rate limits](/api-reference/rate-limits), [Suppression durations](/bounces#suppression-duration).
+- [API rate limits](/api-reference/rate-limits), [Suppression durations](/bounces#suppression-duration), [Suppression Deleted](/api-reference/webhooks/suppression-deleted).

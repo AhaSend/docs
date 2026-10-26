@@ -1,0 +1,28 @@
+---
+title: "contact.added_to_list Webhook Event"
+sidebarTitle: "Contact Added to List"
+openapi: "/webhooks.yaml webhook contact.added_to_list"
+description: "The contact.added_to_list webhook fires when an AhaSend contact is added to a list, with any subscription status. CSV imports to a list send no event."
+---
+
+
+AhaSend sends this event when a contact is added to a list, with any subscription status.
+
+`data.list` is the list. `data.list_contact` is the new membership, and its `subscription_status` is the status that the contact got on the list. A new membership sends only this event, whatever its status.
+
+**No event**: A CSV import to a list, and saving a contact search as a list.
+
+**Setting**: `on_contact_added_to_list` (Contact Added to List in the dashboard).
+
+**Requirements**:
+- Your account has the marketing features. Contact events cannot be turned on without them.
+- A webhook with this event on needs an API key with `contacts:read` and `lists:read` when you create or update it through the API. See [contact events](/api-reference/webhooks#contact-events).
+
+**When it's sent**: When a contact is added to a list.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).
