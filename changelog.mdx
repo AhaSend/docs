@@ -35,6 +35,13 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Save a list search as a new list.** On a list page, search or use advanced search, then click **Save as new list** to put the matching contacts on a new list. Send a campaign to that list to reach only those contacts. Each contact keeps its status, so an unsubscribed contact stays unsubscribed on the new list. The contacts are copied in the background, and the new list's page shows when the copy is done. The new list is separate from the original: later changes to the original list do not reach it.
 - **[AhaSend Markup (AhaML)](/send-api/ahaml) for Simple Editor designs.** The API reads and writes a Simple Editor design as AhaML in `content.markup`, on transactional templates, campaign templates and campaigns. Read a design, change it and send it back; the dashboard editor opens what you write. A refused write lists each problem with its line and column. Designs with an HTML block read with a `markup_error`, and the Simple Editor no longer makes new HTML blocks.
 - **[Get Published Template](/api-reference/templates/get-published-template).** Returns the copy of a template that sends use, with the variables each recipient must give. Read it to build a send.
+- **Segments.** Under Marketing → Segments, build a group of contacts from rules: contact fields and the signup date, list membership, the campaigns a contact received, opened or clicked, how many of them, and birthday or anniversary rules on date fields (a month, or a date in the next days). A segment's members stay up to date as your contacts, lists and campaigns change. API v2 manages segments too, with the new `segments:read`, `segments:write` and `segments:delete` scopes.
+- **Campaign audiences with segments and exclusions.** A campaign can go to lists and segments together, and leave out the contacts of other lists and segments. A contact in more than one of them gets the campaign once. A campaign to a segment reaches its contacts who are confirmed on a list or are on no list.
+- **Contact webhooks.** New events tell your systems about changes to contacts: `contact.created`, `contact.updated`, `contact.deleted`, `contact.added_to_list`, `contact.removed_from_list`, `contact.subscribed`, `contact.unsubscribed` and `contact.complained`. A webhook created through the API needs a key that can read contacts, and lists for the list events.
+- **Campaign unsubscribe and complaint webhooks.** `message.unsubscribed` and `message.complained` say which campaign email made a recipient unsubscribe or report spam, and how they unsubscribed (one-click or the link).
+- **[Suppression webhooks](/integrations/webhooks) for every change.** `suppression.created` also comes for suppressions you create through the API and for unsubscribes from transactional email, and the new `suppression.deleted` comes when a suppression is deleted. Both say who made the change in `origin`.
+- **Choose whose changes a webhook gets.** A webhook's `origins` limits the contact and suppression events it gets to changes made by recipients, through the API, in the dashboard or by AhaSend (`recipient`, `api`, `dashboard`, `system`). For example, leave out `api` so your own API writes do not come back to you as events.
+- **CSV imports say when values are wrapped in quote marks**, per column and with an example, as an export from a JSON column can leave them. The values are stored as written, so rules that compare them may not match.
 
 #### Changes
 
@@ -66,6 +73,10 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **API v2 checks every message with the template engine before it sends it.** [Create Message](/api-reference/messages/create-message), [Create Template Message](/api-reference/messages/create-template-message), [Create Conversation](/api-reference/messages/create-conversation) and [Test Campaign](/api-reference/campaigns/test-campaign) refuse content that cannot be rendered with a recipient's values with `400`, and send nothing of the request. When the check cannot run right now, they answer `503` with a `Retry-After` header; send the same request again after that delay. See [API errors](/api-reference/errors#503-service-unavailable).
 - **A transactional template's `variables` say what to send for each variable.** Each one has a `kind`: `value` for text in the email, `condition` for a value that shows or hides a part, and `list` for an array that repeats a part. A `list` variable's `item_fields` name the fields of each element. See [kinds of variables](/send-api/templates#kinds-of-variables).
 - **A campaign that could not be checked right now has the [issue](/api-reference/campaigns/overview#issues) `text_unchecked`.** Nothing is known to be wrong with it. Check it again in a moment.
+- **A recipient of a campaign sent to a segment unsubscribes from all your marketing email**, and a spam complaint does the same, because a segment is not a list they joined. A recipient of a campaign sent to a list still leaves only that list.
+- **Contact date fields are read day first.** Imports and the dashboard read `05/12/1990` as 5 December 1990, not 12 May. A month-first date that cannot be read day first, such as `12/25/1990`, is no longer stored. Dates such as `1990-12-05` are read as before.
+- **The Simple Editor makes no new HTML blocks.** HTML blocks that a design already has still show, send, and can be edited or deleted.
+- **Logging out asks for one click.** Opening the logout address shows a page with a **Log out** button. The **Log out** item in the menu works as before.
 
 #### Improvements
 
@@ -103,6 +114,17 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Fixed API v2 attachments losing their file name** when the request set `content_disposition`.
 - **Fixed MJML that closes a tag with `/>`, such as `<mj-image ... />`, failing with "Failed to render MJML"** in the Advanced Editor. MJML exported from Klaviyo is written this way.
 - **Fixed `ahasend routes listen --recipient` answering `403` for a recipient domain the account does not have.** The API now answers `400`, and the message says the domain is not found in the account.
+- **Fixed an open or a click turning a bounced message back into "Opened"**, and a later open turning a clicked message back into "Opened".
+- **Fixed out-of-band bounce reports being matched by headers that any sender can set.** A report now matches only a message AhaSend delivered, and suppresses only that message's recipient. Real bounce reports that were not matched before are matched now.
+- **Fixed some bounced messages losing their "Non-delivery report" link** when the report gave no reason text.
+- **Fixed a campaign list check in one account blocking the same address in other accounts.**
+- **Fixed the live event stream of `ahasend webhooks listen` and `ahasend routes listen` sending events that the API key's scopes do not allow.**
+- **Fixed webhooks limited to some domains getting the opens and clicks of every domain**, and click webhooks of campaign links never being sent.
+- **Fixed `suppression.created` being sent again** for a repeat bounce or unsubscribe of a suppression that did not change.
+- **Fixed campaign webhook events being dropped** after the campaign's domain was deleted.
+- **Fixed a transactional template's `variables` leaving out names** that only its show-if rules test or its repeat blocks loop over.
+- **Fixed the Simple Editor's preview of an HTML block cutting off wide emails**, or staying empty while a slow image loaded. The preview runs no scripts.
+- **Fixed a paused account not being able to set the sending type of its domains**, which the pause notice asks for.
 
 </Update>
 
