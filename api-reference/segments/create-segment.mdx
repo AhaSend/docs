@@ -1,0 +1,29 @@
+---
+title: "Create a Segment via the API"
+sidebarTitle: "Create Segment"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/segments"
+description: "Create an AhaSend segment from a name, rules and a time zone. AhaSend then finds its members and keeps them up to date as your contacts and campaigns change."
+---
+
+
+The AhaSend API creates one segment and starts to find its members. Access requires `segments:write`.
+
+A new segment is `building` until its members are found. A large account can take some minutes. A campaign that uses the segment cannot be sent until the segment is `ready`. See [States](/api-reference/segments/overview#states). To see what a definition matches before you save it, use [Preview Segment](/api-reference/segments/preview-segment).
+
+**Fields:**
+- `name` is required. The API trims it, and it must then have 1 to 255 characters. Names do not have to be unique in an account.
+- `description` can have up to 1,000 characters after it is trimmed. Without it, or with `null`, the description is empty.
+- `definition` is required. See [Definitions](/api-reference/segments/overview#definitions).
+- `timezone` is an IANA time zone, such as `Europe/Berlin`. Without it, or with `null` or an empty string, the segment uses `UTC`.
+- A field that you cannot write is refused with `400`, and the message names it.
+
+**Refusals:**
+- A refused definition answers `400`, and the message names each problem by its path, such as `conditions[0].field: the account has no contact field "city"`. An unknown time zone also answers `400`.
+- The API answers `409` when the account already has 100 segments, or when a list or campaign that the definition names is being changed. See [Conflicts](/api-reference/segments/overview#conflicts).
+
+This operation accepts an `Idempotency-Key` header. Unlike most operations, it stores only a `2xx` answer: a `4xx` releases the key, so a retry with the same key runs again. See [Idempotency](/api-reference/segments/overview#idempotency).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Segments API overview](/api-reference/segments/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

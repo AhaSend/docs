@@ -10,7 +10,7 @@ The AhaSend API deletes one list. Access requires `lists:delete`.
 
 After the delete, the list cannot be read and adds no recipients to any campaign. The API keeps every membership of the list, so the record that a contact unsubscribed from the list or reported it as spam is not lost. These memberships cannot be read either: the list answers `404`, and it does not appear in [List Contact's Lists](/api-reference/lists/get-contact-lists). The contacts themselves stay.
 
-A campaign that still needs the list blocks the delete with `409`. Campaigns in `draft`, `validating`, `scheduled`, `sending`, `paused` or `waiting_for_review` block it. Campaigns in `sent`, `failed` or `canceled` do not.
+A campaign that still needs the list, as an included or an excluded list, blocks the delete with `409`. Campaigns in `draft`, `validating`, `scheduled`, `sending`, `paused` or `waiting_for_review` block it. Campaigns in `sent`, `failed` or `canceled` do not. A [segment](/api-reference/segments/overview) that names the list in a `list` condition also blocks it, with a message that names the segments: `Used by segments: A, B. Change those segments first.`
 
 A second delete of the same list answers `404`.
 

@@ -1,0 +1,20 @@
+---
+title: "Delete a Segment via the API"
+sidebarTitle: "Delete Segment"
+openapi: "/openapi.yaml DELETE /v2/accounts/{account_id}/segments/{segment_id}"
+description: "Delete an AhaSend segment. Its contacts stay in your account, and a segment that an unfinished campaign sends to or excludes cannot be deleted."
+---
+
+
+The AhaSend API deletes one segment. Access requires `segments:delete`.
+
+After the delete, the segment cannot be read, and its members are removed shortly after. The contacts themselves stay.
+
+A campaign that still needs the segment, as an included or an excluded segment, blocks the delete with `409`. Campaigns in `draft`, `validating`, `scheduled`, `sending`, `paused` or `waiting_for_review` block it. Campaigns in `sent`, `failed` or `canceled` do not. A segment that is being changed also answers `409`. See [Conflicts](/api-reference/segments/overview#conflicts).
+
+A second delete of the same segment answers `404`.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [List Segments](/api-reference/segments/get-segments).
+- [Campaign status](/api-reference/campaigns/overview#campaign-status), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -2,7 +2,7 @@
 title: "Create a Campaign via the API"
 sidebarTitle: "Create Campaign"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/campaigns"
-description: "Create a draft AhaSend marketing campaign with its sender, lists, subject, preview text and design, from MJML, HTML, AhaML or a campaign template."
+description: "Create a draft AhaSend marketing campaign with its sender, audience, subject, preview text and design, from MJML, HTML, AhaML or a campaign template."
 ---
 
 
@@ -24,12 +24,15 @@ The design comes from one source:
 - The MJML, the HTML, the AhaML and a text written by hand can each be at most 200 KB.
 - The HTML must have an unsubscribe link before you can send the campaign. In AhaML, write it as `<Link href="{{ unsubscribe_url }}">…</Link>`. See [Unsubscribe link](/api-reference/campaigns/overview#unsubscribe-link).
 
-**Sender, subject and lists:**
+**Sender, subject and audience:**
 - `from.email` must be on a domain of your account with valid DNS records. A paused domain is accepted here, but Send Campaign and Test Campaign refuse it.
 - `reply_to` is an address only, without a display name.
 - In `subject` and `preheader`, line breaks become spaces, and spaces at the start and end are removed. An empty subject or preview text counts as none.
 - The API checks the subject, the preview text, the sender and the reply-to by the same rules as the dashboard, and its error messages use the same words.
-- `list_ids` holds 1 to 50 lists of your account, in the order you give. A list that you give twice counts once. A list that does not exist is refused with `400`. To find the ID of a list, use [List Lists](/api-reference/lists/get-lists), or see [where to find a list's ID](/api-reference/campaigns/overview#build-and-send-a-campaign) in the dashboard.
+- `list_ids` and `segment_ids` hold the lists and segments of your account to send to. `exclude_list_ids` and `exclude_segment_ids` hold the lists and segments whose contacts get no message. A list or segment that you give twice counts once. See [Audience](/api-reference/campaigns/overview#audience) for the rules.
+- An audience field that you send must leave the campaign at least one list or segment to send to, so `list_ids` can be `[]` with a segment in `segment_ids`. A list or segment that does not exist, more than 50 lists or 10 segments, or a list or segment that is both included and excluded is refused with `400`.
+- To find the ID of a list or a segment, use [List Lists](/api-reference/lists/get-lists) or [List Segments](/api-reference/segments/get-segments), or see [where to find the ID](/api-reference/campaigns/overview#build-and-send-a-campaign) in the dashboard.
+- When a segment of the audience is being built again, the API answers `409` with `The campaign's audience is being updated. Try again in a minute.` This refusal is stored for the `Idempotency-Key`, so retry with a new key.
 
 This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 

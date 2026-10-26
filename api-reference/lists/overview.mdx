@@ -6,11 +6,11 @@ icon: "list-ul"
 ---
 
 
-The AhaSend Lists API manages your contact lists and the contacts on them. A campaign sends to lists, so a list is how a contact gets marketing email. This page explains lists and memberships, and the rules that apply to all list operations.
+The AhaSend Lists API manages your contact lists and the contacts on them. A campaign sends to lists and [segments](/api-reference/segments/overview): a list holds the contacts you add to it, and a segment holds the contacts that match its rules. This page explains lists and memberships, and the rules that apply to all list operations.
 
 ## Lists
 
-A list is a static, private, single opt-in group of [contacts](/api-reference/contacts/overview), and the unit that a campaign targets. List names do not have to be unique in an account.
+A list is a static, private, single opt-in group of [contacts](/api-reference/contacts/overview). A campaign can send to a list or leave its contacts out. List names do not have to be unique in an account.
 
 `contact_count` is the number of subscribers that a campaign to the list would reach. It counts a member when:
 - Its membership is `confirmed`.
@@ -33,7 +33,7 @@ A membership is one contact on one list. It has no ID of its own: you name it by
 
 `subscribed_at` is the time the membership became `confirmed`. A confirm of a membership that is already `confirmed` does not change it. `unsubscribed_at` is the time the membership became `unsubscribed`, or the time of the complaint. It is cleared when the membership becomes `confirmed` again.
 
-The per-list status and the account-wide `unsubscribed` flag of the contact are separate. [Update Contact](/api-reference/contacts/update-contact) with `unsubscribed: true` stops campaigns to the contact on all lists, and leaves every membership status as it is.
+The per-list status and the account-wide `unsubscribed` flag of the contact are separate. [Update Contact](/api-reference/contacts/update-contact) with `unsubscribed: true` stops campaigns to the contact on all lists and segments, and leaves every membership status as it is.
 
 ## Unsubscribe, Remove or Delete
 
@@ -82,4 +82,4 @@ Create List and Batch Add List Contacts accept an `Idempotency-Key` header. See 
 ## Related Guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
-- [Contacts API overview](/api-reference/contacts/overview), [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Contacts API overview](/api-reference/contacts/overview), [Segments API overview](/api-reference/segments/overview), [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

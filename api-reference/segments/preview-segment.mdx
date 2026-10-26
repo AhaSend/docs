@@ -1,0 +1,25 @@
+---
+title: "Preview a Segment via the API"
+sidebarTitle: "Preview Segment"
+openapi: "/openapi.yaml POST /v2/accounts/{account_id}/segments/preview"
+description: "Try AhaSend segment rules without saving them: get the number of contacts that the rules match now, and up to 10 of the matching contacts."
+---
+
+
+The AhaSend API counts the contacts that a definition matches now, and returns up to 10 of them. Nothing is saved. Access requires `segments:read` and `contacts:read`, because a preview reads contacts by any rule.
+
+**Request:**
+- `definition` is required. It follows the same rules as in [Create Segment](/api-reference/segments/create-segment). See [Definitions](/api-reference/segments/overview#definitions).
+- `timezone` is the IANA time zone that relative times and days are read in. Without it, or with `null` or an empty string, they are read in `UTC`.
+
+**Response:**
+- `count` is the number of contacts that match, whatever their consent. A campaign can reach fewer of them. See [Members and reachable contacts](/api-reference/segments/overview#members-and-reachable-contacts).
+- The count stops after 10 seconds, and `count` is then `null`.
+- `contacts` holds up to 10 matching contacts, in no particular order, each with `contact_id` and `email`. They are a separate read, so they come back also when `count` is `null`. `contacts` is empty when they cannot be read within 10 seconds.
+
+A refused definition or an unknown time zone answers `400`, and the message names each problem.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Create Segment](/api-reference/segments/create-segment).
+- [Segments API overview](/api-reference/segments/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

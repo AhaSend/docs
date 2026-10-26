@@ -1,0 +1,21 @@
+---
+title: "Get a Segment via the API"
+sidebarTitle: "Get Segment"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/segments/{segment_id}"
+description: "Retrieve one AhaSend segment by ID with its rules, state and member count, and marketable_count, the members that a campaign to the segment would reach."
+---
+
+
+The AhaSend API returns one segment of the account. Access requires `segments:read`.
+
+- `member_count` is the number of contacts that match the rules, whatever their consent.
+- `marketable_count` is the number of members that a campaign to this segment alone would reach. See [Members and reachable contacts](/api-reference/segments/overview#members-and-reachable-contacts) for what it counts. It is `null` while the segment is not `ready`, and when the members cannot be counted within 10 seconds.
+- `state` is `building`, `ready` or `failed`. A `failed` segment gives the reason in `failure_reason`. See [States](/api-reference/segments/overview#states).
+- `last_evaluated_at` is the time the members were last checked against the whole account. It is `null` until the first build ends.
+
+To read the members, use [List Segment Contacts](/api-reference/segments/get-segment-contacts). A segment that was deleted answers `404`.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Update Segment](/api-reference/segments/update-segment).
+- [Segments API overview](/api-reference/segments/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

@@ -2,7 +2,7 @@
 title: "Send or Schedule a Campaign via the API"
 sidebarTitle: "Send Campaign"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/campaigns/{campaign_id}/send"
-description: "Send a draft AhaSend marketing campaign to its lists now, or schedule it for a later time. The campaign must be a draft with no issues before it can send."
+description: "Send a draft AhaSend marketing campaign to its lists and segments now, or schedule it for a later time. The campaign must be a draft with no issues to send."
 ---
 
 
@@ -11,7 +11,7 @@ The AhaSend API sends a draft campaign now, or at the time in `send_at`. Access 
 **Before the send:**
 - The campaign must be a draft. Any other status answers `409`.
 - A campaign with issues is refused with `400` `campaign is not ready to send`, and the response holds the `issues`. See [Issues](/api-reference/campaigns/overview#issues).
-- The API then checks what would stop the campaign at its send time. The domain of the sender must still be verified and not paused, your account must be able to send, and the lists must have subscribed contacts. The error message says what to fix.
+- The API then checks what would stop the campaign at its send time. The domain of the sender must still be verified and not paused, your account must be able to send, and the audience must have contacts who can get the campaign. Each segment of the campaign, included or excluded, must be `ready`: a segment that is `building` or `failed` refuses the send with `400`, and the message names it. The error message says what to fix.
 - For a send at a later time, a block that a payment or the next billing period can clear does not refuse the send. The response gives it in `warnings`.
 
 **Send time:**
@@ -20,7 +20,7 @@ The AhaSend API sends a draft campaign now, or at the time in `send_at`. Access 
 - To change the send time, [unschedule](/api-reference/campaigns/unschedule-campaign) the campaign and send it again.
 
 **After the send:**
-- The API answers `202`, and the campaign is in `validating`. Its lists are checked, and the campaign can be held for a review, as for a send from the dashboard. Read `status` and `status_reason` with [Get Campaign](/api-reference/campaigns/get-campaign). See [Campaign status](/api-reference/campaigns/overview#campaign-status).
+- The API answers `202`, and the campaign is in `validating`. Its lists and segments are checked, and the campaign can be held for a review, as for a send from the dashboard. Read `status` and `status_reason` with [Get Campaign](/api-reference/campaigns/get-campaign). See [Campaign status](/api-reference/campaigns/overview#campaign-status).
 - `warnings` lists what the send accepted but you should know, for example that your account cannot send now while the campaign is sent later, or that the view-in-browser page cannot show the design. It is empty when there is nothing to report.
 
 This operation accepts an `Idempotency-Key` header. A refusal from this operation is stored for the key, so send a corrected request with a new key. See [Idempotency](/api-reference/idempotency) and [campaign retries](/api-reference/campaigns/overview#idempotency).
