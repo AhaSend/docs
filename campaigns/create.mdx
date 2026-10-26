@@ -1,17 +1,17 @@
 ---
 title: "Creating a Campaign"
 sidebarTitle: "Creating a Campaign"
-description: "Create an AhaSend campaign: name, sender and reply-to, lists, subject and preview text, design, personalization with contact fields and the unsubscribe link."
+description: "Create an AhaSend campaign: name, sender, lists and segments, subject and preview text, design, personalization with contact fields and the unsubscribe link."
 icon: "pen-to-square"
 ---
 
-A campaign is one email to one or more lists. This page walks through the parts of a campaign, in the order the campaign page shows them. You can fill them in any order and come back later; a campaign stays a draft until you send or schedule it.
+A campaign is one email to one or more lists and segments. This page walks through the parts of a campaign, in the order the campaign page shows them. You can fill them in any order and come back later; a campaign stays a draft until you send or schedule it.
 
 ## Name and Start Point
 
 Under **Marketing > Campaigns**, click **Create Campaign**. Give it a name that you will recognize in the list later, such as "October newsletter"; recipients never see it. Under **Start From**, start from scratch or from a copy of one of your [campaign templates](/campaigns/templates).
 
-To send a campaign again, for example next month's edition, **duplicate** an existing campaign instead. The copy is a new draft with the same sender, lists, subject and design.
+To send a campaign again, for example next month's edition, **duplicate** an existing campaign instead. The copy is a new draft with the same sender, recipients, subject and design.
 
 ## Sender and Reply-To
 
@@ -25,9 +25,11 @@ Use a subdomain for your campaigns, such as `news.yourdomain.com`, and keep your
 
 ## Recipients
 
-Choose one or more [lists](/campaigns/contacts-and-lists); through the API, up to 50. The campaign page shows how many contacts the campaign will reach: the subscribed, enabled contacts on those lists that have not unsubscribed from everything and whose address was not found invalid. A contact on more than one of the lists counts once per list in that number, but gets the email once.
+Click **Manage Recipients**. Under **Send to**, choose one or more [lists](/campaigns/contacts-and-lists) and [segments](/campaigns/segments). Under **Don't send to**, choose the lists and segments whose contacts must not get the campaign: a contact on an excluded list, whatever their status there, or in an excluded segment, does not get the email, even when a chosen list or segment includes them. A list or segment can be on one side only.
 
-To send to part of a list, filter the list with advanced search and **Save as new list**, then choose that list here.
+The campaign page shows how many contacts the campaign will reach. From a list, it counts the subscribed, enabled contacts that have not unsubscribed from everything and whose address was not found invalid. From a segment, it counts the [reachable members](/campaigns/segments#members-and-reachable-contacts). A contact in more than one of the chosen lists and segments counts once and gets the email once. When the exact count takes too long, the page shows an upper bound marked "up to".
+
+To send to part of a list, create a segment with a rule such as **Is a confirmed member of** that list, or filter the list with advanced search and **Save as new list**.
 
 ## Subject and Preview Text
 
@@ -62,7 +64,7 @@ Every campaign must have an unsubscribe link in its HTML. New Simple Editor desi
 <a href="{{ unsubscribe_url }}">Unsubscribe</a>
 ```
 
-Each recipient gets their own link, and AhaSend adds the one-click `List-Unsubscribe` headers that Gmail and Yahoo expect from bulk senders. A recipient who unsubscribes is unsubscribed from the list the campaign went to. A campaign without the link has the issue `unsubscribe_link_missing` and cannot be sent; a test can still go out, so you can test a design before the footer is done.
+Each recipient gets their own link, and AhaSend adds the one-click `List-Unsubscribe` headers that Gmail and Yahoo expect from bulk senders. A recipient who unsubscribes is unsubscribed from the list the campaign went to. A recipient that the campaign reached through a segment has no list to leave, and is unsubscribed from all of your marketing email. See [unsubscribes from a segment campaign](/campaigns/segments#unsubscribes-from-a-segment-campaign). A campaign without the link has the issue `unsubscribe_link_missing` and cannot be sent; a test can still go out, so you can test a design before the footer is done.
 
 Clicking the unsubscribe link in a test send unsubscribes nobody.
 
@@ -74,5 +76,5 @@ The editors save as you work, and the campaign page saves each part when you con
 
 ## Related Guides
 
-- [Testing, review and sending](/campaigns/test-and-send), [Contacts and lists](/campaigns/contacts-and-lists), [Templates and editors](/campaigns/templates).
+- [Testing, review and sending](/campaigns/test-and-send), [Contacts and lists](/campaigns/contacts-and-lists), [Segments](/campaigns/segments), [Templates and editors](/campaigns/templates).
 - [Campaigns API](/api-reference/campaigns/overview), [Domain setup](/domains), [Deliverability best practices](/deliverability).

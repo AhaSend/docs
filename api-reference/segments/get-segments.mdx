@@ -1,0 +1,18 @@
+---
+title: "List Segments via the API"
+sidebarTitle: "List Segments"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/segments"
+description: "List the segments of your AhaSend account, newest first, with the rules, the state and the member count of each segment and the time its members were checked."
+---
+
+
+The AhaSend API returns the account's segments, newest first. Access requires `segments:read`.
+
+Each segment gives its `definition`, its `state` and `member_count`, the contacts that match its rules, whatever their consent. To read how many of them a campaign would reach, use [Get Segment](/api-reference/segments/get-segment). See [Members and reachable contacts](/api-reference/segments/overview#members-and-reachable-contacts).
+
+Pages use cursors: send `after` or `before`, not both. See [Pagination](/api-reference/segments/overview#pagination).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Create Segment](/api-reference/segments/create-segment).
+- [Segments API overview](/api-reference/segments/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

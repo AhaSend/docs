@@ -6,16 +6,16 @@ icon: "address-book"
 ---
 
 
-The AhaSend Contacts API manages the contacts of your account. This page explains what a contact is, how it relates to lists, and the rules that apply to all contact operations.
+The AhaSend Contacts API manages the contacts of your account. This page explains what a contact is, how it relates to lists and segments, and the rules that apply to all contact operations.
 
-## Contacts and Lists
+## Contacts, Lists and Segments
 
 A contact is one person in your account, found by email address. Contacts are account-global: one contact has one email address, and one email address belongs to at most one contact in the account. The API trims the email address and changes it to lowercase before it stores it.
 
-A new contact is on no list. Campaigns send to lists, so a campaign cannot reach a contact until you add it to a list with the [Lists API](/api-reference/lists/overview). Each list membership has its own `subscription_status`. See [Memberships](/api-reference/lists/overview#memberships).
+A new contact is on no list. Campaigns send to lists and segments. A campaign to lists reaches a contact after you add it to a list with the [Lists API](/api-reference/lists/overview), and each list membership has its own `subscription_status`. See [Memberships](/api-reference/lists/overview#memberships). A [segment](/api-reference/segments/overview) finds its members by rules over the contact fields, so a campaign to a segment can also reach a contact on no list.
 
 A contact has two kinds of consent:
-- `unsubscribed` on the contact is account-wide. When it is `true`, campaigns do not send to the contact on any list. It does not change the contact's memberships.
+- `unsubscribed` on the contact is account-wide. When it is `true`, campaigns do not send to the contact, from any list or segment. It does not change the contact's memberships. A contact who unsubscribes from a campaign sent through a segment, or reports it as spam, gets `unsubscribed: true`.
 - `subscription_status` on a membership applies to one list only.
 
 Contacts and [suppressions](/api-reference/suppressions/get-suppressions) are separate. Create Contact does not read or change suppressions, and a change to `unsubscribed` does not add or remove a suppression.
@@ -68,7 +68,7 @@ List Contacts returns contacts newest first. Each page gives `pagination.has_mor
 | `contacts:write` | Create and update contacts, one at a time or in a batch |
 | `contacts:delete` | Delete contacts |
 
-To read the lists of a contact, you need `lists:read`. See [Permission scopes](/api-reference/scopes#lists).
+To read the lists of a contact, you need `lists:read`. To read the segments of a contact, you need `segments:read` and `contacts:read`. See [Permission scopes](/api-reference/scopes#lists).
 
 ## Idempotency
 
@@ -85,8 +85,9 @@ Create Contact and Batch Upsert Contacts accept an `Idempotency-Key` header. See
 | Remove a contact and its history | [Delete Contact](/api-reference/contacts/delete-contact) |
 | Create or update up to 1,000 contacts | [Batch Upsert Contacts](/api-reference/contacts/batch-upsert-contacts) |
 | Read the lists of a contact | [List Contact's Lists](/api-reference/lists/get-contact-lists) |
+| Read the segments of a contact | [List Contact's Segments](/api-reference/segments/get-contact-segments) |
 
 ## Related Guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
-- [Lists API overview](/api-reference/lists/overview), [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Lists API overview](/api-reference/lists/overview), [Segments API overview](/api-reference/segments/overview), [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

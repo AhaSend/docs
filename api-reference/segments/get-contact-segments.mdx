@@ -1,0 +1,22 @@
+---
+title: "List a Contact's Segments via the API"
+sidebarTitle: "List Contact's Segments"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/contacts/{id_or_email}/segments"
+description: "List the AhaSend segments that one contact is a member of, newest segment first, to see which rules a person matches and which campaigns can reach them."
+---
+
+
+The AhaSend API returns the segments that one contact is a member of, newest first. Access requires `segments:read` and `contacts:read`, because the request reads a contact.
+
+`{id_or_email}` is the contact ID or its email address. Percent-encode an email address exactly once. See [Name a contact in the path](/api-reference/contacts/overview#name-a-contact-in-the-path).
+
+A segment that is `building` may still list the contact by its previous rules. See [States](/api-reference/segments/overview#states). This is the reverse of [List Segment Contacts](/api-reference/segments/get-segment-contacts). To read the lists of the contact, use [List Contact's Lists](/api-reference/lists/get-contact-lists).
+
+A contact that does not exist answers `404`.
+
+Pages use cursors: send `after` or `before`, not both. See [Pagination](/api-reference/segments/overview#pagination).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Contact](/api-reference/contacts/get-contact).
+- [Segments API overview](/api-reference/segments/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

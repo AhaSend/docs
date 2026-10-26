@@ -186,7 +186,7 @@ Sending, unscheduling and testing a campaign need only `campaigns:send`. They ne
 | `contacts:write` | Create and update contacts, one at a time or in a batch |
 | `contacts:delete` | Delete contacts |
 
-Reading the lists of a contact needs `lists:read`, not a `contacts` scope. See the [Contacts API](/api-reference/contacts/overview).
+Reading the lists of a contact needs `lists:read`, not a `contacts` scope. Reading the segments of a contact needs `segments:read` and `contacts:read`. See the [Contacts API](/api-reference/contacts/overview).
 
 ### Lists
 
@@ -197,6 +197,16 @@ Reading the lists of a contact needs `lists:read`, not a `contacts` scope. See t
 | `lists:delete` | Delete lists |
 
 Removing a contact from a list needs `lists:write`, not `lists:delete`. Listing the contacts on a list with `include_contacts=true` needs `contacts:read` as well as `lists:read`. See the [Lists API](/api-reference/lists/overview).
+
+### Segments
+
+| Scope | Description |
+|-------|-------------|
+| `segments:read` | List and view segments, preview a definition, and list the members of a segment and the segments of a contact |
+| `segments:write` | Create and update segments |
+| `segments:delete` | Delete segments |
+
+Previewing a definition, listing the members of a segment and listing the segments of a contact read contacts, so they need `contacts:read` as well as `segments:read`. See the [Segments API](/api-reference/segments/overview).
 
 ### API Key Management
 

@@ -1,12 +1,12 @@
 ---
 title: "Campaigns API Overview"
 sidebarTitle: "Introduction"
-description: "Build, test and send AhaSend marketing campaigns through the API: set the sender, lists, subject and design, fix the issues, then read stats and recipients."
+description: "Build, test and send AhaSend marketing campaigns through the API: set the sender, audience, subject and design, fix the issues, then read stats and recipients."
 icon: "bullhorn"
 ---
 
 
-The AhaSend Campaigns API creates marketing campaigns, sends them to your lists and reports the results. This page gives the steps from a new campaign to its report, and the rules that apply to all campaign operations.
+The AhaSend Campaigns API creates marketing campaigns, sends them to your lists and segments and reports the results. This page gives the steps from a new campaign to its report, and the rules that apply to all campaign operations.
 
 ## Campaign Templates and Campaigns
 
@@ -20,7 +20,7 @@ Before you create a campaign, make sure you have:
 
 - **An API key** with the `campaigns` scopes that you need, and the `templates` scopes to manage campaign templates. Copying a campaign template with `template_id` on Create Campaign needs only `campaigns:write`. See [Scopes](#scopes).
 - **A verified sender domain** that is not paused. See [domain setup](/domains).
-- **A list with subscribed contacts.** Create lists and add contacts with the [Lists API](/api-reference/lists/overview) or in the dashboard. See [Build and Send a Campaign](#build-and-send-a-campaign) for where to find the ID of a list.
+- **A list or a segment with contacts who can get marketing email.** Create lists and add contacts with the [Lists API](/api-reference/lists/overview), create segments with the [Segments API](/api-reference/segments/overview), or do both in the dashboard. See [Build and Send a Campaign](#build-and-send-a-campaign) for where to find the ID of a list or a segment.
 
 ## Build and Send a Campaign
 
@@ -33,9 +33,9 @@ Before you create a campaign, make sure you have:
     Call [Create Campaign](/api-reference/campaigns/create-campaign) with a `name`. All other fields are optional. You can set them in the same request, or later with [Update Campaign](/api-reference/campaigns/update-campaign).
   </Step>
 
-  <Step title="Set the sender, lists, subject, preview text and content">
+  <Step title="Set the sender, audience, subject, preview text and content">
     - `from` is the sender. Its address must be on a domain of your account with valid DNS records.
-    - `list_ids` holds the IDs of the lists to send to. To find the ID of a list, use [List Lists](/api-reference/lists/get-lists), or open the list under **Marketing > Lists** in the dashboard: the ID is the last part of the page's URL. Before you send, the lists must have subscribed contacts.
+    - `list_ids` and `segment_ids` hold the IDs of the lists and segments to send to. `exclude_list_ids` and `exclude_segment_ids` hold the IDs of the lists and segments whose contacts get no message. See [Audience](#audience). To find the ID of a list or a segment, use [List Lists](/api-reference/lists/get-lists) or [List Segments](/api-reference/segments/get-segments), or open it under **Marketing > Lists** or **Marketing > Segments** in the dashboard: the ID is the last part of the page's URL. Before you send, the audience must have contacts who can get the campaign.
     - `subject` is the subject line, and `preheader` is the preview text that most inboxes show after the subject.
     - `content` is the design. On create only, `template_id` can copy the design of a campaign template instead. Update Campaign does not accept `template_id`.
   </Step>
@@ -57,12 +57,28 @@ Before you create a campaign, make sure you have:
   </Step>
 </Steps>
 
+## Audience
+
+A campaign sends to the lists in `list_ids` and the segments in `segment_ids`, less the contacts of the lists in `exclude_list_ids` and the members of the segments in `exclude_segment_ids`.
+
+- The audience needs at least one list or segment to send to. So `list_ids` can be `[]` when `segment_ids` has a segment, and exclusions alone are refused with `400`.
+- A campaign uses at most 50 lists and 10 segments, included and excluded together.
+- A list or a segment cannot be both included and excluded.
+- An exclusion wins. A contact with any membership of an excluded list, whatever its status, gets no message, and neither does a member of an excluded segment, also when an included list or segment reaches the contact.
+- A contact reached through several lists and segments gets one message. It is recorded under a list when a list reaches the contact, so an unsubscribe stays per list when it can.
+- An included list reaches its `confirmed` members. An included segment reaches its members who can get marketing email. See [Members and reachable contacts](/api-reference/segments/overview#members-and-reachable-contacts).
+- A contact who unsubscribes from an email that a campaign sent through a list leaves that list. A contact who unsubscribes from an email sent through a segment, or reports it as spam, is unsubscribed account-wide and gets no more marketing email from your account.
+- A campaign that uses a segment that is `building` or `failed`, included or excluded, cannot be sent. See [States](/api-reference/segments/overview#states).
+- A list or a segment that was deleted is left out of the campaign's audience fields.
+
+In [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients), a recipient reached through a list has `list_name`, and one reached through a segment has `segment_id` and `segment_name` instead.
+
 ## Campaign Status
 
 | Status | Meaning |
 |--------|---------|
 | `draft` | The campaign is being prepared. |
-| `validating` | The campaign is scheduled, and its lists are being checked. |
+| `validating` | The campaign is scheduled, and its lists and segments are being checked. |
 | `waiting_for_review` | The campaign is held for a review before it sends. |
 | `scheduled` | The campaign is accepted and waits for its send time. |
 | `sending` | The campaign is sending now. |
@@ -88,7 +104,7 @@ A draft campaign is `ready` when it has no issues. Send Campaign refuses a campa
 | Code | Meaning |
 |------|---------|
 | `sender_missing` | The campaign has no complete sender, or the domain of the sender was deleted. |
-| `lists_missing` | The campaign has no list that still exists. |
+| `lists_missing` | The campaign has no list or segment to send to that still exists. |
 | `subject_missing` | The campaign has no subject. |
 | `preheader_missing` | The campaign has no preview text. |
 | `design_missing` | The campaign has no design, or its design has no HTML. |
@@ -142,7 +158,7 @@ See [Idempotency](/api-reference/idempotency).
 | `templates:write` | Create and update campaign templates |
 | `templates:delete` | Delete campaign templates |
 
-The `templates` scopes give access to transactional templates and campaign templates together. See [Permission scopes](/api-reference/scopes).
+The `templates` scopes give access to transactional templates and campaign templates together. To choose lists and segments by ID, a campaign write needs only `campaigns:write`. To find the IDs, you need `lists:read` or `segments:read`. See [Permission scopes](/api-reference/scopes).
 
 ## API Operations
 
@@ -167,4 +183,4 @@ The `templates` scopes give access to transactional templates and campaign templ
 ## Related Guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
-- [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
+- [Lists API overview](/api-reference/lists/overview), [Segments API overview](/api-reference/segments/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

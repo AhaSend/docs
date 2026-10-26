@@ -1,0 +1,191 @@
+---
+title: "Segments API Overview"
+sidebarTitle: "Introduction"
+description: "Manage AhaSend segments through the API: save rules over your contacts, keep their members up to date on their own, and send campaigns to the members."
+icon: "filter"
+---
+
+
+The AhaSend Segments API manages segments: saved rules over your contacts whose members stay up to date. A campaign can send to a segment or leave its members out. This page explains segments, their definitions and states, who a campaign to a segment reaches, and the rules that apply to all segment operations.
+
+## Segments
+
+A segment is a saved set of rules over the [contacts](/api-reference/contacts/overview) of your account. Its members are the contacts that match the rules. A rule can read:
+- A field of the contact: `email`, `first_name`, `last_name`, one of your own fields, or `created_at`, the time the contact was created.
+- A list membership.
+- The campaigns that the contact received, opened or clicked: one campaign, or any campaign since a time.
+- The number of campaigns that the contact received, opened or clicked since a time.
+- The month and day of one of your date fields, for birthdays and anniversaries.
+
+You do not add members to a segment. AhaSend keeps the members up to date as your contacts, lists and campaigns change, usually within a minute. Rules about campaigns follow within an hour of a send, and relative times such as `30 days ago` are read again on a schedule.
+
+Segment names do not have to be unique in an account. An account can have at most 100 segments.
+
+A list, a campaign or a contact field that a segment uses in a rule cannot be deleted while the segment uses it. [Delete List](/api-reference/lists/delete-list) and [Delete Campaign](/api-reference/campaigns/delete-campaign) answer `409` with a message that names the segments, such as `Used by segments: A, B. Change those segments first.`
+
+## Definitions
+
+`definition` holds the rules of a segment:
+
+```json
+{
+  "schema_version": 1,
+  "match": "all",
+  "conditions": [
+    { "field": "attributes.country", "op": "equal", "value": "DE" },
+    { "field": "created_at", "op": "after", "value": "30 days ago" },
+    { "field": "list", "op": "in", "value": "6f1c2a52-8f2e-4d8e-9a3b-1c2d3e4f5a6b" },
+    {
+      "match": "any",
+      "conditions": [
+        { "field": "campaign", "op": "opened", "value": "9a2e7c41-0b3d-4f5e-8a6b-7c8d9e0f1a2b" },
+        { "field": "any_campaign", "op": "clicked", "value": "14 days ago" },
+        { "field": "campaign_count", "op": "opened_at_least", "value": { "count": 3, "since": "90 days ago" } }
+      ]
+    }
+  ]
+}
+```
+
+- `schema_version` is `1`.
+- `match` is `all` when a contact must match all of the conditions, or `any` when one is enough.
+- `conditions` holds at least one item. An item is a condition or a group. A group has its own `match` and `conditions`, and holds conditions only, so groups nest one level deep.
+- A condition has a `field`, an operator in `op` and, for most operators, a `value`. For an operator that takes no value, such as `is_empty`, leave `value` out or send `null`.
+- A definition has at most 50 conditions in all. At most 5 of them are `campaign`, `any_campaign` or `campaign_count` conditions.
+- An unknown key is refused. A refused definition answers `400`, and the message names each problem by its path, such as `conditions[3].value`.
+
+### Conditions
+
+| `field` | Operators | `value` |
+|---------|-----------|---------|
+| `email`, `first_name`, `last_name`, a text field | `equal`, `not_equal`, `contains`, `not_contains`, `begins_with`, `not_begins_with`, `ends_with`, `not_ends_with`, `is_empty`, `is_not_empty` | A string |
+| A number field | `equal`, `not_equal`, `less`, `less_or_equal`, `greater`, `greater_or_equal` | A number |
+| `created_at`, a date field, a timestamp field | `equal`, `not_equal`, `before`, `before_or_on`, `after`, `after_or_on` | A date such as `2024-06-15`, or a relative time such as `today` or `30 days ago`. `created_at` and timestamp fields also take a time such as `2 hours from now`. |
+| A boolean field | `is_true`, `is_false` | None |
+| A date field | `month_is`, `anniversary_within` | A whole number. See [Birthdays and anniversaries](#birthdays-and-anniversaries). |
+| `list` | `in`, `not_in` | A list ID |
+| `campaign` | `received`, `not_received`, `opened`, `not_opened`, `clicked`, `not_clicked` | A campaign ID |
+| `any_campaign` | `received`, `opened`, `clicked`, `not_opened`, `not_clicked` | A relative time such as `14 days ago` |
+| `campaign_count` | `received_at_least`, `received_fewer_than`, `opened_at_least`, `opened_fewer_than`, `clicked_at_least`, `clicked_fewer_than` | A count object. See [Campaign counts](#campaign-counts). |
+
+Your own fields are `attributes.<key>`, with the key of a contact field that you defined in the dashboard. A condition on a key that the account does not have is refused.
+
+**Rules of the conditions:**
+- Your date, number, timestamp and boolean fields also take `is_null` and `is_not_null`. `email`, `first_name`, `last_name`, `created_at` and your text fields do not.
+- A negated operator, such as `not_equal` or `not_contains`, also matches a contact that has no value for the field.
+- `list` with `in` means a `confirmed` membership of the list.
+- `campaign` with `received` means that the campaign was delivered to the contact. `not_opened` and `not_clicked` match only contacts who received the campaign.
+- `any_campaign` with `received`, `opened` or `clicked` matches a contact with at least one such event since the time. `not_opened` and `not_clicked` match a contact who received a campaign since the time and opened, or clicked, none since then.
+- Opens and clicks by bots do not count.
+
+### Campaign Counts
+
+A `campaign_count` condition takes an object as its `value`, such as `{"count": 3, "since": "90 days ago"}`. It counts the campaigns sent since `since` that the contact received, opened or clicked.
+
+- `count` is a whole number from 1 to 1,000, or from 2 for `received_fewer_than`.
+- `since` is `M days ago`, `M weeks ago`, `M months ago` or `M years ago`, with M up to 365 days, 52 weeks, 12 months or 1 year. The window starts at the beginning of its day in the segment's time zone.
+- A campaign counts from the time it started sending, whenever the contact received, opened or clicked it. Several opens or clicks of one campaign count once.
+- `received_fewer_than`, `opened_fewer_than` and `clicked_fewer_than` match only a contact who received at least one campaign sent since then.
+- A missing or unknown property of the object is refused.
+
+### Birthdays and Anniversaries
+
+Two operators on your date fields read only the month and day, so the year does not matter:
+- `month_is` takes a month from `1` (January) to `12` (December).
+- `anniversary_within` takes a number of days N from `0` to `365`. It matches when the month and day fall on today or on one of the next N days in the segment's time zone. `0` is today only.
+
+A 29 February date counts as 28 February in a year without one. Both operators read a stored value that starts with a `YYYY-MM-DD` date, as the API and imports store it. Any other value never matches. The members of an `anniversary_within` segment move to the new day shortly after midnight in its time zone, usually within about half an hour.
+
+### Time Zone
+
+`timezone` is an IANA time zone, such as `Europe/Berlin`. Relative times, such as `today` or `30 days ago`, and days are read in this zone. Without one, the segment uses `UTC`. An unknown time zone is refused with `400`.
+
+## States
+
+| `state` | Meaning |
+|---------|---------|
+| `building` | AhaSend is finding the members of the current definition. A large account can take some minutes. |
+| `ready` | The members follow the current definition. |
+| `failed` | The members could not be found. `failure_reason` says why. |
+
+- A new segment is `building`. An update that changes `definition` or `timezone` builds the members again, and the segment is `building` until that ends. An update of only `name` or `description` keeps the members and the state.
+- While a segment is `building`, [List Segment Contacts](/api-reference/segments/get-segment-contacts) and [List a Contact's Segments](/api-reference/segments/get-contact-segments) may still answer by the previous rules.
+- Any update of a `failed` segment, `{}` included, builds it again.
+- A campaign that uses a segment, included or excluded, cannot be sent while the segment is `building` or `failed`. [Send Campaign](/api-reference/campaigns/send-campaign) refuses it with `400`, and the message names the segment.
+- `last_evaluated_at` is the time the members were last checked against the whole account. It is `null` until the first build ends.
+
+## Members and Reachable Contacts
+
+The members of a segment are the contacts that match its rules, whatever their consent. `member_count` and [List Segment Contacts](/api-reference/segments/get-segment-contacts) include all of them.
+
+A campaign to a segment reaches only the members who can get marketing email. A member is reachable when:
+- The contact is `enabled`.
+- The contact is not unsubscribed account-wide.
+- Email validation did not find the contact invalid.
+- The contact is `confirmed` on at least one list, or is on no list at all.
+
+So a contact whose memberships are all `unsubscribed`, `complained` or `unconfirmed` is not reached. A contact on no list can be reached, which a campaign to lists cannot do.
+
+[Get Segment](/api-reference/segments/get-segment) returns `marketable_count`, the members that a campaign to this segment alone would reach. It is `null` while the segment is not `ready`, and when the members cannot be counted within 10 seconds. The campaign checks its contacts again when it starts.
+
+## Campaigns and Segments
+
+A campaign sends to the segments in `segment_ids`, and leaves out the members of the segments in `exclude_segment_ids`. See [Audience](/api-reference/campaigns/overview#audience) for the rules of a campaign's lists and segments.
+
+A segment send has no list to leave. A contact who unsubscribes from a segment send, or reports it as spam, is unsubscribed account-wide and gets no more marketing email from your account. The contact's `unsubscribed` becomes `true`. See [Contacts, lists and segments](/api-reference/contacts/overview#contacts-lists-and-segments).
+
+A segment that a campaign still needs, as an included or an excluded segment, cannot be deleted. Campaigns in `draft`, `validating`, `scheduled`, `sending`, `paused` or `waiting_for_review` block the delete.
+
+## Preview a Definition
+
+[Preview Segment](/api-reference/segments/preview-segment) tries a definition without saving it. It returns `count`, the contacts that the definition matches now, whatever their consent, and up to 10 of them. It changes nothing.
+
+## Pagination
+
+List Segments and List a Contact's Segments return segments newest first. List Segment Contacts returns members by contact ID, lowest first. Each page gives `pagination.has_more`, `pagination.next_cursor` and `pagination.previous_cursor`. Send `next_cursor` as `after` for the next page, or `previous_cursor` as `before` for the previous page. You cannot send `after` and `before` together. `limit` is 1 to 100, and the default is 100.
+
+## Conflicts
+
+A segment write that meets another change answers `409` and changes nothing:
+
+| Operation | Cause | What to do |
+|-----------|-------|------------|
+| Create Segment | The account already has 100 segments. | Delete a segment, then retry. |
+| Create Segment | A list or campaign that the definition names is being changed: `The segment is being updated. Try again in a minute.` | Retry later. |
+| Update Segment, Delete Segment | The segment is being changed: `The segment is being updated. Try again in a minute.` | Retry later. |
+| Delete Segment | A campaign still needs the segment: `This segment cannot be deleted while a campaign is still using it.` | Remove the segment from the campaign, or wait until the campaign is `sent`, `failed` or `canceled`. |
+| Create Campaign, Update Campaign | A segment of the audience is being built again: `The campaign's audience is being updated. Try again in a minute.` | Retry later, with a new `Idempotency-Key` if you used one. |
+
+Do not use the `message` to tell the cases apart.
+
+## Scopes
+
+| Scope | Grants |
+|-------|--------|
+| `segments:read` | List and view segments, preview a definition, and list the members of a segment and the segments of a contact |
+| `segments:write` | Create and update segments |
+| `segments:delete` | Delete segments |
+
+Preview Segment, List Segment Contacts and List a Contact's Segments read contacts, so they also need `contacts:read`. See [Permission scopes](/api-reference/scopes#segments).
+
+## Idempotency
+
+Create Segment accepts an `Idempotency-Key` header. A `2xx` answer is stored for 24 hours, so a retry with the same key creates no second segment. Unlike most operations, a `4xx` answer is not stored: it releases the key, so a retry with the same key runs again, for example after you delete a segment. A request with the same key that is still in progress answers `409` with `Idempotent-Replayed: false` and a `Retry-After` header; retry with the same key after that delay. See [Idempotency](/api-reference/idempotency).
+
+## API Operations
+
+| Task | Endpoint reference |
+|---|---|
+| Try a definition without saving it | [Preview Segment](/api-reference/segments/preview-segment) |
+| Create a segment | [Create Segment](/api-reference/segments/create-segment) |
+| Read a segment and its reachable members | [Get Segment](/api-reference/segments/get-segment) |
+| List segments | [List Segments](/api-reference/segments/get-segments) |
+| Change a segment | [Update Segment](/api-reference/segments/update-segment) |
+| Delete a segment | [Delete Segment](/api-reference/segments/delete-segment) |
+| Read the members of a segment | [List Segment Contacts](/api-reference/segments/get-segment-contacts) |
+| Read the segments of a contact | [List a Contact's Segments](/api-reference/segments/get-contact-segments) |
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
+- [Contacts API overview](/api-reference/contacts/overview), [Lists API overview](/api-reference/lists/overview), [Campaigns API overview](/api-reference/campaigns/overview), [Segments in Campaign Builder](/campaigns/segments), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

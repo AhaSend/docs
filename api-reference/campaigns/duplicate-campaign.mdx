@@ -2,7 +2,7 @@
 title: "Duplicate a Campaign via the API"
 sidebarTitle: "Duplicate Campaign"
 openapi: "/openapi.yaml POST /v2/accounts/{account_id}/campaigns/{campaign_id}/duplicate"
-description: "Make a new draft from an AhaSend marketing campaign in any status, with a copy of its design, its subject, preview text and sender, and the same lists."
+description: "Make a new draft from an AhaSend marketing campaign in any status, with a copy of its design, its subject, preview text and sender, and the same audience."
 ---
 
 
@@ -11,7 +11,7 @@ The AhaSend API makes a new draft from a campaign. Access requires `campaigns:wr
 The source campaign can be in any status, so you can copy a campaign that was already sent. The new draft gets:
 - A copy of the design. The copy belongs to the new draft.
 - The subject, the preview text, the sender and the reply-to.
-- The lists of the source that still exist, in the same order.
+- The lists and segments of the source that still exist, included and excluded, with the included lists in the same order. When none of the included lists and segments still exists, the new draft has no lists or segments.
 
 `name` sets the name of the new draft. Without it, the name is `Copy of` and the name of the source, cut to 255 characters. The request body is optional.
 

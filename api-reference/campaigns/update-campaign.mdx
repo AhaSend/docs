@@ -2,7 +2,7 @@
 title: "Update a Campaign via the API"
 sidebarTitle: "Update Campaign"
 openapi: "/openapi.yaml PUT /v2/accounts/{account_id}/campaigns/{campaign_id}"
-description: "Change a draft AhaSend marketing campaign: its name, sender, reply-to, lists, subject, preview text or design. Only a draft campaign can be changed."
+description: "Change a draft AhaSend marketing campaign: its name, sender, reply-to, audience, subject, preview text or design. Only a draft campaign can be changed."
 ---
 
 
@@ -13,7 +13,8 @@ A campaign that is not a draft answers `409` with `campaign is not a draft`. To 
 **Fields:**
 - A field that you leave out does not change and is not checked. A request with no field is refused with `400`.
 - `null` clears `subject`, `preheader`, `from` or `reply_to`. When you clear `from`, `reply_to` stays.
-- `list_ids` replaces all lists of the campaign. A list that does not exist is refused with `400`.
+- `list_ids`, `segment_ids`, `exclude_list_ids` and `exclude_segment_ids` each replace their own set when you send them, and leave it as it is when you leave them out. `[]` empties a set, so `exclude_segment_ids: []` removes every segment exclusion. The result needs at least one list or segment to send to. See [Audience](/api-reference/campaigns/overview#audience).
+- A list or segment that does not exist is refused with `400`. When a segment of the audience is being built again, the API answers `409` with `The campaign's audience is being updated. Try again in a minute.`
 - `template_id` is not accepted: only [Create Campaign](/api-reference/campaigns/create-campaign) can copy a campaign template. A request with `template_id` is refused with `400` as an unknown field.
 - The fields follow the rules of [Create Campaign](/api-reference/campaigns/create-campaign).
 

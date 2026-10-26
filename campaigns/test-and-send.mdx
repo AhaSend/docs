@@ -24,7 +24,7 @@ The campaign page lists what is missing before the campaign can go out. The same
 | Issue | What to fix |
 |---|---|
 | Sender missing | Set a sender on a verified domain that is not paused |
-| Lists missing | Choose at least one list that still exists |
+| Lists missing | Choose at least one list or segment that still exists |
 | Subject or preview text missing | Fill them in |
 | Design missing | Open the editor and make a design; an imported HTML design needs HTML |
 | Text broken | The subject, preview text or design has template syntax that cannot be rendered, for example an unclosed `{{` |
@@ -35,7 +35,7 @@ The campaign page lists what is missing before the campaign can go out. The same
 
 **Schedule & Send** sends the campaign now or at a date and time you choose. A scheduled campaign shows your daily marketing limit, so you can see whether it fits in one day.
 
-Some sends are refused on the spot, with a message that says why: a send time less than a minute ahead, a sender domain that is not verified or is paused, and lists on which no contact can receive the campaign.
+Some sends are refused on the spot, with a message that says why: a send time less than a minute ahead, a sender domain that is not verified or is paused, lists and segments with no contact who can receive the campaign, and a [segment](/campaigns/segments#segment-states) that is still building or has failed.
 
 Changed your mind? Click **Cancel** on a scheduled campaign, or **Cancel Validation** while its lists are checked, and it returns to draft, where you can edit it and send it again. Through the API, use [Unschedule Campaign](/api-reference/campaigns/unschedule-campaign). A paused, canceled or failed campaign that sent nothing has a **Return to Draft** button. Once a campaign has started sending, it cannot go back to draft; to send the same email again, duplicate it.
 
@@ -77,7 +77,7 @@ Campaigns do not send faster than your account's [daily marketing limit](/campai
 
 ## After the Send
 
-Open the report for delivered, opens, clicks, unsubscribes, complaints and bounces. See [reports](/campaigns/reports). Unsubscribes and spam complaints that mailbox providers report back are processed for you: the contact leaves that list and gets no more campaigns from it.
+Open the report for delivered, opens, clicks, unsubscribes, complaints and bounces. See [reports](/campaigns/reports). Unsubscribes and spam complaints that mailbox providers report back are processed for you: the contact leaves that list and gets no more campaigns from it. A contact that the campaign reached through a segment gets no more marketing email from your account.
 
 ## Related Guides
 

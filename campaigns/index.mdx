@@ -13,19 +13,19 @@ Open **Marketing** in the dashboard to find it. Contacts, lists, campaign templa
 
 <Steps>
   <Step title="Make a list">
-    Import contacts from a CSV, add them by hand or push them from your own app. Give them the fields your campaigns need and filter on any of them. See [contacts and lists](/campaigns/contacts-and-lists).
+    Import contacts from a CSV, add them by hand or push them from your own app. Give them the fields your campaigns need and filter on any of them, or build a [segment](/campaigns/segments) that keeps the contacts that match your rules. See [contacts and lists](/campaigns/contacts-and-lists).
   </Step>
   <Step title="Design the email">
     Write it like a document in the Simple Editor, or build it from MJML blocks in the Advanced Editor. Start from scratch or from one of your [campaign templates](/campaigns/templates).
   </Step>
   <Step title="Create the campaign">
-    Set the sender, the lists, the subject and the preview text, and personalize the email with contact fields. See [creating a campaign](/campaigns/create).
+    Set the sender, the lists and segments, the subject and the preview text, and personalize the email with contact fields. See [creating a campaign](/campaigns/create).
   </Step>
   <Step title="Test, then send">
     Send yourself a test, fix the issues the campaign page lists, then send now or schedule it. AhaSend checks new and changed lists before they are sent to. See [testing, review and sending](/campaigns/test-and-send).
   </Step>
   <Step title="Read the report">
-    Delivered, opens, clicks, unsubscribes, complaints and bounces, per campaign and per list. See [reports](/campaigns/reports).
+    Delivered, opens, clicks, unsubscribes, complaints and bounces, per campaign and per list or segment. See [reports](/campaigns/reports).
   </Step>
 </Steps>
 
@@ -39,7 +39,7 @@ You do not have to configure anything for this. Any verified sending domain of y
 
 - Every campaign carries an unsubscribe link and one-click unsubscribe headers, as Gmail and Yahoo expect from bulk senders. A campaign without the link cannot be sent.
 - Before a campaign to a new or changed list goes out, AhaSend checks the list and the content. Addresses that cannot receive mail are left out, a list with too many bad addresses pauses the campaign, and a campaign that looks like spam, phishing or cold outreach is held for review. See [review](/campaigns/test-and-send#review).
-- Unsubscribes and spam complaints are processed for you: the contact gets no more campaigns from that list, and re-importing an old CSV never puts anyone back on a list they left.
+- Unsubscribes and spam complaints are processed for you: the contact gets no more campaigns from that list, or, after a campaign sent through a segment, no more marketing email at all. Re-importing an old CSV never puts anyone back on a list they left.
 
 ## Where Things Are in the Dashboard
 
@@ -47,12 +47,13 @@ You do not have to configure anything for this. Any verified sending domain of y
 |---|---|
 | Marketing > Campaigns | Your campaigns, their status and their reports |
 | Marketing > Lists | Lists, with the number of contacts a campaign would reach |
+| Marketing > Segments | Segments, with their members and the number a campaign would reach |
 | Marketing > Contacts | All contacts of the account, with their fields, lists and history |
 | Marketing > Templates | Your catalog of campaign templates |
 | Marketing > Contact fields | The custom fields of your contacts |
 
 ## Related Guides
 
-- [Contacts and lists](/campaigns/contacts-and-lists), [Campaign templates](/campaigns/templates), [Creating a campaign](/campaigns/create).
+- [Contacts and lists](/campaigns/contacts-and-lists), [Segments](/campaigns/segments), [Campaign templates](/campaigns/templates), [Creating a campaign](/campaigns/create).
 - [Testing, review and sending](/campaigns/test-and-send), [Reports](/campaigns/reports), [Daily marketing limit](/campaigns/marketing-limit).
 - [Unsubscribe links for API and SMTP mail](/campaigns/unsubscribe), [API, CLI and MCP](/campaigns/api-and-automation), [Plans and limits](/facts).

@@ -103,6 +103,7 @@
             "pages": [
               "campaigns/index",
               "campaigns/contacts-and-lists",
+              "campaigns/segments",
               "campaigns/templates",
               "campaigns/create",
               "campaigns/test-and-send",
@@ -263,6 +264,21 @@
                   "api-reference/lists/batch-add-list-contacts",
                   "api-reference/lists/delete-list-contact",
                   "api-reference/lists/get-contact-lists"
+                ]
+              },
+              {
+                "group": "Segments",
+                "icon": "filter",
+                "pages": [
+                  "api-reference/segments/overview",
+                  "api-reference/segments/preview-segment",
+                  "api-reference/segments/create-segment",
+                  "api-reference/segments/get-segment",
+                  "api-reference/segments/get-segments",
+                  "api-reference/segments/update-segment",
+                  "api-reference/segments/delete-segment",
+                  "api-reference/segments/get-segment-contacts",
+                  "api-reference/segments/get-contact-segments"
                 ]
               },
               {

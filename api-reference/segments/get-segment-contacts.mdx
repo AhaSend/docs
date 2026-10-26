@@ -1,0 +1,21 @@
+---
+title: "List the Contacts in a Segment via the API"
+sidebarTitle: "List Segment Contacts"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/segments/{segment_id}/contacts"
+description: "List the members of an AhaSend segment, the contacts that match its rules, with the email address of each and the time it joined the segment."
+---
+
+
+The AhaSend API returns the members of one segment, by contact ID, lowest first. Access requires `segments:read` and `contacts:read`, because the members are contacts.
+
+Each item gives the `contact_id`, the email address of the contact and `entered_at`, the time it became a member.
+
+- A member matches the rules whatever its consent, so a campaign can reach fewer contacts than this operation returns. See [Members and reachable contacts](/api-reference/segments/overview#members-and-reachable-contacts).
+- While the segment is `building`, the members may still follow its previous rules. See [States](/api-reference/segments/overview#states).
+
+Pages use cursors: send `after` or `before`, not both. See [Pagination](/api-reference/segments/overview#pagination).
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Segment](/api-reference/segments/get-segment).
+- [Segments API overview](/api-reference/segments/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).
