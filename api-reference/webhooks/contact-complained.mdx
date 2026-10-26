@@ -1,0 +1,30 @@
+---
+title: "contact.complained Webhook Event"
+sidebarTitle: "Contact Complained"
+openapi: "/webhooks.yaml webhook contact.complained"
+description: "The contact.complained webhook fires when an AhaSend contact reports a campaign email as spam. The payload holds the complaint report and the campaign."
+---
+
+
+AhaSend sends this event when a contact reports a campaign email as spam: a membership's subscription status becomes `complained`, or a complaint about a campaign sent to a segment is recorded for the campaign's recipient.
+
+`data.complaint` is the spam complaint report, as on [`message.complained`](/api-reference/webhooks/message-complained), and `data.campaign_id` is the campaign of the reported email. For a membership, `data.previous_subscription_status` is the status before the change.
+
+A recipient of a campaign sent to a segment who reports it as spam unsubscribes from all lists, so the event has `data.list` and `data.list_contact` set to `null`, and `data.segment_id` is the segment. This event is sent also when the contact is already unsubscribed, once for each campaign that the contact reports. `data.contact.unsubscribed` says whether the contact is unsubscribed from all lists after the complaint.
+
+**No event**: A complaint about a membership that is already `complained`.
+
+**Setting**: `on_contact_complained` (Contact Reported Spam in the dashboard).
+
+**Requirements**:
+- Your account has the marketing features. Contact events cannot be turned on without them.
+- A webhook with this event on needs an API key with `contacts:read` and `lists:read` when you create or update it through the API. See [contact events](/api-reference/webhooks#contact-events).
+
+**When it's sent**: When a spam complaint about a campaign email changes the contact's membership of the campaign's list, or is recorded for a recipient of a campaign sent to a segment.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).

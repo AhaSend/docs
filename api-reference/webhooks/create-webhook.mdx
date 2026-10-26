@@ -12,6 +12,15 @@ every supplied domain. A `global` webhook requires
 `webhooks:write:all`; supplied domains are accepted but ignored, and
 the response contains `domains: []`.
 
+Contact events (the `on_contact_*` fields) are available only to
+accounts with the marketing features: turning one on for another
+account returns HTTP 400. A webhook with any contact event on needs an
+API key with `contacts:read`, and with `lists:read` as well for
+`on_contact_added_to_list`, `on_contact_removed_from_list`,
+`on_contact_subscribed`, `on_contact_unsubscribed`, and
+`on_contact_complained`; without them the request returns HTTP 403.
+The marketing check runs first.
+
 ## Related Guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).

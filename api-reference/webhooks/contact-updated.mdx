@@ -1,0 +1,38 @@
+---
+title: "contact.updated Webhook Event"
+sidebarTitle: "Contact Updated"
+openapi: "/webhooks.yaml webhook contact.updated"
+description: "The contact.updated webhook fires when a field of an AhaSend contact changes. It lists the changed fields. Validation results and imports send no event."
+---
+
+
+AhaSend sends this event when a field of a contact changes: `email`, `first_name`, `last_name`, `status`, `status_reason`, or `attributes`.
+
+`data.contact` is the contact as it was right after the change. `data.changed_fields` lists the fields whose values changed; a change to any key of `attributes` lists `attributes`. In rare cases, when two batch requests write the same new contact at the same time, `changed_fields` lists every field that the later request set.
+
+A bounce or an expired message that disables the contact sends this event with `origin: system`.
+
+**No event**:
+- A write that changes no field, or that changes only `updated_at`
+- The unsubscribe from all lists (`unsubscribed` and `unsubscribed_at`), which sends [`contact.unsubscribed`](/api-reference/webhooks/contact-unsubscribed) or [`contact.subscribed`](/api-reference/webhooks/contact-subscribed)
+- Email validation results (`validation_status` and `last_validated_at`). A validation that blocks a contact changes its `status`, and that sends this event.
+- A CSV import, and removing a contact field from all contacts
+
+<Warning>
+  A handler that writes the contact back through the API receives its own write as a new `contact.updated` event. See [prevent loops](/api-reference/webhooks#origin).
+</Warning>
+
+**Setting**: `on_contact_updated` (Contact Updated in the dashboard).
+
+**Requirements**:
+- Your account has the marketing features. Contact events cannot be turned on without them.
+- A webhook with this event on needs an API key with `contacts:read` when you create or update it through the API. See [contact events](/api-reference/webhooks#contact-events).
+
+**When it's sent**: When a field of a contact changes.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).

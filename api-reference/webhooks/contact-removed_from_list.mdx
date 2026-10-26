@@ -1,0 +1,28 @@
+---
+title: "contact.removed_from_list Webhook Event"
+sidebarTitle: "Contact Removed from List"
+openapi: "/webhooks.yaml webhook contact.removed_from_list"
+description: "The contact.removed_from_list webhook fires when an AhaSend contact is removed from a list. Deleting the contact or the list sends no event. Payload."
+---
+
+
+AhaSend sends this event when a contact is removed from a list.
+
+`data.list` is the list. `data.list_contact` is the membership as it was right before the removal.
+
+**No event**: Deleting the contact ([`contact.deleted`](/api-reference/webhooks/contact-deleted) says that its memberships are gone too), and deleting the list (the list's memberships are kept).
+
+**Setting**: `on_contact_removed_from_list` (Contact Removed from List in the dashboard).
+
+**Requirements**:
+- Your account has the marketing features. Contact events cannot be turned on without them.
+- A webhook with this event on needs an API key with `contacts:read` and `lists:read` when you create or update it through the API. See [contact events](/api-reference/webhooks#contact-events).
+
+**When it's sent**: When a contact is removed from a list.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).

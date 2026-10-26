@@ -1,0 +1,24 @@
+---
+title: "message.complained Webhook Event"
+sidebarTitle: "Complained"
+openapi: "/webhooks.yaml webhook message.complained"
+description: "The message.complained webhook fires when a mailbox provider reports an AhaSend campaign email as spam. The payload holds the feedback type and reporter."
+---
+
+
+AhaSend sends this event when the recipient's mailbox provider reports your campaign email as spam through its feedback loop. This event is sent for campaign email only. A spam complaint about a transactional email suppresses the address and sends [`suppression.created`](/api-reference/webhooks/suppression-created).
+
+`data.complaint.feedback_type` is the feedback type of the report, `abuse` or `fraud`. `data.complaint.reporter` is the feedback loop that sent the report. AhaSend can add feedback loops at any time, so keep a fallback for a value you do not know. `data.campaign_id`, `data.list_id` and `data.segment_id` say which campaign sent the email and how it reached the recipient.
+
+**Repeats**: AhaSend sends this event for every complaint report that it matches to the message, also when the recipient is already unsubscribed. Drop the repeats by `type` and `data.id`. The [contact events](/api-reference/webhooks/contact-complained) of the same report are sent only when the report changes something, except for a campaign sent to a segment.
+
+**Setting**: `on_complained` (Message Reported as Spam in the dashboard).
+
+**When it's sent**: When AhaSend receives a spam complaint report and matches it to the message.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Suppression durations](/bounces#suppression-duration).

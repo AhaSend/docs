@@ -169,7 +169,6 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 #### Bug Fixes
 
-- **Fixed click webhooks for campaign emails never being delivered.** `message.clicked` events for campaign sends were dropped; only clicks in transactional emails produced webhooks. They are now delivered.
 - **Fixed transactional `message.clicked` webhooks always reporting `is_bot: false` and an empty `user_agent`.** Both now carry the real values recorded at click time.
 - **Fixed campaign open webhooks not reporting the bot-detection result.**
 - **Fixed cancelling a scheduled message through API v2**, which returned a `500` error instead of cancelling the send. Cancellation now also covers messages from domains on a dedicated IP pool and sandbox messages.

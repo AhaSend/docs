@@ -16,6 +16,19 @@ A domain-scoped key must be authorized for the existing webhook and
 every newly supplied domain; changing to global requires
 `webhooks:write:all`.
 
+Turning on a contact event (the `on_contact_*` fields) for an account
+without the marketing features returns HTTP 400. A webhook with any
+contact event on needs an API key with `contacts:read`, and with
+`lists:read` as well for `on_contact_added_to_list`,
+`on_contact_removed_from_list`, `on_contact_subscribed`,
+`on_contact_unsubscribed`, and `on_contact_complained`. This check runs
+against the webhook as it will be after the update, so every update of
+an enabled webhook that keeps a contact event on needs these scopes,
+also an update of only `name`, `url`, `scope`, `domains`, or
+`origins`, and returns HTTP 403 without them. A key without them can
+only turn those events off or disable the webhook (`enabled: false`);
+turning it on again needs the scopes. The marketing check runs first.
+
 **Note:** The webhook secret is not updatable
 
 ## Related Guides

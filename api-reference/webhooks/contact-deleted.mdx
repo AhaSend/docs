@@ -1,0 +1,26 @@
+---
+title: "contact.deleted Webhook Event"
+sidebarTitle: "Contact Deleted"
+openapi: "/webhooks.yaml webhook contact.deleted"
+description: "The contact.deleted webhook fires when an AhaSend contact is deleted, with its list memberships. The payload holds the contact as it was before the delete."
+---
+
+
+AhaSend sends this event when a contact is deleted.
+
+`data.contact` is the contact as it was right before the delete. The contact's list memberships are deleted with it, and they send no [`contact.removed_from_list`](/api-reference/webhooks/contact-removed_from_list).
+
+**Setting**: `on_contact_deleted` (Contact Deleted in the dashboard).
+
+**Requirements**:
+- Your account has the marketing features. Contact events cannot be turned on without them.
+- A webhook with this event on needs an API key with `contacts:read` when you create or update it through the API. See [contact events](/api-reference/webhooks#contact-events).
+
+**When it's sent**: When a contact is deleted.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).

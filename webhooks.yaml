@@ -656,7 +656,7 @@ webhooks:
         Triggered when a suppression is created for an email address, or when an existing suppression gets a new reason.
 
         **Why suppressions are created**:
-        - Multiple hard bounces from the same email address (`origin: system`)
+        - A hard bounce from the email address (`origin: system`)
         - Repeated soft bounces over time (`origin: system`)
         - The recipient reports a transactional email as spam (reason `FBL Complaint Report`, `origin: recipient`)
         - The recipient unsubscribes through the unsubscribe link of a transactional email (reason `Unsubscribed`, `origin: recipient`)

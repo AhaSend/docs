@@ -1,0 +1,33 @@
+---
+title: "contact.unsubscribed Webhook Event"
+sidebarTitle: "Contact Unsubscribed"
+openapi: "/webhooks.yaml webhook contact.unsubscribed"
+description: "The contact.unsubscribed webhook fires when an AhaSend contact unsubscribes from a list or from all lists, for example through a campaign's link."
+---
+
+
+AhaSend sends this event when a membership's subscription status becomes `unsubscribed`, or when the contact's unsubscribe from all lists is set (`unsubscribed` changes to `true`).
+
+A recipient who unsubscribes from a campaign email sends this event with `origin: recipient` and the `data.campaign_id` of the campaign. The campaign email also sends its own [`message.unsubscribed`](/api-reference/webhooks/message-unsubscribed). For a membership, `data.previous_subscription_status` is the status before the change. For the unsubscribe from all lists, `data.list` and `data.list_contact` are `null`.
+
+A recipient of a campaign sent to a segment unsubscribes from all lists, so the event has `data.list` and `data.list_contact` set to `null`, and `data.segment_id` is the segment.
+
+**No event**:
+- An unsubscribe of a membership or a contact that is already unsubscribed
+- A change of a membership's status to `unconfirmed`
+- A new membership, which sends `contact.added_to_list`, and a new contact, which sends `contact.created`
+
+**Setting**: `on_contact_unsubscribed` (Contact Unsubscribed in the dashboard).
+
+**Requirements**:
+- Your account has the marketing features. Contact events cannot be turned on without them.
+- A webhook with this event on needs an API key with `contacts:read` and `lists:read` when you create or update it through the API. See [contact events](/api-reference/webhooks#contact-events).
+
+**When it's sent**: When a contact unsubscribes from a list, or from all lists.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).

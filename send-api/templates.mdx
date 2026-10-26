@@ -38,14 +38,14 @@ You can also create a template through the API with [Create Template](/api-refer
 
 Write a variable in the design as `{{ first_name }}`, or in AhaML as a `Var` tag (see [Variables](/send-api/ahaml#variables)). The templating language is [MiniJinja](https://github.com/mitsuhiko/minijinja), the same as for [Create Message](/send-api/send-email).
 
-- **Required or optional.** Every variable is required unless the design gives it a fallback, for example `{{ first_name|default("there") }}`, or a non-empty `fallback` on an AhaML `Var`. The `required` attribute of a `Var` does not make it optional. The template page and [Get Template](/api-reference/templates/get-template) list each variable with `required: true` or `false`.
+- **Required or optional.** Every variable is required unless the design gives it a fallback, for example `{{ first_name|default("there") }}`, or a non-empty `fallback` on an AhaML `Var`. The `required` attribute of a `Var` does not make it optional. The template page lists each variable, and [Get Published Template](/api-reference/templates/get-published-template) returns the variables of the copy that sends use, each with `required: true` or `false`. [Get Template](/api-reference/templates/get-template) returns the draft's variables while a draft exists.
 - **Escaping.** In the HTML body, every value is HTML-escaped. To insert a value as HTML, write `{{ content|safe }}` in the design. The subject, the headers and the text body get values as they are.
 - **Reserved names.** AhaSend supplies `email` (the recipient's address) and, when the design uses it, `unsubscribe_url`. A value you give for these is replaced.
 - **Subject and headers.** A `{{ variable }}` in the subject or in a custom header resolves from the same values. A variable with no value becomes empty.
 
 ### Kinds of Variables
 
-Each variable in `variables` on [Get Template](/api-reference/templates/get-template) has a `kind` that says what to send for it:
+Each variable in `variables` on [Get Published Template](/api-reference/templates/get-published-template) has a `kind` that says what to send for it:
 
 | `kind` | What to send | Used in the design like |
 | --- | --- | --- |

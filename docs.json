@@ -403,14 +403,17 @@
                   "api-reference/webhooks/message-bounced",
                   "api-reference/webhooks/message-suppressed",
                   "api-reference/webhooks/message-opened",
-                  "api-reference/webhooks/message-clicked"
+                  "api-reference/webhooks/message-clicked",
+                  "api-reference/webhooks/message-unsubscribed",
+                  "api-reference/webhooks/message-complained"
                 ]
               },
               {
                 "group": "Suppression Events",
                 "icon": "ban",
                 "pages": [
-                  "api-reference/webhooks/suppression-created"
+                  "api-reference/webhooks/suppression-created",
+                  "api-reference/webhooks/suppression-deleted"
                 ]
               },
               {
@@ -418,6 +421,20 @@
                 "icon": "globe",
                 "pages": [
                   "api-reference/webhooks/domain-dns_error"
+                ]
+              },
+              {
+                "group": "Contact Events",
+                "icon": "address-book",
+                "pages": [
+                  "api-reference/webhooks/contact-created",
+                  "api-reference/webhooks/contact-updated",
+                  "api-reference/webhooks/contact-deleted",
+                  "api-reference/webhooks/contact-added_to_list",
+                  "api-reference/webhooks/contact-removed_from_list",
+                  "api-reference/webhooks/contact-subscribed",
+                  "api-reference/webhooks/contact-unsubscribed",
+                  "api-reference/webhooks/contact-complained"
                 ]
               }
             ]

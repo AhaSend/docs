@@ -1,0 +1,28 @@
+---
+title: "contact.subscribed Webhook Event"
+sidebarTitle: "Contact Subscribed"
+openapi: "/webhooks.yaml webhook contact.subscribed"
+description: "The contact.subscribed webhook fires when an AhaSend list membership becomes confirmed, or a contact's unsubscribe from all lists is cleared. Payload."
+---
+
+
+AhaSend sends this event when a membership's subscription status becomes `confirmed`, or when the contact's unsubscribe from all lists is cleared (`unsubscribed` changes to `false`).
+
+For a membership, `data.previous_subscription_status` is the status before the change. For the unsubscribe from all lists, `data.list` and `data.list_contact` are `null`.
+
+**No event**: A new membership, which sends [`contact.added_to_list`](/api-reference/webhooks/contact-added_to_list).
+
+**Setting**: `on_contact_subscribed` (Contact Subscribed in the dashboard).
+
+**Requirements**:
+- Your account has the marketing features. Contact events cannot be turned on without them.
+- A webhook with this event on needs an API key with `contacts:read` and `lists:read` when you create or update it through the API. See [contact events](/api-reference/webhooks#contact-events).
+
+**When it's sent**: When a contact's membership of a list becomes `confirmed`, or when its unsubscribe from all lists is cleared.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview).
