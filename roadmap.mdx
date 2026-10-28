@@ -7,7 +7,7 @@ sidebarTitle: "Roadmap"
 
 The AhaSend roadmap shows active work, planned improvements and shipped features, with links to the available documentation.
 
-<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 20 October 2026</p>
+<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 28 October 2026</p>
 
 <div className="rm">
   <section>
@@ -16,6 +16,36 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
     </div>
 
     <div className="rm-list">
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/campaigns/segments">Segments</a> <span className="rm-tag is-new">New feature</span></p>
+          <p>Build an audience from rules on contact fields, list membership and status, and send a campaign to the segment instead of a list. A segment stays current: contacts that match later are included in the next send.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/send-api/ahaml">AhaML: Simple Editor designs through the API</a> <span className="rm-tag is-new">New feature</span></p>
+          <p>Read and write Simple Editor designs as AhaSend Markup, an XML text form, in <code>content.markup</code> of the template and campaign template endpoints. Advanced Editor designs stay MJML. The MCP server uses it to build and edit templates for you.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="https://swoosh.hexdocs.pm/Swoosh.Adapters.AhaSend.html">Swoosh adapter for Elixir and Phoenix</a> <span className="rm-tag is-new">New feature</span></p>
+          <p>Swoosh 1.27 ships a native AhaSend adapter: three lines of config in a Phoenix project, with tags, tracking, retention, scheduling, sandbox and idempotency keys as provider options.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
 
@@ -52,36 +82,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title"><a href="/scale/sub-accounts">Zero-day retention for sub accounts</a> <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Sub accounts inherit the option to set message data retention to zero when the parent account is allowed to.</p>
-          <span className="rm-date">Q4 2026</span>
-        </div>
-      </div>
-
-      <div className="rm-card is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title"><a href="https://ahasend.com/campaign-builder">Campaign Builder</a> <span className="rm-tag is-product">New product</span></p>
-          <p>Send newsletters and campaigns to your contact lists with the Simple Editor or the Advanced Editor, reusable templates, contacts and lists in the Management API and a report per campaign. Included in every plan.</p>
-          <span className="rm-date">Q4 2026</span>
-        </div>
-      </div>
-
-      <div className="rm-card is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title"><a href="/domains">Configuring Marketing domains</a> <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Mark a domain as Marketing so its mail goes out through dedicated marketing pools, kept apart from your transactional traffic, with List-Unsubscribe headers added automatically.</p>
-          <span className="rm-date">Q4 2026</span>
-        </div>
-      </div>
-
-      <div className="rm-card is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title"><a href="/send-api/credentials">Simplified credentials and API keys</a> <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Credentials and API keys combined into one place, with v2 keys as the default.</p>
           <span className="rm-date">Q4 2026</span>
         </div>
       </div>
@@ -178,15 +178,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">SEPA payments <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Pay your AhaSend invoices by SEPA direct debit.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
           <p className="rm-title">Message count on the search page <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Show a result count when searching your messages.</p>
         </div>
@@ -232,8 +223,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">See your account rate limit <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Show the current sending rate limit for your account in the dashboard.</p>
+          <p className="rm-title">Email Address Validation API endpoint <span className="rm-tag is-new">New feature</span></p>
+          <p>Validate an email address in real time through the Management API, to catch typos and reduce bounces before you send.</p>
         </div>
       </div>
 
@@ -241,8 +232,17 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Email Address Validation API endpoint <span className="rm-tag is-new">New feature</span></p>
-          <p>Validate an email address in real time through the Management API, to catch typos and reduce bounces before you send.</p>
+          <p className="rm-title">SEPA payments <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Pay your AhaSend invoices by SEPA direct debit.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">See your account rate limit <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Show the current sending rate limit for your account in the dashboard.</p>
         </div>
       </div>
 
@@ -421,10 +421,40 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-shipped" id="shipped">Shipped (19)</h2>
+      <h2 className="rm-badge is-shipped" id="shipped">Shipped (22)</h2>
     </div>
 
     <div className="rm-list">
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="https://ahasend.com/campaign-builder">Campaign Builder</a> <span className="rm-tag is-product">New product</span></p>
+          <p>Send newsletters and campaigns to your contact lists with the Simple Editor or the Advanced Editor, reusable templates, contacts and lists in the Management API and a report per campaign. Included in every plan.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/domains">Configuring Marketing domains</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Mark a domain as Marketing so its mail goes out through dedicated marketing pools, kept apart from your transactional traffic, with List-Unsubscribe headers added automatically.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/send-api/credentials">Simplified credentials and API keys</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Credentials and API keys combined into one place, with v2 keys as the default.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
 
@@ -505,7 +535,9 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         </div>
       </div>
 
-                              <div className="rm-card is-shipped">
+                        
+
+      <div className="rm-card is-shipped">
         <div className="rm-accent" />
 
         <div>
@@ -515,7 +547,9 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         </div>
       </div>
 
-                  <div className="rm-card is-shipped">
+            
+
+      <div className="rm-card is-shipped">
         <div className="rm-accent" />
 
         <div>
