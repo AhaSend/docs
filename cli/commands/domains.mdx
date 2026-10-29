@@ -63,7 +63,7 @@ Without the domain argument, the command asks for it when stdin is a terminal. W
 The command prints the domain on stdout. The records the domain needs go to stderr, as setup instructions. Each record is marked required or optional. Add every required record. Add an optional record only for the feature its note names: for example, the MX record sends inbound email to AhaSend for [inbound routes](/cli/commands/routes), which changes where email to that name is delivered. For each record, see [domain setup](/domains).
 
 ```bash
-# Marketing domain with a custom DKIM selector (Platform Partner accounts only)
+# Marketing domain with a custom DKIM selector (DNS whitelabel, Max plan)
 ahasend domains create news.example.com --sending-type marketing --dkim-selector news
 
 # Custom tracking and return-path subdomains
@@ -160,7 +160,7 @@ ahasend domains update example.com --dkim-selector ""
 ```
 
 - Each subdomain must be one DNS label: 1-63 letters, digits and hyphens, without a leading or trailing hyphen. Subdomains lock after DNS verification; to change a locked subdomain, contact support.
-- `--dkim-selector` works on Platform Partner accounts only. An empty value clears it. The selector also locks after DNS verification, so the empty-value example works only on a domain that is not verified; to change a locked selector, contact support. The selector cannot change while a DKIM key rotation is in progress.
+- `--dkim-selector` works on accounts with DNS whitelabel (Max plan). An empty value clears it. The selector also locks after DNS verification, so the empty-value example works only on a domain that is not verified; to change a locked selector, contact support. The selector cannot change while a DKIM key rotation is in progress.
 - `--dkim-rotation-interval` takes 30 to 180 days.
 - `--sending-type marketing` needs marketing features on your account, as [Create Domain](#create-domain) describes. A sending type change applies to new messages within five minutes.
 
@@ -221,9 +221,9 @@ These flags come from the CLI's `--help`. All commands also accept the [global f
 
 | Flag | Description and default |
 |---|---|
-| `--dkim-private-key-file string` | File with the domain's DKIM private key, an RSA key in PEM form of at least 1024 bits (Platform Partner accounts only) |
+| `--dkim-private-key-file string` | File with the domain's DKIM private key, an RSA key in PEM form of at least 1024 bits (DNS whitelabel, Max plan) |
 | `--dkim-rotation-interval int` | DKIM rotation interval in days (managed DNS domains on eligible plans only) |
-| `--dkim-selector string` | Custom DKIM selector (Platform Partner accounts only) |
+| `--dkim-selector string` | Custom DKIM selector (DNS whitelabel, Max plan) |
 | `--format string` | DNS record format: `bind`, `cloudflare` or `terraform` (terraform for Cloudflare provider v5); not with `--no-dns-help` or `--output json` |
 | `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--media-subdomain string` | Custom media subdomain |
@@ -259,7 +259,7 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | Flag | Description and default |
 |---|---|
 | `--dkim-rotation-interval int` | DKIM rotation interval in days (managed DNS domains on eligible plans only) |
-| `--dkim-selector string` | Custom DKIM selector; an empty value clears it (Platform Partner accounts only) |
+| `--dkim-selector string` | Custom DKIM selector; an empty value clears it (DNS whitelabel, Max plan) |
 | `--media-subdomain string` | Custom media subdomain |
 | `--return-path-subdomain string` | Custom return-path subdomain |
 | `--sending-type string` | Sending type: `transactional` or `marketing` |
