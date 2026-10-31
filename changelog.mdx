@@ -58,7 +58,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **A list's subscriber count shows only the contacts a campaign can reach.** Bounced, invalid and unsubscribed contacts are left out, in the dashboard and in the API's `contact_count`. The Lists page also shows the total number of contacts on each list.
 - **Unsubscribes and spam reports are protected suppressions.** [Wiping suppressions](/api-reference/suppressions/wipe-suppressions) keeps them, and the dashboard marks them as protected. You can still delete them one at a time.
 - **Renaming a contact field changes only its label.** Its key stays the same. Templates, saved searches and the API use the key.
-- **Pause notices explain why.** When an account is paused, the dashboard and the email give the reason and the next steps.
+- **Pause notices explain why.** When an account is paused, the dashboard and the email give the reason and the next steps. Only a pause for marketing email from a transactional domain asks you to change a domain's [sending type](/domains#sending-type). A pause for other content, such as phishing or cold email, does not.
 - **Some campaign actions are refused earlier, with a message that says why:** scheduling less than a minute ahead, scheduling when the sender domain is not verified or is paused, and scheduling when no contact on the chosen lists can get the campaign. A reply-to address must be a plain address, without a name.
 - **Messages record their template.** In API v2, a message sent from a transactional template has its `template_id`.
 - **The contact CSV export writes dates in your time zone, with the UTC offset.** If your own code reads this file, check how it reads dates.
@@ -77,6 +77,9 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Contact dates are read day first.** Imports and the dashboard read `05/12/1990` as 5 December 1990, not 12 May. A date that only works month first, such as `12/25/1990`, is no longer saved. Dates such as `1990-12-05` are read as before.
 - **The Simple Editor no longer lets you add HTML blocks.** HTML blocks that a design already has still show, send, and can be edited or deleted.
 - **Opening the logout address asks you to confirm.** It shows a page with a **Log out** button. The **Log out** item in the menu works as before.
+- **A campaign that is not approved in [review](/campaigns/test-and-send#review) says why, and what to do next.** The email and the campaign page give the reason (no consent from the contacts, poor list quality, the content, or another reason), the reviewer's note and the next steps. The campaign page also has a **Contact Support** button. For a list without consent, a change to the content does not change the decision. The email's subject is `Your campaign "<name>" was not approved`.
+- **A domain with no mail server blocks its contacts only in the account whose list check found it.** List checks no longer add these addresses to AhaSend's list of addresses that cannot get email, which applies to every account, because a domain can add a mail server later. The addresses that list checks added to it for this reason are removed. Contacts that were already blocked stay blocked in their own account.
+- **The CSV import forms state the consent rule.** Import only people who agreed to get your email. Bought, scraped or copied lists are not permitted.
 
 #### Improvements
 
@@ -89,6 +92,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **CSV contact imports accept an `Email Address` column**, as in Mailchimp exports. Before, the column had to be called `email`. From a Mailchimp export, import only the file of subscribed contacts. The unsubscribed and cleaned files have no status column, so their contacts would be imported as subscribed.
 - **When MJML cannot be built, the Advanced Editor tells you why**, with the error from the MJML compiler.
 - **Dark mode is easier to read.** Links and blue buttons, including disabled ones, are lighter, and selected text is visible. This applies in dark mode and on the dark sidebar and page headers. The stat cards on a campaign report all have the same height.
+- **The dashboard says why a contact is blocked.** The contact page shows the reason in plain words. On the contacts list and on a list's page, hover over the **Blocked** badge to see it.
 
 #### Bug Fixes
 
@@ -125,6 +129,8 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Fixed a transactional template's `variables` missing names** that are only used in show/hide rules or repeat blocks.
 - **Fixed the Simple Editor's HTML block preview cutting off wide emails**, or staying empty while a slow image loaded. The preview does not run scripts.
 - **Fixed a paused account not being able to set the sending type of its domains**, which the pause notice asks it to do.
+- **Fixed campaign list checks treating a failed DNS lookup as a domain with no mail server.** A DNS timeout or server error no longer blocks the contact. Only a clear answer that the domain has no mail server does.
+- **Fixed sub-account usage counting the last 30 days instead of the current billing period.** [Get Sub-Accounts Usage](/api-reference/sub-accounts/get-sub-accounts-usage) and the dashboard now count from the start of the parent account's billing period. Each account changes over at its next renewal.
 
 </Update>
 
