@@ -107,6 +107,7 @@
               "campaigns/templates",
               "campaigns/create",
               "campaigns/test-and-send",
+              "campaigns/who-can-i-send-to",
               "campaigns/reports",
               "campaigns/marketing-limit",
               "campaigns/unsubscribe",

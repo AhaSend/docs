@@ -1,0 +1,71 @@
+---
+title: "Who Can I Send Marketing Email To?"
+sidebarTitle: "Who can I send to"
+description: "Who may receive your campaigns on AhaSend: contacts who opted in with you. What is fine, what is not, what to do for prospecting, and how double opt-in works."
+icon: "user-check"
+---
+
+Campaigns on AhaSend go to people who asked to hear from you. This page explains what that means in practice, what the list review looks for, what to do when you want to reach new companies, and how to run double opt-in on your lists.
+
+## The Rule
+
+You may send a campaign to a contact when that contact has a relationship with you and gave you their address for this purpose: they signed up on your site, created an account, bought from you, or asked to be kept informed. You should be able to show, for every contact, when and how they opted in.
+
+The rule is about the relationship with the recipient, not about the email. A friendly tone, a plain design or an unsubscribe link does not turn a list of strangers into subscribers, and the [review](/campaigns/test-and-send#review) judges the list, not the wording.
+
+Transactional email to your own users, such as password resets, receipts and notifications, is never affected by this page.
+
+## What Is Fine
+
+- Newsletter subscribers who filled in your sign-up form.
+- Users of your product or service, and customers who bought from you, as long as they can opt out.
+- People who gave you a business card or ticked a box at your stand or event and agreed to hear from you.
+- Leads who replied to you, booked a demo or asked for a quote.
+- A list you bring over from another email provider, when the contacts on it opted in with you there.
+
+## What Is Not Fine
+
+- Purchased, rented or borrowed lists, whoever sold them and whatever they promise about consent.
+- Addresses collected from websites, directories, trade registers, public registries or LinkedIn, or scraped by a tool.
+- Lead databases, data enrichment exports and "verified B2B contacts".
+- Co-registration: people who signed up for something else and were passed on to you.
+- Role addresses such as `info@`, `sales@` or `legal@` of companies you have no relationship with, and registered-mail addresses that companies must publish by law.
+- Anyone who unsubscribed, complained or asked you to stop.
+
+A list like this is cold outreach, and AhaSend does not accept it. The campaign is held, and the account can be suspended on repeat. See the [terms of service](https://ahasend.com/terms).
+
+## What Happens at Review
+
+Before a campaign goes out, AhaSend checks new and changed lists: a sample of the addresses is validated, and the content is checked for spam, phishing and cold outreach. A list that fails is paused with the reason on the campaign page; a borderline list waits for a person to look at it, usually within 1 to 2 business days. Proof of consent can be requested for any list. The full rules are on [testing, review and sending](/campaigns/test-and-send#review).
+
+A validation that passes is not permission. A list of real, deliverable addresses that never opted in is still cold outreach.
+
+## Prospecting: What To Do Instead
+
+Reaching companies you have no relationship with yet is sales, and email campaigns are the wrong tool for it. What works, and keeps your sending reputation intact:
+
+- **LinkedIn and personal outreach.** One-to-one messages from a person, written for the recipient.
+- **Outreach tools built for it.** Cold-email tools send from mailboxes made for that purpose, with their own warm-up and reputation, separate from the platform your customers' email runs on.
+- **Ads and content.** Let the people who are interested come to you.
+- **Events and partnerships.** Collect addresses from people who talk to you.
+
+Whoever replies, books a call or signs up has started a relationship with you. Bring those people into a list and send them your campaigns.
+
+Personal, hand-written email from your own people to contacts they have a business reason to write to is fine through the transactional API. It is bulk, list-based sending to people who did not ask for it that this page is about.
+
+## Double Opt-In
+
+Double opt-in means a new subscriber confirms their address before they receive anything: they sign up, you send one confirmation email, and they are subscribed when they click the link in it. It keeps typos and other people's addresses off your list, it gives you a timestamped record of consent, and in several European countries it is what the regulator expects.
+
+AhaSend lists are single opt-in by default, and each list membership has a `subscription_status` that makes double opt-in simple to build:
+
+1. When someone signs up, add them to the list with `subscription_status: "unconfirmed"`. An unconfirmed contact is on the list but does not receive campaigns.
+2. Send a confirmation email through the API or SMTP with a link to your own site. Make the link unique per contact.
+3. When the link is clicked, set the membership to `confirmed` with [Add or Update a List Contact](/api-reference/lists/upsert-list-contact). AhaSend records `subscribed_at`, which is your proof of consent.
+
+Contacts that never click stay unconfirmed and never receive a campaign. Keep a copy of the sign-up source and time on the contact, for example in a custom field, so you can show where every subscriber came from. See [contacts and lists](/campaigns/contacts-and-lists) for the membership statuses.
+
+## Related Guides
+
+* [Testing, review and sending](/campaigns/test-and-send), [Contacts and lists](/campaigns/contacts-and-lists), [Unsubscribe links](/campaigns/unsubscribe).
+* [Terms of service](https://ahasend.com/terms), [Campaign Builder overview](/campaigns).
