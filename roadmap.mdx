@@ -7,7 +7,7 @@ sidebarTitle: "Roadmap"
 
 The AhaSend roadmap shows active work, planned improvements and shipped features, with links to the available documentation.
 
-<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 28 October 2026</p>
+<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 5 November 2026</p>
 
 <div className="rm">
   <section>
@@ -90,7 +90,7 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-active" id="active">Active (1)</h2>
+      <h2 className="rm-badge is-active" id="active">Active (2)</h2>
     </div>
 
     <div className="rm-list">
@@ -102,15 +102,42 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
           <p>Work on the platform itself rather than on new features: databases, resilience and tooling.</p>
         </div>
       </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Clearer automated monitoring <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>When automated monitoring pauses or limits sending, the dashboard and the notification say which trigger fired and what to do about it.</p>
+        </div>
+      </div>
     </div>
   </section>
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-planned" id="planned">Planned (34)</h2>
+      <h2 className="rm-badge is-planned" id="planned">Planned (35)</h2>
     </div>
 
     <div className="rm-list">
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Unsubscribe page in the recipient's language <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>The unsubscribe page shown in the language of the recipient, Danish first, with the profile and subscription pages to follow.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Double opt-in, consent records and sign-up form <span className="rm-tag is-new">New feature</span></p>
+          <p>Confirmed opt-in for contact lists: a confirmation email on sign-up, a consent record per contact with date and source, and an embeddable sign-up form for your site.</p>
+        </div>
+      </div>
+
       <div className="rm-card is-planned">
         <div className="rm-accent" />
 
@@ -133,8 +160,17 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Campaign Builder improvements <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>The unsubscribe page in the recipient's language, and more information in the dashboard when sending is paused because of poor list quality.</p>
+          <p className="rm-title">User permissions <span className="rm-tag is-new">New feature</span></p>
+          <p>Roles and permissions for team members: access to sub accounts only, without the parent account's data; control over who may view message content and who may see or check DNS records in a sub account. Filtering messages by the credential that sent them is part of it.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Clearer pauses for list quality <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>More information in the dashboard when campaign sending is paused because of poor list quality, so you know which contacts to fix.</p>
         </div>
       </div>
 
@@ -207,15 +243,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Account level notifications <span className="rm-tag is-improvement">Improvement</span></p>
           <p>Webhook and email notifications for account events, including sub-account status changes and rate limits being hit.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Whitelabel dashboard on your own domain <span className="rm-tag is-new">New feature</span></p>
-          <p>Serve the dashboard to your customers under a hostname of your own (CNAME), next to the DNS whitelabeling that exists today. For Platform Partners.</p>
         </div>
       </div>
 
@@ -306,15 +333,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Bad domain check API endpoint <span className="rm-tag is-new">New feature</span></p>
           <p>An API endpoint to check addresses against our known bad-domain list.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">User permissions <span className="rm-tag is-new">New feature</span></p>
-          <p>User groups and roles with their own permissions, first of all to decide who may view message content; filtering messages by the credential that sent them is part of it.</p>
         </div>
       </div>
 
@@ -535,8 +553,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         </div>
       </div>
 
-                        
-
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
 
@@ -546,8 +562,6 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
           <span className="rm-date">Q3 2026</span>
         </div>
       </div>
-
-            
 
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
