@@ -960,6 +960,10 @@ components:
 
             When provided, it is normalized to lowercase and must be a single DNS label: 1-62 characters using lowercase letters, numbers, and hyphens only, without a leading or trailing hyphen.
 
+            On managed DNS domains, DKIM uses two selectors and switches between them at each key rotation: this selector, and a second selector that is this selector followed by `2`. When the selector ends in a `1` that does not follow another digit, that `1` becomes `2` instead: `os` → `os2`, `os1` → `os2`, but `s11` → `s112`.
+
+            DNS records that already exist at the hosts of a selector sent in this field do not block it. On a managed DNS domain, DKIM passes once the `host` of the DKIM record marked `required` in the domain's `dns_records` (DKIM hosts contain `._domainkey.`) points to that record's `content`, directly or through other CNAME records; point the other DKIM record's `host` to its `content` too, so DKIM rotation can run.
+
             **Note:** This parameter is only supported on [Platform Partner](https://ahasend.com/partners) accounts.
         sending_type:
           type: string
@@ -997,6 +1001,10 @@ components:
             Optional custom DKIM selector for the domain. Omit or send null to leave the current value unchanged; send an empty or whitespace-only string to clear the override and revert to the default selector. The value is trimmed before it is interpreted, so whitespace-only input clears the override just like an empty string.
 
             When provided, it is normalized to lowercase and must be a single DNS label: 1-62 characters using lowercase letters, numbers, and hyphens only, without a leading or trailing hyphen. It cannot be changed once the selector locks after DNS verification or while a DKIM key rotation is in progress.
+
+            On managed DNS domains, DKIM uses two selectors and switches between them at each key rotation: this selector, and a second selector that is this selector followed by `2`. When the selector ends in a `1` that does not follow another digit, that `1` becomes `2` instead: `os` → `os2`, `os1` → `os2`, but `s11` → `s112`.
+
+            DNS records that already exist at the hosts of a selector sent in this field do not block it. On a managed DNS domain, DKIM passes once the `host` of the DKIM record marked `required` in the domain's `dns_records` (DKIM hosts contain `._domainkey.`) points to that record's `content`, directly or through other CNAME records; point the other DKIM record's `host` to its `content` too, so DKIM rotation can run.
 
             **Note:** This parameter is only supported on [Platform Partner](https://ahasend.com/partners) accounts.
         sending_type:
