@@ -7,6 +7,34 @@ sidebarTitle: "Changelog"
 
 The AhaSend changelog lists product releases, API changes and fixes by month, with links to the affected features.
 
+<Update label="November 2026">
+#### New Features
+
+- **New sign-up and account setup.** A new account is set up in short steps: your company, the email you send, a few questions about you, your sending domain and its DNS records, a plan, and a first test email.
+- **New log-in and sign-up pages**, with our newest blog post and changelog entries next to the form.
+- **Your logo in account settings.** Upload your logo (PNG, JPEG or GIF, up to 1 MB) or remove it in Settings → Account. An empty design in the campaign and template editors then opens as a sample email with your logo and brand colors.
+- **Subscribe without leaving the Billing page.** Pick your billing country, and Stripe's checkout opens in the page.
+
+#### Changes
+
+- **Existing DNS records no longer block a custom DKIM selector.** With [DNS whitelabel](/scale/dns-whitelabel), you can send `dkim_selector` when you [create a domain](/api-reference/domains/create-domain) with managed DNS. Before, the API refused it with `400` if the selector's hosts already had DNS records. Now the domain is created with managed DNS. So you can keep the DKIM records your customers already have from another email service. DKIM passes once those records point to the records AhaSend gives you.
+- **A custom DKIM selector that ends in `1` gets a second selector that ends in `2`.** Managed DNS domains use two DKIM selectors. The second one is your selector followed by `2`. Now, if your selector ends in `1`, that `1` becomes `2`: `os1` gives `os2`, and `selector1` gives `selector2`. A `1` after another digit does not change: `s11` gives `s112`. Other selectors work as before: `os` gives `os2`.
+- **A data retention of 0 on one email needs the same approval as the account setting.** This applies to `retention.data: 0` in [API v2](/api-reference/messages/create-message), and to the `ahasend-data-retention: 0` header in SMTP and API v1. For an account that may not turn off data retention, the email is still sent, and its content is kept for the account's data retention. Sub-accounts follow their parent account. [Update Account](/api-reference/accounts/update-account) with `message_data_retention: 0` uses the same rule. See [per-message overrides](/retention#per-message-overrides).
+- **Inbound email cannot set its own retention.** AhaSend removes the retention headers from email you receive, so a sender cannot delete your copy or stop its [routing](/integrations/routing). Your account settings apply.
+- **An email's content is deleted no later than the email.** If an email asks for a shorter metadata retention than data retention, its content is now deleted together with its metadata.
+- **Webhook, route, S3 and SSO URLs must be public addresses.** A [webhook](/integrations/webhooks) or [route](/integrations/routing) URL, an [S3 export](/retention/s3) endpoint and an [SSO](/security/sso) issuer must be a public `http://` or `https://` URL. AhaSend refuses a URL that is, or resolves to, a private, local or internal network address when you save it (API v2 answers `400`). It also never connects to such an address, after a redirect either. A webhook or route that already has such a URL fails, and AhaSend turns it off after repeated errors, with the usual email. The SSO and S3 checks in the settings no longer show what the other server replied.
+- **Website fields accept non-English domain names.** An account's website, in the dashboard and in [Update Account](/api-reference/accounts/update-account), can now be a domain name such as `bäckerei.de`.
+- **Planned database maintenance no longer causes errors.** Short planned maintenance of our database no longer makes API requests or dashboard pages fail, and no longer rejects email.
+
+#### Bug Fixes
+
+- **Fixed Remember me not keeping you signed in after you closed the browser.** A sign-in with **Remember me** now stays signed in for up to 30 days. [SSO](/security/sso) sign-ins work the same way. Without **Remember me**, closing the browser still signs you out.
+- **Fixed some sign-in and sign-up links losing the dashboard page they point to.** After you signed in, you got the home page instead of that page. This happened when the browser had no AhaSend session open, for example on a first visit.
+- **Fixed the Simple Editor adding 2px borders to a section when you changed its border width.** Sides with no border were set to 2px. For example, a section with only a top border got a border on all four sides. Now a side set to 0 stays at 0. If a section got extra borders this way, set those sides back to 0.
+- **Fixed the error when you add an SSO domain that another account uses.** It now says "The domain specified is already in use by another account." instead of "Failed to create OIDC domain."
+
+</Update>
+
 <Update label="October 2026">
 #### New Features
 
