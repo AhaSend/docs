@@ -14,6 +14,14 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **New log-in and sign-up pages**, with our newest blog post and changelog entries next to the form.
 - **Your logo in account settings.** Upload your logo (PNG, JPEG or GIF, up to 1 MB) or remove it in Settings → Account. An empty design in the campaign and template editors then opens as a sample email with your logo and brand colors.
 - **Subscribe without leaving the Billing page.** Pick your billing country, and Stripe's checkout opens in the page.
+- **[Go SDK](/guides/go-sdk) v0.6.0 and [Node.js SDK](/guides/nodejs-sdk) `@ahasend/sdk` 0.6.0.** Both SDKs follow the new message `id` (see Changes below). The `id` of a send result is the message's ID as a bare UUID, which Get Message and Cancel Message take. The new `message_id_header` (`MessageIDHeader` in Go) holds the email's Message-ID header. In message webhooks, `data.id` is the message's ID. Install them with `go get github.com/AhaSend/ahasend-go@v0.6.0` or `npm install @ahasend/sdk@0.6.0`.
+- **[AhaSend CLI](/cli) v0.4.0.** The CLI uses Go SDK v0.6.0 and adds:
+  - The `segments` commands, to manage [segments](/campaigns/segments) and see their members, and `contacts segments`, to see the segments of a contact.
+  - `--segment-id`, `--exclude-list-id` and `--exclude-segment-id` on `campaigns create` and `campaigns update`, to send a campaign to segments and leave out lists and segments.
+  - Simple Editor designs in [AhaML](/send-api/ahaml). The `create` and `update` commands of `templates`, `campaigns` and `campaigns templates` take `--markup-file`. Their `get` commands take `--markup`, which writes only the design, so you can edit it and write it back. If the API refuses a design, the CLI shows each problem with its line and column.
+  - The contact webhook events, with `--all-contact-events`, and `--origins` on `webhooks create` and `webhooks update`. `webhooks list --events` shows only the webhooks that have those events.
+  - The Message-ID header in the output of `messages send`.
+  - **Breaking:** `templates get` shows the working copy of a template, and `templates get --published` shows the published version. `templates draft get` is removed. Some CSV output has new columns, and the event flags of `webhooks update` set the webhook's full list of events. See the [v0.4.0 release notes](https://github.com/AhaSend/ahasend-cli/releases/tag/v0.4.0).
 
 #### Changes
 
