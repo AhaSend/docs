@@ -130,7 +130,7 @@ These operations accept an `Idempotency-Key` header:
 - Create Campaign, Update Campaign and Duplicate Campaign.
 - Send Campaign, Unschedule Campaign and Test Campaign.
 
-The API stores the answer that the operation itself gives to a key, including a refusal (`4xx`), and replays it for every retry with the same key. So a refusal from the operation stays a refusal for that key. After you fix the cause, for example after you add the missing subject or after the status of the campaign changes, send the request again with a new `Idempotency-Key`. Test Campaign is the one exception: it does not store a `4xx` answer.
+The API stores the answer that the operation itself gives to a key, including a refusal (`4xx`), and replays it for every retry with the same key. So a refusal from the operation stays a refusal for that key. After you fix the cause, for example after you add the missing subject or after the status of the campaign changes, send the request again with a new `Idempotency-Key`. Two kinds of refusal are not stored, so a retry with the same key runs again. Test Campaign does not store a `4xx` answer. Create Campaign, Update Campaign and Duplicate Campaign do not store the audience refusal: the `409` with `The campaign's audience is being updated. Try again in a minute.` when a segment of the audience is being built again. Retry it after a minute.
 
 The API does not store a `5xx`, or a `401`, `403` or rate-limit `429`, which come before the operation runs. You can retry these with the same key. Stored answers expire after 24 hours. See [Idempotency](/api-reference/idempotency).
 
@@ -139,10 +139,10 @@ A campaign `409` has one of three forms:
 | Headers | Meaning | What to do |
 |---------|---------|------------|
 | `Idempotent-Replayed: false` and `Retry-After` | A request with the same key is still in progress. | Retry with the same key after the `Retry-After` delay. |
-| Neither header | The status of the campaign does not allow the request. | After the status changes, send the request again, with a new key if you used one. |
+| Neither header | The status of the campaign does not allow the request, or a segment of the audience is being built again (the audience refusal). | After the status changes, send the request again, with a new key if you used one. Retry the audience refusal after a minute, with the same key or a new one. |
 | `Idempotent-Replayed: true` | The API replays a status conflict that it stored for an earlier request with the same key. | After the status changes, retry with a new key. |
 
-Only Update Campaign, Send Campaign, Unschedule Campaign and Test Campaign have a status conflict among the operations with a key. Test Campaign does not store its status conflict, so it never answers in the third form. The other campaign and campaign template operations with a key answer `409` only in the first form. Do not use the `message` to tell the forms apart.
+Only Update Campaign, Send Campaign, Unschedule Campaign and Test Campaign have a status conflict among the operations with a key. Test Campaign does not store its status conflict, so it never answers in the third form. Create Campaign and Duplicate Campaign answer `409` in the first form, or in the second form for the audience refusal. The campaign template operations with a key answer `409` only in the first form. Do not use the `message` to tell the forms apart.
 
 See [Idempotency](/api-reference/idempotency).
 

@@ -14,7 +14,7 @@ A campaign that is not a draft answers `409` with `campaign is not a draft`. To 
 - A field that you leave out does not change and is not checked. A request with no field is refused with `400`.
 - `null` clears `subject`, `preheader`, `from` or `reply_to`. When you clear `from`, `reply_to` stays.
 - `list_ids`, `segment_ids`, `exclude_list_ids` and `exclude_segment_ids` each replace their own set when you send them, and leave it as it is when you leave them out. `[]` empties a set, so `exclude_segment_ids: []` removes every segment exclusion. The result needs at least one list or segment to send to. See [Audience](/api-reference/campaigns/overview#audience).
-- A list or segment that does not exist is refused with `400`. When a segment of the audience is being built again, the API answers `409` with `The campaign's audience is being updated. Try again in a minute.`
+- A list or segment that does not exist is refused with `400`. When a segment of the audience is being built again, the API answers `409` with `The campaign's audience is being updated. Try again in a minute.` This refusal is not stored: it releases the `Idempotency-Key`, so a retry with the same key runs again. Retry it after a minute.
 - `template_id` is not accepted: only [Create Campaign](/api-reference/campaigns/create-campaign) can copy a campaign template. A request with `template_id` is refused with `400` as an unknown field.
 - The fields follow the rules of [Create Campaign](/api-reference/campaigns/create-campaign).
 
@@ -30,7 +30,7 @@ A campaign that is not a draft answers `409` with `campaign is not a draft`. To 
 - The API and the dashboard change the same campaign. The request waits for other changes to the same campaign to finish, and a send that starts after the request uses the change.
 - When a dashboard editor is open on the same campaign, the design that is saved last is kept.
 
-This operation accepts an `Idempotency-Key` header. A refusal from this operation is stored for the key, so send a corrected request with a new key. See [Idempotency](/api-reference/idempotency) and [campaign retries](/api-reference/campaigns/overview#idempotency).
+This operation accepts an `Idempotency-Key` header. Except for the audience `409`, a refusal from this operation is stored for the key, so send a corrected request with a new key. See [Idempotency](/api-reference/idempotency) and [campaign retries](/api-reference/campaigns/overview#idempotency).
 
 ## Related Guides
 

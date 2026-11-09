@@ -154,7 +154,7 @@ A segment write that meets another change answers `409` and changes nothing:
 | Create Segment | A list or campaign that the definition names is being changed: `The segment is being updated. Try again in a minute.` | Retry later. |
 | Update Segment, Delete Segment | The segment is being changed: `The segment is being updated. Try again in a minute.` | Retry later. |
 | Delete Segment | A campaign still needs the segment: `This segment cannot be deleted while a campaign is still using it.` | Remove the segment from the campaign, or wait until the campaign is `sent`, `failed` or `canceled`. |
-| Create Campaign, Update Campaign | A segment of the audience is being built again: `The campaign's audience is being updated. Try again in a minute.` | Retry later, with a new `Idempotency-Key` if you used one. |
+| Create Campaign, Update Campaign | A segment of the audience is being built again: `The campaign's audience is being updated. Try again in a minute.` | Retry later. The refusal is not stored, so a retry with the same `Idempotency-Key` runs again. |
 
 Do not use the `message` to tell the cases apart.
 

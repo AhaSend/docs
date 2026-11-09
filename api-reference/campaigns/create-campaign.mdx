@@ -32,7 +32,7 @@ The design comes from one source:
 - `list_ids` and `segment_ids` hold the lists and segments of your account to send to. `exclude_list_ids` and `exclude_segment_ids` hold the lists and segments whose contacts get no message. A list or segment that you give twice counts once. See [Audience](/api-reference/campaigns/overview#audience) for the rules.
 - An audience field that you send must leave the campaign at least one list or segment to send to, so `list_ids` can be `[]` with a segment in `segment_ids`. A list or segment that does not exist, more than 50 lists or 10 segments, or a list or segment that is both included and excluded is refused with `400`.
 - To find the ID of a list or a segment, use [List Lists](/api-reference/lists/get-lists) or [List Segments](/api-reference/segments/get-segments), or see [where to find the ID](/api-reference/campaigns/overview#build-and-send-a-campaign) in the dashboard.
-- When a segment of the audience is being built again, the API answers `409` with `The campaign's audience is being updated. Try again in a minute.` This refusal is stored for the `Idempotency-Key`, so retry with a new key.
+- When a segment of the audience is being built again, the API answers `409` with `The campaign's audience is being updated. Try again in a minute.` This refusal is not stored: it releases the `Idempotency-Key`, so a retry with the same key runs again. Retry it after a minute.
 
 This operation accepts an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 
