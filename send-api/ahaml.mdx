@@ -545,7 +545,7 @@ A read prints the stored design as the email draws it. So some designs come back
 - A `Color` mark with no color comes back as the paragraph color, `#374151`. A `Highlight` with no color, an empty color and an image with no source draw nothing, and are left out.
 - A theme setting the stored design lacks comes back at the value the email is drawn with.
 - A section padding or margin, or a border width or radius, that the editor keeps as one value for all four sides comes back with all four sides at that value.
-- A setting an older editor stored that the email does not use, such as a color on a list item, is left out.
+- A stored setting that the email does not use, such as a color on a list item, is left out.
 - A paragraph, heading or footer whose text draws nothing, such as spaces alone, is left out. An empty paragraph, which draws a blank line, stays. When the only text is characters XML cannot hold and one of them draws a line, the block comes back as one line: an empty paragraph, or a heading or footer holding a `<Br/>`.
 - A rule whose result is known before the email is sent, such as one on a name that is not valid, is left out when it always shows its block, and the block is left out with it when it always hides it. A `Repeat` whose list name is not a valid name is left out with its blocks.
 - A rule whose action is neither show nor hide is left out, as the email always shows its block. A `value` stored with `is_true` or `is_false` is left out, as those operators do not read it.
@@ -554,7 +554,7 @@ A read prints the stored design as the email draws it. So some designs come back
 
 A block left out as above can take its bottom margin with it where no block next to it draws as large a margin: at the start or the end of the tag that holds it, or after a `Spacer`, a `Columns` or a `Section` with no bottom margin.
 
-A design made by an older editor comes back with every setting it lacks at its default, as the editor fills them when it opens the design. This is the one case where an edit can change the sent email beyond what the edit itself changes: a write stores the filled settings, as the next save in the dashboard would. AhaML sent back unchanged keeps the stored design.
+A setting other than a theme setting that the stored design lacks comes back at its default, as the editor fills it when it opens the design. This is the one case where an edit can change the sent email beyond what the edit itself changes: a write stores the filled settings, as the next save in the dashboard would. AhaML sent back unchanged keeps the stored design.
 
 A design AhaML cannot show reads with `markup` null and `markup_error` set:
 

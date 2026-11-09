@@ -77,7 +77,7 @@ Before setting up your domain, make sure you have:
 - **The domain or subdomain** you want to use for sending emails
 
 <Info>
-**Managed DNS vs manual DNS:** New domains in AhaSend use managed DNS (DNS v3) by default. Managed DNS shows two DKIM CNAME records so AhaSend can rotate DKIM keys safely over time. Some older or explicitly manual domains may still use the legacy single-DKIM-TXT setup instead. Your domain details page is always the source of truth for the exact records you need to publish.
+**Managed DNS vs manual DNS:** New domains in AhaSend use managed DNS by default. Managed DNS shows two DKIM CNAME records so AhaSend can rotate DKIM keys safely over time. A domain with manual DNS uses a single DKIM TXT record instead. Your domain details page is always the source of truth for the exact records you need to publish.
 </Info>
 
 <Steps>
@@ -138,7 +138,7 @@ Before setting up your domain, make sure you have:
         **Record Type:** Usually `CNAME` for managed DNS, sometimes `TXT` for manual DNS
         **Purpose:** Prevents email tampering, confirms sender identity, and enables safe DKIM rotation on managed domains
 
-        **Managed DNS (DNS v3):**
+        **Managed DNS:**
 
         ```text
         Name: managed._domainkey.(your domain or subdomain)
@@ -161,10 +161,6 @@ Before setting up your domain, make sure you have:
         Type: TXT
         Value: [unique DKIM public key]
         ```
-
-        <Note>
-        If you are working with a legacy or explicitly manual domain, your dashboard will show a single DKIM TXT record instead of the managed CNAME-based setup.
-        </Note>
       </Accordion>
 
       <Accordion title="DMARC record (Required)" icon="shield-halved">
