@@ -131,12 +131,12 @@ ahasend webhooks trigger YOUR_RESOURCE_ID \
 ahasend webhooks trigger YOUR_RESOURCE_ID \
   --events message.delivered,message.opened,message.clicked
 
-# Trigger all available events
+# Trigger every event except the contact events
 ahasend webhooks trigger YOUR_RESOURCE_ID \
   --all-events
 ```
 
-A disabled webhook gets no events: the API answers that they are queued, and then drops them.
+A disabled webhook gets no events: the API answers that they are queued, and then drops them. To trigger the contact events, see [Contact Events](#contact-events).
 
 ### Event Simulation Scenarios
 
@@ -157,6 +157,30 @@ ahasend webhooks trigger YOUR_RESOURCE_ID \
 ahasend webhooks trigger YOUR_RESOURCE_ID \
   --events message.transient_error,message.failed,domain.dns_error
 ```
+
+## Contact Events
+
+On CLI v0.4.0 or later, `webhooks listen` and `webhooks trigger` also take the eight contact events, such as `contact.created` and `contact.added_to_list`. They need an account with the marketing features, and an API key with the scopes that [contact events](/cli/commands/webhooks#contact-events) lists. Turn them on for one of your webhooks, listen through it, and trigger them from another terminal:
+
+```bash
+# Turn on every event of the webhook, the contact events included
+ahasend webhooks update YOUR_RESOURCE_ID --enabled --all-events --all-contact-events
+
+# Listen through the webhook, and show only some contact events
+ahasend webhooks listen --webhook-id YOUR_RESOURCE_ID \
+  --events contact.created,contact.added_to_list,contact.unsubscribed
+
+# In another terminal, trigger every contact event
+ahasend webhooks trigger YOUR_RESOURCE_ID --all-contact-events
+
+# Or test list membership changes
+ahasend webhooks trigger YOUR_RESOURCE_ID \
+  --events contact.added_to_list,contact.unsubscribed,contact.removed_from_list
+```
+
+The event flags of `webhooks update` set the webhook's whole list of events, so name every event the webhook should keep; see [Update Webhook](/cli/commands/webhooks#update-webhook).
+
+The stream sends only the events that the API key's scopes can read. When the key lacks the read scope of a family of events that the webhook turns on, such as `contacts:read` for the contact events, the command prints the server's warning on stderr as it connects, and the listener gets none of those events; see [Listen for Events](/cli/commands/webhooks#listen-for-events).
 
 ## Integration Testing
 
@@ -237,7 +261,7 @@ Stdout holds the banner, the `Session established` line and the events, with sep
 
 **Signature Verification Failed**: Use the forwarding secret of the current run, as the banner prints it, as the raw UTF-8 HMAC key. Do not base64-decode it, and do not use the webhook's own secret. Each run prints a new secret.
 
-**Events Not Received**: Check that the webhook is enabled, that `--events` does not filter the events out, and that your local server is running. Run with `--debug` to see each forward and its response status.
+**Events Not Received**: Check that the webhook is enabled, that the API key has the read scope of the events (on CLI v0.4.0 or later, the command warns on stderr when it does not), that `--events` does not filter the events out, and that your local server is running. Run with `--debug` to see each forward and its response status.
 
 **Connection Lost**: The listener does not reconnect. Start it again with `--webhook-id` and the same webhook ID to receive the [kept events](#events-without-a-listener).
 

@@ -6,7 +6,7 @@ sidebarTitle: "Overview"
 ---
 
 
-The AhaSend CLI lets you send email, manage domains, templates, campaigns, contacts and credentials, and test webhooks and routes from your terminal.
+The AhaSend CLI lets you send email, manage domains, templates, campaigns, contacts, segments and credentials, and test webhooks and routes from your terminal.
 
 <Note>
 The AhaSend CLI is available on [GitHub](https://github.com/AhaSend/ahasend-cli) and supports Linux, macOS, and Windows.
@@ -22,10 +22,10 @@ The AhaSend CLI is available on [GitHub](https://github.com/AhaSend/ahasend-cli)
   Add, check, and manage sending domains and their DNS records
 </Card>
 <Card title="Templates and Campaigns" icon="bullhorn">
-  Store transactional templates, and draft, test, and send campaigns to contact lists
+  Store transactional templates, and draft, test, and send campaigns to contact lists and segments
 </Card>
-<Card title="Contacts and Lists" icon="address-book">
-  Manage contacts, import them in batches, and organize them in lists
+<Card title="Contacts, Lists and Segments" icon="address-book">
+  Manage contacts, import them in batches, organize them in lists, and find them by rules with segments
 </Card>
 <Card title="Webhooks and Routes" icon="webhook">
   Configure event notifications and inbound routes, and test them locally
@@ -81,14 +81,17 @@ ahasend messages send --sandbox \
 
 ### Templates and Campaigns
 - Store transactional templates, edit drafts, publish them, and restore earlier versions
-- Draft, test, send, or schedule campaigns to contact lists
+- Read and write Simple Editor designs as AhaML
+- Draft, test, send, or schedule campaigns to contact lists and segments, and leave out the contacts of other lists and segments
 - Campaign statistics, recipients, and campaign templates
 
-### Contacts and Lists
+### Contacts, Lists and Segments
 - Create, update, and delete contacts, or import them in batches
 - Create contact lists, and add, set, or remove their members
+- Create segments that find contacts by rules, preview the rules, and list the members
 
 ### Webhook & Route Management
+- Configure webhooks for message, suppression, domain and contact events
 - Stream webhook and route events to your terminal, and forward them to a local server
 - Trigger test webhook and route events
 - Inbound email route configuration
@@ -124,10 +127,11 @@ The CLI covers these AhaSend services:
 
 - [Messages](/cli/commands/messages): send, list, get, and cancel messages.
 - [Domains](/cli/commands/domains): create, check, verify, update, and delete sending domains.
-- [Templates](/cli/commands/templates): store transactional templates, with drafts and versions.
+- [Templates](/cli/commands/templates): store transactional templates, with drafts, versions and AhaML designs.
 - [Campaigns](/cli/commands/campaigns): draft, test, send, and report on campaigns, and manage campaign templates.
 - [Contacts](/cli/commands/contacts): create, update, list, get, delete, and batch-import account contacts.
 - [Lists](/cli/commands/lists): manage contact lists and their members.
+- [Segments](/cli/commands/segments): create, preview, update, and delete segments, and list their members.
 - [Webhooks](/cli/commands/webhooks): configure, listen to, and trigger webhooks.
 - [Routes](/cli/commands/routes): configure, listen to, and trigger inbound routes.
 - [Suppressions](/cli/commands/suppressions): list, create, check, delete, and wipe suppressions.

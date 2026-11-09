@@ -1,0 +1,232 @@
+---
+title: "ahasend segments: Manage Contact Segments"
+sidebarTitle: "segments"
+description: "Create, preview, update, and delete AhaSend segments with the CLI: write segment rules in a JSON file, count the contacts they match, and list the members."
+icon: "filter"
+---
+
+AhaSend CLI segment commands manage segments: saved rules over your contacts, whose members AhaSend finds and keeps up to date. Campaigns send to segments, and leave the members of segments out, as they do with [lists](/cli/commands/lists).
+
+<Note>
+These commands need CLI v0.4.0 or later. Check your version with `ahasend --version`, and [upgrade](/cli/installation) if it is older.
+</Note>
+
+## Prerequisites
+
+[Authenticate with a full API key](/cli/authentication). Segment tasks need these [scopes](/api-reference/scopes#segments):
+
+| Scope | Commands |
+|---|---|
+| `segments:read` | `segments list`, `segments get`, `segments preview`, `segments members` |
+| `segments:write` | `segments create`, `segments update` |
+| `segments:delete` | `segments delete` |
+| `contacts:read` | `segments preview`, `segments members` |
+
+The shell examples need Bash and jq.
+
+A segment's members are the contacts that match its rules, whatever their consent. A campaign to the segment reaches only the members who can get marketing email; see [members and reachable contacts](/campaigns/segments#members-and-reachable-contacts). A segment is `building` while AhaSend finds its members, `ready` when they follow its rules, and `failed` when they could not be found. A campaign to a segment cannot be sent until the segment is `ready`; see [segment states](/campaigns/segments#segment-states).
+
+## Write a Definition File
+
+`segments create`, `segments update` and `segments preview` read a segment's rules from `--definition-file`, a JSON file that holds one segment definition in the API's shape. Save this file as `engaged.json`. It matches the contacts whose email address ends with `@example.com` and who were created in the last 30 days or opened at least 3 campaigns in the last 90 days:
+
+```json engaged.json
+{
+  "schema_version": 1,
+  "match": "all",
+  "conditions": [
+    {"field": "email", "op": "ends_with", "value": "@example.com"},
+    {"match": "any", "conditions": [
+      {"field": "created_at", "op": "after", "value": "30 days ago"},
+      {"field": "campaign_count", "op": "opened_at_least",
+       "value": {"count": 3, "since": "90 days ago"}}
+    ]}
+  ]
+}
+```
+
+A definition matches `all` or `any` of its conditions. An entry of its `conditions` that has a `match` key is a group, which matches all or any of its own conditions; a group cannot hold a group. Any other entry is a condition, which compares a `field` with an operator, `op`, and a `value`. [Definitions](/api-reference/segments/overview#definitions) lists the fields, among them your own contact fields, lists and campaigns, with their operators and values and the limits on conditions.
+
+A definition's relative times, such as `30 days ago`, and its days are read in the segment's time zone: the IANA time zone, such as `Europe/Berlin`, that `--timezone` gives. A segment created without `--timezone` uses UTC, and `segments update` changes the time zone only when you give `--timezone`. `segments preview --timezone` reads the definition it tries the same way. See [Time Zone](/api-reference/segments/overview#time-zone).
+
+The CLI checks the shape of the file before any request is sent. A mistake fails with exit code 4 and an error that names its place in the file:
+
+```text
+Error: --definition-file: conditions[1].conditions[0].vlaue is not a key of a segment condition
+```
+
+- The file holds one JSON object. A file that is empty or is not JSON fails with `--definition-file is not JSON: <reason>`, and other JSON with `--definition-file must be a JSON object, the segment definition`.
+- An object holds only the keys of its kind, each once: `schema_version`, `match` and `conditions` in the definition, `match` and `conditions` in a group, `field`, `op` and `value` in a condition, and `count` and `since` in the count that a `campaign_count` condition takes as its value.
+- `schema_version` and `count` are integers written without a fraction or exponent; `match`, `field`, `op` and `since` are strings; `conditions` is an array of objects. A `value` is a string, a number, `true`, `false`, `null` or a count, and a whole number must lie between -2^53 and 2^53.
+- A group inside a group fails with `--definition-file: conditions[1].conditions[0] is a group inside a group, which the API does not allow`.
+
+The CLI checks nothing more. The API checks the fields, operators and values: a definition it refuses fails with exit code 4, and the error names the place of each problem.
+
+## Preview a Definition
+
+`segments preview` tries a definition without saving anything. It shows how many contacts the definition matches now, whatever their consent, and up to 10 of them:
+
+```bash
+ahasend segments preview --definition-file engaged.json
+```
+
+```text
+Count: 2
+
+Email: docs-segment-test@example.com
+Contact ID: 11111111-1111-4111-8111-111111111111
+
+Email: pat@example.com
+Contact ID: 22222222-2222-4222-8222-222222222222
+```
+
+The API stops counting after 10 seconds, and the count then reads `Count: not counted in time`; the contacts are shown either way. Table output shows the contacts as a table under the count. CSV output has the header `count,email,contact_id` and one row per contact, each with the count, whose cell is empty when the API gave none; without contacts, it has one row, with the count alone.
+
+## Create a Test Segment
+
+Save these commands in one Bash script, and run it in the folder that holds `engaged.json`. The script creates a test segment, and later examples on this page use the same segment.
+
+```bash
+set -euo pipefail
+SEGMENT_ID=$(ahasend segments create --name "Docs test segment" --description "Docs test" \
+  --definition-file engaged.json --output json | jq -er '.id')
+ahasend segments get "$SEGMENT_ID"
+ahasend segments list
+```
+
+A new segment is `building` until its members are found, which can take some minutes on a large account. An account has at most 100 segments. With `--idempotency-key`, a retry with the same key creates no second segment; see [Idempotency](/api-reference/segments/overview#idempotency).
+
+`segments get` shows the segment's state, the reason a failed segment failed, and its definition: as indented JSON in table and plain output, and as compact JSON in the `definition` column of CSV output. `Members` counts every contact that matches the rules, whatever its consent, and `Marketable` counts those a campaign to the segment alone would reach. `Marketable` is `unknown` in table and plain output, and an empty cell in CSV output, while the segment is not `ready` and when the API cannot count the members within 10 seconds.
+
+`segments list` lists the account's segments, newest first. Table output shows each segment's name, ID, state, member count, and when it was updated. Plain and CSV output add the description, the failure reason, the time zone, when the members were last checked, the creation time and the definition. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
+
+To send a campaign to a segment, or leave its members out, give the segment's ID to `campaigns create` or `campaigns update`; see [Choose the Audience](/cli/commands/campaigns#choose-the-audience).
+
+## List the Members
+
+Continue the script. `segments members` lists a segment's members by contact ID, from the lowest:
+
+```bash
+ahasend segments members "$SEGMENT_ID"
+```
+
+The output shows each member's email address, contact ID, and when it entered the segment. While the segment is `building`, its members may still follow its previous rules. To see the segments one contact is a member of, use [`ahasend contacts segments`](/cli/commands/contacts#list-a-contacts-segments).
+
+## Update the Test Segment
+
+Continue the script. `update` sends only the flags you give, and needs at least one.
+
+```bash
+ahasend segments update "$SEGMENT_ID" --name "Docs test segment renamed" --description ""
+ahasend segments update "$SEGMENT_ID" --definition-file engaged.json --timezone Europe/Berlin
+```
+
+`--description ""` clears the description, and `--timezone ""` sets UTC. `--definition-file` replaces the rules as a whole.
+
+A change of the definition or the time zone builds the segment's members again, and the segment is `building` until that ends. Any update of a `failed` segment builds it again. A change of only the name or the description of any other segment leaves its members and its state as they are.
+
+An update or a delete that meets another change of the segment fails with HTTP 409, `The segment is being updated. Try again in a minute.`, and exit code 1. Run the command again a minute later; see [Conflicts](/api-reference/segments/overview#conflicts).
+
+## Delete the Test Segment
+
+Finish the script by deleting the segment it created.
+
+```bash
+ahasend segments delete "$SEGMENT_ID" --force
+```
+
+The script stops at the first command that fails, and then deletes nothing. If it stops early, find the test segment with `ahasend segments list` and delete it with `segments delete`.
+
+Deleting a segment does not delete its contacts; its members are removed shortly after. The API refuses to delete a segment while a campaign that still needs it, to send to its members or to leave them out, refers to it. A segment in turn keeps the lists, campaigns and contact fields that its rules name from being deleted until you change or delete the segment; see [delete a segment](/campaigns/segments#delete-a-segment).
+
+`segments delete` asks for confirmation first; see [prompts](/cli/configuration#prompts).
+
+## Command Flags
+
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
+
+### `segments create`
+
+```text
+ahasend segments create --name <name> --definition-file <path> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--definition-file string` | JSON file holding the segment definition (required) |
+| `--description string` | Segment description |
+| `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--name string` | Segment name (required) |
+| `--timezone string` | IANA time zone that relative times and days are read in, such as `Europe/Berlin` (UTC when omitted) |
+
+### `segments delete`
+
+```text
+ahasend segments delete <segment-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `-f`, `--force` | Skip confirmation prompt |
+
+### `segments get`
+
+```text
+ahasend segments get <segment-id> [flags]
+```
+
+No command-specific flags. See [global flags](/cli/configuration#global-flags).
+
+### `segments list`
+
+```text
+ahasend segments list [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+
+### `segments members`
+
+```text
+ahasend segments members <segment-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+
+### `segments preview`
+
+```text
+ahasend segments preview --definition-file <path> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--definition-file string` | JSON file holding the segment definition to try (required) |
+| `--timezone string` | IANA time zone that relative times and days are read in, such as `Europe/Berlin` (UTC when omitted) |
+
+### `segments update`
+
+```text
+ahasend segments update <segment-id> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--definition-file string` | JSON file holding the new segment definition, which replaces the rules |
+| `--description string` | New segment description (empty clears it) |
+| `--name string` | New segment name |
+| `--timezone string` | New IANA time zone that relative times and days are read in (empty sets UTC) |
+
+## Related Guides
+
+- [Segments API](/api-reference/segments/overview), [Preview segment](/api-reference/segments/preview-segment), [Create segment](/api-reference/segments/create-segment).
+- [Segments in Campaign Builder](/campaigns/segments), [Campaigns commands](/cli/commands/campaigns), [Contacts commands](/cli/commands/contacts), [Lists commands](/cli/commands/lists).
+- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).
