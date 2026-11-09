@@ -175,6 +175,8 @@ Configure message routes in your AhaSend dashboard to start processing inbound e
       </Accordion>
 
       <Accordion title="Deduplicate by Message ID" icon="copy">
+        - AhaSend groups the email by its Message-ID header
+
         **Handle Multiple Recipients:**
         - **Disabled (default):** Separate request for each recipient (To, CC, BCC)
         - **Enabled:** Single request per email regardless of recipient count
@@ -463,7 +465,7 @@ All message routing requests follow the Standard Webhooks payload format:
   "route_id": "11111111-1111-4111-8111-111111111111",
   "timestamp": "2024-05-07T10:41:45.026792973Z",
   "data": {
-    "id": "route-msg-12345",
+    "id": "019a0c3f-1d2e-7f3a-8b4c-5d6e7f8a9b0c",
     "from": "customer@gmail.com",
     "reply_to": "customer@gmail.com",
     "to": "support@yourdomain.com",
@@ -506,10 +508,11 @@ All message routing requests follow the Standard Webhooks payload format:
 <AccordionGroup>
   <Accordion title="Email Metadata" icon="info">
     **Core Message Information:**
+    - `id` - The message's ID, which [Get Message](/api-reference/messages/get-message) takes
     - `from` - Sender's email address and name
     - `to` - Recipient address that matched your route
     - `subject` - Email subject line
-    - `message_id` - Unique identifier from the email headers
+    - `message_id` - The email's Message-ID header
     - `date` - When the email was sent
     - `size` - Email size in bytes
   </Accordion>
@@ -523,7 +526,7 @@ All message routing requests follow the Standard Webhooks payload format:
 
   <Accordion title="Threading Information" icon="reply">
     **Conversation Threading:**
-    - `in_reply_to` - Message ID this email is replying to
+    - `in_reply_to` - The In-Reply-To header: the Message-ID of the email this one replies to
     - `references` - Complete thread reference chain
     - `reply_to` - Address to reply to (may differ from sender)
   </Accordion>
