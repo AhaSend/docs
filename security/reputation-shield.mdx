@@ -278,7 +278,8 @@ When Reputation Shield blocks an email, your application should:
       "data": [
         {
           "object": "message",
-          "id": "<message-id@yourdomain.com>",
+          "id": "0192f5a4-7b1c-7d3e-9a2b-4c5d6e7f8a9b",
+          "message_id_header": "<0192f5a4-7b1c-7d3e-9a2b-4c5d6e7f8a9b@yourdomain.com>",
           "recipient": { "email": "user@example.com", "name": "" },
           "status": "queued",
           "error": null
@@ -287,7 +288,7 @@ When Reputation Shield blocks an email, your application should:
     }
     ```
 
-    For a request with several recipients, HTTP `202` can include rejected recipients with `status: "error"`, `id: null` and an `error` message. Check every entry in `data` before treating the whole request as successful.
+    For a request with several recipients, HTTP `202` can include rejected recipients with `status: "error"`, `id: null`, `message_id_header: null` and an `error` message. Check every entry in `data` before treating the whole request as successful.
 
     If no recipient can be queued, the API currently returns HTTP `500` with this body:
 

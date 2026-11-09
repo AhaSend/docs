@@ -117,7 +117,7 @@ curl -X POST "https://api.ahasend.com/v2/accounts/{account_id}/messages/template
   }'
 ```
 
-The response is the same per-recipient list as Create Message: for each recipient an `id` (null when nothing was sent), a `status` (`queued`, `scheduled` or `error`) and an `error`.
+The response is the same per-recipient list as Create Message: for each recipient an `id` and a `message_id_header` (both null when nothing was sent), a `status` (`queued`, `scheduled` or `error`) and an `error`.
 
 What the request can set, and what it cannot:
 

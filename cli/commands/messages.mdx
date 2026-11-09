@@ -209,7 +209,7 @@ Message sent to 1 of 2 recipients
 
 Message 1:
   Recipient: u@example.com
-  ID: <0d371db4-00d0-5eec-851c-e1db1e2b190d@example.com>
+  ID: 0d371db4-00d0-5eec-851c-e1db1e2b190d
   Status: queued
 
 Message 2:
@@ -218,7 +218,7 @@ Message 2:
   Error: failed to send message: rej@example.com: The message could not be queued because of an internal error. Please try again later or contact support.
 ```
 
-With `--output json`, the command prints the API's response body as [JSON output](/cli/configuration#json-output) describes. Each message's `id` is its Message-ID, which `messages get` and `messages cancel` take. Notices, such as where the command saved failed recipients, go to stderr.
+With `--output json`, the command prints the API's response body as [JSON output](/cli/configuration#json-output) describes. Each message's `id` is the ID that `messages get` and `messages cancel` take. `message_id_header` is its Message-ID header. Notices, such as where the command saved failed recipients, go to stderr.
 
 The API can accept a request but refuse some recipients in it, when it could not queue their message. Those recipients count as failed. The command saves failed recipients to a file that you can send again; see [failed recipients](/cli/batch-processing#failed-recipients).
 
@@ -248,6 +248,7 @@ ahasend messages list --tag onboarding --limit 50
 
 - `--sender` matches the sender address exactly. `--recipient` and `--subject` match every message whose recipient or subject contains the value, case-sensitively, so `--recipient user@example.com` also matches `olduser@example.com`.
 - `--status` can be used multiple times. Valid statuses are `received`, `delivered`, `opened`, `clicked`, `deferred`, `bounced`, `failed`, `suppressed`, `sandbox delivered`, `sandbox deferred`, `sandbox failed`, `sandbox bounced` and `sandbox suppressed`. `delivered` also matches opened and clicked messages, and `opened` also matches clicked ones.
+- `--message-id` finds the messages with that Message-ID header. Give it with its angle brackets, in quotes.
 - `--tag` takes at most 20 tags, none with a comma.
 - `--from-time` and `--to-time` take an RFC 3339 time or a relative time that counts back from now, such as `1h`, `24h` or `7d`.
 - `--limit`, `--after` and `--before` page through the results as [lists and pagination](/cli/configuration#lists-and-pagination) describes. With `--output json`, read the next cursor from `pagination.next_cursor`.
@@ -259,7 +260,7 @@ ahasend messages list --tag onboarding --limit 50
 ahasend messages get <message-id> [flags]
 ```
 
-The message ID is the message's UUID or its Message-ID, such as `<550e8400-e29b-41d4-a716-446655440000@example.com>`. Quote a Message-ID in the shell. The output shows the message's status, its delivery attempts, the template it was sent from, and its raw content while your [retention settings](/retention) keep it.
+The message ID is the message's `id`, which `messages send` prints. The output shows the message's status, its delivery attempts, the template it was sent from, and its raw content while your [retention settings](/retention) keep it.
 
 ```bash
 ahasend messages get "YOUR_RESOURCE_ID"
@@ -274,12 +275,12 @@ ahasend messages get "YOUR_RESOURCE_ID" --output json | jq -r .content > message
 ahasend messages cancel <message-id>... [flags]
 ```
 
-Cancel stops a message that still waits in the delivery queue, such as one scheduled for later. It takes one or more UUIDs or Message-IDs. The API answers success for any message it finds, including one already delivered, which the cancel leaves as it is; check a message's status with `messages get`.
+Cancel stops a message that still waits in the delivery queue, such as one scheduled for later. It takes one or more message IDs. The API answers success for any message it finds, including one already delivered, which the cancel leaves as it is; check a message's status with `messages get`.
 
 The command asks for confirmation first; see [prompts](/cli/configuration#prompts).
 
 ```bash
-# Schedule a sandbox message, then cancel it by its Message-ID
+# Schedule a sandbox message, then cancel it by its ID
 TEST_ID=$(ahasend messages send --sandbox \
   --from sender@example.com \
   --to test@example.com \
@@ -326,7 +327,7 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | `--before string` | Return the page before this cursor |
 | `--from-time string` | Filter messages created after this time (RFC3339 or relative like '24h', '7d') |
 | `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
-| `--message-id string` | Filter by message ID header |
+| `--message-id string` | Filter by the Message-ID header, with its angle brackets |
 | `--recipient string` | Filter by recipient: addresses that contain the value, such as @example.com |
 | `--sender string` | Filter by sender email address (must be from your domain) |
 | `--show-details` | Show detailed message information |

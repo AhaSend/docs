@@ -290,7 +290,8 @@ The API returns a response with information about each message created:
   "data": [
     {
       "object": "message",
-      "id": "<3f8e2b1a-7c4d-4e2a-9b1e-2f3a4b5c6d7e@yourdomain.com>",
+      "id": "3f8e2b1a-7c4d-4e2a-9b1e-2f3a4b5c6d7e",
+      "message_id_header": "<3f8e2b1a-7c4d-4e2a-9b1e-2f3a4b5c6d7e@yourdomain.com>",
       "recipient": {
         "email": "user@example.com",
         "name": "John Doe",
@@ -316,11 +317,11 @@ The API returns a response with information about each message created:
   <Accordion title="Message Status" icon="info">
     - **`queued`** - Message accepted and queued for delivery
     - **`scheduled`** - Message scheduled for future delivery
-    - **`error`** - Message failed validation or processing; `id` is `null`
+    - **`error`** - Message failed validation or processing; `id` and `message_id_header` are `null`
   </Accordion>
 
   <Accordion title="Message ID" icon="fingerprint">
-    Unique identifier for tracking the message through webhooks and logs. It is `null` when the message was not sent.
+    `id` is the message's ID, a UUID. [Get Message](/api-reference/messages/get-message) and [Cancel Message](/api-reference/messages/cancel-message) take it. `message_id_header` is the Message-ID header of the email. [List Messages](/api-reference/messages/get-messages) can filter by it, and [webhook events](/integrations/webhooks) carry it as `data.message_id_header`, so use it to match a send with its events. Both are `null` when the message was not sent.
   </Accordion>
 
   <Accordion title="Schedule Information" icon="calendar">
