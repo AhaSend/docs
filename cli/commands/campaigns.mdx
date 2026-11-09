@@ -1,11 +1,11 @@
 ---
 title: "ahasend campaigns: Manage Campaigns"
 sidebarTitle: "campaigns"
-description: "Draft, test, schedule, and send AhaSend campaigns to contact lists with the CLI, read their stats and recipients, and manage reusable campaign templates."
+description: "Draft, test, schedule, and send AhaSend campaigns to contact lists and segments with the CLI, read their stats and recipients, and manage campaign templates."
 icon: "bullhorn"
 ---
 
-AhaSend CLI campaign commands draft, test, send and report on marketing campaigns, which send to [contact lists](/cli/commands/lists).
+AhaSend CLI campaign commands draft, test, send and report on marketing campaigns, which send to [contact lists](/cli/commands/lists) and [segments](/campaigns/segments).
 
 <Note>
 These commands need CLI v0.3.0 or later. Check your version with `ahasend --version`, and [upgrade](/cli/installation) if it is older.
@@ -54,22 +54,64 @@ ahasend campaigns test "$CAMPAIGN_ID" --to me@example.com
 
 The API allows 50 test emails a UTC day for each account, one for each address of each test. A test that would pass that limit is refused with `daily test send limit reached` and exit code 8.
 
+## Choose the Audience
+
+A campaign's audience is the lists and segments it sends to, and the lists and segments whose contacts get no message from it, even when a list or segment it sends to reaches them. `campaigns create` and `campaigns update` set each part with its own flag:
+
+| Flag | Part of the audience |
+|---|---|
+| `--list-id` | A list to send to |
+| `--segment-id` | A segment to send to |
+| `--exclude-list-id` | A list whose contacts get no message |
+| `--exclude-segment-id` | A segment whose members get no message |
+
+Every flag but `--list-id` needs CLI v0.4.0 or later, as do `--clear-lists`, `--clear-segments`, `--clear-exclude-lists` and `--clear-exclude-segments`.
+
+```bash
+# Send to a segment instead of the campaign's lists, and leave out the contacts of a list
+ahasend campaigns update YOUR_CAMPAIGN_ID --segment-id YOUR_SEGMENT_ID --clear-lists \
+  --exclude-list-id YOUR_LIST_ID
+
+# Stop leaving out the members of segments
+ahasend campaigns update YOUR_CAMPAIGN_ID --clear-exclude-segments
+```
+
+- Each flag can be used more than once, and each value splits on commas.
+- A campaign uses at most 50 lists and 10 segments, included and excluded together, counting an ID given twice once. More fail before any request, with exit code 4 and `--list-id and --exclude-list-id take at most 50 lists in all, got <n>` or `--segment-id and --exclude-segment-id take at most 10 segments in all, got <n>`. The CLI counts the IDs a command gives; the API checks the sets it stores.
+- On `update`, each flag replaces its part of the audience, and a part that no flag names is kept. `--clear-lists`, `--clear-segments`, `--clear-exclude-lists` and `--clear-exclude-segments` empty a part, and each cannot be combined with the flag of its part. The API refuses a campaign left with no list and no segment to send to; see [Audience](/api-reference/campaigns/overview#audience).
+- `campaigns get` shows the audience by ID in its `Lists`, `Segments`, `Excluded Lists` and `Excluded Segments` rows. CSV output has the columns `list_ids`, `segment_ids`, `exclude_list_ids` and `exclude_segment_ids`.
+
+A segment is `building` while AhaSend finds its members; see [segment states](/campaigns/segments#segment-states). While a segment of the audience is building, `campaigns create`, `campaigns duplicate` and a `campaigns update` that changes the audience wait for it, and can fail with HTTP 409, `The campaign's audience is being updated. Try again in a minute.`, and exit code 1. The API keeps no answer to such a request for its [idempotency key](/api-reference/campaigns/overview#idempotency), so run the same command again, with the same `--idempotency-key` or a new one. `ahasend segments get` shows a segment's state. A send is refused instead, as the next section describes.
+
 ## Send or Schedule a Campaign
 
 <Warning>
-`campaigns send` sends the campaign to the members of its lists that a campaign reaches, the contact count that `ahasend lists get` shows. Test the campaign first, and check its lists.
+`campaigns send` sends the campaign to the contacts its audience reaches: the members of its lists and segments that a campaign reaches, less the contacts of its excluded lists and segments. The contact count of `ahasend lists get` and the `Marketable` count of `ahasend segments get` show how many contacts a list or a segment reaches. Test the campaign first, and check its audience.
 </Warning>
 
-`campaigns send` sends a draft now, or at the time given with `--schedule`: an RFC 3339 time or a relative one such as `2h`. The API takes a time more than a minute ahead. The campaign then goes through list validation and review before it sends; follow its status with `campaigns get`.
+`campaigns send` sends a draft now, or at the time given with `--schedule`: an RFC 3339 time or a relative one such as `2h`. The API takes a time more than a minute ahead. The campaign then goes through audience validation and review before it sends; follow its status with `campaigns get`.
 
 ```bash
 ahasend campaigns send YOUR_CAMPAIGN_ID --schedule 2h
 ahasend campaigns get YOUR_CAMPAIGN_ID
 ```
 
-`campaigns send` asks for confirmation first, as [prompts](/cli/configuration#prompts) describes. The prompt names the campaign and the send time in your local time zone, and a declined prompt sends nothing.
+`campaigns send` asks for confirmation first, as [prompts](/cli/configuration#prompts) describes. The prompt asks whether to send the campaign to its audience, and names the campaign and the send time in your local time zone. A declined prompt sends nothing.
 
 A campaign with issues is refused with exit code 4, and each issue is listed. With `--output json`, the issues are in the `issues` array of the API's error body.
+
+The `text_unchecked` issue means the API could not check the subject, the preview text and the design right now, and it clears on its own. On CLI v0.4.0 or later, outside JSON output, a refusal that holds it ends with a line that says to run the command again:
+
+```text
+Error: failed to send campaign: campaign is not ready to send
+lists_missing: Choose at least one list
+text_unchecked: <the API's message>
+text_unchecked clears on its own: run the command again with a new --idempotency-key
+```
+
+The API stores its answer to a send with `--idempotency-key`, a refusal included, and gives it again to a run with the same key for 24 hours; see [Idempotency](/api-reference/campaigns/overview#idempotency). The line therefore asks for a new key when the send had `--idempotency-key`; without the flag, it ends at `run the command again`. On a refused `campaigns test`, the line does not ask for a new key.
+
+While a segment of the campaign, included or excluded, is `building` or `failed`, the API refuses the send with HTTP 400, and the command exits with code 4. A building segment becomes `ready` by itself; a failed one becomes `ready` only after you edit and save it (see [segment states](/campaigns/segments#segment-states)). Once `ahasend segments get` shows the segment `ready`, run the send again, with a new `--idempotency-key` if the refused send had one.
 
 To stop a validating or scheduled campaign, return it to draft with `campaigns unschedule`. It does not ask for confirmation. A campaign that has queued mail cannot be unscheduled. To change the send time of a scheduled campaign, unschedule it and send it again.
 
@@ -89,6 +131,20 @@ ahasend campaigns recipients YOUR_CAMPAIGN_ID --status "Administratively Bounced
 
 `campaigns recipients` needs exactly one of `--status` and `--bounce-classification`. `--status` takes a status that `campaigns stats` counts, in any case, and `--bounce-classification` takes a bounce classification that `campaigns stats` counts, other than `Unknown`. `campaigns list --status draft` lists the campaigns in one status.
 
+On CLI v0.4.0 or later, each recipient shows the list or the segment the campaign reached it through: a recipient reached through a list has its list and no segment, and one reached through a segment has its segment and no list. Table output has a `Segment` column after `List`, plain output shows the segment's ID and name, and CSV output has the columns `segment_id` and `segment_name` after `list_name`.
+
+## AhaML Designs
+
+Campaigns and campaign templates read and write the design of the Simple Editor as AhaML, as [transactional templates](/cli/commands/templates#ahaml-designs) do. `campaigns get --markup` writes only the design's AhaML to stdout, and `campaigns update --markup-file` writes it back. These flags need CLI v0.4.0 or later.
+
+```bash
+ahasend campaigns get YOUR_CAMPAIGN_ID --markup > october.ahaml
+# Edit october.ahaml, then write it back
+ahasend campaigns update YOUR_CAMPAIGN_ID --markup-file october.ahaml
+```
+
+`campaigns templates get --markup` and `campaigns templates update --markup-file` do the same for a campaign template. `campaigns create` and `campaigns templates create` also take `--markup-file`, which makes the editor `simple`. On `campaigns update`, `--markup-file` replaces a simple design, and a campaign with no design yet takes it and becomes simple. The [templates commands](/cli/commands/templates#ahaml-designs) describe what `--markup` writes, when it fails, and the `Markup`, `Markup Error` and `Markup Warnings` rows.
+
 ## Campaign Templates
 
 Campaign templates are designs that a campaign can copy with `campaigns create --campaign-template-id`. A campaign template has no draft, subject or sender: changes apply at once, and campaigns already made from it keep their own copies. A campaign can be made from a template only once the template has HTML.
@@ -103,7 +159,7 @@ ahasend campaigns delete "$COPY_ID" --force
 ahasend campaigns templates delete "$CAMPAIGN_TEMPLATE_ID" --force
 ```
 
-`--campaign-template-id` cannot be combined with `--editor`, `--mjml-file`, `--html-file` or `--text-file`.
+`--campaign-template-id` cannot be combined with `--editor`, `--markup-file`, `--mjml-file`, `--html-file` or `--text-file`.
 
 ## Delete the Test Campaign
 
@@ -116,7 +172,9 @@ ahasend lists delete "$LIST_ID" --force
 
 The script stops at the first command that fails, and then deletes nothing. If it stops early, find what it made with `ahasend campaigns list --status draft`, `ahasend campaigns templates list` and `ahasend lists list --name "Docs test"`, and delete each with `campaigns delete`, `campaigns templates delete` or `lists delete`. Delete the campaigns before the list.
 
-`campaigns delete` and `campaigns templates delete` ask for confirmation first; see [prompts](/cli/configuration#prompts). To copy a campaign in any status into a new draft, use `campaigns duplicate`. Without `--name`, the copy is named "Copy of" and the campaign's name.
+The API also refuses to delete a campaign or a list while a segment refers to it, and names those segments; see [delete a segment](/campaigns/segments#delete-a-segment).
+
+`campaigns delete` and `campaigns templates delete` ask for confirmation first; see [prompts](/cli/configuration#prompts). To copy a campaign in any status into a new draft, use `campaigns duplicate`. The copy gets the campaign's design, subject, preview text, sender, reply-to, and the lists and segments of its audience that still exist; a segment that is building can make the copy fail, as [Choose the Audience](#choose-the-audience) describes. Without `--name`, the copy is named "Copy of" and the campaign's name.
 
 ## Command Flags
 
@@ -132,15 +190,19 @@ ahasend campaigns create --name <name> [flags]
 |---|---|
 | `--campaign-template-id string` | ID of a campaign template whose design the campaign copies |
 | `--editor string` | Editor of the design: `advanced`, `simple` or `html` |
+| `--exclude-list-id strings` | ID of a list whose contacts get no message (can be used multiple times) |
+| `--exclude-segment-id strings` | ID of a segment whose members get no message (can be used multiple times) |
 | `--from string` | Sender email address |
 | `--from-name string` | Sender display name (needs `--from`) |
 | `--html-file string` | Path to the HTML |
 | `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--list-id strings` | ID of a list to send to (can be used multiple times) |
+| `--markup-file string` | Path to the AhaML of a Simple Editor design |
 | `--mjml-file string` | Path to the MJML source |
 | `--name string` | Campaign name, shown in the dashboard only (required) |
 | `--preheader string` | Preview text |
 | `--reply-to string` | Reply-to email address |
+| `--segment-id strings` | ID of a segment to send to (can be used multiple times) |
 | `--subject string` | Subject |
 | `--text-file string` | Path to the plain text version |
 
@@ -171,7 +233,9 @@ ahasend campaigns duplicate <campaign-id> [flags]
 ahasend campaigns get <campaign-id> [flags]
 ```
 
-No command-specific flags. See [global flags](/cli/configuration#global-flags).
+| Flag | Description and default |
+|---|---|
+| `--markup` | Write only the design's AhaML to stdout, as `--markup-file` reads it |
 
 ### `campaigns list`
 
@@ -231,6 +295,7 @@ ahasend campaigns templates create --name <name> [flags]
 | `--editor string` | Editor of the design: `advanced`, `simple` or `html` |
 | `--html-file string` | Path to the HTML |
 | `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--markup-file string` | Path to the AhaML of a Simple Editor design |
 | `--mjml-file string` | Path to the MJML source |
 | `--name string` | Campaign template name (required) |
 | `--text-file string` | Path to the plain text version |
@@ -251,7 +316,9 @@ ahasend campaigns templates delete <campaign-template-id> [flags]
 ahasend campaigns templates get <campaign-template-id> [flags]
 ```
 
-No command-specific flags. See [global flags](/cli/configuration#global-flags).
+| Flag | Description and default |
+|---|---|
+| `--markup` | Write only the design's AhaML to stdout, as `--markup-file` reads it |
 
 ### `campaigns templates list`
 
@@ -275,6 +342,7 @@ ahasend campaigns templates update <campaign-template-id> [flags]
 |---|---|
 | `--html-file string` | Path to the HTML |
 | `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--markup-file string` | Path to the AhaML of a Simple Editor design |
 | `--mjml-file string` | Path to the MJML source |
 | `--name string` | New campaign template name |
 | `--regenerate-text` | Make the text version again from the HTML |
@@ -309,18 +377,26 @@ ahasend campaigns update <campaign-id> [flags]
 
 | Flag | Description and default |
 |---|---|
+| `--clear-exclude-lists` | Exclude no list |
+| `--clear-exclude-segments` | Exclude no segment |
 | `--clear-from` | Remove the sender |
+| `--clear-lists` | Remove every list the campaign sends to |
 | `--clear-reply-to` | Remove the reply-to |
+| `--clear-segments` | Remove every segment the campaign sends to |
+| `--exclude-list-id strings` | New list whose contacts get no message, replacing the excluded lists (can be used multiple times) |
+| `--exclude-segment-id strings` | New segment whose members get no message, replacing the excluded segments (can be used multiple times) |
 | `--from string` | Sender email address |
 | `--from-name string` | Sender display name (needs `--from`) |
 | `--html-file string` | Path to the HTML |
 | `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--list-id strings` | New list to send to, replacing the lists (can be used multiple times) |
+| `--markup-file string` | Path to the AhaML of a Simple Editor design |
 | `--mjml-file string` | Path to the MJML source |
 | `--name string` | New campaign name |
 | `--preheader string` | New preview text (empty clears it) |
 | `--regenerate-text` | Make the text version again from the HTML |
 | `--reply-to string` | New reply-to email address |
+| `--segment-id strings` | New segment to send to, replacing the segments (can be used multiple times) |
 | `--subject string` | New subject (empty clears it) |
 | `--text-file string` | Path to the plain text version |
 
@@ -328,4 +404,5 @@ ahasend campaigns update <campaign-id> [flags]
 
 - [Campaigns API](/api-reference/campaigns/overview), [Send campaign](/api-reference/campaigns/send-campaign), [Test campaign](/api-reference/campaigns/test-campaign).
 - [Campaign templates API](/api-reference/campaign-templates/create-campaign-template), [Lists commands](/cli/commands/lists), [Transactional templates commands](/cli/commands/templates).
-- [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).
+- [Segments](/campaigns/segments), [AhaML](/send-api/ahaml), [CLI configuration and output](/cli/configuration).
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

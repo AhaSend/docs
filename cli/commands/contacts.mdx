@@ -17,10 +17,11 @@ These commands need CLI v0.3.0 or later. Check your version with `ahasend --vers
 
 | Scope | Commands |
 |---|---|
-| `contacts:read` | `contacts list`, `contacts get` |
+| `contacts:read` | `contacts list`, `contacts get`, `contacts segments` |
 | `contacts:write` | `contacts create`, `contacts update`, `contacts batch` |
 | `contacts:delete` | `contacts delete` |
 | `lists:read` | `contacts memberships` |
+| `segments:read` | `contacts segments` |
 
 Attribute keys must already exist in the dashboard. Creating a contact does not add it to a list; add it with [`ahasend lists members add`](/cli/commands/lists#add-and-list-members). The shell examples need Bash.
 
@@ -74,6 +75,16 @@ ahasend contacts memberships docs-contact-test@example.com --subscription-status
 ```
 
 Each membership shows its list and its status: `unconfirmed`, `confirmed`, `unsubscribed` or `complained`.
+
+## List a Contact's Segments
+
+Continue the script. `contacts segments` lists the [segments](/campaigns/segments) a contact is a member of, in the order of `segments list`. It needs CLI v0.4.0 or later.
+
+```bash
+ahasend contacts segments docs-contact-test@example.com
+```
+
+The output shows each segment as `segments list` does. A contact in no segment prints `No segments found`. A segment that is `building` may still list the contact by its previous rules.
 
 ## Delete the Test Contacts
 
@@ -175,6 +186,18 @@ ahasend contacts memberships <id-or-email> [flags]
 | `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
 | `--subscription-status string` | Filter by membership status: `unconfirmed`, `confirmed`, `unsubscribed` or `complained` |
 
+### `contacts segments`
+
+```text
+ahasend contacts segments <id-or-email> [flags]
+```
+
+| Flag | Description and default |
+|---|---|
+| `--after string` | Return the page after this cursor |
+| `--before string` | Return the page before this cursor |
+| `--limit int32` | Maximum number of items to return (0-100; 0 uses the API default) |
+
 ### `contacts update`
 
 ```text
@@ -193,6 +216,6 @@ ahasend contacts update <id-or-email> [flags]
 
 ## Related Guides
 
-- [Contacts API](/api-reference/contacts/overview), [Batch upsert contacts](/api-reference/contacts/batch-upsert-contacts), [Lists of a contact](/api-reference/lists/get-contact-lists).
+- [Contacts API](/api-reference/contacts/overview), [Batch upsert contacts](/api-reference/contacts/batch-upsert-contacts), [Lists of a contact](/api-reference/lists/get-contact-lists), [Segments of a contact](/api-reference/segments/get-contact-segments).
 - [Lists commands](/cli/commands/lists), [Campaigns commands](/cli/commands/campaigns), [CLI authentication](/cli/authentication).
 - [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

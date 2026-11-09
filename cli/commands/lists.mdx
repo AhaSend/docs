@@ -91,7 +91,7 @@ ahasend contacts delete docs-list-member-test@example.com --force
 
 The script stops at the first command that fails, and then deletes nothing. If it stops early, find the test list with `ahasend lists list --name docs` and delete it with `lists delete`, then delete the test contact with the `contacts delete` command above.
 
-The API refuses to delete a list while a campaign that still needs it refers to it.
+The API refuses to delete a list while a campaign that still needs it refers to it, or while a segment refers to it, and names those segments; see [delete a segment](/campaigns/segments#delete-a-segment).
 
 `lists delete` and `lists members remove` ask for confirmation first; see [prompts](/cli/configuration#prompts).
 

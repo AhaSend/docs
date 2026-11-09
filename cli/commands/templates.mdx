@@ -1,7 +1,7 @@
 ---
 title: "ahasend templates: Transactional Templates"
 sidebarTitle: "templates"
-description: "Create, update, publish, and delete AhaSend transactional templates with the CLI, inspect or discard drafts, and list or restore published versions."
+description: "Create, update, publish, and delete AhaSend transactional templates with the CLI, edit Simple Editor designs as AhaML, and list or restore versions."
 icon: "file-lines"
 ---
 
@@ -19,7 +19,7 @@ These commands work on templates stored in your AhaSend account. To send content
 
 | Scope | Commands |
 |---|---|
-| `templates:read` | `templates list`, `templates get`, `templates draft get`, `templates versions list`, `templates versions get` |
+| `templates:read` | `templates list`, `templates get`, `templates versions list`, `templates versions get` |
 | `templates:write` | `templates create`, `templates update`, `templates publish`, `templates draft discard`, `templates versions restore` |
 | `templates:delete` | `templates delete` |
 
@@ -28,6 +28,8 @@ These commands work on templates stored in your AhaSend account. To send content
 ## Drafts, Publishing and Versions
 
 Changes to a template go to its draft, the same draft the dashboard edits. Sends use the published copy, so publish the draft with `--publish` or `templates publish` before you send. A template created without `--publish` has only a draft, and sends of it fail until you publish it.
+
+On CLI v0.4.0 or later, `templates get` shows the template's working copy: its draft while it has one, and its published copy otherwise. `Has Draft` says which one it shows. `templates update` changes this copy, so a change builds on what `templates get` shows. `templates get --published` shows the published copy, the one sends use. `templates list` lists each template as its published copy.
 
 Every publish is kept as a version. A template keeps its 50 most recent versions, and you can restore any of them into the draft.
 
@@ -39,21 +41,23 @@ Save this file as `welcome.html`:
 <p>Hello from the docs test template.</p>
 ```
 
-Then save these commands in one Bash script. Use a sender address on your verified domain in place of `hello@example.com`. The send uses sandbox mode, so nothing is delivered.
+Then save these commands in one Bash script. The script needs CLI v0.4.0 or later. Use a sender address on your verified domain in place of `hello@example.com`. The send uses sandbox mode, so nothing is delivered.
 
 ```bash
 set -euo pipefail
 TEMPLATE_ID=$(ahasend templates create --name "Docs test template" --subject "Docs test" \
   --from hello@example.com --from-name "Example" --html-file welcome.html --output json | jq -er '.id')
-ahasend templates draft get "$TEMPLATE_ID"
-ahasend templates publish "$TEMPLATE_ID"
 ahasend templates get "$TEMPLATE_ID"
+ahasend templates publish "$TEMPLATE_ID"
+ahasend templates get "$TEMPLATE_ID" --published
 ahasend messages send --template-id "$TEMPLATE_ID" --to docs-template-test@example.com --sandbox
 ```
 
-`templates get` shows the published copy, with the variables a send must supply, each marked required or optional. The template supplies the content, so `messages send --template-id` takes no content flags; `--from` and `--subject` default to the template's sender and subject. Pass variable values with `--global-substitutions` or a `--recipients` file, as the [messages commands](/cli/commands/messages) describe.
+Before the publish, `templates get` shows the draft. `templates get --published` shows the published copy, with the variables a send must supply. The template supplies the content, so `messages send --template-id` takes no content flags; `--from` and `--subject` default to the template's sender and subject. Pass variable values with `--global-substitutions` or a `--recipients` file, as the [messages commands](/cli/commands/messages) describe.
 
-Content comes from files. `--mjml-file` sets the MJML of an advanced template, and `--html-file` the HTML of an html template; you cannot combine them. `--text-file` sets the plain text version, which is otherwise made from the HTML. Give `--editor` when there is neither an MJML nor an HTML file. The editor cannot change after you create the template.
+Each variable shows its kind and whether a send must give it a value. A value shows no kind, as `first_name (required)`. A condition, which only shows or hides part of the email, shows as `vip (condition; optional)`. A list, whose section repeats for each element, shows the fields each element gives, as `items (list of name/price; required)`, or `tags (list; optional)` when the section uses none. Variable kinds need CLI v0.4.0 or later; see [kinds of variables](/send-api/templates#kinds-of-variables).
+
+Content comes from files. `--markup-file` sets the design of a simple template as [AhaML](#ahaml-designs), `--mjml-file` the MJML of an advanced template, and `--html-file` the HTML of an html template; you cannot combine them. `--text-file` sets the plain text version, which is otherwise made from the HTML. Give `--editor` when there is no markup, MJML or HTML file. The editor cannot change after you create the template.
 
 ## Update the Draft
 
@@ -61,11 +65,11 @@ Continue the script. `update` sends only the flags you give. Every field but the
 
 ```bash
 ahasend templates update "$TEMPLATE_ID" --subject "Docs test, second version"
-ahasend templates draft get "$TEMPLATE_ID"
+ahasend templates get "$TEMPLATE_ID"
 ahasend templates update "$TEMPLATE_ID" --publish
 ```
 
-`update --publish` publishes the whole draft, including changes made in the dashboard; on its own it only publishes. To drop a draft instead, run `ahasend templates draft discard "$TEMPLATE_ID" --force`. `draft get` on a template with no draft returns a not found error.
+After the first update, `templates get` shows the draft with the new subject, and `templates get --published` shows the published copy without it. `update --publish` publishes the whole draft, including changes made in the dashboard; on its own it only publishes. To drop a draft instead, run `ahasend templates draft discard "$TEMPLATE_ID" --force`.
 
 Other update flags:
 
@@ -73,6 +77,30 @@ Other update flags:
 - `--from` replaces the sender address and name together. `--clear-from` removes the sender and the reply-to.
 - `--reply-to` needs a template that has a sender. `--clear-reply-to` removes the reply-to.
 - `--regenerate-text` makes the text version again from the HTML.
+
+## AhaML Designs
+
+The design of a simple template reads and writes as [AhaML](/send-api/ahaml) (AhaSend Markup), the text form of a Simple Editor design. `templates get --markup` writes only the design's AhaML to stdout, so you can save it, edit it, and write it back with `--markup-file`. These flags need CLI v0.4.0 or later.
+
+```bash
+ahasend templates get YOUR_TEMPLATE_ID --markup > design.ahaml
+# Edit design.ahaml, then write it back to the draft
+ahasend templates update YOUR_TEMPLATE_ID --markup-file design.ahaml
+```
+
+To a file or a pipe, `--markup` writes the AhaML exactly as the API returned it; to a terminal, it escapes control characters. It cannot be used with `--output`. It fails with exit code 1 when there is no AhaML to write: for an advanced or html design, for a design with no content, and when the API could not give the design as AhaML.
+
+On `create`, `--markup-file` makes the editor `simple`, and `--editor advanced` and `--editor html` cannot be used with it. On `update`, it replaces the design of a simple template. `--text-file` and `--regenerate-text` can be used with it. An empty file is rejected.
+
+Without `--markup`, `templates get` shows the AhaML of a simple design in its `Markup` row. When the API could not give the design as AhaML, `Markup Error` says why, as `<code>: <message>`, such as `html_block: ...` for a design that holds an HTML block. `templates versions get` shows the same two rows. In CSV output, the columns `markup` and `markup_error` follow `mjml`, and the output of one template, such as from `templates get`, ends with a `markup_warnings` column.
+
+A write that carries AhaML shows the API's warnings about it in a `Markup Warnings` row, one per line, with the place in the AhaML when there is one:
+
+```text
+line 3, column 48: text holds {{, which stays text (jinja_in_text) at Email > Paragraph[1]
+```
+
+A write whose AhaML the API refuses fails with exit code 4, and outside JSON output lists each problem under the error, with its line and column. See [AhaML errors](/send-api/ahaml#errors) for the problems the API reports.
 
 ## List and Restore Versions
 
@@ -120,6 +148,7 @@ ahasend templates create --name <name> [flags]
 | `--from-name string` | Sender display name (needs `--from`) |
 | `--html-file string` | Path to the HTML |
 | `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--markup-file string` | Path to the AhaML of a Simple Editor design |
 | `--mjml-file string` | Path to the MJML source |
 | `--name string` | Template name (required) |
 | `--preheader string` | Preview text |
@@ -148,21 +177,16 @@ ahasend templates draft discard <template-id> [flags]
 |---|---|
 | `-f`, `--force` | Skip confirmation prompt |
 
-### `templates draft get`
-
-```text
-ahasend templates draft get <template-id> [flags]
-```
-
-No command-specific flags. See [global flags](/cli/configuration#global-flags).
-
 ### `templates get`
 
 ```text
 ahasend templates get <template-id> [flags]
 ```
 
-No command-specific flags. See [global flags](/cli/configuration#global-flags).
+| Flag | Description and default |
+|---|---|
+| `--markup` | Write only the design's AhaML to stdout, as `--markup-file` reads it |
+| `--published` | Get the published copy, which sends use, instead of the working copy |
 
 ### `templates list`
 
@@ -200,6 +224,7 @@ ahasend templates update <template-id> [flags]
 | `--from-name string` | Sender display name (needs `--from`) |
 | `--html-file string` | Path to the HTML |
 | `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
+| `--markup-file string` | Path to the AhaML of a Simple Editor design |
 | `--mjml-file string` | Path to the MJML source |
 | `--name string` | New template name |
 | `--preheader string` | New preview text (empty clears it) |
@@ -241,4 +266,4 @@ ahasend templates versions restore <template-id> <version-id> [flags]
 
 - [Create template](/api-reference/templates/create-template), [Publish template](/api-reference/templates/publish-template), [Restore template version](/api-reference/templates/restore-template-version).
 - [Send a template message](/api-reference/messages/create-template-message), [Messages commands](/cli/commands/messages), [Message content guide](/cli/templates).
-- [Campaign templates](/cli/commands/campaigns#campaign-templates), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).
+- [AhaML](/send-api/ahaml), [Campaign templates](/cli/commands/campaigns#campaign-templates), [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes).

@@ -210,6 +210,7 @@ Message sent to 1 of 2 recipients
 Message 1:
   Recipient: u@example.com
   ID: 0d371db4-00d0-5eec-851c-e1db1e2b190d
+  Message-ID: <0d371db4-00d0-5eec-851c-e1db1e2b190d@example.com>
   Status: queued
 
 Message 2:
@@ -218,7 +219,9 @@ Message 2:
   Error: failed to send message: rej@example.com: The message could not be queued because of an internal error. Please try again later or contact support.
 ```
 
-With `--output json`, the command prints the API's response body as [JSON output](/cli/configuration#json-output) describes. Each message's `id` is the ID that `messages get` and `messages cancel` take. `message_id_header` is its Message-ID header. Notices, such as where the command saved failed recipients, go to stderr.
+Table output has a row for each message, with the columns `#`, `Recipient`, `ID`, `Message-ID`, `Status` and `Error`, and CSV output has the columns `recipient,id,message_id_header,status,error`. `ID` is the message's `id`, which `messages get` and `messages cancel` take. `Message-ID` is the email's Message-ID header, which `messages list --message-id` takes. A message the API did not send has neither. The `Message-ID` line and column need CLI v0.4.0 or later.
+
+With `--output json`, the command prints the API's response body as [JSON output](/cli/configuration#json-output) describes, which gives each message's `id` and its Message-ID header, `message_id_header`. Notices, such as where the command saved failed recipients, go to stderr.
 
 The API can accept a request but refuse some recipients in it, when it could not queue their message. Those recipients count as failed. The command saves failed recipients to a file that you can send again; see [failed recipients](/cli/batch-processing#failed-recipients).
 
@@ -268,6 +271,8 @@ ahasend messages get "YOUR_RESOURCE_ID"
 # Save the message content to a file
 ahasend messages get "YOUR_RESOURCE_ID" --output json | jq -r .content > message.txt
 ```
+
+The delivery attempt of an out-of-band bounce, which the recipient's mail server reported after it accepted the message, names the bounce report message, and `messages get` takes its ID too. Table output then adds a `Report Message ID` column to the `Delivery Attempts` table, and plain output a `Report Message ID:` line to that attempt; CSV output has it in the attempt's `report_message_id`. This needs CLI v0.4.0 or later.
 
 ## Cancel Messages
 

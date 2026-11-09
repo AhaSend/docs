@@ -95,13 +95,14 @@ A scope that ends in `{domain}` takes one of your domains in its place, such as 
 | Campaigns | `campaigns:read`, `campaigns:write`, `campaigns:delete`, `campaigns:send` |
 | Contacts | `contacts:read`, `contacts:write`, `contacts:delete` |
 | Lists | `lists:read`, `lists:write`, `lists:delete` |
+| Segments | `segments:read`, `segments:write`, `segments:delete` |
 | SMTP credentials | `smtp-credentials:read:all`, `smtp-credentials:read:{domain}`, `smtp-credentials:write:all`, `smtp-credentials:write:{domain}`, `smtp-credentials:delete:all`, `smtp-credentials:delete:{domain}` |
 | Statistics | `statistics-transactional:read:all`, `statistics-transactional:read:{domain}` |
 | API keys | `api-keys:read`, `api-keys:write`, `api-keys:delete` |
 | Sub-accounts | `sub-accounts:read`, `sub-accounts:write`, `sub-accounts:delete`, `sub-accounts:suspend`, `sub-accounts:usage` |
 | Sub-account API keys | `sub-account-api-keys:read`, `sub-account-api-keys:write`, `sub-account-api-keys:delete` |
 
-`ahasend apikeys create --help` lists the same scopes. See [Permission scopes](/api-reference/scopes) for what each one allows.
+`ahasend apikeys create --help` lists the same scopes. The segment scopes need CLI v0.4.0 or later. See [Permission scopes](/api-reference/scopes) for what each one allows.
 
 ## IP Allow Lists
 
