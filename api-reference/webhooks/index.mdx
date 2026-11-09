@@ -51,6 +51,8 @@ Events contain `type`, `webhook_id`, `timestamp`, and an event-specific `data` o
 
 Transactional and campaign messages send the same message events with the same payload. The events of a campaign message also carry `campaign_id`, `list_id` and `segment_id`. `message.unsubscribed` and `message.complained` are sent for campaign email only.
 
+`data.id` is the message's ID, the same for every event of the message. [Get Message](/api-reference/messages/get-message) takes it, and for a message sent through the API it is the `id` that the send returned. For a campaign message, `data.id` only groups the events of that message, because the API does not return campaign messages.
+
 AhaSend reads the message when it sends a message event. When the message is deleted before then, or for a campaign message its campaign recipient or its contact, the event is not sent. An event of a campaign message is also not sent when it happens before AhaSend has logged that it received the message.
 
 ## Contact Events

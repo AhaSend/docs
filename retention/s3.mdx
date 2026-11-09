@@ -130,6 +130,8 @@ RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID/MESSAGE_ID.eml
 RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID/YYYYMMDDTHHMMSSZ-STATUS.txt
 ```
 
+`MESSAGE_ID` is the message's `id`, which [Get Message](/api-reference/messages/get-message) takes.
+
 ### Email Address Formatting
 
 Special characters in email addresses are replaced for S3 compatibility:
@@ -150,22 +152,22 @@ Special characters in email addresses are replaced for S3 compatibility:
 my-email-archive/
 ├── john_AT_example.com/
 │   ├── 2024-01-15/
-│   │   ├── msg_abc123/
-│   │   │   └── msg_abc123.eml
+│   │   ├── 019a0c3e-7c3e-7b2a-9d4e-5f6a7b8c9d0e/
+│   │   │   └── 019a0c3e-7c3e-7b2a-9d4e-5f6a7b8c9d0e.eml
 │   │   │   └── 20240115T120000Z-Delivery.txt
 │   └── 2024-01-16/
-│       ├── msg_def456/
-│       │   └── msg_def456.eml
+│       ├── 0199f1c2-7d3a-7b4e-9a1f-2c3d4e5f6a7b/
+│       │   └── 0199f1c2-7d3a-7b4e-9a1f-2c3d4e5f6a7b.eml
 │       │   └── 20240116T120000Z-TransientFailure.txt
 ├── support_AT_mycompany.org/
 │   └── 2024-01-15/
-│       ├── msg_ghi789/
-│       │   └── msg_ghi789.eml
+│       ├── 019a0c3f-1d2e-7f3a-8b4c-5d6e7f8a9b0c/
+│       │   └── 019a0c3f-1d2e-7f3a-8b4c-5d6e7f8a9b0c.eml
 │       │   └── 20240115T120000Z-Bounce.txt
 └── user_PLUS_tag_AT_example.com/
     └── 2024-01-15/
-        ├── msg_jkl012/
-        │   └── msg_jkl012.eml
+        ├── 019a0c40-2e3f-7a4b-9c5d-6e7f8a9b0c1d/
+        │   └── 019a0c40-2e3f-7a4b-9c5d-6e7f8a9b0c1d.eml
         │   └── 20240115T120000Z-TransientFailure.txt
         │   └── 20240115T120100Z-Expiration.txt
 ```

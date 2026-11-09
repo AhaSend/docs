@@ -443,8 +443,8 @@ All AhaSend webhooks follow the Standard Webhooks payload format:
     "from": "hello@yourcompany.com",
     "recipient": "customer@example.com",
     "subject": "Welcome to our service",
-    "message_id_header": "message-id-12345",
-    "id": "ahasend-message-67890",
+    "message_id_header": "<message-id-12345@localhost>",
+    "id": "019a0c3e-7c3e-7b2a-9d4e-5f6a7b8c9d0e",
     "delivery_attempt": {
       "smtp_code": 250,
       "enhanced_status_code": "2.0.0",
@@ -454,6 +454,8 @@ All AhaSend webhooks follow the Standard Webhooks payload format:
   }
 }
 ```
+
+`data.message_id_header` is the email's Message-ID header. [Message Events](/api-reference/webhooks#message-events) says what `data.id` is.
 
 ### Delivery Attempt Diagnostics
 
