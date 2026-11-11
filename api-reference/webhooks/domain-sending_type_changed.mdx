@@ -1,0 +1,33 @@
+---
+title: "domain.sending_type_changed Webhook Event"
+sidebarTitle: "Sending Type Changed"
+openapi: "/webhooks.yaml webhook domain.sending_type_changed"
+description: "The domain.sending_type_changed webhook fires when a domain's sending type changes between transactional and marketing. Payload, source and setting."
+---
+
+
+AhaSend sends this event when the [sending type](/domains#sending-type) of a domain changes between `transactional` and `marketing`.
+
+**Who changes it** (`data.source`):
+- You, in the dashboard or through the API (`customer`)
+- AhaSend support (`admin`)
+- AhaSend, when a transactional domain sends marketing email: the domain becomes `marketing` (`automatic`)
+
+AhaSend can add a source, so keep a fallback for a value you do not know.
+
+`data.previous_sending_type` and `data.sending_type` are the domain's sending type before and after the change, and `timestamp` is the time of the change.
+
+**Impact**: The domain's email follows the rules of its new sending type.
+
+**No event**: Adding a domain, whatever its sending type, or saving a domain without a change to its sending type.
+
+**Setting**: `on_sending_type_changed` (Sending Type Changed in the dashboard). Any account can use this event.
+
+**When it's sent**: When the sending type of a domain changes.
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
+- [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).
+- [Signature verification](/api-reference/webhooks/security), [Retry policy](/api-reference/webhooks/retry-policy), [API errors](/api-reference/errors).
+- [API rate limits](/api-reference/rate-limits), [Domain setup](/domains).

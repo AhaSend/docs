@@ -243,15 +243,17 @@ These scopes are granted to **parent**-account API keys to manage sub-accounts a
   <Tab title="Global Scopes">
     | Scope | Description |
     |-------|-------------|
-    | `statistics-transactional:read:all` | Read statistics for all domains |
+    | `statistics:read:all` | Read statistics for all domains |
   </Tab>
 
   <Tab title="Domain-Specific Scopes">
     | Scope Pattern | Description |
     |---------------|-------------|
-    | `statistics-transactional:read:{domain}` | Read statistics for specific domain |
+    | `statistics:read:{domain}` | Read statistics for specific domain |
   </Tab>
 </Tabs>
+
+These scopes cover the [transactional reports](/api-reference/reports/get-deliverability-report) and [Get Email Statistics](/api-reference/reports/get-email-statistics). The earlier names `statistics-transactional:read:all` and `statistics-transactional:read:{domain}` still work and give the same access. One key cannot hold the same scope under both names.
 
 ## Scope Validation and Hierarchy
 
@@ -313,7 +315,7 @@ When an API request is made, the system checks scopes in the following order:
     [
       "messages:send:{newsletter.com}",
       "suppressions:write",
-      "statistics-transactional:read:{newsletter.com}"
+      "statistics:read:{newsletter.com}"
     ]
     ```
   </Accordion>

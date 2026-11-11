@@ -56,7 +56,7 @@ ahasend apikeys create --label "Production API" --scope "messages:send:all"
 # Read-only analytics key
 ahasend apikeys create \
   --label "Analytics Only" \
-  --scope "statistics-transactional:read:all" \
+  --scope "statistics:read:all" \
   --scope "messages:read:all"
 
 # Domain-specific messaging
@@ -97,12 +97,12 @@ A scope that ends in `{domain}` takes one of your domains in its place, such as 
 | Lists | `lists:read`, `lists:write`, `lists:delete` |
 | Segments | `segments:read`, `segments:write`, `segments:delete` |
 | SMTP credentials | `smtp-credentials:read:all`, `smtp-credentials:read:{domain}`, `smtp-credentials:write:all`, `smtp-credentials:write:{domain}`, `smtp-credentials:delete:all`, `smtp-credentials:delete:{domain}` |
-| Statistics | `statistics-transactional:read:all`, `statistics-transactional:read:{domain}` |
+| Statistics | `statistics:read:all`, `statistics:read:{domain}` |
 | API keys | `api-keys:read`, `api-keys:write`, `api-keys:delete` |
 | Sub-accounts | `sub-accounts:read`, `sub-accounts:write`, `sub-accounts:delete`, `sub-accounts:suspend`, `sub-accounts:usage` |
 | Sub-account API keys | `sub-account-api-keys:read`, `sub-account-api-keys:write`, `sub-account-api-keys:delete` |
 
-`ahasend apikeys create --help` lists the same scopes. The segment scopes need CLI v0.4.0 or later. See [Permission scopes](/api-reference/scopes) for what each one allows.
+`ahasend apikeys create --help` lists the same scopes. The segment scopes need CLI v0.4.0 or later, and the statistics scopes under these names need CLI v0.5.0 or later. Earlier versions accept only the [earlier names](/api-reference/scopes#statistics-and-reports). See [Permission scopes](/api-reference/scopes) for what each one allows.
 
 ## IP Allow Lists
 

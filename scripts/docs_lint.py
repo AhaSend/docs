@@ -153,8 +153,8 @@ def cli_problems(words, commands):
 
 def load_commands(release):
     snapshot = json.loads(release.read_text())
-    if snapshot["source"].get("version") != "v0.4.0":
-        raise ValueError("CLI command source must be the pinned v0.4.0 release")
+    if snapshot["source"].get("version") != "v0.5.0":
+        raise ValueError("CLI command source must be the pinned v0.5.0 release")
     return snapshot["commands"]
 
 
