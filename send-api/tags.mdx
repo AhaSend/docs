@@ -1,0 +1,58 @@
+---
+title: "Tags"
+sidebarTitle: "Tags"
+description: "Tag the emails you send with the AhaSend API, for example by email type or feature, and filter messages by tag when you look them up or investigate a problem."
+icon: "tags"
+---
+
+Tags label a message with what it is, such as `password-reset`, `invoice` or `onboarding`. You can then filter your messages by tag, for example to see how all invoice emails were delivered last week.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
+<a id="add" />
+
+## How Do I Tag an Email?
+
+Add a `tags` array to the send request:
+
+```json
+{
+  "sandbox": true,
+  "from": { "email": "billing@yourdomain.com", "name": "Your Company" },
+  "recipients": [{ "email": "customer@example.com" }],
+  "subject": "Your invoice",
+  "text_content": "Your invoice is attached.",
+  "tags": ["invoice", "billing"]
+}
+```
+
+| Rule | Limit |
+| --- | --- |
+| Tags per message | Up to 10 |
+| Length of a tag | Up to 64 characters |
+| Case | Tags are case-sensitive: `Invoice` and `invoice` are different tags |
+| Characters | Don't use commas: AhaSend stores the tags as a comma-separated list |
+
+<a id="filter" />
+
+## How Do I Find Messages by Tag?
+
+[List Messages](/api-reference/messages/get-messages) takes a `tags` filter with up to 20 comma-separated tags:
+
+```bash
+curl --request GET \
+  --url 'https://api.ahasend.com/v2/accounts/{account_id}/messages?tags=invoice&from_time=2026-11-01T00:00:00Z' \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+<a id="naming" />
+
+## How Should I Name Tags?
+
+Name tags after what the email is, not after the recipient: a tag per user makes filtering useless. Lowercase with hyphens works well, such as `password-reset`, `order-confirmation` or `trial-ending`.
+
+Over SMTP, use the `ahasend-tags` [special header](/smtp/special-headers#message-tags-header) with the same rules.
+
+## Related Guides
+
+- [Send email](/send-api/send-email), [List Messages reference](/api-reference/messages/get-messages), [SMTP special headers](/smtp/special-headers).

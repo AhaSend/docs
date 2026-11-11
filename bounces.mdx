@@ -52,7 +52,7 @@ Remove a suppression only after resolving its cause and confirming that sending 
 
 Verify the [signature](/api-reference/webhooks/security), save the `webhook-id` delivery header to detect duplicate deliveries, and record the message ID, event type and timestamp. Acknowledge verified unknown event types with 2xx. Keep the event history so a late bounce or repeated notification does not erase useful earlier evidence.
 
-A delivery attempt's `classification` is an open string. Values can change as classification improves; keep the original SMTP response and do not reject an entire webhook because a new classification appears. Distinguish [webhook delivery retries](/api-reference/webhooks/retry-policy) from the email's own [schedule and expiry](/send-api/send-email).
+A delivery attempt's `classification` is an open string. Values can change as classification improves; keep the original SMTP response and do not reject an entire webhook because a new classification appears. Distinguish [webhook delivery retries](/api-reference/webhooks/retry-policy) from the email's own [schedule and expiry](/send-api/schedule-email).
 
 Test each branch with the [sandbox outcomes](/send-api/sandbox) and [local webhook testing](/cli/webhook-testing). Use the [bounce report API](/api-reference/reports/get-bounce-report) to find patterns by recipient domain before changing volume.
 

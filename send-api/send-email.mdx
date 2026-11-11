@@ -61,6 +61,38 @@ curl --request POST \
   }'
 ```
 
+## What Else Can I Do When Sending?
+
+<CardGroup cols={2}>
+  <Card title="Batch Sending" icon="users" href="/send-api/multiple-recipients">
+    Up to 100 personalized recipients per request, plus CC and BCC.
+  </Card>
+  <Card title="Attachments" icon="paperclip" href="/send-api/attachments">
+    PDFs, calendar invites and other files, with size limits.
+  </Card>
+  <Card title="Inline Images" icon="image" href="/send-api/inline-images">
+    Show a logo or photo inside the message with `cid:`.
+  </Card>
+  <Card title="Schedule Email" icon="clock" href="/send-api/schedule-email">
+    Send later, expire late messages, cancel before sending.
+  </Card>
+  <Card title="Custom Headers" icon="heading" href="/send-api/custom-headers">
+    Add your own headers, with substitutions in values.
+  </Card>
+  <Card title="Tags" icon="tags" href="/send-api/tags">
+    Label messages and filter on them later.
+  </Card>
+  <Card title="Tracking and Retention" icon="sliders" href="/send-api/tracking-and-retention">
+    Per-message tracking and storage, overriding your account.
+  </Card>
+  <Card title="Idempotency Keys" icon="repeat" href="/api-reference/idempotency">
+    Retry safely without sending twice.
+  </Card>
+  <Card title="Bounces and Suppressions" icon="ban" href="/bounces">
+    Why an address is suppressed, for how long, and when to remove it.
+  </Card>
+</CardGroup>
+
 <a id="authentication" />
 
 ## Which Credentials Do I Need?

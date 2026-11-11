@@ -1,0 +1,63 @@
+---
+title: "Inline Images"
+sidebarTitle: "Inline Images"
+description: "Show images inside the body of your emails by attaching them with a Content-ID and referring to them from your HTML with cid, through the API or over SMTP."
+icon: "image"
+---
+
+An inline image is an attachment that shows inside the message instead of as a download, for example a logo or a product photo. You attach the image with a Content-ID and refer to that ID from your HTML.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
+<a id="api" />
+
+## How Do I Embed an Image with the API?
+
+Give the attachment a `content_id` wrapped in angle brackets, and use the same value without the brackets after `cid:` in your HTML:
+
+```json
+{
+  "sandbox": true,
+  "from": { "email": "orders@yourdomain.com", "name": "Your Store" },
+  "recipients": [{ "email": "customer@example.com" }],
+  "subject": "Thanks for your order",
+  "html_content": "<p>Thanks for your order.</p><img src=\"cid:logo@yourdomain.com\" alt=\"Your Store\" width=\"120\">",
+  "attachments": [
+    {
+      "file_name": "logo.png",
+      "content_type": "image/png",
+      "base64": true,
+      "content_id": "<logo@yourdomain.com>",
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+    }
+  ]
+}
+```
+
+<Warning>
+  The angle brackets in `content_id` are required. Without them the image is delivered as a regular downloadable attachment and doesn't show in the message.
+</Warning>
+
+The same works with [transactional templates](/send-api/templates): attach the image in the send request and refer to it from the template's HTML with `cid:`.
+
+<a id="hosted-images" />
+
+## Should I Embed Images or Link to Them?
+
+| | Embedded with `cid:` | Linked from your website |
+| --- | --- | --- |
+| Shows without the recipient allowing remote images | Yes, in most clients | Often not until the recipient allows it |
+| Message size | Grows with every image | Stays small |
+| Change an image after sending | No | Yes |
+
+Embed small images that must always show, such as a logo. Link larger images and anything you might want to change later.
+
+<a id="smtp" />
+
+## How Do I Embed an Image over SMTP?
+
+Add the image as a MIME part with a `Content-ID` header inside a `multipart/related` part, and refer to it with `cid:` in the HTML. Most mail libraries have a helper for this, often called an embedded or inline attachment.
+
+## Related Guides
+
+- [Attachments](/send-api/attachments), [Send email](/send-api/send-email), [Transactional templates](/send-api/templates).
