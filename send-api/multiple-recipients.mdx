@@ -65,8 +65,10 @@ Keep each `id` to look the message up later with [Get Message](/api-reference/me
 
 Split the list into requests of up to 100 recipients and send them one after another or in parallel, within the [API rate limit](/api-reference/rate-limits) of 100 requests per second. Give every request its own [idempotency key](/api-reference/idempotency), so a retry after a timeout never sends a batch twice.
 
+The number of emails your account can send per hour is a separate limit; see [sending limits](/api-reference/rate-limits#sending-limits).
+
 <Tip>
-  For newsletters and other marketing mail to a list, [Campaign Builder](/campaigns) does the batching, unsubscribe handling and reporting for you, and sends from a marketing domain.
+  For newsletters and other marketing mail to a list, [Campaign Builder](/campaigns) does the batching, unsubscribe handling and reporting for you, and sends over the marketing infrastructure.
 </Tip>
 
 <a id="cc-and-bcc" />

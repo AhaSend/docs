@@ -49,6 +49,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 | `Reply-To` | Use the `reply_to` field. If you set `reply_to`, don't also put `Reply-To` in `headers`. |
 | `To` | Set from `recipients`: one recipient per message. For several visible recipients, CC or BCC, use [Create Conversation Message](/send-api/multiple-recipients#cc-and-bcc). |
 | `DKIM-Signature` | Added when the message is signed with your domain's key. |
+| `List-Unsubscribe`, `List-Unsubscribe-Post` | Added to mail from a [marketing domain](/domains#sending-type), and to other mail that uses `{{unsubscribe_url}}`. On that mail, AhaSend keeps your own headers only when they meet the [rules for your own List-Unsubscribe header](/campaigns/unsubscribe#can-i-use-my-own-list-unsubscribe-header). |
 
 <Note>
   Tracking, tags, retention and sandbox mode have their own fields in the API: see [Tags](/send-api/tags) and [Tracking and retention per message](/send-api/tracking-and-retention). Over SMTP, the same settings use [special headers](/smtp/special-headers).

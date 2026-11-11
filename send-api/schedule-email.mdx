@@ -37,7 +37,7 @@ The response returns each message with `status: "scheduled"` and its `schedule`.
 | Field | Rule |
 | --- | --- |
 | `first_attempt` | In the future and within 7 days of the request |
-| `expires` | In the future and within 8 days of the request |
+| `expires` | In the future and within 8 days of the request; after `first_attempt` when you set both |
 
 Times with a `Z` are in UTC; you can also give an offset, such as `2026-11-20T09:00:00+01:00`.
 
