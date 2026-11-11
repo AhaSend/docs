@@ -48,7 +48,7 @@ bun add @ahasend/sdk fastify @fastify/rate-limit fastify-raw-body
 
 `fastify-raw-body` is only needed for webhooks: signature verification requires the raw, unparsed request body.
 
-## Configure Environment Variables
+## Configure environment variables
 
 Add your credentials to `.env` (and load them with `node --env-file=.env` or `@fastify/env`/`dotenv`):
 
@@ -59,7 +59,7 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 WELCOME_ROUTE_TOKEN=replace-with-a-long-random-value
 ```
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope and reuse it across requests:
 
@@ -80,7 +80,7 @@ export const ahasend = new AhaSendClient({
 export const welcomeRouteToken = requireEnv("WELCOME_ROUTE_TOKEN");
 ```
 
-## Send an Email from a Fastify Route
+## Send an email from a Fastify route
 
 Fastify parses JSON bodies out of the box, so no body-parsing plugin is needed here. A send route spends your AhaSend quota and puts caller-supplied text into mail you sign, so it authenticates the caller, validates the body against a schema, caps the body size, and rate-limits before it reaches the SDK:
 
@@ -175,7 +175,7 @@ The SDK retries transient failures automatically, but a 5xx or timeout does not 
 
 The send example uses `sandbox: true` to validate the request without delivering anything. The idempotency key is bound to a hash of the request body, so flipping `sandbox` on or off while reusing the same `eventId` returns `422` `AhaSendIdempotencyMismatchError` — use a distinct key prefix for sandbox traffic.
 
-## Handle Webhooks
+## Handle webhooks
 
 The SDK ships a dedicated Fastify adapter that verifies the HMAC signature and hands you a typed event. The verifier needs the **raw request body**, which Fastify normally discards after JSON parsing. Register the [`fastify-raw-body`](https://github.com/Eomm/fastify-raw-body) plugin and enable it only on the webhook route.
 
@@ -237,7 +237,7 @@ Timestamp validation does not stop a valid delivery from being replayed inside t
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

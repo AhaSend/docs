@@ -13,7 +13,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
   Idempotency is particularly important for critical operations like sending emails, creating resources, or processing payments where duplicate actions could cause problems.
 </Note>
 
-## How It Works
+## How it works
 
 When you make a request with an `Idempotency-Key` header:
 
@@ -24,7 +24,7 @@ When you make a request with an `Idempotency-Key` header:
 
 <AccordionGroup>
   <Accordion title="Supported Operations" icon="list-check">
-    Only the operations in the [Supported Operations](#supported-operations) table declare the idempotency header. These cover:
+    Only the operations in the [Supported operations](#supported-operations) table declare the idempotency header. These cover:
 
     - **API Keys**: Create API keys
     - **Domains**: Create domains
@@ -69,7 +69,7 @@ When you make a request with an `Idempotency-Key` header:
   </Accordion>
 </AccordionGroup>
 
-## Supported Operations
+## Supported operations
 
 | Operation |
 |---|
@@ -104,12 +104,12 @@ When you make a request with an `Idempotency-Key` header:
 
 A fresh execution has no `Idempotent-Replayed` header. A completed replay returns the original status and body with `Idempotent-Replayed: true`. An in-progress request returns `409`, `Idempotent-Replayed: false`, and a positive integer `Retry-After`. A mismatched request returns `422` with neither of these headers. The API has no `412` failed-key response.
 
-## Key Selection Best Practices
+## Key selection best practices
 
 A client generates an idempotency key, which is a unique key that the server uses to recognize subsequent retries of the same request. How you create unique keys is up to you, but we suggest using V4 UUIDs, or another random string with enough entropy to avoid collisions. Idempotency keys are up to 255 characters long.
 
 
-### Key Generation Examples
+### Key generation examples
 
 <CodeGroup>
 
@@ -164,7 +164,7 @@ func main() {
   **Key Collision Risk**: With V4 UUIDs, the probability of generating duplicate keys is approximately 1 in 5.3 x 10^36. For practical purposes, this is negligible even at massive scale.
 </Note>
 
-## Usage Example
+## Usage example
 
 Include the `Idempotency-Key` header only on an operation that declares it:
 
@@ -224,7 +224,7 @@ response = requests.post(
 
 </CodeGroup>
 
-## Response Behavior
+## Response behavior
 
 The API responds differently based on the idempotency key status:
 
@@ -288,7 +288,7 @@ The API responds differently based on the idempotency key status:
   </Tab>
 </Tabs>
 
-## Best Practices
+## Best practices
 
 <CardGroup cols={1}>
   <Card title="Unique Keys" icon="fingerprint">
@@ -301,7 +301,7 @@ The API responds differently based on the idempotency key status:
   </Card>
 
   <Card title="Retry Logic" icon="arrow-rotate-right">
-    Retry with the same idempotency key when you do not know the outcome, or the answer was not stored, as the **Failed Original** tab under [Response Behavior](#response-behavior) describes. Examples are a network error, a `5xx` (when a `503` has a `Retry-After` header, wait that delay), a rate-limit `429` (wait as [API rate limits](/api-reference/rate-limits) describes), and a `409` that is still in progress (wait for its `Retry-After` delay). A stored answer is replayed, so a retry of a stored `4xx` with the same key gets the same answer. For a `5xx` or a network error, wait with exponential backoff between retries. The snippet below handles the in-progress `409`; the [Error Handling](#best-practices) card lists how to treat the other `409` answers.
+    Retry with the same idempotency key when you do not know the outcome, or the answer was not stored, as the **Failed Original** tab under [Response behavior](#response-behavior) describes. Examples are a network error, a `5xx` (when a `503` has a `Retry-After` header, wait that delay), a rate-limit `429` (wait as [API rate limits](/api-reference/rate-limits) describes), and a `409` that is still in progress (wait for its `Retry-After` delay). A stored answer is replayed, so a retry of a stored `4xx` with the same key gets the same answer. For a `5xx` or a network error, wait with exponential backoff between retries. The snippet below handles the in-progress `409`; the [Error Handling](#best-practices) card lists how to treat the other `409` answers.
 
     Pass a `makeRequest(key)` callback that sends the same body each time and, on failure, throws an object with the HTTP `status` and the response `headers` (a `Headers` object). Only use this retry policy after deciding that retrying an uncertain send is acceptable.
 
@@ -337,7 +337,7 @@ The API responds differently based on the idempotency key status:
   </Card>
 </CardGroup>
 
-## Error Scenarios
+## Error scenarios
 
 <AccordionGroup>
   <Accordion title="Request Already in Progress (409 Conflict)" icon="clock">
@@ -359,7 +359,7 @@ The API responds differently based on the idempotency key status:
 
     **What it means**: The failure is treated as transient, and the key remains usable.
 
-    **What to do**: Retry with the same idempotency key — the request is re-executed as if it were the first attempt. (Other answers can be stored. The **Failed Original** tab under [Response Behavior](#response-behavior) lists what is stored and the exceptions.)
+    **What to do**: Retry with the same idempotency key — the request is re-executed as if it were the first attempt. (Other answers can be stored. The **Failed Original** tab under [Response behavior](#response-behavior) lists what is stored and the exceptions.)
   </Accordion>
 
   <Accordion title="Key Mismatch" icon="key">
@@ -377,25 +377,25 @@ The API responds differently based on the idempotency key status:
   </Accordion>
 </AccordionGroup>
 
-## Implementation Details
+## Implementation details
 
 <Warning>
   The following technical details are provided for transparency but are not required for basic usage.
 </Warning>
 
-### Request Hashing
+### Request hashing
 
 The API uses SHA256 hashing of the request method, path, and body to detect changes between requests with the same idempotency key. This ensures that different requests don't accidentally match — including the same payload sent to a different resource.
 
-### Concurrency Protection
+### Concurrency protection
 
 Claiming an idempotency key happens atomically; While a request is in flight, concurrent requests with the same key receive `409 Conflict` with a `Retry-After` header instead of waiting.
 
-### Execution Leases
+### Execution leases
 
 An in-flight request holds a lease on its idempotency key for up to 5 minutes. If the original request never completes (for example, it was interrupted by a deploy or crash), the key unblocks automatically when the lease expires and the next retry re-executes the request.
 
-### Storage Duration
+### Storage duration
 
 Ordinary stored results expire after 24 hours; successful API-key creation results expire after 5 minutes. After expiry, the same key can run a new operation.
 
@@ -407,7 +407,7 @@ Responses that contain a one-time secret — API key creation and sub-account AP
   For high-volume applications, consider implementing client-side deduplication in addition to server-side idempotency to reduce unnecessary API calls.
 </Tip>
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
 - [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).

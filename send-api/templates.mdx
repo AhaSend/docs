@@ -9,7 +9,7 @@ A transactional template is an email design that lives in your AhaSend account. 
 
 Templates are sent through the API only. SMTP cannot send a template.
 
-## When to Use a Template
+## When to use a template
 
 | | Template | Create Message |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ Use a template for emails whose wording changes more often than your code: passw
 
 Transactional templates are separate from [campaign templates](/api-reference/campaign-templates/get-campaign-templates), which are starting designs for marketing campaigns under Marketing → Templates.
 
-## Create a Template
+## Create a template
 
 In the dashboard, open **Transactional → Templates** and create a template. Choose how to build the design:
 
@@ -43,7 +43,7 @@ Write a variable in the design as `{{ first_name }}`, or in AhaML as a `Var` tag
 - **Reserved names.** AhaSend supplies `email` (the recipient's address) and, when the design uses it, `unsubscribe_url`. A value you give for these is replaced.
 - **Subject and headers.** A `{{ variable }}` in the subject or in a custom header resolves from the same values. A variable with no value becomes empty.
 
-### Kinds of Variables
+### Kinds of variables
 
 Each variable in `variables` on [Get Published Template](/api-reference/templates/get-published-template) has a `kind` that says what to send for it:
 
@@ -77,11 +77,11 @@ When `item_fields` is `["value"]`, the repeated part shows each element as it is
 
 A [template version](/api-reference/templates/get-template-version) published before kinds were recorded shows every variable as `value`. Save and publish the template again to get a version that records them: a published template has no draft, so make an edit and save it first.
 
-### Unsubscribe Link
+### Unsubscribe link
 
 When the design uses `{{ unsubscribe_url }}`, each recipient gets its own link, and the message carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, so the unsubscribe button of mail clients works. The button suppresses the recipient for the sending domain; the link opens a confirmation page first. Most transactional email should not have an unsubscribe link; use it for templates that are optional for the recipient, such as digests.
 
-## Draft, Publish, Versions
+## Draft, publish, versions
 
 Every edit, in the dashboard or through the API, goes to the template's **draft**. Sends use the **published** copy.
 
@@ -93,7 +93,7 @@ Every edit, in the dashboard or through the API, goes to the template's **draft*
 - Each publish makes a version. A template keeps its 50 most recent versions. Preview any of them on the template page or with [Get Template Version](/api-reference/templates/get-template-version), and bring one back with [Restore Template Version](/api-reference/templates/restore-template-version).
 - `has_draft` tells you whether unpublished changes are waiting. [Get Published Template](/api-reference/templates/get-published-template) returns the copy that sends use; read it to build a send.
 
-## Send a Template
+## Send a template
 
 Call [Create Template Message](/api-reference/messages/create-template-message) with the template's ID. Each recipient gets a separate message with its own values. One request can hold up to 100 recipients.
 
@@ -134,7 +134,7 @@ The [Node.js SDK](/guides/nodejs-sdk) (`@ahasend/sdk` 0.3.0 and later) and the [
 
 Sending a template needs a key that can send from the sender's domain: `messages:send:all` or the domain-specific send scope. No `templates` scope is needed to send. Creating, editing and publishing templates needs `templates:write`; deleting needs `templates:delete`. See [Permission scopes](/api-reference/scopes).
 
-## Errors You Will See
+## Errors you will see
 
 | Response | Cause | Fix |
 | --- | --- | --- |

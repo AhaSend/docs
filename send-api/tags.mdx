@@ -11,7 +11,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="add" />
 
-## How Do I Tag an Email?
+## How do I tag an email?
 
 Add a `tags` array to the send request:
 
@@ -35,7 +35,7 @@ Add a `tags` array to the send request:
 
 <a id="filter" />
 
-## How Do I Find Messages by Tag?
+## How do I find messages by tag?
 
 [List Messages](/api-reference/messages/get-messages) takes a `tags` filter with up to 20 comma-separated tags:
 
@@ -47,12 +47,12 @@ curl --request GET \
 
 <a id="naming" />
 
-## How Should I Name Tags?
+## How should I name tags?
 
 Name tags after what the email is, not after the recipient: a tag per user makes filtering useless. Lowercase with hyphens works well, such as `password-reset`, `order-confirmation` or `trial-ending`.
 
 Over SMTP, use the `ahasend-tags` [special header](/smtp/special-headers#message-tags-header) with the same rules.
 
-## Related Guides
+## Related guides
 
 - [Send email](/send-api/send-email), [List Messages reference](/api-reference/messages/get-messages), [SMTP special headers](/smtp/special-headers).

@@ -11,7 +11,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="api" />
 
-## How Do I Attach a File with the API?
+## How do I attach a file with the API?
 
 Add an `attachments` array to your [Create Message](/api-reference/messages/create-message) request. Each attachment has a file name, a content type and the file's content in `data`.
 
@@ -52,7 +52,7 @@ Attachments work the same way with [Create Template Message](/api-reference/mess
 
 <a id="calendar" />
 
-## How Do I Send a Calendar Invite?
+## How do I send a calendar invite?
 
 An `.ics` file is plain text, so it can go in `data` without encoding:
 
@@ -66,13 +66,13 @@ An `.ics` file is plain text, so it can go in `data` without encoding:
 
 <a id="smtp" />
 
-## How Do I Send Attachments over SMTP?
+## How do I send attachments over SMTP?
 
 Attach files with your mail library as usual when you send through the [SMTP relay](/smtp). AhaSend sends the message as you built it and doesn't change its MIME structure.
 
 <a id="limits" />
 
-## How Large Can Attachments Be?
+## How large can attachments be?
 
 | Limit | Value |
 | --- | --- |
@@ -84,11 +84,11 @@ Base64 makes a file about a third larger, so a 15 MB PDF is already close to the
 
 <a id="incoming" />
 
-## Can I Receive Attachments on Incoming Mail?
+## Can I receive attachments on incoming mail?
 
 Yes. [Message routes](/integrations/routing) can include the attachments of incoming messages in the payload they send to your endpoint, base64-encoded with their file name, content type and Content-ID.
 
-## Related Guides
+## Related guides
 
 - [Send email](/send-api/send-email), [Inline images](/send-api/inline-images), [Create Message reference](/api-reference/messages/create-message).
 - [SMTP settings](/smtp), [Message routing](/integrations/routing), [Sending limits](/send-api/send-email#limits).

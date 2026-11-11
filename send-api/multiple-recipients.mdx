@@ -11,7 +11,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="batch" />
 
-## How Do I Send One Request to Many Recipients?
+## How do I send one request to many recipients?
 
 List the recipients in `recipients`. Values in a recipient's `substitutions` override the request's own `substitutions`, so you can set a default once and personalize per person.
 
@@ -41,7 +41,7 @@ curl --request POST \
 
 <a id="results" />
 
-## How Do I Check Which Recipients Were Sent?
+## How do I check which recipients were sent?
 
 The response holds one item per recipient, in the order of your request. A request can succeed as a whole (HTTP `202`) while the message for one recipient is not sent. Check every item:
 
@@ -61,7 +61,7 @@ Keep each `id` to look the message up later with [Get Message](/api-reference/me
 
 <a id="larger-lists" />
 
-## How Do I Send to More Than 100 Recipients?
+## How do I send to more than 100 recipients?
 
 Split the list into requests of up to 100 recipients and send them one after another or in parallel, within the [API rate limit](/api-reference/rate-limits) of 100 requests per second. Give every request its own [idempotency key](/api-reference/idempotency), so a retry after a timeout never sends a batch twice.
 
@@ -73,7 +73,7 @@ The number of emails your account can send per hour is a separate limit; see [se
 
 <a id="cc-and-bcc" />
 
-## How Do I Send One Message with CC or BCC?
+## How do I send one message with CC or BCC?
 
 Use [Create Conversation Message](/api-reference/messages/create-conversation). It sends one message with `to`, `cc` and `bcc`, up to 50 addresses combined, the way a person sends an email from their mail client.
 
@@ -90,7 +90,7 @@ Use [Create Conversation Message](/api-reference/messages/create-conversation). 
 
 Conversation messages don't support substitutions; use Create Message when the content differs per recipient.
 
-## Related Guides
+## Related guides
 
 - [Send email](/send-api/send-email), [Transactional templates](/send-api/templates), [Idempotency](/api-reference/idempotency).
 - [Rate limits](/api-reference/rate-limits), [Webhooks](/integrations/webhooks), [Sandbox mode](/send-api/sandbox).

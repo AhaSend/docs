@@ -78,7 +78,7 @@ Your own fields are `attributes.<key>`, with the key of a contact field that you
 - `any_campaign` with `received`, `opened` or `clicked` matches a contact with at least one such event since the time. `not_opened` and `not_clicked` match a contact who received a campaign since the time and opened, or clicked, none since then.
 - Opens and clicks by bots do not count.
 
-### Campaign Counts
+### Campaign counts
 
 A `campaign_count` condition takes an object as its `value`, such as `{"count": 3, "since": "90 days ago"}`. It counts the campaigns sent since `since` that the contact received, opened or clicked.
 
@@ -88,7 +88,7 @@ A `campaign_count` condition takes an object as its `value`, such as `{"count": 
 - `received_fewer_than`, `opened_fewer_than` and `clicked_fewer_than` match only a contact who received at least one campaign sent since then.
 - A missing or unknown property of the object is refused.
 
-### Birthdays and Anniversaries
+### Birthdays and anniversaries
 
 Two operators on your date fields read only the month and day, so the year does not matter:
 - `month_is` takes a month from `1` (January) to `12` (December).
@@ -96,7 +96,7 @@ Two operators on your date fields read only the month and day, so the year does 
 
 A 29 February date counts as 28 February in a year without one. Both operators read a stored value that starts with a `YYYY-MM-DD` date, as the API and imports store it. Any other value never matches. The members of an `anniversary_within` segment move to the new day shortly after midnight in its time zone, usually within about half an hour.
 
-### Time Zone
+### Time zone
 
 `timezone` is an IANA time zone, such as `Europe/Berlin`. Relative times, such as `today` or `30 days ago`, and days are read in this zone. Without one, the segment uses `UTC`. An unknown time zone is refused with `400`.
 
@@ -114,7 +114,7 @@ A 29 February date counts as 28 February in a year without one. Both operators r
 - A campaign that uses a segment, included or excluded, cannot be sent while the segment is `building` or `failed`. [Send Campaign](/api-reference/campaigns/send-campaign) refuses it with `400`, and the message names the segment.
 - `last_evaluated_at` is the time the members were last checked against the whole account. It is `null` until the first build ends.
 
-## Members and Reachable Contacts
+## Members and reachable contacts
 
 The members of a segment are the contacts that match its rules, whatever their consent. `member_count` and [List Segment Contacts](/api-reference/segments/get-segment-contacts) include all of them.
 
@@ -128,7 +128,7 @@ So a contact whose memberships are all `unsubscribed`, `complained` or `unconfir
 
 [Get Segment](/api-reference/segments/get-segment) returns `marketable_count`, the members that a campaign to this segment alone would reach. It is `null` while the segment is not `ready`, and when the members cannot be counted within 10 seconds. The campaign checks its contacts again when it starts.
 
-## Campaigns and Segments
+## Campaigns and segments
 
 A campaign sends to the segments in `segment_ids`, and leaves out the members of the segments in `exclude_segment_ids`. See [Audience](/api-reference/campaigns/overview#audience) for the rules of a campaign's lists and segments.
 
@@ -136,7 +136,7 @@ A segment send has no list to leave. A contact who unsubscribes from a segment s
 
 A segment that a campaign still needs, as an included or an excluded segment, cannot be deleted. Campaigns in `draft`, `validating`, `scheduled`, `sending`, `paused` or `waiting_for_review` block the delete.
 
-## Preview a Definition
+## Preview a definition
 
 [Preview Segment](/api-reference/segments/preview-segment) tries a definition without saving it. It returns `count`, the contacts that the definition matches now, whatever their consent, and up to 10 of them. It changes nothing.
 
@@ -172,7 +172,7 @@ Preview Segment, List Segment Contacts and List a Contact's Segments read contac
 
 Create Segment accepts an `Idempotency-Key` header. A `2xx` answer is stored for 24 hours, so a retry with the same key creates no second segment. Unlike most operations, a `4xx` answer is not stored: it releases the key, so a retry with the same key runs again, for example after you delete a segment. A request with the same key that is still in progress answers `409` with `Idempotent-Replayed: false` and a `Retry-After` header; retry with the same key after that delay. See [Idempotency](/api-reference/idempotency).
 
-## API Operations
+## API operations
 
 | Task | Endpoint reference |
 |---|---|
@@ -185,7 +185,7 @@ Create Segment accepts an `Idempotency-Key` header. A `2xx` answer is stored for
 | Read the members of a segment | [List Segment Contacts](/api-reference/segments/get-segment-contacts) |
 | Read the segments of a contact | [List a Contact's Segments](/api-reference/segments/get-contact-segments) |
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
 - [Contacts API overview](/api-reference/contacts/overview), [Lists API overview](/api-reference/lists/overview), [Campaigns API overview](/api-reference/campaigns/overview), [Segments in Campaign Builder](/campaigns/segments), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

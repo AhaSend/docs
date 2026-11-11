@@ -7,13 +7,13 @@ icon: "filter"
 
 A segment is a set of rules over your contacts. Its members are the contacts that match the rules, and they stay up to date as your contacts, lists and campaigns change. You can send a campaign to a segment, or leave a segment's members out of a campaign. This page explains how to build a segment, who a campaign to it reaches, and what happens when a recipient unsubscribes.
 
-## Segments and Lists
+## Segments and lists
 
 A list holds the contacts that you add to it, and each contact has its own status on the list. A segment holds the contacts that match its rules: you do not add or remove members, AhaSend does it for you. For example, a segment with the rule "Created is after 30 days ago" always holds the contacts of the last 30 days.
 
 A campaign can use lists and segments together. To keep a fixed copy of the contacts that match a search on a list instead, use [Save as new list](/campaigns/contacts-and-lists#advanced-search-and-saved-lists).
 
-## Create a Segment
+## Create a segment
 
 <Steps>
   <Step title="Open the segments">
@@ -47,11 +47,11 @@ Opens and clicks by bots do not count.
 
 Dates such as "today" and relative times such as "30 days ago" are read in the segment's time zone. A negative rule, such as **Doesn't contain**, also matches a contact with no value in that field.
 
-### Birthdays and Anniversaries
+### Birthdays and anniversaries
 
 With a date field such as `birthday`, **Falls within the next** 7 days finds the contacts whose birthday is today or in the next 7 days, whatever the year. 0 days is today only. A 29 February date counts as 28 February in a year without one. The members move to the new day shortly after midnight in the segment's time zone, usually within about half an hour.
 
-## Members and Reachable Contacts
+## Members and reachable contacts
 
 A segment's members are the contacts that match its rules, whatever their consent. A campaign to the segment reaches only the members who can get marketing email. A member is reachable when all of these are true:
 
@@ -64,7 +64,7 @@ A contact who unsubscribed from every list they were on, complained, or is uncon
 
 While you build the rules, the form shows how many contacts match and, when fewer of them are reachable, how many of them can get campaigns. A segment's page shows its **Members** and, when they are not all reachable, the **Reachable** count. The info button next to it explains the difference. The count is checked again when a campaign starts.
 
-### Segment States
+### Segment states
 
 | State | Meaning |
 |---|---|
@@ -74,7 +74,7 @@ While you build the rules, the form shows how many contacts match and, when fewe
 
 The members follow changes to your contacts and lists, usually within a minute. Rules about campaigns follow within an hour of a send, and relative times such as "30 days ago" are read again on a schedule. When you change the rules or the time zone, the segment is **Building** again.
 
-## Send a Campaign to a Segment
+## Send a campaign to a segment
 
 On the campaign page, click **Manage Recipients**:
 
@@ -87,23 +87,23 @@ The **Recipients** step then shows how many contacts the campaign reaches, from 
 
 A campaign cannot be scheduled while one of its segments, included or excluded, is building or has failed. The campaign page says which segment to wait for or fix. Before a campaign goes out, AhaSend [reviews](/campaigns/test-and-send#review) the contacts of its segments as it reviews lists.
 
-## Unsubscribes from a Segment Campaign
+## Unsubscribes from a segment campaign
 
 A segment has no list to leave. When a contact gets a campaign through a segment and clicks the unsubscribe link, the page asks them to unsubscribe from all of your marketing email. A spam complaint about that email does the same. The contact is then unsubscribed from everything, and no campaign reaches them from any list or segment.
 
 A contact that a campaign reaches through a list and a segment gets the email through the list, so an unsubscribe from it stops only that list.
 
-## Delete a Segment
+## Delete a segment
 
 On the segment's page, click **Delete**. The contacts of the segment are not deleted. A segment that an unfinished campaign sends to or excludes cannot be deleted.
 
 A segment also protects what its rules use. A list, a campaign or a custom field that a segment names in a rule cannot be deleted until you change or delete that segment. The message names the segments.
 
-## Segments Through the API
+## Segments through the API
 
 Segments are also available through the [Segments API](/api-reference/segments/overview): create and preview segments, read their members and the segments of a contact, and use `segment_ids` and `exclude_segment_ids` on a [campaign](/api-reference/campaigns/overview#audience).
 
-## Related Guides
+## Related guides
 
 - [Contacts and lists](/campaigns/contacts-and-lists), [Creating a campaign](/campaigns/create), [Testing, review and sending](/campaigns/test-and-send).
 - [Segments API](/api-reference/segments/overview), [Campaigns API](/api-reference/campaigns/overview).

@@ -44,7 +44,7 @@ with app.app_context():
 
 Run `python quick_send.py`. A failure raises an exception and exits with an error.
 
-## Add a Flask Command for Your Worker
+## Add a Flask command for your worker
 
 Save this as `app.py`. Set `AHASEND_TO=recipient@example.com` for testing. The command has no public HTTP endpoint. Flask's [command support](https://flask.palletsprojects.com/en/stable/cli/#custom-commands) runs it with the application context active.
 

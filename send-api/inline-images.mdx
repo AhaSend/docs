@@ -11,7 +11,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="api" />
 
-## How Do I Embed an Image with the API?
+## How do I embed an image with the API?
 
 Give the attachment a `content_id` wrapped in angle brackets, and use the same value without the brackets after `cid:` in your HTML:
 
@@ -42,7 +42,7 @@ The same works with [transactional templates](/send-api/templates): attach the i
 
 <a id="hosted-images" />
 
-## Should I Embed Images or Link to Them?
+## Should I embed images or link to them?
 
 | | Embedded with `cid:` | Linked from your website |
 | --- | --- | --- |
@@ -54,10 +54,10 @@ Embed small images that must always show, such as a logo. Link larger images and
 
 <a id="smtp" />
 
-## How Do I Embed an Image over SMTP?
+## How do I embed an image over SMTP?
 
 Add the image as a MIME part with a `Content-ID` header inside a `multipart/related` part, and refer to it with `cid:` in the HTML. Most mail libraries have a helper for this, often called an embedded or inline attachment.
 
-## Related Guides
+## Related guides
 
 - [Attachments](/send-api/attachments), [Send email](/send-api/send-email), [Transactional templates](/send-api/templates).

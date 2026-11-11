@@ -33,7 +33,7 @@ go get github.com/go-chi/chi/v5
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 ```bash
 export AHASEND_API_KEY=aha-sk-...
@@ -42,7 +42,7 @@ export AHASEND_WEBHOOK_SECRET=aha-whsec-...
 export WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
 ```
 
-## Create the Client
+## Create the client
 
 Create the client once at startup and share it across handlers: it maintains its own rate-limit, retry, and idempotency state:
 
@@ -116,7 +116,7 @@ In production, put this HTTP listener behind a TLS-terminating reverse proxy or 
 
 `middleware.Logger` and `middleware.Recoverer` are safe on every route: neither touches the request body, and `Logger` records only request metadata. Just don't add middleware that reads the request body ahead of the webhook route (more on that below).
 
-## Send an Email from a chi Handler
+## Send an email from a chi handler
 
 chi handlers are ordinary `net/http` handlers, so decode the JSON body with `encoding/json`:
 
@@ -224,7 +224,7 @@ The send API is multi-status: a 202 response has one `Data` entry per recipient,
 
 The SDK retries network failures, `429`, and `5xx` responses with exponential backoff, reusing one idempotency key across those attempts. When you supply no key it generates a fresh random one per call, so it protects only that call's internal retries — a second HTTP request to this route would get a new key and send a second email. That is why the example derives a stable key from the caller's `event_id` and passes it with `api.WithIdempotencyKey`. Keep each `event_id` bound to the same message data: the API matches a key against the method, path, and a hash of the body, and answers a mismatch with `422`. The mode prefix keeps a sandbox result from being replayed for a live send, since `Sandbox` is part of that body. Stored outcomes replay for 24 hours, and a `5xx` is never stored, so even a same-key retry after a server error can still send twice.
 
-## Handle Webhooks
+## Handle webhooks
 
 chi hands you the raw `*http.Request`, so the SDK's `ParseRequest` works directly: it verifies the HMAC signature, rejects timestamps outside its tolerance window, and returns a typed event. `ParseRequest` itself does not limit the body, so bound the stream before calling it.
 
@@ -291,7 +291,7 @@ Return 2xx promptly after durable work has been accepted. Do slow processing in 
 
 `maxWebhookBodyBytes` caps one request, not the process. `ParseRequest` buffers the whole body and copies it again to build the signed string, so cap concurrency and request rate at the reverse proxy as well, or enough simultaneous maximum-size deliveries will exhaust memory. As you replace the `log.Print` calls with real handling, keep the raw body, the signature header, and the event object itself out of your logs: those carry recipient addresses and message content.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

@@ -53,7 +53,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Step 2: Write a Cursor Rule File
+## Step 2: Write a Cursor rule file
 
 Cursor reads Project Rules from `.mdc` files in a `.cursor/rules/` directory; the older single `.cursorrules` file is deprecated. Create an **Always** rule that pins down the facts the model is most likely to get wrong:
 
@@ -74,7 +74,7 @@ The rule is now included in model context for every Agent request. It does not r
   For a one-off, you can paste a documentation URL into the chat instead. AhaSend publishes a machine-readable index at `https://ahasend.com/docs/llms.txt` that lists every doc page. The rule file is better because it persists; the URL is fine when you just want one correct call.
 </Tip>
 
-## Step 3: Write a Specific Prompt
+## Step 3: Write a specific prompt
 
 With context in place the prompt can be short, but name the file, the service, and the pattern to follow. Cursor's own guidance is that "add tests for auth.ts" produces worse results than a specific brief. Compare:
 
@@ -83,7 +83,7 @@ With context in place the prompt can be short, but name the file, the service, a
 
 For a multi-file change, a reusable email module plus the call site, switch the agent into **Plan mode** (Shift+Tab) first. It lets Agent research the codebase and propose an editable plan, so you can review the approach before asking it to build.
 
-## Step 4: Review the Diff
+## Step 4: Review the diff
 
 Don't accept the diff just because it's green. First confirm that the signup transaction writes both the user and one uniquely keyed email job/outbox record; the request must not report success if that durable handoff fails. The sending side then has two parts: a single shared client:
 
@@ -135,7 +135,7 @@ Six things to confirm in whatever the agent wrote:
   If the agent scaffolds any frontend code, make sure the key never lands in a client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`). Anything with those prefixes ships to the browser.
 </Warning>
 
-## Step 5: Test It in Sandbox Mode
+## Step 5: Test it in sandbox mode
 
 Cursor can run the code it just wrote, but its test runs should not send real email to real inboxes. With [sandbox mode](/send-api/sandbox), one field makes the message go through the full validation and queuing pipeline at no cost and with no delivery. Give the agent's environment a dedicated sandbox credential as well, so a generated test that forgets the field still can't deliver.
 
@@ -152,7 +152,7 @@ const result = await ahasend.messages.send({
 
 Ask Cursor to "add an integration test that sends in sandbox mode and asserts every recipient came back queued" to exercise the real API path without delivering mail. To verify a webhook handler too, first configure the matching event subscription at a URL AhaSend can reach; expose a local handler through a tunnel, copy the dashboard secret to `AHASEND_WEBHOOK_SECRET` exactly including its prefix, and do not paste it into Cursor. Then swap `sandbox_result` to `"bounce"`, `"defer"`, `"fail"`, or `"suppress"` and assert on the durable result after the webhook arrives. Add this to your rule file: default `sandbox` to `true` everywhere except production, read the flag from an environment variable so going live is a config change rather than a code edit, and namespace idempotency keys by environment so a sandbox key is never reused for a live send.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

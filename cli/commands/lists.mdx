@@ -25,7 +25,7 @@ These commands need CLI v0.3.0 or later. Check your version with `ahasend --vers
 
 A member is one contact's membership of one list, with its own subscription status: `unconfirmed`, `confirmed`, `unsubscribed` or `complained`. A list's contact count is the number of members a campaign to the list would reach.
 
-## Create and Update a Test List
+## Create and update a test list
 
 Save these commands in one Bash script. The script creates a test contact and a test list, and later examples on this page use the same contact and list.
 
@@ -42,7 +42,7 @@ ahasend lists list --name docs
 
 `lists list --name` finds the lists whose name contains the value, in any case.
 
-## Add and List Members
+## Add and list members
 
 Continue the script. `members add` adds up to 1,000 existing contacts in one request, named with `--email`, `--contact-id`, or both. Each flag can be used more than once and splits on commas.
 
@@ -69,7 +69,7 @@ ahasend lists members add "$LIST_ID" --file members.json
 
 `members list` filters by `--email` and `--subscription-status`. To see the lists one contact is on, use `ahasend contacts memberships`.
 
-## Unsubscribe or Remove a Member
+## Unsubscribe or remove a member
 
 `members set` adds one contact to a list or changes its status. Without `--subscription-status`, a new member is confirmed and an existing member keeps its status.
 
@@ -80,7 +80,7 @@ ahasend lists members remove "$LIST_ID" docs-list-member-test@example.com --forc
 
 To stop mail to a contact on a list and keep the record, set the status to `unsubscribed`. `members remove` deletes the membership and any unsubscribe it records. A complained membership cannot be changed or removed.
 
-## Delete the Test List
+## Delete the test list
 
 Finish the script by deleting the list and the contact it created.
 
@@ -95,7 +95,7 @@ The API refuses to delete a list while a campaign that still needs it refers to 
 
 `lists delete` and `lists members remove` ask for confirmation first; see [prompts](/cli/configuration#prompts).
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -204,7 +204,7 @@ ahasend lists update <list-id> [flags]
 | `--name string` | New list name |
 | `--tag strings` | New tag for the list, replacing all tags (can be used multiple times) |
 
-## Related Guides
+## Related guides
 
 - [Lists API](/api-reference/lists/overview), [Add contacts to a list](/api-reference/lists/batch-add-list-contacts), [Lists of a contact](/api-reference/lists/get-contact-lists).
 - [Contacts commands](/cli/commands/contacts), [Segments commands](/cli/commands/segments), [Campaigns commands](/cli/commands/campaigns), [CLI authentication](/cli/authentication).

@@ -18,7 +18,7 @@ GitHub Copilot cloud agent works asynchronously and can open a pull request for 
 
 <SendGuideRules />
 
-## AhaSend Rules for AI Coding Agents
+## AhaSend rules for AI coding agents
 
 Add this shared block to .github/copilot-instructions.md:
 
@@ -35,7 +35,7 @@ The agent can write the integration, but it cannot verify your domain or create 
 
 Keep the deployed application's API key in your hosting platform's secret store. You do not need to expose it to Copilot for the agent to implement and test the integration.
 
-## Step 1: Install the SDK and Commit It
+## Step 1: Install the SDK and commit it
 
 Install the official SDK and commit the manifest and lockfile before assigning the task.
 
@@ -63,7 +63,7 @@ bun add @ahasend/sdk
 
 This gives the agent an unambiguous dependency and lets its normal package install reproduce your dependency graph.
 
-## Step 2: Write the Issue
+## Step 2: Write the issue
 
 Give the agent the API contract, security boundaries, and acceptance tests instead of leaving it to infer them. Open an issue, use a prompt like this, and assign it to Copilot:
 
@@ -82,7 +82,7 @@ Give the agent the API contract, security boundaries, and acceptance tests inste
 
 Copilot cloud agent also supports repository-wide instructions in `.github/copilot-instructions.md`. Put durable rules such as server-only credentials, stable idempotency keys, multi-status checks, and safe logging there so later email tasks inherit them.
 
-## Step 3: Review the Pull Request
+## Step 3: Review the pull request
 
 When the agent finishes, it requests your review. For a new task, GitHub limits it to a newly created `copilot/` branch, and Copilot cannot approve or merge the pull request. Review the diff and the agent's session log before allowing workflows or merging.
 
@@ -167,7 +167,7 @@ Keys are scoped to the account, not to a delivery mode, and the API matches a re
 
 A resolved send returns one entry per recipient. Do not accept code that checks only `result.data[0]`, treats resolution as unconditional success, or exposes recipient details in a response or log.
 
-## Step 4: Test Without Giving the Agent a Production Credential
+## Step 4: Test without giving the agent a production credential
 
 Prefer mocked tests: Copilot can validate request construction, error handling, multi-status behavior, and idempotency without any AhaSend credential.
 
@@ -181,7 +181,7 @@ Create a domain-scoped credential in **Sandbox** mode under **Credentials → Ad
 
 Remove the temporary Agents credential after the test. Your deployed application should use a separate key from its hosting platform's secret store.
 
-## Step 5: Merge and Send a Real Email
+## Step 5: Merge and send a real email
 
 By default, GitHub Actions workflows do not run automatically when Copilot pushes. First inspect the diff, especially changes under `.github/workflows/`, then use **Approve and run workflows** and confirm the required checks actually completed. Your own approval does not count toward required approvals on a Copilot pull request, so obtain another approval if the repository requires one.
 
@@ -191,7 +191,7 @@ After review and CI pass, merge through your normal protected-branch process. In
 - Set `AHASEND_DELIVERY_MODE` explicitly to `live`; fail closed when it is absent or invalid.
 - Send one confirmation to an address you control and verify the result and delivery.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

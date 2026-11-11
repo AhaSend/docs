@@ -34,7 +34,7 @@ go get github.com/gofiber/fiber/v3
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 ```bash
 export AHASEND_API_KEY=aha-sk-...
@@ -45,7 +45,7 @@ export WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
 
 Keep all three secrets in your deployment platform's secret store, never in the repository, and never send them to a client.
 
-## Create the Client
+## Create the client
 
 Create the client once at startup and share it across handlers: it maintains its own rate-limit, retry, and idempotency state:
 
@@ -121,7 +121,7 @@ func main() {
 
 Fiber leaves `ReadTimeout`, `WriteTimeout`, and `IdleTimeout` unset by default, so a listener that accepts a 30 MB body will also hold a connection open indefinitely while a client dribbles that body in. Set all three, and size `ReadTimeout` against the largest body you actually accept: a legitimate multi-megabyte delivery that cannot finish arriving inside the window is recorded as a failed webhook delivery. Put the listener behind a TLS-terminating reverse proxy, and cap request rate and concurrency there too: `BodyLimit` bounds one request, not the memory a burst of maximum-size deliveries can consume at once. The limiter keys on `c.IP()`, which is the proxy's address unless you configure `TrustProxy` and `ProxyHeader`.
 
-## Send an Email from a Fiber Handler
+## Send an email from a Fiber handler
 
 Fiber's `Ctx` satisfies `context.Context`, but as a context that never cancels — it is pooled and reused, so `Done()` is always nil. Pass it to the SDK while the handler is running and derive an explicit timeout: the SDK's default HTTP client caps each attempt at 30 seconds, but it retries up to three times with exponential backoff, so only your deadline bounds the call as a whole. The 30 seconds below buys one full-length attempt, or several fast failures and their backoff; raise it if you want both to fit.
 
@@ -254,7 +254,7 @@ A successful create is multi-status: `response.Data` carries one result per reci
 
 The SDK reuses one idempotency key across its own retries of network failures, `429`, and `5xx`, but generates a fresh key per call, so it protects only that call — a second HTTP request to this route would get a new key and send a second email. That is why the example derives a stable key from the caller's `event_id`. Keep each `event_id` bound to the same message data: the API hashes the method, path, and body behind the key and answers a mismatch with `422`. The mode prefix follows from that same rule: `Sandbox` is part of the hashed body, so reusing one key across both modes answers `422` rather than replaying, and the prefix gives each mode its own keys. Stored outcomes replay for 24 hours, and a `5xx` is never stored, so even a same-key retry after a server error can still send twice.
 
-## Handle Webhooks
+## Handle webhooks
 
 The SDK's `ParseRequest` takes a `*http.Request`, which Fiber never constructs. Use `verifier.Parse` instead: hand it the exact bytes from `c.BodyRaw()` and an `http.Header` built from the three signature headers AhaSend sends. Do not use `c.Body()`, because it can decompress an encoded request and change the signed bytes.
 
@@ -319,7 +319,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 Return 200 promptly after that durable handoff, because unsuccessful webhook requests are retried: with 6 attempts over about 16 minutes, and after more than 100 consecutive failed attempts the webhook is disabled. Fiber reuses request buffers, so copy any `c.BodyRaw()` or `c.Get()` value that must outlive the handler — `strings.Clone` on the `webhook-id` you persist, for instance. Parsed event structs contain decoded copies. As you replace the `log.Print` calls with real handling, keep the raw body, the signature header, and the event object itself out of your logs: those carry recipient addresses and message content.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

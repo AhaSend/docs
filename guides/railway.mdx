@@ -32,7 +32,7 @@ npm install @ahasend/sdk express
 
 <QuickSend />
 
-## What You're Deploying
+## What you're deploying
 
 Install `@ahasend/sdk` and `express` in a Node.js 22 or newer project. This complete server uses a dedicated server-to-server token and sends in sandbox mode. Replace the sender with a verified domain.
 
@@ -99,7 +99,7 @@ process.once("SIGTERM", () => {
 
 Run TypeScript with your project's runner (for example `npx tsx server.ts`). Call `/api/welcome` with your server token and JSON containing `email` and a stable `eventId`. Add a per-caller send limit before production use. An AhaSend 202 contains one result per recipient; this route returns 422 if any recipient is rejected.
 
-## Configure Deployment Health and Draining
+## Configure deployment health and draining
 
 Commit a `railway.json` file so Railway waits for the health endpoint before activating a new deployment and gives the previous process time to close in-flight requests after `SIGTERM`:
 
@@ -161,7 +161,7 @@ railway up
 </Step>
 </Steps>
 
-## Expose a Public Webhook URL on Railway
+## Expose a public webhook URL on Railway
 
 Your service is private by default. To receive AhaSend webhooks, generate a public domain: open the service, go to **Settings → Networking → Public Networking**, and click **Generate Domain**. Then create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at:
 
@@ -177,7 +177,7 @@ Mount the SDK's `expressWebhookHandler` directly on the route, with no `express.
 
 Anything your handler writes to standard output or standard error is captured into Railway's logs, browsable through the deploy panel, the **Observability** tab's Log Explorer, and `railway logs`, and retained for days to months depending on your plan. Keep `event.data` out of it — it carries the recipient address, sender, and subject, plus the opener's IP and user agent on open and click events — and log a status, an error code, and the AhaSend request ID rather than a whole error, event, or response body.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

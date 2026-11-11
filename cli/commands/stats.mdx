@@ -36,7 +36,7 @@ The three subcommands take the same flags:
 
 `--output json` prints the API's response unchanged. Table and plain output show each period's time in your local time zone. `--output csv` writes one row per period, or per classification or recipient domain where the report has them.
 
-## Deliverability Statistics
+## Deliverability statistics
 
 Each period shows how many messages were received, delivered, deferred, bounced, failed, suppressed, opened and clicked. The CLI works out the delivery rate (delivered out of received) and the open rate (opened out of delivered) from these counts.
 
@@ -67,7 +67,7 @@ ahasend stats deliverability \
 ahasend stats deliverability --from-time 30d --output csv > deliverability-report.csv
 ```
 
-## Bounce Analysis
+## Bounce analysis
 
 Each period shows its bounces by classification, with each classification's count and its share of the period's bounces. `ahasend stats bounces --help` describes the common classifications:
 
@@ -99,7 +99,7 @@ ahasend stats bounces --from-time 30d --group-by week
 ahasend stats bounces --sender-domain example.com --from-time 30d --output csv
 ```
 
-## Delivery Time Performance
+## Delivery time performance
 
 Each period shows the average delivery time, and the time for each recipient domain with the number of delivered messages it covers. Table and plain output give each time in seconds, minutes or hours, whichever reads best. CSV output gives times in seconds, as the API sends them.
 
@@ -115,7 +115,7 @@ ahasend stats delivery-time \
   --recipient-domain outlook.com
 ```
 
-## Filter by Tag
+## Filter by tag
 
 ```bash
 # Messages tagged campaign-summer
@@ -125,7 +125,7 @@ ahasend stats deliverability --tag campaign-summer --from-time 30d
 ahasend stats deliverability --tag welcome --tag onboarding
 ```
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -162,13 +162,13 @@ These flags come from the CLI's `--help`. All commands also accept the [global f
 | `--tag strings` | Filter by message tag, none with a comma (can be used multiple times) |
 | `--to-time string` | End time (RFC3339, or relative like '1d' for 1 day ago; empty leaves it to the API, which uses now) |
 
-## Next Steps
+## Next steps
 
 - [Configure webhooks for real-time tracking](/cli/commands/webhooks)
 - [Manage suppressions](/cli/commands/suppressions)
 - [Send messages](/cli/commands/messages)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Delivery statistics API](/api-reference/reports/get-deliverability-report).
 - [API rate limits](/api-reference/rate-limits), [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication).

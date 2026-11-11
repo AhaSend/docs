@@ -48,7 +48,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 Set the credentials in the Node process environment. For local development, load an ignored `.env` file from your server bootstrap or start the dev server with the variables set; in production, use your host's secret storage. Never use a `VITE_` prefix for secrets, because that prefix is for values exposed to browser code.
 
@@ -58,7 +58,7 @@ AHASEND_ACCOUNT_ID=your-account-uuid
 AHASEND_WEBHOOK_SECRET=aha-whsec-...
 ```
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope and reuse it across requests. The `.server.ts` filename makes the build fail if client code imports this module:
 
@@ -68,7 +68,7 @@ import { AhaSendClient } from "@ahasend/sdk";
 export const ahasend = AhaSendClient.fromEnv();
 ```
 
-## Register the Routes
+## Register the routes
 
 Framework Mode routes are configured in `app/routes.ts`. Add the UI route and webhook resource route alongside your existing routes:
 
@@ -83,7 +83,7 @@ export default [
 
 Before using the action, implement `emailSendRateLimit.take({ request, recipient }): Promise<boolean>` in `app/lib/email-send-rate-limit.server.ts`. It must identify the authenticated caller and enforce a per-user send limit. The webhook route also imports `webhookDeliveries.enqueueOnce(id, event): Promise<boolean>` from `app/lib/webhook-deliveries.server.ts`: atomically store the delivery ID and durable work, returning false for a duplicate. These two modules belong to your application.
 
-## Send an Email from an Action
+## Send an email from an action
 
 Server `action` functions can import the client directly. A public form that sends email must bound its request body, validate its fields, and enforce server-side abuse controls. The example calls an application-specific `emailSendRateLimit.take()` backed by a durable, distributed store; implement it before deploying the route. Do not replace it with browser validation or an in-memory counter.
 
@@ -206,7 +206,7 @@ The SDK retries transient failures automatically, but a retry after a 5xx can st
 
 The example sets `sandbox: true` on the send request to validate it without delivering anything.
 
-## Handle Webhooks
+## Handle webhooks
 
 Read the secret and build the verifier in a `.server.ts` module, not in the route file. Route modules are referenced by **both** the client and the server module graph — React Router strips their `loader` and `action` exports from the browser build, but top-level statements with side effects survive, so a secret check written at the top of a route module is emitted into a client chunk that throws in the browser:
 
@@ -303,7 +303,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

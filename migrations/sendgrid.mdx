@@ -19,7 +19,7 @@ AhaSend migration from SendGrid means changing your send call or SMTP settings, 
 
 <MigrationPrepare />
 
-## Map the API Fields
+## Map the API fields
 
 Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message) with [v2 authentication](/api-reference/authentication). This is a field mapping from [SendGrid's send API](https://www.twilio.com/docs/sendgrid/api-reference/mail-send/mail-send), not a drop-in change of base URL.
 
@@ -39,13 +39,13 @@ Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message
 
 <MigrationApiResult />
 
-## Replace the SMTP Settings
+## Replace the SMTP settings
 
 Replace SendGrid's `smtp.sendgrid.net`, literal username `apikey` and API-key password with AhaSend's host and a newly created SMTP username and password. Do not keep `apikey` as the username. See [SendGrid's SMTP configuration](https://www.twilio.com/docs/sendgrid/for-developers/sending-email/integrating-with-the-smtp-api).
 
 <MigrationSmtpSettings />
 
-## Map Events by Meaning
+## Map events by meaning
 
 These are the closest matching outcomes, not identical payloads or a guaranteed one-to-one event sequence. Keep the provider name with each saved message ID while both systems are active. See [SendGrid's event documentation](https://www.twilio.com/docs/sendgrid/for-developers/tracking-events/event) and the [AhaSend event list](/api-reference/webhooks).
 
@@ -62,7 +62,7 @@ These are the closest matching outcomes, not identical payloads or a guaranteed 
 
 <MigrationWebhookChecks />
 
-## Export the Old Recipient Blocks
+## Export the old recipient blocks
 
 Export each relevant SendGrid suppression group: bounces, blocks, invalid emails, spam reports, global unsubscribes and unsubscribe-group entries. Include each subuser whose mail you are moving. Preserve unsubscribe-group membership in your app; a domain-level suppression does not model individual lists. Use [SendGrid suppression management](https://www.twilio.com/docs/sendgrid/ui/sending-email/index-suppressions) to obtain the records.
 

@@ -9,7 +9,7 @@ import EmailConceptRelated from "/snippets/email-concept-related.mdx";
 
 AhaSend reports bounces, failures and suppressed recipients through message logs and webhooks; this guide maps those outcomes to the action your application should take.
 
-## What Is the Difference Between a Hard and Soft Bounce?
+## What is the difference between a hard and soft bounce?
 
 A hard bounce is a permanent rejection for that delivery attempt, such as an invalid mailbox. A soft bounce is a temporary delivery problem, such as a busy server. Read the server's full reply and the [SMTP error reference](/smtp/errors), because the same broad code can have several causes.
 
@@ -25,13 +25,13 @@ A hard bounce is a permanent rejection for that delivery attempt, such as an inv
 
 The response to [Create Message](/api-reference/messages/create-message) is an acceptance response with per-recipient `queued`, `scheduled` or `error` entries. It is not the final delivery state. Check each recipient even when the HTTP request succeeds.
 
-## Why Was My Email Suppressed?
+## Why was my email suppressed?
 
 A suppression blocks sending to an address for the matching sending domain, or for the applicable account domains. Look up the address and sending domain with [List Suppressions](/api-reference/suppressions/get-suppressions) or the [suppression CLI](/cli/commands/suppressions). Read its reason and expiry instead of assuming every suppression came from a hard bounce.
 
 AhaSend can create suppressions from delivery problems, spam complaints or a click on an AhaSend [unsubscribe link](/campaigns/unsubscribe). Your application can also create one for an unsubscribe or an internal blocklist. Reasons are readable strings, including caller-supplied text; do not treat them as a fixed enum.
 
-## Suppression Duration
+## Suppression duration
 
 | Cause | Duration |
 |---|---|
@@ -44,11 +44,11 @@ AhaSend can create suppressions from delivery problems, spam complaints or a cli
 
 API-created suppressions do not inherit a default expiry from their reason. Keep unsubscribes and complaints in your own durable recipient preferences too; an expiry must not silently restore permission to send unwanted mail.
 
-## When Should I Remove a Suppression?
+## When should I remove a suppression?
 
 Remove a suppression only after resolving its cause and confirming that sending is appropriate. For an invalid mailbox, ask the user to correct or verify the address. A complaint or unsubscribe is not a reason to try a different sender domain. Use [Delete Suppression](/api-reference/suppressions/delete-suppression) for the specific address and domain; clearing the whole list can restart unwanted mail.
 
-## How Should My Webhook Handler Update State?
+## How should my webhook handler update state?
 
 Verify the [signature](/api-reference/webhooks/security), save the `webhook-id` delivery header to detect duplicate deliveries, and record the message ID, event type and timestamp. Acknowledge verified unknown event types with 2xx. Keep the event history so a late bounce or repeated notification does not erase useful earlier evidence.
 

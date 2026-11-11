@@ -12,7 +12,7 @@ Included on Pro (up to 9 sub-accounts) and Max (no limit). There is no charge pe
 
 This model is built for platforms and agencies that send on behalf of many customers: provision a sub-account per customer, and let it use the full feature set of AhaSend in complete isolation, all billed back to the parent.
 
-## Why Use Sub-Accounts?
+## Why use sub-accounts?
 
 <CardGroup cols={2}>
   <Card title="Full Sending Isolation" icon="shield-halved">
@@ -32,7 +32,7 @@ This model is built for platforms and agencies that send on behalf of many custo
   </Card>
 </CardGroup>
 
-## How It Works
+## How it works
 
 Sub-accounts follow a parent and child model:
 
@@ -46,7 +46,7 @@ From the parent account you stay in control end to end: manage the full lifecycl
   Each sub-account has an optional `monthly_credit` field, a monthly sending cap where `0` means no cap.
 </Note>
 
-## When to Use Sub-Accounts
+## When to use sub-accounts
 
 Sub-Accounts are ideal when you send on behalf of distinct end customers and need each kept separate:
 
@@ -58,7 +58,7 @@ Sub-Accounts are ideal when you send on behalf of distinct end customers and nee
 
 For a single business sending its own transactional mail, a regular account with multiple domains is simpler and is the better fit.
 
-## Provisioning a Sub-Account
+## Provisioning a sub-account
 
 You provision a sub-account from the parent in two API calls: create the sub-account, then create its bootstrap API key. After that, the child key and child account ID are all you need to run that customer's email.
 
@@ -80,7 +80,7 @@ You provision a sub-account from the parent in two API calls: create the sub-acc
   The `secret_key` is shown only once, on creation, and is omitted from all later responses (exact idempotent replays within 5 minutes return the same value). Store it securely the moment you receive it.
 </Warning>
 
-## Example: Provision, Verify a Domain, and Send
+## Example: Provision, verify a domain, and send
 
 The flow below runs end to end: it provisions a sub-account with the parent key, then switches to the child key to verify a sending domain and send a message. It uses `jq` to capture the IDs and secret returned along the way.
 
@@ -120,11 +120,11 @@ curl -sS -X POST "https://api.ahasend.com/v2/accounts/${CHILD_ACCOUNT_ID}/messag
 
 See [Create Domain](/api-reference/domains/create-domain), [Check Domain DNS](/api-reference/domains/check-dns), and [Create Message](/api-reference/messages/create-message) for the full reference.
 
-## Sub-Account Status
+## Sub-account status
 
 See the API overview for [sub-account status values](/api-reference/sub-accounts/overview#sub-account-status).
 
-## Paused Domains
+## Paused domains
 
 AhaSend can [pause sending from a domain](/domains#why-is-sending-paused-on-my-domain) of a sub-account. The owners and admins of the parent account also get the pause email.
 
@@ -133,7 +133,7 @@ The parent account can lift the pause. Fix the cause first, then use one of thes
 * **Dashboard:** go to **Settings > Sub-accounts** and open the sub-account. The **Paused domains** card lists each paused domain. Click **Lift pause**. The owners and admins of the parent account can do this.
 * **API:** call [Unpause Sub-Account Domain](/api-reference/sub-accounts/unpause-sub-account-domain) with a parent API key that has the `sub-accounts:suspend` scope.
 
-## Usage and Billing
+## Usage and billing
 
 The [usage endpoint](/api-reference/sub-accounts/get-sub-accounts-usage) returns current billing-period message volume and the proportional cost allocated to the parent and each active sub-account:
 
@@ -145,7 +145,7 @@ The [usage endpoint](/api-reference/sub-accounts/get-sub-accounts-usage) returns
 
 Use parent-account keys with the [sub-account permission scopes](/api-reference/sub-accounts/overview#scopes) needed for each task.
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Sub-Accounts API Overview" icon="book" href="/api-reference/sub-accounts/overview">
@@ -168,7 +168,7 @@ Use parent-account keys with the [sub-account permission scopes](/api-reference/
 
 Sub-accounts are included on Pro (up to 9) and Max (no limit); DNS whitelabel is included on Max. See [plan features](/facts#plans-and-features), [sub-accounts](/scale/sub-accounts) and [DNS whitelabel](/scale/dns-whitelabel), or [contact sales](mailto:sales@ahasend.com) for larger setups.
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [Sub-account API rules](/api-reference/sub-accounts/overview).
 - [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key), [Plans and limits](/facts).

@@ -27,7 +27,7 @@ The examples also create a test list, which needs `lists:write` and `lists:delet
 
 A campaign is a draft until it is sent, and only a draft can be changed or deleted. A draft shows whether it is ready to send and, when it is not, each issue in the way.
 
-## Draft and Test a Campaign
+## Draft and test a campaign
 
 Save this file as `campaign.html`. A campaign's HTML must use `{{ unsubscribe_url }}` or `{{ unsubscribe_link }}`; see [unsubscribe link](/api-reference/campaigns/overview#unsubscribe-link):
 
@@ -54,7 +54,7 @@ ahasend campaigns test "$CAMPAIGN_ID" --to me@example.com
 
 The API allows 50 test emails a UTC day for each account, one for each address of each test. A test that would pass that limit is refused with `daily test send limit reached` and exit code 8.
 
-## Choose the Audience
+## Choose the audience
 
 A campaign's audience is the lists and segments it sends to, and the lists and segments whose contacts get no message from it, even when a list or segment it sends to reaches them. `campaigns create` and `campaigns update` set each part with its own flag:
 
@@ -83,7 +83,7 @@ ahasend campaigns update YOUR_CAMPAIGN_ID --clear-exclude-segments
 
 A segment is `building` while AhaSend finds its members; see [segment states](/campaigns/segments#segment-states). While a segment of the audience is building, `campaigns create`, `campaigns duplicate` and a `campaigns update` that changes the audience wait for it, and can fail with HTTP 409, `The campaign's audience is being updated. Try again in a minute.`, and exit code 1. The API keeps no answer to such a request for its [idempotency key](/api-reference/campaigns/overview#idempotency), so run the same command again, with the same `--idempotency-key` or a new one. [`ahasend segments get`](/cli/commands/segments) shows a segment's state. A send is refused instead, as the next section describes.
 
-## Send or Schedule a Campaign
+## Send or schedule a campaign
 
 <Warning>
 `campaigns send` sends the campaign to the contacts its audience reaches: the members of its lists and segments that a campaign reaches, less the contacts of its excluded lists and segments. The contact count of `ahasend lists get` and the `Marketable` count of [`ahasend segments get`](/cli/commands/segments) show how many contacts a list or a segment reaches. Test the campaign first, and check its audience.
@@ -119,7 +119,7 @@ To stop a validating or scheduled campaign, return it to draft with `campaigns u
 ahasend campaigns unschedule YOUR_CAMPAIGN_ID
 ```
 
-## Read Results
+## Read results
 
 `campaigns stats` shows a campaign's live counters, its rates and its stored report. The report is recounted from time to time, so check again later for new numbers.
 
@@ -133,7 +133,7 @@ ahasend campaigns recipients YOUR_CAMPAIGN_ID --status "Administratively Bounced
 
 On CLI v0.4.0 or later, each recipient shows the list or the segment the campaign reached it through: a recipient reached through a list has its list and no segment, and one reached through a segment has its segment and no list. Table output has a `Segment` column after `List`, plain output shows the segment's ID and name, and CSV output has the columns `segment_id` and `segment_name` after `list_name`.
 
-## AhaML Designs
+## AhaML designs
 
 Campaigns and campaign templates read and write the design of the Simple Editor as AhaML, as [transactional templates](/cli/commands/templates#ahaml-designs) do. `campaigns get --markup` writes only the design's AhaML to stdout, and `campaigns update --markup-file` writes it back. These flags need CLI v0.4.0 or later.
 
@@ -145,7 +145,7 @@ ahasend campaigns update YOUR_CAMPAIGN_ID --markup-file october.ahaml
 
 `campaigns templates get --markup` and `campaigns templates update --markup-file` do the same for a campaign template. `campaigns create` and `campaigns templates create` also take `--markup-file`, which makes the editor `simple`. On `campaigns update`, `--markup-file` replaces a simple design, and a campaign with no design yet takes it and becomes simple. The [templates commands](/cli/commands/templates#ahaml-designs) describe what `--markup` writes, when it fails, and the `Markup`, `Markup Error` and `Markup Warnings` rows.
 
-## Campaign Templates
+## Campaign templates
 
 Campaign templates are designs that a campaign can copy with `campaigns create --campaign-template-id`. A campaign template has no draft, subject or sender: changes apply at once, and campaigns already made from it keep their own copies. A campaign can be made from a template only once the template has HTML.
 
@@ -161,7 +161,7 @@ ahasend campaigns templates delete "$CAMPAIGN_TEMPLATE_ID" --force
 
 `--campaign-template-id` cannot be combined with `--editor`, `--markup-file`, `--mjml-file`, `--html-file` or `--text-file`.
 
-## Delete the Test Campaign
+## Delete the test campaign
 
 Finish the script by deleting the draft campaign, then the test list. The API refuses to delete a list while a campaign that still needs it refers to it.
 
@@ -174,9 +174,9 @@ The script stops at the first command that fails, and then deletes nothing. If i
 
 The API also refuses to delete a campaign or a list while a segment refers to it, and names those segments; see [delete a segment](/campaigns/segments#delete-a-segment).
 
-`campaigns delete` and `campaigns templates delete` ask for confirmation first; see [prompts](/cli/configuration#prompts). To copy a campaign in any status into a new draft, use `campaigns duplicate`. The copy gets the campaign's design, subject, preview text, sender, reply-to, and the lists and segments of its audience that still exist; a segment that is building can make the copy fail, as [Choose the Audience](#choose-the-audience) describes. Without `--name`, the copy is named "Copy of" and the campaign's name.
+`campaigns delete` and `campaigns templates delete` ask for confirmation first; see [prompts](/cli/configuration#prompts). To copy a campaign in any status into a new draft, use `campaigns duplicate`. The copy gets the campaign's design, subject, preview text, sender, reply-to, and the lists and segments of its audience that still exist; a segment that is building can make the copy fail, as [Choose the audience](#choose-the-audience) describes. Without `--name`, the copy is named "Copy of" and the campaign's name.
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -400,7 +400,7 @@ ahasend campaigns update <campaign-id> [flags]
 | `--subject string` | New subject (empty clears it) |
 | `--text-file string` | Path to the plain text version |
 
-## Related Guides
+## Related guides
 
 - [Campaigns API](/api-reference/campaigns/overview), [Send campaign](/api-reference/campaigns/send-campaign), [Test campaign](/api-reference/campaigns/test-campaign).
 - [Campaign templates API](/api-reference/campaign-templates/create-campaign-template), [Lists commands](/cli/commands/lists), [Transactional templates commands](/cli/commands/templates).

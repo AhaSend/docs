@@ -34,7 +34,7 @@ go get github.com/google/uuid
 
 `google/uuid` is a transitive dependency of the SDK, but the account ID is a `uuid.UUID`, so your own code imports it directly and it needs its own `go get`.
 
-## Configure Environment Variables
+## Configure environment variables
 
 ```bash
 export AHASEND_API_KEY=aha-sk-...
@@ -46,7 +46,7 @@ export WELCOME_API_PASSWORD=a-long-random-secret
 
 Use your deployment platform's secret manager rather than committing these values. The example protects the send route with HTTP Basic authentication for a concrete service-to-service boundary; serve it only over HTTPS. A user-facing application should use its existing session or token middleware and load the recipient from the authenticated user's server-side record. Authentication bounds *who* can send, not *how much*: add per-caller rate limiting to the group as well — a [`golang.org/x/time/rate`](https://pkg.go.dev/golang.org/x/time/rate) limiter keyed by caller is enough — so one leaked credential or one looping client cannot drain the account.
 
-## Create the Client
+## Create the client
 
 Create the client once at startup and share it across handlers so its transport and rate limiter are reused. Automatic idempotency keys are still generated per request:
 
@@ -153,7 +153,7 @@ func mustEnv(name string) string {
 
 The SDK's outbound timeout, retry count, and the handler's end-to-end context deadline fit within the server's write and shutdown budgets. Keep those budgets aligned if you change any of them. `SetTrustedProxies(nil)` ignores client-supplied forwarding headers. If a load balancer or reverse proxy terminates HTTPS, replace `nil` with only that proxy's IP addresses or CIDRs. `SetMode(gin.ReleaseMode)` matters for more than log volume: Gin defaults to debug mode, and in debug mode a recovered panic writes the request's entire header block to the error log — cookies, `webhook-signature`, and everything else except `Authorization`.
 
-## Send an Email from a Gin Handler
+## Send an email from a Gin handler
 
 ```go send.go
 package main
@@ -284,7 +284,7 @@ The send API is multi-status: a `202` carries one `Data` entry per recipient, an
 
 The SDK automatically retries transient failures and attaches an automatic idempotency key to each send. This handler overrides it with a stable key derived from the immutable signup ID so a later retry of the same business operation can reuse the key. Reuse a key only with the exact same payload: the API rejects the same key carrying a changed body with `422`, which the SDK reports as `ErrorTypeIdempotency` and the handler turns into a `409` rather than a retryable `502`. A `409` from the API is the separate in-progress case — an earlier request with that key has not finished — which the SDK reports as `ErrorTypeIdempotencyConflict` with the remaining seconds in `RetryAfter`. Stored outcomes replay for 24 hours, but a 5xx is not stored, so a retry after a server error can still send twice; persist workflow state and make uncertain results safe to reconcile.
 
-## Handle Webhooks
+## Handle webhooks
 
 Gin handlers wrap a standard `*http.Request`, so the SDK's `ParseRequest` works directly: it verifies the HMAC signature and timestamp, then returns a typed event. Timestamp validation is not replay deduplication. No body-parsing middleware may run on this route first.
 
@@ -327,7 +327,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 This minimal receiver deliberately verifies and acknowledges without performing a business side effect. Before adding one, atomically commit the verified `webhook-id` header together with durable queue/outbox work; acknowledge an already-committed ID with 2xx, and process durable work idempotently. Do not launch a bare goroutine: it can be lost when the process exits, and `*gin.Context` is recycled once the handler returns, so anything that outlives the request must carry `c.Copy()` instead of `c`. Keep reverse-proxy request-size and concurrency limits at least as strict as the application limit above, return promptly, and keep failures opaque.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

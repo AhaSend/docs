@@ -18,7 +18,7 @@ This guide shows how to send transactional email from an app built with v0 with 
 
 <SendGuideRules />
 
-## AhaSend Rules for AI Coding Agents
+## AhaSend rules for AI coding agents
 
 Add this shared block to your project instructions:
 
@@ -32,7 +32,7 @@ Add this shared block to your project instructions:
 
 Verify the domain and create the key in the [dashboard](https://dash.ahasend.com) first: the [quickstart](/quickstart) walks through both. Scope the key to `messages:send:{your-domain}` rather than `messages:send:all`, so a leak exposes one domain's outbound mail instead of your whole account.
 
-## Add Server-Side Vercel Variables
+## Add server-side Vercel variables
 
 <Warning>
   If v0 already put your key in a `NEXT_PUBLIC_` variable or referenced it from a client component, treat it as leaked. Delete the variable, rotate the key in the dashboard, and only then continue.
@@ -78,7 +78,7 @@ bun add @ahasend/sdk server-only
 
 <QuickSend />
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope. This keeps retry, telemetry, and idempotency configuration consistent across every route, and avoids rebuilding the client on each request.
 
@@ -104,7 +104,7 @@ if (deliveryMode !== "sandbox" && deliveryMode !== "live") {
 export const sandboxMode = deliveryMode === "sandbox";
 ```
 
-## Ask v0 for a Route Handler
+## Ask v0 for a route handler
 
 Be explicit about the trust boundary. A public route that accepts any recipient address becomes an email relay, even though the API key itself stays hidden. Use a prompt like this:
 
@@ -170,7 +170,7 @@ AhaSend send responses are multi-status: the promise can resolve while an indivi
 
 The SDK retries only operations its generated policy marks safe, idempotent, or protected by a key. For an eligible operation it handles 408, 429, 5xx, network failures, and timeouts. An automatically generated send key covers one logical SDK call and its internal attempts. A new route request is a new logical call, so the example supplies a stable key derived from the server-side confirmation record. The mode prefix prevents a recent sandbox outcome from colliding with a live send. Reuse a key only for the exact same operation and payload.
 
-## Call the Route from the Form
+## Call the route from the form
 
 The browser sends neither the recipient nor any AhaSend credential:
 
@@ -188,13 +188,13 @@ async function sendConfirmation() {
 
 Disable the submit control while this request is pending. Keep the application's session, authorization, CSRF, and abuse-prevention controls on the route; idempotency prevents duplicate processing but is not authentication or rate limiting.
 
-## Test in Sandbox Mode
+## Test in sandbox mode
 
 Keep `AHASEND_DELIVERY_MODE=sandbox` while you build. Sandbox mode accepts a normal request without delivering email, returns a normal-shaped response, and can trigger the applicable configured webhook events.
 
 Use `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`, and `"suppress"` for other outcomes, and confirm your event handling. The full set is in the [sandbox mode guide](/send-api/sandbox). When ready, deliberately change `AHASEND_DELIVERY_MODE` to `live` in the **Production** environment only, publish again, and send one test to an address you control. Leave Development on `sandbox`: a dedicated sandbox credential simulates every send regardless of this setting, so a live value there is misleading rather than useful. Do not derive this switch from `NODE_ENV`, because preview deployments commonly use production optimizations too.
 
-## Audit Before You Ship
+## Audit before you ship
 
 <Steps>
   <Step title="Search the repo for credentials">
@@ -211,7 +211,7 @@ Use `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`
   </Step>
 </Steps>
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

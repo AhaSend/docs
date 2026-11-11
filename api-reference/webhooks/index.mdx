@@ -9,7 +9,7 @@ AhaSend webhook events report email delivery, engagement, suppression, contact a
 
 Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-## Event Types
+## Event types
 
 | Event type | Filter flag | Fires when | Payload |
 |---|---|---|---|
@@ -37,17 +37,17 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 Inbound routing has a separate [`message.routing` event](/api-reference/routes/route-message).
 
-## Suppression Duration
+## Suppression duration
 
 See [bounces and suppression durations](/bounces#suppression-duration) for expiry rules and the next steps after a failed send.
 
-## Payload Structure
+## Payload structure
 
 All webhook events use a consistent JSON structure:
 
 Events contain `type`, `webhook_id`, `timestamp`, and an event-specific `data` object. The payload `webhook_id` identifies the configured endpoint; the `webhook-id` header identifies the delivery across retries. Inbound routes use `route_id` instead of `webhook_id`. Use the payload reference for each event above.
 
-## Message Events
+## Message events
 
 Transactional and campaign messages send the same message events with the same payload. The events of a campaign message also carry `campaign_id`, `list_id` and `segment_id`. `message.unsubscribed` and `message.complained` are sent for campaign email only.
 
@@ -55,7 +55,7 @@ Transactional and campaign messages send the same message events with the same p
 
 AhaSend reads the message when it sends a message event. When the message is deleted before then, or for a campaign message its campaign recipient or its contact, the event is not sent. An event of a campaign message is also not sent when it happens before AhaSend has logged that it received the message.
 
-## Contact Events
+## Contact events
 
 Contact events report changes to your contacts and to their list memberships. They are available to accounts with the marketing features. Every contact event carries the `contact` and its `origin`. The events that can be about a list membership (`contact.added_to_list`, `contact.removed_from_list`, `contact.subscribed`, `contact.unsubscribed` and `contact.complained`) also carry the `list` and the `list_contact`.
 
@@ -81,11 +81,11 @@ AhaSend can add an origin, so keep a fallback for a value you do not know. Messa
   **Prevent loops**: A handler that writes to the AhaSend API every time it receives `contact.updated` receives its own write as a new `contact.updated` event, with `origin: api`. Make sure that the handler does not write again when the contact already has the values it wants, or leave `api` out of the webhook's `origins`.
 </Warning>
 
-## Event Order
+## Event order
 
 Events are not delivered in the order in which they happened, and a later event can arrive first. Order the events by their `timestamp`. For a contact or a suppression event it is the time of the change; for `message.unsubscribed` and `message.complained`, the time of the unsubscribe request or of the spam complaint report.
 
-## Changes That Send No Event
+## Changes that send no event
 
 - A change of a membership's status to `unconfirmed`
 - Importing contacts from a CSV file
@@ -98,11 +98,11 @@ Events are not delivered in the order in which they happened, and a later event 
 - [Wiping suppressions](/api-reference/suppressions/wipe-suppressions). After a wipe, read the list again with [List Suppressions](/api-reference/suppressions/get-suppressions).
 - The removal of expired suppressions: `suppression.created` already gave the `expires_at`
 
-## Delivery and Verification
+## Delivery and verification
 
 Check [signatures](/api-reference/webhooks/security) before trusting a payload, and use the [retry policy](/api-reference/webhooks/retry-policy) to handle duplicate or failed deliveries. Manage endpoints with [Create Webhook](/api-reference/webhooks/create-webhook), [List Webhooks](/api-reference/webhooks/get-webhooks), [Update Webhook](/api-reference/webhooks/update-webhook) and [Delete Webhook](/api-reference/webhooks/delete-webhook).
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
 - [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing), [Signature verification](/api-reference/webhooks/security).

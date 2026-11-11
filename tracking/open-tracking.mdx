@@ -16,7 +16,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 Open tracking is off by default. Enable it in account settings or override it per message. Tracked URLs use the AhaSend tracking domain unless you configure a [custom tracking CNAME](/domains).
 
-## How Open Tracking Works
+## How open tracking works
 
 Open tracking works by embedding a tiny, invisible 1x1 pixel image at the end of your HTML emails. When a recipient opens the email and their email client loads images, it makes a request to AhaSend's servers to fetch this tracking pixel, which registers as an "open" event.
 
@@ -39,7 +39,7 @@ Open tracking works by embedding a tiny, invisible 1x1 pixel image at the end of
   </Accordion>
 </AccordionGroup>
 
-### Common Accuracy Issues
+### Common accuracy issues
 
 <AccordionGroup>
   <Accordion title="False Negatives (Missed Opens)" icon="eye-slash">
@@ -73,7 +73,7 @@ Open tracking works by embedding a tiny, invisible 1x1 pixel image at the end of
   </Accordion>
 </AccordionGroup>
 
-## Privacy Considerations
+## Privacy considerations
 
 Open tracking has significant privacy implications that you should consider:
 
@@ -81,7 +81,7 @@ Open tracking has significant privacy implications that you should consider:
 **Privacy Compliance:** Ensure your use of open tracking complies with applicable privacy laws (GDPR, CCPA, etc.) in your jurisdiction. Consider disclosing tracking in your privacy policy.
 </Warning>
 
-### Privacy Impact
+### Privacy impact
 
 <AccordionGroup>
   <Accordion title="Information Collected" icon="database">
@@ -112,11 +112,11 @@ Open tracking has significant privacy implications that you should consider:
   </Accordion>
 </AccordionGroup>
 
-## Enabling Open Tracking
+## Enabling open tracking
 
 Open tracking can be controlled at different levels depending on how you send emails:
 
-### Account-Wide Settings
+### Account-wide settings
 
 Configure your default open tracking preference in your AhaSend dashboard:
 
@@ -124,11 +124,11 @@ Configure your default open tracking preference in your AhaSend dashboard:
 2. Toggle **Open Tracking** on or off
 3. This setting applies to all emails unless overridden per message
 
-### Per-Message Override
+### Per-message override
 
 Override account settings for individual emails using different methods:
 
-## SMTP with Special Headers
+## SMTP with special headers
 
 For SMTP email sending, use the `ahasend-track-opens` header to control tracking:
 
@@ -153,7 +153,7 @@ Content-Type: text/html
 
 For complete SMTP header documentation, see [Special Email Headers](/smtp/special-headers).
 
-## API v2 Implementation
+## API v2 implementation
 
 API v2 (`/v2/accounts/{account_id}/messages`) provides native support for tracking configuration:
 
@@ -183,7 +183,7 @@ API v2 (`/v2/accounts/{account_id}/messages`) provides native support for tracki
 
 For complete API v2 documentation, see [Send Emails using the API](/api-reference/messages/create-message).
 
-## API v1 Implementation
+## API v1 implementation
 
 For API v1 (`/v1/email/send`), include tracking headers in the `content.headers` field:
 
@@ -209,7 +209,7 @@ For API v1 (`/v1/email/send`), include tracking headers in the `content.headers`
 }
 ```
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Realistic Expectations" icon="chart-line">
@@ -292,7 +292,7 @@ For API v1 (`/v1/email/send`), include tracking headers in the `content.headers`
   </Accordion>
 </AccordionGroup>
 
-## Related Guides
+## Related guides
 
 - [Account quickstart](/quickstart), [Domain setup](/domains), [Open event payload](/api-reference/webhooks/message-opened).
 - [Click tracking](/tracking/click-tracking), [API tracking options](/api-reference/messages/create-message), [SMTP tracking headers](/smtp/special-headers).

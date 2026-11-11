@@ -8,7 +8,7 @@ sidebarTitle: "Changelog"
 The AhaSend changelog lists product releases, API changes and fixes by month, with links to the affected features.
 
 <Update label="November 2026">
-#### New Features
+#### New features
 
 - **New sign-up and account setup.** A new account is set up in short steps: your company, the email you send, a few questions about you, your sending domain and its DNS records, a plan, and a first test email.
 - **Send DNS records to a colleague.** On the page of a [domain](/domains) that is not verified yet, click **Send to a colleague** to email its DNS records to someone at your company. They get the records and a link that shows each record's status for 14 days, with a **Check now** button. You can cancel a link from the same window. The DNS step of account setup has the same button. Each domain can be sent 3 times. The address must be at the same domain as the account owner's email, so the button does not show when that is a free email address such as Gmail.
@@ -40,7 +40,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Website fields accept non-English domain names.** An account's website, in the dashboard and in [Update Account](/api-reference/accounts/update-account), can now be a domain name such as `bäckerei.de`.
 - **Planned database maintenance no longer causes errors.** Short planned maintenance of our database no longer makes API requests or dashboard pages fail, and no longer rejects email.
 
-#### Bug Fixes
+#### Bug fixes
 
 - **Fixed Remember me not keeping you signed in after you closed the browser.** A sign-in with **Remember me** now stays signed in for up to 30 days. [SSO](/security/sso) sign-ins work the same way. Without **Remember me**, closing the browser still signs you out.
 - **Fixed some sign-in and sign-up links losing the dashboard page they point to.** After you signed in, you got the home page instead of that page. This happened when the browser had no AhaSend session open, for example on a first visit.
@@ -50,7 +50,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 </Update>
 
 <Update label="October 2026">
-#### New Features
+#### New features
 
 - **[Transactional templates](/send-api/templates) in API v2.** Create, edit and delete templates through the API. You edit a draft, publish it, and can view or restore older published versions. To send a template, use [Create Template Message](/api-reference/messages/create-template-message). Each recipient can have their own values for the template's variables.
 - **Transactional templates in the dashboard.** Go to Transactional → Templates. Design a template with the Simple Editor or the Advanced Editor, or upload your own HTML file or a zip file with its images. Each template has its own page. It shows the template ID, its variables, a sample API request, a preview with your sample values, a test send, a default sender and subject, and delivery statistics for the last 30 days. Your edits are saved as a draft. API sends keep using the published version until you click **Publish**. You can preview and restore the last 50 published versions.
@@ -136,7 +136,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Dark mode is easier to read.** Links and blue buttons, including disabled ones, are lighter, and selected text is visible. This applies in dark mode and on the dark sidebar and page headers. The stat cards on a campaign report all have the same height.
 - **The dashboard says why a contact is blocked.** The contact page shows the reason in plain words. On the contacts list and on a list's page, hover over the **Blocked** badge to see it.
 
-#### Bug Fixes
+#### Bug fixes
 
 - **Fixed [Reputation Shield](/security/reputation-shield) blocking email to real email providers**, such as Hotmail, Outlook, Live, MSN, Proton and Tutanota, for a short time in early October. A public list of throwaway email domains that we use had started to include them.
 - **Fixed automatic DKIM key changes starting late for some domains**, mostly on plans that change keys more often.
@@ -192,7 +192,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **The message details page now keeps explaining why a message is waiting**, for example that your account has reached its sending rate limit, for as long as it waits. Before, the explanation could disappear after a few minutes.
 - **The cookie consent banner on the dashboard is now served from AhaSend's own domain**, so it loads even when a third-party CDN is blocked.
 
-#### Bug Fixes
+#### Bug fixes
 
 - **Fixed temporary failures on AhaSend's side adding valid recipients to your [suppression list](/bounces#why-was-my-email-suppressed)** and disabling campaign subscribers. These messages still show as bounced. Recipients are now suppressed only when the receiving mail server or the recipient's own domain rejects the address.
 - **Fixed spam complaints from mailbox providers not being processed** when the original email used a character set other than UTF-8. Recipients who complain are now suppressed and unsubscribed from your lists as intended.
@@ -206,7 +206,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 <Update label="August 2026">
 
-#### New Features
+#### New features
 
 - **[Official TypeScript / JavaScript SDK](/guides/nodejs-sdk)**: [`@ahasend/sdk`](https://github.com/AhaSend/ahasend-ts) is now available on npm (`npm install @ahasend/sdk`). It covers the full API v2: messages, domains, API keys, webhooks, statistics, suppressions, inbound routes, SMTP credentials, account members and sub-accounts, with TypeScript types included, automatic idempotency keys on create calls, retries, rate-limit handling and pagination helpers. A separate `@ahasend/sdk/webhooks` entry point verifies webhook signatures and parses all event types, with adapters for Express, Fastify and Next.js. It runs on Node.js 22+, Deno, Bun, Cloudflare Workers and Vercel Edge. It is a server-side SDK and is still v0.x, so pin an exact version in production.
 - **[Delivery Attempt Details in Webhooks](/api-reference/webhooks/message-bounced)**: `message.delivered`, `message.bounced` and `message.transient_error` webhooks now include a `delivery_attempt` object with the SMTP result behind the event: `smtp_code`, `enhanced_status_code`, the receiving server's `response`, a plain-English `description`, the bounce `classification`, and the SMTP `command` stage. The field is additive and is left out of events that are not the result of a delivery attempt. Test webhooks and sandbox sends include a representative sample, so you can build against the real payload shape.
@@ -237,7 +237,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **The API v2 list messages endpoint now accepts `Opened` and `Clicked`** as `status` filter values. They were previously rejected as invalid.
 - **The Lists page loads faster and more reliably for large audiences.** Subscriber counts for filtered lists are now calculated far more efficiently.
 
-#### Bug Fixes
+#### Bug fixes
 
 - **Fixed transactional `message.clicked` webhooks always reporting `is_bot: false` and an empty `user_agent`.** Both now carry the real values recorded at click time.
 - **Fixed campaign open webhooks not reporting the bot-detection result.**
@@ -261,7 +261,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 <Update label="July 2026">
 
-#### New Features
+#### New features
 
 - **CSV Contact Import**: You can now fill a contact list by uploading a CSV file — from the Contacts page, from an individual list, or directly in the Create List dialog so a new list is created and populated in one step. Contacts that already exist are updated and added to the list; new ones are created. Recognized columns are email, first name, last name, status, and any of your custom contact attributes.
 - **Background Imports with Progress and Email Notification**: Files above roughly 500KB or 5,000 rows are processed in the background. The Contacts and list pages show a live progress banner with a Cancel button, and you receive an email when the import finishes reporting how many contacts were imported, how many joined the list, and how many rows were skipped. If an import fails, the email explains why whenever the cause is something you can fix — such as a malformed row and its line number, a missing email column, or an empty file — and re-uploading the same file is always safe.
@@ -288,7 +288,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Images in marketing campaigns load faster on repeat views.** Cached campaign images now tell recipients' email clients that they can be kept for 24 hours, matching what images already got on first load.
 - **Links inside notification emails are now visibly styled as links** instead of blending into the body text. This covers account suspended, credit limit warnings, domain DNS problems, and disabled webhook, routing, and S3 integration notices.
 
-#### Bug Fixes
+#### Bug fixes
 
 - **Late and retried delivery events now report what actually happened instead of repeating the last known status.** Our mail server can retry an event notification for up to 24 hours. A retried reception, temporary failure, or bounce arriving after a message was already delivered previously re-sent a duplicate `on_delivered`; it now sends the event that actually occurred. A retried non-delivery event on a message you had already opened or clicked used to produce no webhook and now reports itself. A retried delivery event on an already-opened message still sends nothing, and an expired message still produces exactly one `on_transient_error` and one `on_failed`. Payload shapes are unchanged and no new event types were added.
 - **Contact Imports no longer overwrite data you didn't include.** A CSV that omits a column, or leaves a cell blank, now leaves the existing first name, last name, and custom attributes untouched, and custom attributes are merged rather than replaced. Previously an email-only CSV would erase names and attributes on every contact it touched.
@@ -311,7 +311,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 <Update label="June 2026">
 
-#### New Features
+#### New features
 
 - **[Sub-Accounts](/scale/sub-accounts)**: Platform Partner and reseller accounts can now create and manage sub-accounts under a single parent, from both the dashboard and the v2 API. Each sub-account is a full account — its own domains, sending, webhooks, routes, and members — that is billed through the parent, with usage pooled onto the parent's invoice and a proportional per-sub cost breakdown available in the dashboard and API.
 - **API-Only Sub-Account Provisioning**: Partners can provision a new sub-account and mint its first working API key entirely over the API, with no dashboard step. The new key belongs to the sub-account, and its secret is returned only once (or on an exact idempotent retry within five minutes).
@@ -338,7 +338,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Self-lockout protection on API-key allow lists.** If you use a key to set its own IP allow list to a value that excludes the IP you're calling from, the change is rejected and nothing is saved. You can still change it from the dashboard, from an already-allowed IP, or with a different key.
 - **Sub-account and API-key updates reject empty or no-change requests** with a clear error and leave omitted fields untouched; the website field is optional when updating a sub-account.
 
-#### Bug Fixes
+#### Bug fixes
 
 - Fixed legacy plan customers being unable to upgrade to the Pro or Max plan; these upgrades now complete correctly.
 - Fixed plan upgrades failing for cards that require extra verification; the upgrade now goes through against your saved card without a failed authentication prompt.
@@ -350,7 +350,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 <Update label="May 2026">
 
-#### New Features
+#### New features
 
 - **Duplicate a Campaign**: You can now duplicate an existing marketing campaign in one action. The copy includes the design, sender settings, subject, preview text, tags, and recipient lists, and opens as a new editable draft — delivery history and statistics are not carried over.
 - **Automatic Tax on Subscriptions**: New paid subscriptions now have applicable sales tax or VAT automatically calculated and added to your invoices based on your billing location.
@@ -368,7 +368,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - **Clearer error when adding a duplicate contact.** Adding a contact whose email already exists now shows a specific "a contact with this email address already exists" message instead of a generic failure.
 - **Better partial-failure reporting on multi-recipient sends.** When some recipients in a send fail, the API response now clearly reports which recipients failed and why, rather than failing the entire request opaquely.
 
-#### Bug Fixes
+#### Bug fixes
 
 - Fixed credit purchases that could silently fail to complete; credit top-ups are now provisioned reliably.
 - Fixed plan upgrades occasionally resolving to the wrong plan when an invoice contained proration credits.
@@ -384,7 +384,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 <Update label="April 2026">
 
-#### New Features
+#### New features
 
 - **Multi-Currency Billing**: New paid subscriptions are now billed in EUR, GBP, or USD depending on your location. The same applies when upgrading or switching between Pro and Max plans. Your default currency is captured when your account is verified, and prices on the onboarding and dashboard billing pages — both plan base prices and per-1k-email overage rates — are now shown in your local currency with the correct symbol (€9 / £8 / $10 for the Pro plan, etc.). You can override the auto-detected currency with a `currency` cookie.
 - **Custom Subdomains on Domain Creation**: The API v2 [create-domain endpoint](/api-reference/domains/create-domain) now accepts `tracking_subdomain`, `return_path_subdomain`, `subscription_subdomain`, `media_subdomain`, and `dkim_rotation_interval_days` so domains can be set up with custom subdomains in a single API call.
@@ -420,7 +420,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 <Update label="March 2026">
 
-#### New Features
+#### New features
 
 - **Managed DNS & DKIM Rotation Setup**: Sending-domain setup now supports our new native managed DNS flow. Managed domains get two DKIM CNAME records: one required for sending and a second recommended record that lets AhaSend rotate DKIM keys later without asking for another DNS change.
 - **Contact Detail Pages**: You can now view and edit individual contacts directly from the dashboard, including custom attributes, list memberships, engagement statistics, campaign delivery history, and activity logs. Drill-down pages for opens, clicks, and campaigns are available for detailed analysis.
@@ -446,7 +446,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - Checkout and payment form initialization is more reliable.
 - Zero message-data retention is available within the plan limits and needs AhaSend approval. See [retention settings](/retention).
 
-#### Bug Fixes
+#### Bug fixes
 
 - Fixed character encoding corruption (mojibake) in campaign emails when HTML entities such as non-breaking spaces were converted to UTF-8 by the tracking system.
 - Fixed single-part campaign emails not receiving click or open tracking.
@@ -458,7 +458,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 <Update label="February 2026">
 
-#### New Features
+#### New features
 
 - **Campaign Content Spam Check**: Campaign validation now includes an AI-based content review step using our own in-house, self-hosted, fine-tuned LLM model in addition to recipient-list checks. This helps catch campaigns that look like spam, phishing, or cold outreach before they are sent.
 - **Campaign Review Notifications**: You now get email notifications when a campaign review is pending, approved, or rejected.
@@ -480,7 +480,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - Domain risk analysis is more reliable thanks to improved domain-registration lookup logic and better handling of rate limits and timeouts.
 - Message IDs generated by[Send Message APIv2](/api-reference/messages/create-message), [Send Conversational Message APIv2](/api-reference/messages/create-conversation) and [Create Message APIv1](/api-reference/v1) are now generated using UUIDv7, improving consistency, ordering and performance for generated IDs.
 
-#### Bug Fixes
+#### Bug fixes
 
 - Fixed API v2 [conversational sending](/api-reference/messages/create-conversation) not properly respecting API-key sandbox mode.
 - Fixed API v2 [GetMessage](/api-reference/messages/get-message) returning `500` errors in cases where `404` was correct.
@@ -498,7 +498,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 
 - Improved session security with automatic session refresh after login and password reset.
 
-#### New Features
+#### New features
 
 - **Contact List Validation**: Automatically validate your contact lists before sending campaigns. The system checks email syntax, MX records, and uses external verification services to identify invalid or risky addresses. Campaigns with high bounce risk are flagged for review before sending.
 - **Campaign Cancellation & Rescheduling**: Cancel scheduled campaigns or validation in progress, and reschedule campaigns with a new send time.
@@ -519,7 +519,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - Campaign report page redesigned with separate views for campaigns being validated, scheduled, or paused.
 - Many improvements and bugfixes for the Email Template Designer: fixed inline images breaking on edits, added undo/redo buttons, fixed color picker positioning, and resolved image resize issues.
 
-#### Bug Fixes
+#### Bug fixes
 
 - Fixed [API sandbox mode](/send-api/sandbox) for [Send Conversational Message API](/api-reference/messages/create-conversation) not being respected when set on credentials.
 - Fixed [Send Message API](/api-reference/messages/create-message) incorrectly changing custom email header names to lowercase.
@@ -655,7 +655,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
 - Improve system performance and email throughput
 </Update>
 
-## Related Guides
+## Related guides
 
 - [Start sending](/quickstart), [Domain setup](/domains), [Send-only API keys](/send-api/credentials).
 - [Sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).

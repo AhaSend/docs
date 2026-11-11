@@ -9,11 +9,11 @@ AhaSend retries failed webhook and inbound route deliveries: webhooks get 6 atte
 
 Signed webhooks and routes are available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-## What Counts as a Failed Attempt?
+## What counts as a failed attempt?
 
 Any 2xx response is successful. Any non-2xx response, timeout or connection error is a failure. Each attempt times out after 5 seconds.
 
-## When Does AhaSend Retry?
+## When does AhaSend retry?
 
 The delay before each retry is (failures so far)^4 seconds, ±10%. Times in this table exclude that jitter and the time spent making requests.
 
@@ -32,7 +32,7 @@ The delay before each retry is (failures so far)^4 seconds, ±10%. Times in this
 | 11 | 10,000 | 25,333 | Finished | Yes |
 | 12 | 14,641 | 39,974 | Finished | Yes |
 
-## How Do I Re-enable a Disabled Endpoint?
+## How do I re-enable a disabled endpoint?
 
 After more than 100 consecutive failed attempts, the webhook or route is disabled and account users are emailed. Correct the endpoint, then [update the webhook](/api-reference/webhooks/update-webhook) or [update the route](/api-reference/routes/update-route) with `enabled: true` to turn it back on.
 
@@ -40,11 +40,11 @@ Redirects are followed, but 301, 302 and 303 turn the POST into a GET without a 
 
 Verify [signatures](/api-reference/webhooks/security) before processing events. Acknowledge verified unknown event types with a 2xx response so new event types do not cause repeated failures.
 
-## How Do I Handle Duplicate Deliveries?
+## How do I handle duplicate deliveries?
 
 Verify the signature, then use `webhook-id` to identify a delivery across retries. Commit that ID and the durable work it protects together, so a retry cannot repeat a side effect or lose work. Return 2xx for an already-processed delivery.
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
 - [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).

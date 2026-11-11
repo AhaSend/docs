@@ -11,7 +11,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="add" />
 
-## How Do I Add a Header?
+## How do I add a header?
 
 `headers` is an object of header names and values. A `{{ variable }}` in a value is filled from the recipient's substitutions:
 
@@ -33,7 +33,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="rules" />
 
-## Which Rules Apply to Header Names and Values?
+## Which rules apply to header names and values?
 
 - A name must be visible ASCII, with no space and no colon. An empty name, or one with a space, a colon or a line break, is rejected.
 - A substitution value used in a header must not contain a line break; the request is rejected and the error names the recipient.
@@ -41,7 +41,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="reserved" />
 
-## Which Headers Does AhaSend Set for Me?
+## Which headers does AhaSend set for me?
 
 | Header | What happens |
 | --- | --- |
@@ -55,6 +55,6 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
   Tracking, tags, retention and sandbox mode have their own fields in the API: see [Tags](/send-api/tags) and [Tracking and retention per message](/send-api/tracking-and-retention). Over SMTP, the same settings use [special headers](/smtp/special-headers).
 </Note>
 
-## Related Guides
+## Related guides
 
 - [Send email](/send-api/send-email), [SMTP special headers](/smtp/special-headers), [Create Message reference](/api-reference/messages/create-message).
