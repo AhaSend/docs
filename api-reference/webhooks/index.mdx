@@ -26,6 +26,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 | `suppression.created` | `on_suppression_created` | A suppression is created or gets a new reason | [Reference](/api-reference/webhooks/suppression-created) |
 | `suppression.deleted` | `on_suppression_deleted` | A suppression is deleted | [Reference](/api-reference/webhooks/suppression-deleted) |
 | `domain.dns_error` | `on_dns_error` | A sending domain has a DNS error | [Reference](/api-reference/webhooks/domain-dns_error) |
+| `domain.sending_type_changed` | `on_sending_type_changed` | A domain's sending type changes between `transactional` and `marketing` | [Reference](/api-reference/webhooks/domain-sending_type_changed) |
 | `contact.created` | `on_contact_created` | A contact is created | [Reference](/api-reference/webhooks/contact-created) |
 | `contact.updated` | `on_contact_updated` | A field of a contact changes | [Reference](/api-reference/webhooks/contact-updated) |
 | `contact.deleted` | `on_contact_deleted` | A contact is deleted | [Reference](/api-reference/webhooks/contact-deleted) |
@@ -73,7 +74,7 @@ Contact and suppression events carry `origin`, which says who made the change:
 - `dashboard`: you, through the AhaSend dashboard
 - `system`: AhaSend, for example after a bounce, an expired message or an email validation, or when AhaSend support makes the change
 
-AhaSend can add an origin, so keep a fallback for a value you do not know. Message events and `domain.dns_error` have no `origin`.
+AhaSend can add an origin, so keep a fallback for a value you do not know. Message events and domain events have no `origin`. `domain.sending_type_changed` says who made the change in its `source`.
 
 **Origin filter**: Each webhook has an `origins` setting, the list of origins whose contact and suppression events it gets. The default is `null`, which means every origin. A list that holds all four origins is saved as `null`, so that an origin added later reaches the webhook too. An empty list is refused: to stop contact or suppression events, turn them off. Events without an `origin` always pass the filter. In the dashboard, the setting is **Send changes made by**.
 
@@ -83,7 +84,7 @@ AhaSend can add an origin, so keep a fallback for a value you do not know. Messa
 
 ## Event Order
 
-Events are not delivered in the order in which they happened, and a later event can arrive first. Order the events by their `timestamp`. For a contact or a suppression event it is the time of the change; for `message.unsubscribed` and `message.complained`, the time of the unsubscribe request or of the spam complaint report.
+Events are not delivered in the order in which they happened, and a later event can arrive first. Order the events by their `timestamp`. For a contact or a suppression event, and for `domain.sending_type_changed`, it is the time of the change; for `message.unsubscribed` and `message.complained`, the time of the unsubscribe request or of the spam complaint report.
 
 ## Changes That Send No Event
 
@@ -97,6 +98,7 @@ Events are not delivered in the order in which they happened, and a later event 
 - A repeat of an existing suppression that does not change its reason
 - [Wiping suppressions](/api-reference/suppressions/wipe-suppressions). After a wipe, read the list again with [List Suppressions](/api-reference/suppressions/get-suppressions).
 - The removal of expired suppressions: `suppression.created` already gave the `expires_at`
+- Adding a domain, whatever its sending type: `domain.sending_type_changed` reports only changes
 
 ## Delivery and Verification
 

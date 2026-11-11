@@ -1,7 +1,7 @@
 ---
 title: "API Rate Limits and 429 Handling"
 sidebarTitle: "Rate Limits"
-description: "AhaSend API v2 allows 100 requests/second per account (burst 200); statistics endpoints allow 1/second. Learn what a 429 response looks like and how to retry."
+description: "AhaSend API v2 allows 100 requests/second per account (burst 200), transactional statistics 1/second. Learn what a 429 response looks like and how to retry."
 icon: "gauge-high"
 ---
 
@@ -45,10 +45,11 @@ Most API endpoints are subject to the following rate limits:
 - `/v2/accounts/{account_id}/routes/*` - Route management
 - `/v2/accounts/{account_id}/webhooks/*` - Webhook management
 - `/v2/accounts/{account_id}/smtp-credentials/*` - SMTP credential management
+- `/v2/accounts/{account_id}/statistics/emails` - Email statistics
 
-### Statistics, Stream and Trigger Endpoints
+### Transactional Statistics, Stream and Trigger Endpoints
 
-Statistics, webhook and route stream, and test-trigger endpoints have a separate limit of 1 request per second:
+Transactional statistics, webhook and route stream, and test-trigger endpoints have a separate limit of 1 request per second:
 
 <CardGroup cols={2}>
   <Card title="Request Rate" icon="chart-line">
@@ -159,7 +160,7 @@ Instead of polling endpoints repeatedly, configure webhooks to receive real-time
 ## Statistics API Considerations
 
 <Warning>
-Statistics endpoints have very restrictive rate limits (1 request per second). Plan your analytics queries carefully and consider:
+Transactional statistics endpoints have very restrictive rate limits (1 request per second). Plan your analytics queries carefully and consider:
 
 - Caching results for frequently accessed time periods
 - Using broader time ranges to reduce query frequency

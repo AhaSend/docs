@@ -26,7 +26,7 @@ jobs:
         run: |
           python -m pip install -r scripts/requirements.txt
           npm install --global mint@4.2.315
-          go install github.com/AhaSend/ahasend-cli@v0.4.0
+          go install github.com/AhaSend/ahasend-cli@v0.5.0
       - name: Collect actual release command and flag names
         run: python scripts/capture_cli.py --binary "$(go env GOPATH)/bin/ahasend-cli" --output "$RUNNER_TEMP/ahasend-cli.json"
       - name: Check page metadata, headings, navigation, code and CLI names

@@ -127,7 +127,7 @@ The following configuration fragment belongs inside your startup function and re
 | `api.WithAPIKey(key)` | Your API key, required |
 | `api.WithRetryConfig(cfg)` | Retry policy: attempts, backoff strategy, delays |
 | `client.SetSendMessageRateLimit(rps, burst)` | Pace outbound sends |
-| `client.SetStatisticsRateLimit(rps, burst)` | Pace statistics calls, which are limited harder |
+| `client.SetStatisticsRateLimit(rps, burst)` | Pace transactional statistics calls, which are limited harder |
 | `api.WithRequestAPIKey(key)` | Override the key for one request |
 
 ```go
@@ -148,7 +148,7 @@ client := api.NewAPIClient(
 client.SetSendMessageRateLimit(100, 200) // requests per second, burst
 ```
 
-See [API rate limits](/api-reference/rate-limits). Pacing is already on when you build the client, preset to the standard account limits: 100 requests per second with a 200 burst for sends and other general endpoints, 1 per second with no burst for statistics. These setters move a bucket to whatever limit your account actually has; they do not switch pacing on. That matters in both directions — an account provisioned above 100 sends per second stays capped at the default until you raise the bucket. The token buckets are local to one client instance, so they do not coordinate across application replicas and do not eliminate API `429` responses.
+See [API rate limits](/api-reference/rate-limits). Pacing is already on when you build the client, preset to the standard account limits: 100 requests per second with a 200 burst for sends and other general endpoints, 1 per second with no burst for transactional statistics. These setters move a bucket to whatever limit your account actually has; they do not switch pacing on. That matters in both directions — an account provisioned above 100 sends per second stays capped at the default until you raise the bucket. The token buckets are local to one client instance, so they do not coordinate across application replicas and do not eliminate API `429` responses.
 
 ## Errors
 
@@ -209,7 +209,7 @@ Reuse a caller-provided key only for the same exact request payload, and never l
 | `MessagesAPI` | Send messages, retrieve status and history, cancel |
 | `DomainsAPI` | Add, verify, and configure sending domains |
 | `WebhooksAPI` | Manage webhook endpoints |
-| `StatisticsAPI` | Deliverability, bounce, and delivery-time reports |
+| `StatisticsAPI` | Deliverability, bounce, and delivery-time reports, and email statistics |
 | `SuppressionsAPI` | Manage suppression lists |
 | `RoutesAPI` | Inbound email routing |
 | `AccountsAPI` | Account and member management |

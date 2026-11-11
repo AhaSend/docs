@@ -1,14 +1,14 @@
 ---
 title: "ahasend stats: Delivery and Bounce Reports"
-description: "Pull AhaSend deliverability, bounce and delivery-time reports from the CLI, grouped by hour, day, week or month and exported to CSV or JSON."
+description: "Pull AhaSend email counts and deliverability, bounce and delivery-time reports from the CLI, grouped by hour, day, week or month and exported to CSV or JSON."
 icon: chart-line
 sidebarTitle: "stats"
 ---
 
 
-AhaSend CLI `stats` commands report delivery, bounce and delivery-time statistics; this page covers filters and output.
+AhaSend CLI `stats` commands report email counts and delivery, bounce and delivery-time statistics; this page covers filters and output.
 
-Before running the examples, [log in](/cli/authentication) with an API key that has the `statistics-transactional:read:all` [scope](/api-reference/scopes#statistics-and-reports), and replace `example.com` in `--sender-domain` with one of your sending domains.
+Before running the examples, [log in](/cli/authentication) with an API key that has the `statistics:read:all` [scope](/api-reference/scopes#statistics-and-reports), and replace `example.com` in `--sender-domain` with one of your sending domains.
 
 ## Overview
 
@@ -20,8 +20,9 @@ Available subcommands:
 - `deliverability` - Message counts and delivery and open rates per period
 - `bounces` - Bounces per period by classification
 - `delivery-time` - Average delivery time per period and per recipient domain
+- `emails` - Email counts of any period, for the whole account or per domain
 
-The three subcommands take the same flags:
+[`emails`](#email-counts) has its own flags. `deliverability`, `bounces` and `delivery-time` take these:
 
 - `--from-time`: Start time. The default is `7d`, 7 days ago. An empty value leaves the start to the API.
 - `--to-time`: End time. Without it, the API uses now.
@@ -34,7 +35,7 @@ The three subcommands take the same flags:
 
 `--sender-domain`, `--recipient-domain` and `--tag` can be used multiple times, or take values separated by commas. The CLI sends only the filters you give.
 
-`--output json` prints the API's response unchanged. Table and plain output show each period's time in your local time zone. `--output csv` writes one row per period, or per classification or recipient domain where the report has them.
+For `deliverability`, `bounces` and `delivery-time`, `--output json` prints the API's response unchanged. Table and plain output show each period's time in your local time zone. `--output csv` writes one row per period, or per classification or recipient domain where the report has them.
 
 ## Deliverability Statistics
 
@@ -115,6 +116,33 @@ ahasend stats delivery-time \
   --recipient-domain outlook.com
 ```
 
+## Email Counts
+
+`stats emails` shows the email counts of any period in the account's history, for the whole account or for each of its domains. Unlike the other `stats` commands, it is not limited to the account's [message metadata retention](/retention#message-data-vs-metadata) period. It needs CLI v0.5.0 or later.
+
+Each period shows how many messages were received (accepted by AhaSend, inbound mail included), delivered, bounced and suppressed, how many spam complaints came in, and how many temporary delivery failures (deferred), opens and clicks there were. Deferred, opened and clicked count events, so one message can add more than one; `stats deliverability` counts messages, so its numbers differ. Opens and clicks are not fully accurate: AhaSend makes a reasonable effort to filter out bots and scanners. The counts cover transactional, campaign and inbound mail, with inbound mail under the domain that received it, and include deleted domains. Sandbox mail is not counted.
+
+```bash
+# Daily counts of today and the 30 days before it
+ahasend stats emails
+
+# Monthly counts of 2025 for each domain
+ahasend stats emails \
+  --from-time 2025-01-01T00:00:00Z \
+  --to-time 2026-01-01T00:00:00Z \
+  --group-by month \
+  --breakdown domain
+
+# Weekly counts of one domain over the last 90 days
+ahasend stats emails --from-time 90d --group-by week --sender-domain example.com
+```
+
+`stats emails` takes `--from-time`, `--to-time`, `--group-by` and `--sender-domain`, but not `--recipient-domain` or `--tag`. Without `--from-time`, the range starts 30 days before its end, and without `--to-time`, it ends now. Without `--sender-domain`, the counts cover every domain the API key can read. Periods are in UTC, and weeks start on Monday. The range includes `--from-time` and excludes `--to-time`, and the API rounds it out to whole periods. A range can be at most 31 days with `--group-by hour`, 366 days with `day` and `week`, and 5 years with `month`.
+
+`--breakdown domain` shows the counts of each domain, and the command fetches every page of domains and shows them as one result. When a page covers another range than the first page, as when the current period ends while the pages are fetched without a `--to-time`, the command fails with exit code 1 rather than mix ranges: run it again, or give a `--to-time` in the past.
+
+Table and plain output show each period's time in your local time zone. They show the totals of the whole range, then each row: a period, or with a breakdown, a period of one domain. The rows of a breakdown can add up to a few events more or less than the totals. CSV output has a line per row and no line for the totals; its columns are `from_timestamp`, `to_timestamp`, `sender_domain`, empty without a breakdown, and the counters with the API's names, such as `reception_count`. JSON output is the API's response; with a breakdown, one response with the rows of every page and `pagination.has_more` false.
+
 ## Filter by Tag
 
 ```bash
@@ -162,6 +190,16 @@ These flags come from the CLI's `--help`. All commands also accept the [global f
 | `--tag strings` | Filter by message tag, none with a comma (can be used multiple times) |
 | `--to-time string` | End time (RFC3339, or relative like '1d' for 1 day ago; empty leaves it to the API, which uses now) |
 
+### `stats emails`
+
+| Flag | Description and default |
+|---|---|
+| `--breakdown string` | Break the counts down by: domain |
+| `--from-time string` | Start time, included (RFC3339, or relative like '90d' for 90 days ago; without it, the API starts 30 days before the end) |
+| `--group-by string` | Group results by: hour, day, week or month (without it, the API groups by day) |
+| `--sender-domain strings` | Count only this domain of the account (can be used multiple times) |
+| `--to-time string` | End time, excluded (RFC3339, or relative like '1d' for 1 day ago; without it, the API ends the range now) |
+
 ## Next Steps
 
 - [Configure webhooks for real-time tracking](/cli/commands/webhooks)
@@ -173,4 +211,4 @@ These flags come from the CLI's `--help`. All commands also accept the [global f
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Delivery statistics API](/api-reference/reports/get-deliverability-report).
 - [API rate limits](/api-reference/rate-limits), [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication).
 - [Permission scopes](/api-reference/scopes), [Domain setup](/domains), [Sandbox behavior](/send-api/sandbox).
-- [Tracking setup](/tracking/open-tracking), [Suppression durations](/bounces#suppression-duration).
+- [Tracking setup](/tracking/open-tracking), [Suppression durations](/bounces#suppression-duration), [Email statistics API](/api-reference/reports/get-email-statistics).
