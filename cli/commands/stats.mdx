@@ -37,7 +37,7 @@ Available subcommands:
 
 For `deliverability`, `bounces` and `delivery-time`, `--output json` prints the API's response unchanged. Table and plain output show each period's time in your local time zone. `--output csv` writes one row per period, or per classification or recipient domain where the report has them.
 
-## Deliverability Statistics
+## Deliverability statistics
 
 Each period shows how many messages were received, delivered, deferred, bounced, failed, suppressed, opened and clicked. The CLI works out the delivery rate (delivered out of received) and the open rate (opened out of delivered) from these counts.
 
@@ -68,7 +68,7 @@ ahasend stats deliverability \
 ahasend stats deliverability --from-time 30d --output csv > deliverability-report.csv
 ```
 
-## Bounce Analysis
+## Bounce analysis
 
 Each period shows its bounces by classification, with each classification's count and its share of the period's bounces. `ahasend stats bounces --help` describes the common classifications:
 
@@ -100,7 +100,7 @@ ahasend stats bounces --from-time 30d --group-by week
 ahasend stats bounces --sender-domain example.com --from-time 30d --output csv
 ```
 
-## Delivery Time Performance
+## Delivery time performance
 
 Each period shows the average delivery time, and the time for each recipient domain with the number of delivered messages it covers. Table and plain output give each time in seconds, minutes or hours, whichever reads best. CSV output gives times in seconds, as the API sends them.
 
@@ -116,7 +116,7 @@ ahasend stats delivery-time \
   --recipient-domain outlook.com
 ```
 
-## Email Counts
+## Email counts
 
 `stats emails` shows the email counts of any period in the account's history, for the whole account or for each of its domains. Unlike the other `stats` commands, it is not limited to the account's [message metadata retention](/retention#message-data-vs-metadata) period. It needs CLI v0.5.0 or later.
 
@@ -143,7 +143,7 @@ ahasend stats emails --from-time 90d --group-by week --sender-domain example.com
 
 Table and plain output show each period's time in your local time zone. They show the totals of the whole range, then each row: a period, or with a breakdown, a period of one domain. The rows of a breakdown can add up to a few events more or less than the totals. CSV output has a line per row and no line for the totals; its columns are `from_timestamp`, `to_timestamp`, `sender_domain`, empty without a breakdown, and the counters with the API's names, such as `reception_count`. JSON output is the API's response; with a breakdown, one response with the rows of every page and `pagination.has_more` false.
 
-## Filter by Tag
+## Filter by tag
 
 ```bash
 # Messages tagged campaign-summer
@@ -153,7 +153,7 @@ ahasend stats deliverability --tag campaign-summer --from-time 30d
 ahasend stats deliverability --tag welcome --tag onboarding
 ```
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -200,13 +200,13 @@ These flags come from the CLI's `--help`. All commands also accept the [global f
 | `--sender-domain strings` | Count only this domain of the account (can be used multiple times) |
 | `--to-time string` | End time, excluded (RFC3339, or relative like '1d' for 1 day ago; without it, the API ends the range now) |
 
-## Next Steps
+## Next steps
 
 - [Configure webhooks for real-time tracking](/cli/commands/webhooks)
 - [Manage suppressions](/cli/commands/suppressions)
 - [Send messages](/cli/commands/messages)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Delivery statistics API](/api-reference/reports/get-deliverability-report).
 - [API rate limits](/api-reference/rate-limits), [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication).
