@@ -22,7 +22,7 @@ Available subcommands:
 - `delete` - Delete an SMTP credential
 - `send` - Send an email via SMTP protocol
 
-## List SMTP Credentials
+## List SMTP credentials
 
 ```bash
 # List SMTP credentials
@@ -33,9 +33,9 @@ ahasend smtp list --limit 10
 ahasend smtp list --limit 10 --after YOUR_CURSOR
 ```
 
-Passwords are never shown. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
+Passwords are never shown. Pages work as [Lists and pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
 
-## Create SMTP Credential
+## Create SMTP credential
 
 ```bash
 # Global credential, which can send from any verified domain
@@ -53,9 +53,9 @@ ahasend smtp create --name "Development" --sandbox
 
 `--scope` is `global` (the default) or `scoped`. `--scope scoped` needs at least one `--domains`, and `--domains` needs `--scope scoped`. Repeat `--domains`, or separate domains with commas, to allow several.
 
-The output shows the generated password once. It cannot be retrieved later, so save it. When `--name` is missing, the command asks for it, as [Missing Values](/cli/configuration#missing-values) describes.
+The output shows the generated password once. It cannot be retrieved later, so save it. When `--name` is missing, the command asks for it, as [Missing values](/cli/configuration#missing-values) describes.
 
-## Get SMTP Details
+## Get SMTP details
 
 ```bash
 ahasend smtp get YOUR_RESOURCE_ID
@@ -63,7 +63,7 @@ ahasend smtp get YOUR_RESOURCE_ID
 
 The password shows as `[HIDDEN]` in table and plain output.
 
-## Delete SMTP Credential
+## Delete SMTP credential
 
 Applications that use the credential lose access at once. The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it.
 
@@ -76,7 +76,7 @@ ahasend smtp delete "$TEST_ID"
 
 `smtp send` sends one email over SMTP, to test SMTP credentials. It connects to `--server`, which defaults to `send.ahasend.com:587`. Give `--server` as `host:port`, or as `host` for port 587.
 
-A send needs `--from`, a recipient (`--to`, `--cc` or `--bcc`), `--subject`, content (`--text`, `--html`, `--text-file` or `--html-file`), `--username` and the password. When one is missing, the command asks for it, as [Missing Values](/cli/configuration#missing-values) describes, and hides the password as you type.
+A send needs `--from`, a recipient (`--to`, `--cc` or `--bcc`), `--subject`, content (`--text`, `--html`, `--text-file` or `--html-file`), `--username` and the password. When one is missing, the command asks for it, as [Missing values](/cli/configuration#missing-values) describes, and hides the password as you type.
 
 Set `SMTP_USERNAME` and `SMTP_PASSWORD` in your shell from the values returned when you created the sandbox credential. The CLI cannot retrieve an existing credential's password.
 
@@ -100,7 +100,7 @@ printf '%s\n' "$SMTP_PASSWORD" | ahasend smtp send --sandbox --sandbox-result bo
   --text "This send simulates a bounce"
 ```
 
-### Password Input
+### Password input
 
 Other users of the machine can see `--password` in the process list, and your shell may keep it in its history. `--password-stdin` reads the password from the first line of stdin instead, without its line break. With it, the command asks for no value, so a missing flag fails as with `--non-interactive`. `--password` and `--password-stdin` cannot be used together.
 
@@ -110,7 +110,7 @@ The command starts TLS at once on port 465, and otherwise with STARTTLS when the
 
 The command logs in with CRAM-MD5 when the server offers it, with LOGIN when the server offers LOGIN but not PLAIN, and with PLAIN otherwise. For AhaSend's own servers, see [SMTP settings](/smtp).
 
-### Test the Connection
+### Test the connection
 
 `--test` connects to `--server`, starts TLS when the server offers it, logs in when you give the username and the password, and quits. It sends no message, so it needs no message flags, and the message flags have no effect. Without `--username` and the password, it tests only the connection: a server that offers no STARTTLS then passes the test, over a connection without TLS.
 
@@ -139,7 +139,7 @@ Headers such as `AhaSend-Track-Opens`, `AhaSend-Tags` and `AhaSend-Sandbox` cont
 
 `--header` cannot set `From`, `Sender`, `To`, `Cc`, `Bcc`, `Subject`, `Mime-Version`, `Content-Type` or `Content-Transfer-Encoding`, which the command builds itself. It can set `Date` and `Message-ID`. Header names ignore case, and each name may be given once. A header value that holds a comma goes in double quotes inside the shell quotes, as in `--header '"X-Note: first, second"'`.
 
-### Results and Exit Codes
+### Results and exit codes
 
 When the server refuses any recipient, nothing is sent, and the error names the recipient.
 
@@ -154,7 +154,7 @@ ahasend messages list --message-id '<0d371db4-00d0-5eec-851c-e1db1e2b190d@exampl
 - After a sent message: `success` (`true`) and `message_id`, the Message-ID header, which `messages list --message-id` takes.
 - After a test that passed or failed: `test_mode` (`true`), `success` (whether the test passed), `connected` (whether it connected to the server), `authenticated` (whether it logged in) and `error` (why it failed, or an empty string).
 
-A failed send prints no result object: it prints the error object that [JSON Output](/cli/configuration#json-output) describes.
+A failed send prints no result object: it prints the error object that [JSON output](/cli/configuration#json-output) describes.
 
 | Exit code | Meaning |
 |---|---|
@@ -165,7 +165,7 @@ A failed send prints no result object: it prints the error object that [JSON Out
 
 Exit code 7 after the whole message was sent means the server may have accepted it. Check whether it arrived before you send it again.
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -225,12 +225,12 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | `--track-opens` | Track opens (`--track-opens=false` turns it off); the account's setting applies when omitted |
 | `--username string` | SMTP username (required, except by `--test`) |
 
-## Next Steps
+## Next steps
 
 - [Send messages via API](/cli/commands/messages)
 - [Manage API keys](/cli/commands/apikeys)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [SMTP credential setup](/smtp/credentials).
 - [SMTP credential API](/api-reference/smtp-credentials/create-smtp-credential), [SMTP settings](/smtp), [CLI configuration and output](/cli/configuration).

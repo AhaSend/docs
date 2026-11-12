@@ -22,7 +22,7 @@ Available on Max. See [plans and features](/facts#plans-and-features).
 **Recommended Approach:** For most integrations, [webhooks](/integrations/webhooks) are the preferred method for handling bounce notifications as they provide real-time delivery and more detailed event data. DSN reports are specifically designed for integrating with legacy systems where webhooks are not feasible.
 </Note>
 
-## What Are DSN Reports?
+## What are DSN reports?
 
 Delivery Status Notification reports are standardized email messages that provide detailed information about email delivery failures. When enabled, AhaSend automatically generates DSN reports for bounced emails and sends them to configured recipients.
 
@@ -60,7 +60,7 @@ Configure DSN reports through your account settings with optional domain-level o
   </Step>
 </Steps>
 
-## How DSN Reports Work
+## How DSN reports work
 
 Once configured, AhaSend automatically handles DSN generation and delivery:
 
@@ -74,7 +74,7 @@ Once configured, AhaSend automatically handles DSN generation and delivery:
 1. **Domain-specific recipient** (if configured for the sending domain)
 2. **Account-level default recipient** (fallback for all domains)
 
-## Use Cases
+## Use cases
 
 DSN reports serve various enterprise requirements:
 
@@ -101,7 +101,7 @@ DSN reports serve various enterprise requirements:
   </Card>
 </CardGroup>
 
-## DSN Report Format
+## DSN report format
 
 DSN reports follow RFC 3464 specifications for standardized processing:
 
@@ -117,7 +117,7 @@ DSN reports follow RFC 3464 specifications for standardized processing:
 - Delivery attempt timestamps
 - Mail server response messages
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Recipient Configuration" icon="envelope">
@@ -208,7 +208,7 @@ DSN reports follow RFC 3464 specifications for standardized processing:
 </AccordionGroup>
 
 
-## Related Guides
+## Related guides
 
 - [Account quickstart](/quickstart), [Domain setup](/domains), [Bounce webhook](/api-reference/webhooks/message-bounced).
 - [Webhook setup](/integrations/webhooks), [Plans and limits](/facts), [Tracking setup](/tracking/open-tracking).

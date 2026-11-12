@@ -52,7 +52,7 @@ bun add --dev typescript @types/koa @types/node
 
 `raw-body` is only needed for webhooks, where signature verification requires the exact, unparsed request bytes. Koa itself ships no type declarations, hence `@types/koa`; `@koa/router` and `@koa/bodyparser` bundle their own, so don't add `@types/koa__router`.
 
-## Configure Environment Variables
+## Configure environment variables
 
 Add your credentials to `.env` (and load them with `node --env-file=.env` or `dotenv`):
 
@@ -66,7 +66,7 @@ WELCOME_ENDPOINT_TOKEN=a-long-random-server-to-server-token
 
 Keep these values in your deployment platform's secret store. The examples require an explicit `sandbox` or `live` delivery mode and refuse to start for any other value.
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope and reuse it across requests:
 
@@ -92,7 +92,7 @@ export const sandboxMode = deliveryMode === "sandbox";
 export const welcomeToken = requireEnv("WELCOME_ENDPOINT_TOKEN");
 ```
 
-## Send an Email from a Koa Route
+## Send an email from a Koa route
 
 ```ts server.ts
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -203,7 +203,7 @@ This is a server-to-server route protected by a dedicated bearer token. For a br
 
 The stable business-event key protects retries outside the SDK's internal retry loop. Reuse an idempotency key only for the exact same request payload and never log it: AhaSend matches a key against a hash of the request body, so the same key with different content is rejected as `AhaSendIdempotencyMismatchError` (HTTP 422). `sandbox` is part of that body, which is why the key is namespaced by `deliveryMode` — without that, replaying an event ID after switching modes fails permanently instead of sending. Stored non-server-error outcomes can be replayed for 24 hours, but a `5xx` releases the key for re-execution; reconcile an uncertain outcome before another send when duplicates are unacceptable.
 
-## Handle Webhooks
+## Handle webhooks
 
 There is no Koa-specific adapter, so use the asynchronous generic `WebhookVerifier`. It needs the **raw request body**. Put the webhook route in its own router before `bodyParser()`, then read the exact bytes from the Node request (`ctx.req`) with the [`raw-body`](https://github.com/stream-utils/raw-body) package. Timestamp validation rejects stale signatures but does not deduplicate a valid delivery replayed inside the tolerance window.
 
@@ -285,7 +285,7 @@ The demo map loses data on restart, has no cleanup, and cannot coordinate replic
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

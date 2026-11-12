@@ -5,7 +5,7 @@
 
 For a sending subdomain such as `notify.example.com` in the `example.com` zone, use `notify` for SPF, `_dmarc.notify` for DMARC, and `managed._domainkey.notify` for that example DKIM name. If `notify.example.com` has its own delegated zone, names are relative to that zone instead.
 
-## Verify the Records in AhaSend
+## Verify the records in AhaSend
 
 Save the changes, then open the sending domain in AhaSend and click **Check DNS**. Compare each saved full hostname, record type and value with the dashboard. Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
 

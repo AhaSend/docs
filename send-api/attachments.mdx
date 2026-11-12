@@ -1,0 +1,94 @@
+---
+title: "Attachments"
+sidebarTitle: "Attachments"
+description: "Send files with your emails through the API or SMTP: PDFs, calendar invites and other documents, with the fields, encoding rules and size limits explained."
+icon: "paperclip"
+---
+
+You can add files to any email you send through AhaSend: an invoice as a PDF, a calendar invite as an `.ics` file, a CSV export. Over the API you put each file in the `attachments` array of the request; over SMTP you attach files the way your mail library already does.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
+<a id="api" />
+
+## How do I attach a file with the API?
+
+Add an `attachments` array to your [Create Message](/api-reference/messages/create-message) request. Each attachment has a file name, a content type and the file's content in `data`.
+
+```bash
+curl --request POST \
+  --url https://api.ahasend.com/v2/accounts/{account_id}/messages \
+  --header 'Authorization: Bearer YOUR_API_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "sandbox": true,
+    "from": { "email": "billing@yourdomain.com", "name": "Your Company" },
+    "recipients": [{ "email": "customer@example.com" }],
+    "subject": "Your invoice",
+    "html_content": "<p>Your invoice is attached.</p>",
+    "attachments": [
+      {
+        "file_name": "invoice.pdf",
+        "content_type": "application/pdf",
+        "base64": true,
+        "data": "JVBERi0xLjcKJcOkw7zDtsOfCjIgMCBvYmoK..."
+      }
+    ]
+  }'
+```
+
+The `data` value in this example is shortened; send the complete base64 string of your file.
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `file_name` | Yes | The name the recipient sees, for example `invoice.pdf`. |
+| `content_type` | Yes | The MIME type, for example `application/pdf`, `text/calendar` or `text/csv`. |
+| `data` | Yes | The file's content: base64-encoded when `base64` is `true`, otherwise read as UTF-8 text. |
+| `base64` | No | Set to `true` for binary files such as PDFs, images and archives. Defaults to `false`. |
+| `content_disposition` | No | The disposition of the attachment. |
+| `content_id` | No | Shows the file inside the message instead of as a download; see [Inline images](/send-api/inline-images). |
+
+Attachments work the same way with [Create Template Message](/api-reference/messages/create-template-message) and [Create Conversation Message](/api-reference/messages/create-conversation).
+
+<a id="calendar" />
+
+## How do I send a calendar invite?
+
+An `.ics` file is plain text, so it can go in `data` without encoding:
+
+```json
+{
+  "file_name": "appointment.ics",
+  "content_type": "text/calendar",
+  "data": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Your Company//Booking//EN\r\nBEGIN:VEVENT\r\nUID:booking-1234@yourdomain.com\r\nDTSTART:20261120T090000Z\r\nDTEND:20261120T093000Z\r\nSUMMARY:Your appointment\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+}
+```
+
+<a id="smtp" />
+
+## How do I send attachments over SMTP?
+
+Attach files with your mail library as usual when you send through the [SMTP relay](/smtp). AhaSend sends the message as you built it and doesn't change its MIME structure.
+
+<a id="limits" />
+
+## How large can attachments be?
+
+| Limit | Value |
+| --- | --- |
+| Complete message | 20 MiB, including headers, body and all attachments after base64 encoding |
+| API request body | 30 MB |
+| Per attachment | No separate limit |
+
+Base64 makes a file about a third larger, so a 15 MB PDF is already close to the limit once encoded. For large files, send a download link instead: the message stays small and lands more reliably in the inbox.
+
+<a id="incoming" />
+
+## Can I receive attachments on incoming mail?
+
+Yes. [Message routes](/integrations/routing) can include the attachments of incoming messages in the payload they send to your endpoint, base64-encoded with their file name, content type and Content-ID.
+
+## Related guides
+
+- [Send email](/send-api/send-email), [Inline images](/send-api/inline-images), [Create Message reference](/api-reference/messages/create-message).
+- [SMTP settings](/smtp), [Message routing](/integrations/routing), [Sending limits](/send-api/send-email#limits).

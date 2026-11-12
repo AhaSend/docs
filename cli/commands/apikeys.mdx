@@ -29,10 +29,10 @@ Each API key has:
 - A unique identifier and secret
 - Scopes (permissions) that define what the key can do; see [Scopes](#scopes)
 - A label that names it, required when you create it
-- An optional IP allow list that limits where the key can be used; see [IP Allow Lists](#ip-allow-lists)
+- An optional IP allow list that limits where the key can be used; see [IP allow lists](#ip-allow-lists)
 - Creation and last used timestamps
 
-## List API Keys
+## List API keys
 
 ```bash
 # List API keys
@@ -43,9 +43,9 @@ ahasend apikeys list --limit 10
 ahasend apikeys list --limit 10 --after YOUR_CURSOR
 ```
 
-Table output shows each key's label, ID, public key, scopes and last use. Plain and CSV output add the IP allow list and the creation and update times. Secrets are never shown. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
+Table output shows each key's label, ID, public key, scopes and last use. Plain and CSV output add the IP allow list and the creation and update times. Secrets are never shown. Pages work as [Lists and pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
 
-## Create API Key
+## Create API key
 
 `--label` and at least one `--scope` are required.
 
@@ -104,7 +104,7 @@ A scope that ends in `{domain}` takes one of your domains in its place, such as 
 
 `ahasend apikeys create --help` lists the same scopes. The segment scopes need CLI v0.4.0 or later, and the statistics scopes under these names need CLI v0.5.0 or later. Earlier versions accept only the [earlier names](/api-reference/scopes#statistics-and-reports). See [Permission scopes](/api-reference/scopes) for what each one allows.
 
-## IP Allow Lists
+## IP allow lists
 
 `--ip-allow-list` limits the source IPs that can authenticate with the key. Each entry is a CIDR block, such as `203.0.113.0/24`, or a bare IPv4 or IPv6 address, such as `2001:db8::1`. Repeat the flag, or separate entries with commas. Without it, the key works from any IP, which table and plain output show as `any`.
 
@@ -116,7 +116,7 @@ The CLI checks the list before it sends the request. These fail with exit code 4
 
 A request with the key from an IP outside the list fails with HTTP 403 (exit code 6). See [IP allow lists](/security/ip-allow-lists) for how the API applies the list.
 
-## Get API Key Details
+## Get API key details
 
 ```bash
 ahasend apikeys get YOUR_RESOURCE_ID
@@ -124,7 +124,7 @@ ahasend apikeys get YOUR_RESOURCE_ID
 
 The key ID must be a UUID. Table and plain output show the secret key as `[HIDDEN]`.
 
-## Update API Key
+## Update API key
 
 `update` changes only the flags you give, and needs at least one. Do not replace the scopes of the key the CLI is logged in with unless the new scopes keep the `api-keys` scopes you need: otherwise that key can no longer change itself back. `--scope` replaces all of the key's scopes: to add a scope, give every existing scope plus the new one. `--ip-allow-list` replaces the whole list, and `--clear-ip-allow-list` removes it so the key works from any IP. The secret cannot be changed; create a new key and delete the old one instead.
 
@@ -148,7 +148,7 @@ ahasend apikeys update YOUR_RESOURCE_ID --clear-ip-allow-list
 
 The API refuses to give the key you are calling with an IP allow list that leaves out your current IP, so you cannot lock yourself out. The update fails with HTTP 409, exit code 1.
 
-## Delete API Key
+## Delete API key
 
 The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it.
 
@@ -161,7 +161,7 @@ ahasend apikeys delete "$TEST_ID"
 Deleting an API key is irreversible. Applications using this key will lose access immediately.
 </Warning>
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -201,13 +201,13 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | `--label string` | New label for the API key |
 | `--scope strings` | New scope to grant, replacing all scopes (can be used multiple times) |
 
-## Next Steps
+## Next steps
 
 - [Learn about API Key Scopes](/api-reference/scopes)
 - [Authenticate with the CLI](/cli/authentication)
 - [Send messages](/cli/commands/messages)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Permission scopes](/api-reference/scopes).
 - [Scoped credentials](/security/scoped-credentials), [Create key API](/api-reference/api-keys/create-api-key), [IP allow lists](/security/ip-allow-lists).

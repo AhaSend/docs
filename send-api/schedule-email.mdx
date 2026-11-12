@@ -1,0 +1,77 @@
+---
+title: "Schedule Email"
+sidebarTitle: "Schedule Email"
+description: "Schedule an email for later with the API, set an expiry so a message that can't be delivered in time is dropped, and cancel a scheduled send."
+icon: "clock"
+---
+
+Add a `schedule` to any send request to choose when AhaSend makes the first delivery attempt, when the message expires, or both.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
+<a id="schedule" />
+
+## How do I schedule an email?
+
+Set `schedule.first_attempt` to the moment the email should go out, in [RFC3339](https://www.rfc-editor.org/rfc/rfc3339) format:
+
+```bash
+curl --request POST \
+  --url https://api.ahasend.com/v2/accounts/{account_id}/messages \
+  --header 'Authorization: Bearer YOUR_API_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "sandbox": true,
+    "from": { "email": "reminders@yourdomain.com", "name": "Your Company" },
+    "recipients": [{ "email": "customer@example.com", "substitutions": { "time": "14:00" } }],
+    "subject": "Reminder: your appointment tomorrow",
+    "text_content": "See you tomorrow at {{ time }}.",
+    "schedule": {
+      "first_attempt": "2026-11-20T08:00:00Z"
+    }
+  }'
+```
+
+The response returns each message with `status: "scheduled"` and its `schedule`. Keep the message `id` if you may want to cancel it.
+
+| Field | Rule |
+| --- | --- |
+| `first_attempt` | In the future and within 7 days of the request |
+| `expires` | In the future and within 8 days of the request; after `first_attempt` when you set both |
+
+Times with a `Z` are in UTC; you can also give an offset, such as `2026-11-20T09:00:00+01:00`.
+
+<a id="expires" />
+
+## How do I stop an email from arriving too late?
+
+Set `schedule.expires`. If the message hasn't been delivered by then, for example because the receiving server kept deferring it, AhaSend drops it instead of delivering it late.
+
+This is useful for anything that loses its value with time, such as a login code or a one-time password: set `expires` to the moment the code stops working, and the recipient never receives a code that no longer works. You can set `expires` without `first_attempt`; the message then goes out right away.
+
+```json
+{
+  "schedule": {
+    "expires": "2026-11-11T14:25:00Z"
+  }
+}
+```
+
+<a id="cancel" />
+
+## How do I cancel a scheduled email?
+
+Call [Cancel Message](/api-reference/messages/cancel-message) with the message's `id` before its first attempt:
+
+```bash
+curl --request DELETE \
+  --url https://api.ahasend.com/v2/accounts/{account_id}/messages/{message_id}/cancel \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+The API key needs `messages:cancel:all`, or the cancel scope for the sender's domain. See [permission scopes](/api-reference/scopes).
+
+## Related guides
+
+- [Send email](/send-api/send-email), [Cancel Message reference](/api-reference/messages/cancel-message), [Batch sending](/send-api/multiple-recipients).
+- [Permission scopes](/api-reference/scopes), [Webhooks](/integrations/webhooks), [Bounces and suppressions](/bounces).

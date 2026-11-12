@@ -16,7 +16,7 @@ Use a [verified sending domain](/domains), your account ID, and a domain-scoped 
 
 Use Python 3.13, [Azure Functions Core Tools v4](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) and the [Python v2 programming model](https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference-python).
 
-## Install the Dependencies
+## Install the dependencies
 
 ```bash
 python3.13 -m venv .venv
@@ -29,7 +29,7 @@ python -m pip freeze > requirements.txt
 
 <CloudSend />
 
-## Create the HTTP Function
+## Create the HTTP function
 
 Save this as `function_app.py`:
 
@@ -58,7 +58,7 @@ Create `host.json`:
 {"version":"2.0"}
 ```
 
-## Run with Core Tools
+## Run with core tools
 
 Activate `.venv`, export the variables from the shared code, and run:
 
@@ -74,7 +74,7 @@ curl --fail-with-body http://localhost:7071/api/sendEmail   -H "Authorization: B
 
 Expect HTTP 202 with acceptance statuses. Invalid JSON or event IDs return 400; a wrong bearer token returns 401. Use a new event ID for a new test and the original ID for a retry of the same message. Local Core Tools does not enforce function keys; the bearer check still runs.
 
-## Prepare the Hosted App
+## Prepare the hosted app
 
 Select Python 3.13 on a supported Linux Functions plan. Include `requirements.txt`, `host.json`, `function_app.py` and `send_email.py` in the project. Keep secrets in [Key Vault references](https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references) and ordinary configuration in app settings. Add `x-functions-key` to hosted requests alongside the bearer token. Follow [Microsoft's Python deployment guidance](https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference-python) and enforce your application's permissions and request limits.
 

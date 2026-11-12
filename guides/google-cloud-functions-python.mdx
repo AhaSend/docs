@@ -18,7 +18,7 @@ Use a [verified sending domain](/domains), your account ID, and a domain-scoped 
 
 Use Python 3.13 and the [Python Functions Framework](https://github.com/GoogleCloudPlatform/functions-framework-python). You can complete the local test without a Google Cloud account.
 
-## Install the Dependencies
+## Install the dependencies
 
 ```bash
 python3.13 -m venv .venv
@@ -31,7 +31,7 @@ python -m pip freeze > requirements.txt
 
 <CloudSend />
 
-## Create the HTTP Function
+## Create the HTTP function
 
 Save this as `main.py`:
 
@@ -72,7 +72,7 @@ curl --fail-with-body "http://localhost:${PORT:-8080}"   -H "Authorization: Bear
 
 Expect HTTP 202 with acceptance statuses. A wrong token returns 401, invalid input returns 400 and a failed upstream request returns 502. Use a new event ID for each new test and keep the original one when retrying the same job.
 
-## Prepare the Hosted Function
+## Prepare the hosted function
 
 Deploy with the Python 3.13 runtime and entry point `send_email_http`. Include `main.py`, `send_email.py` and `requirements.txt`. Follow [Google's function deployment steps](https://cloud.google.com/run/docs/deploy-functions), load credentials with [Secret Manager](https://cloud.google.com/run/docs/configuring/services/secrets), and restrict invokers with IAM. With both IAM and the application bearer token enabled, send the Google identity token in `X-Serverless-Authorization` and the app token in `Authorization`; see [service authentication](https://cloud.google.com/run/docs/authenticating/service-to-service).
 

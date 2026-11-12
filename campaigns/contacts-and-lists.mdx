@@ -31,7 +31,7 @@ The import matches the columns of your file to the contact fields by their heade
 
 Import into a list when the file is a list, for example your newsletter subscribers. Import on the Contacts page when you only want the contacts in your account, and add them to lists later.
 
-### Contact Status
+### Contact status
 
 | Status | Meaning |
 |---|---|
@@ -45,7 +45,7 @@ Next to the status, a contact can be **unsubscribed from everything**. That is t
 
 Email validation adds a third signal: a contact whose address was found invalid is left out of campaigns.
 
-## Custom Fields
+## Custom fields
 
 Add the fields your campaigns need, such as company, plan, city, VIP or customer since, under **Marketing > Contact fields**. A field has a name, a key and a type: text, number, yes/no, date or date/time. The type is fixed when you create the field, so a number stays a number. Renaming a field changes only its name, not its key, so it does not break the campaigns, searches or API calls that use it.
 
@@ -62,7 +62,7 @@ A list is a static group of contacts. A campaign sends to one or more lists and 
 
 The Lists page shows two numbers for each list: how many contacts are on it, and how many a campaign would reach. The second number counts a contact when its membership is confirmed, the contact is enabled, it has not unsubscribed from everything, and email validation did not find its address invalid. The API returns the same number as `contact_count`.
 
-### List Status
+### List status
 
 Each contact on a list has its own status on that list, separate from the contact status above:
 
@@ -75,7 +75,7 @@ Each contact on a list has its own status on that list, separate from the contac
 
 A list page can therefore show a contact as **Confirmed** on the list and **Blocked** as a contact at the same time. The two columns answer different questions: is the contact subscribed to this list, and can AhaSend send to this contact at all. A campaign reaches the contact only when both answers are yes.
 
-### Unsubscribe, Remove or Delete
+### Unsubscribe, remove or delete
 
 | Goal | What to do | Effect |
 |---|---|---|
@@ -89,7 +89,7 @@ The dashboard has no button to unsubscribe a contact; recipients unsubscribe the
 
 Contacts and [suppressions](/bounces) are separate records. A suppression you add by hand, or one that a bounce of your transactional mail creates, does not change any contact or list status.
 
-## Advanced Search and Saved Lists
+## Advanced search and saved lists
 
 On a list page, the search box finds contacts by email, first name or last name, and advanced search filters on any field, with AND and OR rules and groups, relative dates such as "7 days ago", and checks for empty fields. The page shows how many contacts match out of the total. To send to just those contacts, click **Save as new list** and the matching contacts are copied to a new list; this works for a plain search as well as for an advanced search.
 
@@ -101,7 +101,7 @@ The **Send Campaign** button on a list page starts a campaign for the whole list
 
 **Export CSV** on the Contacts page exports all contacts of your account. The file has the standard fields, the status and your custom fields, in the order you set under **Marketing > Contact fields**.
 
-## Related Guides
+## Related guides
 
 - [Campaign Builder overview](/campaigns), [Segments](/campaigns/segments), [Creating a campaign](/campaigns/create), [Reports](/campaigns/reports).
 - [Contacts API](/api-reference/contacts/overview), [Lists API](/api-reference/lists/overview), [Bounces and suppressions](/bounces).

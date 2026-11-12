@@ -22,15 +22,15 @@ Available subcommands:
 - `get` - Get one message
 - `cancel` - Cancel a scheduled message
 
-## Send Messages
+## Send messages
 
 ```text
 ahasend messages send [flags]
 ```
 
-A send needs `--from`, `--subject`, a recipient (`--to` or `--recipients`) and text or HTML content. A send with `--template-id` needs only a recipient, because the template supplies the rest; see [Stored Templates](#stored-templates). When a value is missing, the command can ask for it; see [prompts](/cli/configuration#prompts). The command checks every flag and file before it sends anything, so invalid input sends nothing.
+A send needs `--from`, `--subject`, a recipient (`--to` or `--recipients`) and text or HTML content. A send with `--template-id` needs only a recipient, because the template supplies the rest; see [Stored templates](#stored-templates). When a value is missing, the command can ask for it; see [prompts](/cli/configuration#prompts). The command checks every flag and file before it sends anything, so invalid input sends nothing.
 
-### Basic Usage
+### Basic usage
 
 ```bash
 # Text email
@@ -117,7 +117,7 @@ ahasend messages send --sandbox \
 
 The subject and the content can hold placeholders such as `{{first_name}}`, which the API fills from `--global-substitutions` and the recipients file. See the [message content guide](/cli/templates).
 
-### Stored Templates
+### Stored templates
 
 `--template-id` sends a transactional template stored in your AhaSend account. Manage stored templates with the [`ahasend templates` commands](/cli/commands/templates).
 
@@ -158,7 +158,7 @@ ahasend messages send --sandbox \
   --schedule 2h
 ```
 
-### Headers, Tags and Tracking
+### Headers, tags and tracking
 
 - `--header` adds a custom header in `Name: value` format. You can use it multiple times, with each name once, in any case. Put a value that holds a comma in double quotes, such as `--header '"Name: a, b"'`. The command refuses `From`, `Sender`, `To`, `Cc`, `Bcc`, `Subject`, `Message-ID` and the headers AhaSend sets, such as `AhaSend-Sandbox`; use the matching flag instead, such as `--from`, `--sandbox` or `--tag`.
 - `--tag` adds a message tag. You can use it multiple times.
@@ -175,7 +175,7 @@ ahasend messages send --sandbox \
   --track-clicks=false
 ```
 
-### Sandbox Mode
+### Sandbox mode
 
 `--sandbox` sends in sandbox mode, which delivers nothing. `--sandbox-result` picks the simulated outcome: `deliver` (the default), `bounce`, `defer`, `fail` or `suppress`. It needs `--sandbox`. See [sandbox mode](/send-api/sandbox).
 
@@ -200,7 +200,7 @@ ahasend messages send --sandbox \
   --idempotency-key "order-1234-confirmation"
 ```
 
-### Output and Exit Codes
+### Output and exit codes
 
 A send of up to 100 recipients makes one request. Plain output starts with a heading, `Message sent successfully`, `Message sent to N of M recipients` or `Message not sent to any recipient`, then lists each message:
 
@@ -229,7 +229,7 @@ The API does not refuse a suppressed address. It queues the message, does not de
 
 A send exits with the [shared exit codes](/cli/configuration#exit-codes). [Exit codes for sends](/cli/batch-processing#exit-codes) gives the codes that report its result.
 
-## List Messages
+## List messages
 
 ```text
 ahasend messages list [flags]
@@ -257,7 +257,7 @@ ahasend messages list --tag onboarding --limit 50
 - `--limit`, `--after` and `--before` page through the results as [lists and pagination](/cli/configuration#lists-and-pagination) describes. With `--output json`, read the next cursor from `pagination.next_cursor`.
 - `--show-details` adds more fields for each message, such as its direction, attempts and bounce class.
 
-## Get a Message
+## Get a message
 
 ```text
 ahasend messages get <message-id> [flags]
@@ -274,7 +274,7 @@ ahasend messages get "YOUR_RESOURCE_ID" --output json | jq -r .content > message
 
 The delivery attempt of an out-of-band bounce, which the recipient's mail server reported after it accepted the message, names the bounce report message, and `messages get` takes its ID too. Table output then adds a `Report Message ID` column to the `Delivery Attempts` table, and plain output a `Report Message ID:` line to that attempt; CSV output has it in the attempt's `report_message_id`. This needs CLI v0.4.0 or later.
 
-## Cancel Messages
+## Cancel messages
 
 ```text
 ahasend messages cancel <message-id>... [flags]
@@ -303,14 +303,14 @@ A message the API does not find fails with exit code 5. The API records a messag
 
 With several IDs, the command cancels each in turn and prints one result per ID; with `--output json`, it prints a JSON array with the API's response or error body for each ID, or the CLI's [error object](/cli/configuration#json-output) for an ID whose request got no answer. Any failure then exits with code 1. Ctrl+C stops before the next cancel and exits with code 130.
 
-## Advanced Usage
+## Advanced usage
 
 - [Batch Processing Guide](/cli/batch-processing) - Send to many recipients from a CSV or JSON file
 - [Message Content Guide](/cli/templates) - Content files, variables, conditions and loops
 - [Stored Templates](/cli/commands/templates) - Manage the transactional templates that `--template-id` sends
 - [Examples](/cli/examples) - Real-world use cases
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -374,13 +374,13 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | `--track-clicks` | Track clicks (`--track-clicks=false` turns it off); the account's setting applies when omitted |
 | `--track-opens` | Track opens (`--track-opens=false` turns it off); the account's setting applies when omitted |
 
-## Next Steps
+## Next steps
 
 - [Learn about domains](/cli/commands/domains)
 - [Configure webhooks](/cli/commands/webhooks)
 - [View statistics](/cli/commands/stats)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).

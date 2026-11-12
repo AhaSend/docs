@@ -26,7 +26,7 @@ The AhaSend API adds 1 to 1,000 existing contacts to one list, and answers when 
 
 This operation accepts an `Idempotency-Key` header. The memberships and the stored response are saved together. A retry with the same key replays the `200`, the `404` for a missing list or the `400` for 24 hours. See [Idempotency](/api-reference/idempotency).
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
 - [Batch Upsert Contacts](/api-reference/contacts/batch-upsert-contacts), [Lists API overview](/api-reference/lists/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

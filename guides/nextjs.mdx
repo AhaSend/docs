@@ -48,7 +48,7 @@ bun add @ahasend/sdk zod server-only
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 For local development, add your credentials to an uncommitted `.env.local`, which Next.js loads automatically. In production, inject the same values through your hosting platform's secret settings:
 
@@ -63,7 +63,7 @@ WELCOME_API_TOKEN=generate-a-long-random-service-token
   Never prefix these variables with `NEXT_PUBLIC_`. Next.js inlines every `NEXT_PUBLIC_*` variable into the browser bundle at build time. A `NEXT_PUBLIC_AHASEND_API_KEY` would hand full send access to anyone who opens DevTools. Unprefixed variables stay server-side.
 </Warning>
 
-## Create the Client
+## Create the client
 
 Build the client on first use and reuse it across requests. The `server-only` marker makes an accidental Client Component import fail at build time, and `fromEnv()` validates the required AhaSend configuration:
 
@@ -108,7 +108,7 @@ export async function sendWelcomeEmail(input: WelcomeInput) {
   Read credentials inside a function, not at module scope. `next build` imports every route module to collect its configuration, so a client constructed — or an environment variable asserted — while the module is evaluating turns a build without production secrets into a hard build failure (`Failed to collect page data`). That is the normal case for Docker image builds and for CI that keeps secrets out of the build step.
 </Warning>
 
-## Send an Email from a Next.js Route Handler
+## Send an email from a Next.js route handler
 
 Route Handlers are public endpoints. This backend-to-backend example requires a long random bearer token over HTTPS; use your application's existing authentication and authorization instead when the caller is a user. Also configure request-size and rate limits at your hosting layer.
 
@@ -236,7 +236,7 @@ A 202 is a **multi-status** response: `result.data` holds one entry per recipien
 
 The stable, hashed signup ID lets retries across requests reuse the same idempotency key without placing the raw customer identifier in request metadata. Keep the payload stable for a given signup ID; reusing a key with a different payload is rejected.
 
-### Alternative: Send from a Server Action
+### Alternative: Send from a server action
 
 Server Actions are also public mutation endpoints. Authenticate inside the action, then load the recipient from your server-side user record rather than accepting an email address from the browser. Adapt `requireCurrentUser()` to your authentication and data-access layer:
 
@@ -271,7 +271,7 @@ export async function sendWelcome() {
 
 The send example uses `sandbox: true` to validate the request without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so a sandbox send is not a separate namespace: reusing `welcome-<hash>` with `sandbox` flipped is the same key with a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Prefix sandbox keys distinctly (`sandbox-welcome-…`).
 
-## Handle Webhooks
+## Handle webhooks
 
 The SDK ships an App Router adapter, `nextRouteHandler`, that reads a bounded raw body, verifies the HMAC signature and timestamp over those exact bytes, and hands you a typed event. Build it on first request and call it from `POST`:
 
@@ -309,7 +309,7 @@ This minimal receiver verifies and acknowledges events without side effects. Tim
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/api/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix). Invalid signatures are rejected with a 400 before your handler runs.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

@@ -21,7 +21,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="limits" />
 
-## What Are the API Sending Limits?
+## What are the API sending limits?
 
 | Setting | Limit |
 |---|---|
@@ -35,7 +35,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="quick-start" />
 
-## How Do I Send an Email Through the API?
+## How do I send an email through the API?
 
 Here's a simple example to send your first email using the API:
 
@@ -61,9 +61,41 @@ curl --request POST \
   }'
 ```
 
+## What else can I do when sending?
+
+<CardGroup cols={2}>
+  <Card title="Batch Sending" icon="users" href="/send-api/multiple-recipients">
+    Up to 100 personalized recipients per request, plus CC and BCC.
+  </Card>
+  <Card title="Attachments" icon="paperclip" href="/send-api/attachments">
+    PDFs, calendar invites and other files, with size limits.
+  </Card>
+  <Card title="Inline Images" icon="image" href="/send-api/inline-images">
+    Show a logo or photo inside the message with `cid:`.
+  </Card>
+  <Card title="Schedule Email" icon="clock" href="/send-api/schedule-email">
+    Send later, expire late messages, cancel before sending.
+  </Card>
+  <Card title="Custom Headers" icon="heading" href="/send-api/custom-headers">
+    Add your own headers, with substitutions in values.
+  </Card>
+  <Card title="Tags" icon="tags" href="/send-api/tags">
+    Label messages and filter on them later.
+  </Card>
+  <Card title="Tracking and Retention" icon="sliders" href="/send-api/tracking-and-retention">
+    Per-message tracking and storage, overriding your account.
+  </Card>
+  <Card title="Idempotency Keys" icon="repeat" href="/api-reference/idempotency">
+    Retry safely without sending twice.
+  </Card>
+  <Card title="Bounces and Suppressions" icon="ban" href="/bounces">
+    Why an address is suppressed, for how long, and when to remove it.
+  </Card>
+</CardGroup>
+
 <a id="authentication" />
 
-## Which Credentials Do I Need?
+## Which credentials do I need?
 
 All API requests require authentication using your API v2 key:
 
@@ -87,7 +119,7 @@ All API requests require authentication using your API v2 key:
 **Need API Keys?** If you haven't created API v2 credentials yet, check out our [API Credentials guide](/send-api/credentials) for step-by-step instructions.
 </Info>
 
-## Basic Examples
+## Basic examples
 
 <CodeGroup>
 
@@ -155,7 +187,7 @@ All API requests require authentication using your API v2 key:
 
 In the HTML body, AhaSend HTML-escapes each value: a `first_name` of `<b>Ann</b>` shows as the text `<b>Ann</b>`, not as bold. To insert a value as HTML, for example a block of order rows that your code builds, write `{{ order_rows|safe }}`, and escape any user input inside that value yourself. The subject, the headers and the text body get values as they are.
 
-## Advanced Examples
+## Advanced examples
 
 <Note>
 **Multiple Recipients:** When you specify multiple recipients in the recipients array, AhaSend sends separate individual emails to each recipient. This is not one email with multiple addresses in the To/CC headers, but rather individual personalized emails where each recipient only sees their own email address and can receive personalized template substitutions.
@@ -278,11 +310,11 @@ Per-recipient `substitutions` override the global `substitutions` for that recip
 
 <a id="response-handling" />
 
-## How Do I Read the Sending Response?
+## How do I read the sending response?
 
 The API returns a response with information about each message created:
 
-### Successful Response (202)
+### Successful response (202)
 
 ```json
 {
@@ -311,7 +343,7 @@ The API returns a response with information about each message created:
 }
 ```
 
-### Response Fields
+### Response fields
 
 <AccordionGroup>
   <Accordion title="Message Status" icon="info">
@@ -331,7 +363,7 @@ The API returns a response with information about each message created:
 
 <a id="error-handling" />
 
-## How Do I Handle a Failed Request?
+## How do I handle a failed request?
 
 HTTP `202` means the request was accepted for processing. Inspect every item's `status`; a rejected recipient has `status: "error"` and `id: null` even if the HTTP request succeeded.
 
@@ -355,7 +387,7 @@ Error responses have a human-readable `message` field. Its text can change; do n
 
 A completed duplicate request returns its original status and body with `Idempotent-Replayed: true`. See [idempotency](/api-reference/idempotency) and [error handling](/api-reference/errors).
 
-## Validation Requirements
+## Validation requirements
 
 Based on the [API documentation](/api-reference/messages/create-message), ensure your requests meet these requirements:
 
@@ -386,7 +418,7 @@ Based on the [API documentation](/api-reference/messages/create-message), ensure
   </Accordion>
 </AccordionGroup>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Idempotency" icon="repeat">
@@ -422,7 +454,7 @@ Based on the [API documentation](/api-reference/messages/create-message), ensure
   </Accordion>
 </AccordionGroup>
 
-## Related Guides
+## Related guides
 
 - [Domain setup](/domains), [Send-only API keys](/send-api/credentials), [API authentication](/api-reference/authentication).
 - [Create Message reference](/api-reference/messages/create-message), [SMTP settings](/smtp), [CLI sending](/cli/commands/messages).

@@ -35,7 +35,7 @@ A membership is one contact on one list. It has no ID of its own: you name it by
 
 The per-list status and the account-wide `unsubscribed` flag of the contact are separate. [Update Contact](/api-reference/contacts/update-contact) with `unsubscribed: true` stops campaigns to the contact on all lists and segments, and leaves every membership status as it is.
 
-## Unsubscribe, Remove or Delete
+## Unsubscribe, remove or delete
 
 | Goal | Operation | Effect |
 |------|-----------|--------|
@@ -64,7 +64,7 @@ To remove a contact from a list, you need `lists:write`, not `lists:delete`. Lis
 
 Create List and Batch Add List Contacts accept an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 
-## API Operations
+## API operations
 
 | Task | Endpoint reference |
 |---|---|
@@ -79,7 +79,7 @@ Create List and Batch Add List Contacts accept an `Idempotency-Key` header. See 
 | Take a contact off a list | [Remove a Contact from a List](/api-reference/lists/delete-list-contact) |
 | Read the lists of a contact | [List Contact's Lists](/api-reference/lists/get-contact-lists) |
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
 - [Contacts API overview](/api-reference/contacts/overview), [Segments API overview](/api-reference/segments/overview), [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

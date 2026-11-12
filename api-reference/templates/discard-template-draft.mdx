@@ -12,7 +12,7 @@ The API and the dashboard edit the same draft, so this also discards changes mad
 
 If the template changes in the dashboard or through another request while this request runs, the API tries again. If that continues, the API answers `503` with a `Retry-After` header. Retry the request after that delay.
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Get Template](/api-reference/templates/get-template).
 - [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

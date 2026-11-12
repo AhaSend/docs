@@ -19,7 +19,7 @@ AhaSend migration from Resend means changing your send call or SMTP settings, ma
 
 <MigrationPrepare />
 
-## Map the API Fields
+## Map the API fields
 
 Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message) with [v2 authentication](/api-reference/authentication). This is a field mapping from [Resend's send API](https://resend.com/docs/api-reference/emails/send-email), not a drop-in change of base URL.
 
@@ -38,13 +38,13 @@ Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message
 
 <MigrationApiResult />
 
-## Replace the SMTP Settings
+## Replace the SMTP settings
 
 Replace `smtp.resend.com`, username `resend` and its API-key password with AhaSend's host and separate SMTP credentials. Use STARTTLS instead of carrying over an implicit-TLS configuration. See [Resend's SMTP guide](https://resend.com/docs/send-with-smtp).
 
 <MigrationSmtpSettings />
 
-## Map Events by Meaning
+## Map events by meaning
 
 These are the closest matching outcomes, not identical payloads or a guaranteed one-to-one event sequence. Keep the provider name with each saved message ID while both systems are active. See [Resend's event documentation](https://resend.com/docs/webhooks/event-types) and the [AhaSend event list](/api-reference/webhooks).
 
@@ -61,7 +61,7 @@ These are the closest matching outcomes, not identical payloads or a guaranteed 
 
 <MigrationWebhookChecks />
 
-## Export the Old Recipient Blocks
+## Export the old recipient blocks
 
 Open Resend's **Suppressions** page and choose **Download CSV**, as described in [Resend's suppression guide](https://resend.com/docs/dashboard/emails/email-suppressions). Preserve each address and its reason, including manually added blocks. Resend suppressions apply across the team’s domains: copy each required block to every AhaSend sending domain it must cover, and keep the team-wide rule in your application. Include contact unsubscribes separately: a contact preference and an email suppression are different records. Compare the export with saved bounce/complaint events and your application's opt-out records before switching.
 

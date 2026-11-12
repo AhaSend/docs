@@ -48,7 +48,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Choose a Runtime
+## Choose a runtime
 
 Use Vercel's default server runtime; no runtime setting is required for the SDK.
 The SDK also supports Web APIs in edge runtimes. Check your installed Next.js
@@ -60,7 +60,7 @@ before changing a route's runtime.
   in server code and never expose an API key to browser code.
 </Warning>
 
-## Add a Server-Side Send Helper
+## Add a server-side send helper
 
 Create the client at module scope and reuse it. This helper accepts an already
 authorized and validated business record; do not call it directly with
@@ -147,7 +147,7 @@ method, path, and exact body — never on which API key sent it. That is why
 sandbox send and a Production live send sharing one signup ID would reuse a
 single key with two different bodies, which the API rejects as a 422 mismatch.
 
-## Set Environment Variables
+## Set environment variables
 
 <Steps>
   <Step title="Add production variables">
@@ -199,7 +199,7 @@ pass `--no-sensitive` only if you have a reason to keep a value readable.
   value into the browser bundle. Rotate an API key immediately if it is exposed.
 </Warning>
 
-## Local Development
+## Local development
 
 `vercel dev` downloads Development-scoped variables into memory, so a local
 secret file is not required:
@@ -255,7 +255,7 @@ invocation, but they share the function's timeout and their promises are
 cancelled if it expires. Use them for non-critical work, not as a replacement
 for durable persistence.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

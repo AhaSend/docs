@@ -14,7 +14,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 **Account Owner Only:** Only the account owner can enable 2FA enforcement. This setting affects all team members and requires careful planning.
 </Info>
 
-## What is 2FA Enforcement?
+## What is 2FA enforcement?
 
 2FA enforcement is an account-level security setting that mandates all team members use two-factor authentication. Think of it as adding a second lock to a shared door - everyone needs both the key (password) and the code (2FA) to enter.
 
@@ -39,7 +39,7 @@ Before enabling 2FA enforcement, the account owner must:
   </Step>
 </Steps>
 
-## Enabling 2FA Enforcement
+## Enabling 2FA enforcement
 
 Once your personal 2FA is active, enable enforcement for your team:
 
@@ -65,15 +65,15 @@ Once your personal 2FA is active, enable enforcement for your team:
 
 Enforcement includes the account owner. When OIDC SSO is enabled for the account, enforce MFA at your identity provider; AhaSend skips its own profile-2FA gate for that SSO account. See [SSO configuration](/security/sso).
 
-## What Happens to Team Members
+## What happens to team members
 
 When 2FA enforcement is enabled, team members experience the following:
 
-### First Access After Enforcement
+### First access after enforcement
 - **2FA Already Enabled:** Normal access to account dashboard
 - **2FA Not Enabled:** Redirected to profile settings with setup requirement
 
-### Setup Process
+### Setup process
 1. **Clear messaging** explains 2FA is now required for account access
 2. **Guided setup** walks through 2FA configuration
 3. **Access blocked** until 2FA setup is completed successfully
@@ -82,13 +82,13 @@ When 2FA enforcement is enabled, team members experience the following:
 **Team Communication:** Notify your team before enabling enforcement to avoid access disruptions during critical operations.
 </Tip>
 
-## Multiple Account Scenarios
+## Multiple account scenarios
 
 It's common for users, especially agencies or consultants, to be members of multiple AhaSend accounts. **The 2FA enforcement setting is specific to each individual account.**
 
 This means that enabling 2FA enforcement on one account does not automatically force a user to enable 2FA to access other accounts they are members of, unless those other accounts also have 2FA enforcement enabled.
 
-## Why Enforce 2FA?
+## Why enforce 2FA?
 
 Mandatory 2FA provides critical security benefits for team accounts:
 
@@ -115,7 +115,7 @@ Mandatory 2FA provides critical security benefits for team accounts:
   </Accordion>
 </AccordionGroup>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Implementation Planning" icon="calendar">
@@ -133,7 +133,7 @@ Mandatory 2FA provides critical security benefits for team accounts:
   </Accordion>
 </AccordionGroup>
 
-## Related Guides
+## Related guides
 
 - [Account quickstart](/quickstart), [Set up 2FA first](/security/2fa), [Team members API](/api-reference/accounts/get-account-members).
 - [Plans and limits](/facts).

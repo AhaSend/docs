@@ -46,7 +46,7 @@ yarn add @ahasend/sdk elysia
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 Add your credentials to `.env`. Bun loads it automatically, no dotenv needed:
 
@@ -57,7 +57,7 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
 ```
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope and reuse it across requests:
 
@@ -70,7 +70,7 @@ export const ahasend = new AhaSendClient({
 });
 ```
 
-## Send an Email from an Elysia Route
+## Send an email from an Elysia route
 
 Elysia validates and types the body for you when you attach a `t.Object` schema:
 
@@ -159,7 +159,7 @@ The SDK retries transient failures automatically, but a retry after a 5xx can st
 
 Add `sandbox: true` to the send request to validate it without delivering anything. Sandbox is a body field, so a key already spent on a sandbox send is rejected when the same key is replayed for the live send — give the two runs different keys.
 
-## Handle Webhooks
+## Handle webhooks
 
 There is no Elysia-specific adapter, so use the generic `WebhookVerifier`, which needs the **raw request body**. Elysia normally parses supported content types during its parse lifecycle; set `parse: "none"` on this route so the underlying `Request` remains untouched. Bound the stream while reading it so an oversized unauthenticated body is rejected before it is fully buffered.
 
@@ -251,7 +251,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
   Timestamp verification is not replay deduplication. Before adding side effects, atomically persist the verified `webhook-id` header together with durable queue/outbox work. Acknowledge an already-recorded ID without processing it again, and make the worker idempotent.
 </Warning>
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

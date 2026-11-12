@@ -20,9 +20,9 @@ The CLI provides tools for:
 
 Every flag on this page is listed in the [`routes` command reference](/cli/commands/routes#command-flags).
 
-## Route Listener
+## Route listener
 
-### Basic Usage
+### Basic usage
 
 `ahasend routes listen` prints each event as text, whatever `--output` says. It runs until you press Ctrl+C or the connection closes. Give exactly one of `--route-id` and `--recipient`.
 
@@ -48,9 +48,9 @@ When the connection starts, the command prints a banner with the route ID, the r
 Attachment data is not sent over the WebSocket. Only email metadata and content are.
 </Note>
 
-### Temporary Routes
+### Temporary routes
 
-With `--recipient`, the API creates a temporary route named `DevMode route for <API key label>`. It is enabled, and `routes list` does not show it. It stays after the command ends, until you delete it or the API does, as [Events Without a Listener](#events-without-a-listener) describes.
+With `--recipient`, the API creates a temporary route named `DevMode route for <API key label>`. It is enabled, and `routes list` does not show it. It stays after the command ends, until you delete it or the API does, as [Events without a listener](#events-without-a-listener) describes.
 
 As soon as the API creates it, the command prints a note on stderr with its ID and the command that deletes it:
 
@@ -60,7 +60,7 @@ ahasend routes delete YOUR_RESOURCE_ID
 
 The note appears before the command connects, so you see the ID even when connecting then fails.
 
-### Existing Routes
+### Existing routes
 
 With `--route-id`, the command listens through a route you created. A disabled route gets no events, so enable it first:
 
@@ -69,9 +69,9 @@ ahasend routes update YOUR_RESOURCE_ID --enabled
 ahasend routes listen --route-id YOUR_RESOURCE_ID
 ```
 
-While you listen, the route's own URL keeps receiving every email it matches, the test events of `routes trigger` included. Listening also turns on streaming for the route, and streaming stays on after the command ends, as [Events Without a Listener](#events-without-a-listener) describes.
+While you listen, the route's own URL keeps receiving every email it matches, the test events of `routes trigger` included. Listening also turns on streaming for the route, and streaming stays on after the command ends, as [Events without a listener](#events-without-a-listener) describes.
 
-### Events Without a Listener
+### Events without a listener
 
 A route with streaming on keeps it when no listener is connected: the API keeps its events for the next listener, up to the last 100. When 5 minutes pass with no new event, the API drops the kept events. The next `routes listen --route-id` of the same route prints the kept events first, each marked `REPLAY:`.
 
@@ -79,15 +79,15 @@ When an event arrives while 100 events are already kept, the API drops the kept 
 - A temporary route is deleted.
 - A route you created keeps posting emails to its URL. The next `routes listen --route-id` turns streaming on again.
 
-### Event Type
+### Event type
 
 - `message.routing` - Triggered when an inbound email matches a route
 
 See the [route payload](/api-reference/routes/route-message) for its fields.
 
-## Event Forwarding
+## Event forwarding
 
-### Forward to Local Server
+### Forward to local server
 
 `--forward-to` sends each event to your handler as an HTTP POST with a JSON body. The URL must be HTTP or HTTPS with a host name and no user name or password; another URL fails with exit code 4. A plain HTTP URL for a host other than `localhost` or a loopback address prints a warning on stderr.
 
@@ -111,7 +111,7 @@ ahasend routes listen \
 
 `--skip-verify` applies only to the `--forward-to` endpoint, and needs it: without `--forward-to`, the command fails with exit code 4. The connection to AhaSend is always verified.
 
-### Event Headers
+### Event headers
 
 When the connection starts, the banner prints `Forwarding secret (signs forwarded events): <secret>`. The command makes a new secret on each run, also with `--route-id`: it is not the secret of that route.
 
@@ -122,15 +122,15 @@ Forwarded requests carry the Standard Webhooks headers:
 
 To verify a forwarded event, use the full secret string, as printed, as the raw UTF-8 HMAC key. Do not base64-decode it. See [signature verification](/api-reference/webhooks/security).
 
-### Order and Delivery
+### Order and delivery
 
 The command forwards events one at a time, in the order they arrive, with their body byte for byte as the stream sent it, so the signature covers exactly what the API sent. A slow endpoint does not hold up the stream: up to 100 events, and up to 32 MiB of their data, wait for it, in order. When an event would go over either limit, the command does not forward it and says so on stderr.
 
 A forwarded request is not sent again. When the request fails, the command logs an error on stderr; when it gets a response outside the 2xx range, the command logs a warning. When the stream ends, the command waits for the events not yet forwarded. Press Ctrl+C to skip the wait.
 
-## Triggering Test Events
+## Triggering test events
 
-### Development Testing
+### Development testing
 
 `routes trigger` asks the API to send a test `message.routing` event to a route. Use the route ID that the listener's banner shows to see the event in your terminal. The API key needs `messages:read` for the domain of the route's recipient (`messages:read:all`, or `messages:read:{example.com}`); route scopes do not grant it.
 
@@ -140,7 +140,7 @@ ahasend routes trigger YOUR_RESOURCE_ID
 
 A disabled route gets no event: the API answers that it is queued, and then drops it.
 
-### Finding Route IDs
+### Finding route IDs
 
 ```bash
 # List your routes to find their IDs
@@ -149,9 +149,9 @@ ahasend routes list
 
 Temporary routes do not appear in the list. Their ID is in the listener's banner and in the note on stderr.
 
-## Integration Testing
+## Integration testing
 
-### Development Workflow
+### Development workflow
 
 ```bash
 # 1. Create a route for testing
@@ -172,9 +172,9 @@ ahasend routes trigger YOUR_RESOURCE_ID
 
 `routes create` prints the route's signing secret once. Save it to verify the emails the route posts to its `--url`.
 
-## Output Formats
+## Output formats
 
-### Standard Output
+### Standard output
 
 ```bash
 # Full event details (default)
@@ -183,7 +183,7 @@ ahasend routes listen --route-id YOUR_RESOURCE_ID
 
 Each event shows its time, its type and its data as indented JSON.
 
-### Slim Output
+### Slim output
 
 ```bash
 # One line per event
@@ -192,22 +192,22 @@ ahasend routes listen --route-id YOUR_RESOURCE_ID --slim-output
 
 Each event shows its time, its type, and the sender, recipient and subject of the email.
 
-## Connection and Exit Codes
+## Connection and exit codes
 
 The listener does not reconnect. It exits with:
 - `0` when the server closes the connection normally, or when you press Ctrl+C
 - `7` when the connection drops, or the server closes it with an error
 - `4` when you decline to take over the stream from another connection
 
-Other failures, such as an invalid flag or an API error while the command sets up the stream, exit as [Exit Codes](/cli/configuration#exit-codes) lists.
+Other failures, such as an invalid flag or an API error while the command sets up the stream, exit as [Exit codes](/cli/configuration#exit-codes) lists.
 
 When another connection holds the stream, the command asks on stderr whether to force a reconnect, and takes the stream over when you confirm, as [Prompts](/cli/configuration#prompts) describes. The other connection stays open but gets no more events.
 
 A message on the stream that the command cannot read, such as one that is not JSON, is skipped with a warning on stderr, and the command keeps listening.
 
-## Use Cases
+## Use cases
 
-### Testing Inbound Email Processing
+### Testing inbound email processing
 
 ```bash
 # Listen for all emails to your domain
@@ -215,7 +215,7 @@ ahasend routes listen --recipient "*@example.com" \
   --forward-to http://localhost:3000/inbound
 ```
 
-### Support Ticket System
+### Support ticket system
 
 ```bash
 # Route support emails to a local handler
@@ -223,7 +223,7 @@ ahasend routes listen --recipient "support@example.com" \
   --forward-to http://localhost:3000/tickets/create
 ```
 
-### Email-to-Task Integration
+### Email-to-task integration
 
 ```bash
 # Convert emails to tasks
@@ -231,7 +231,7 @@ ahasend routes listen --recipient "tasks@example.com" \
   --forward-to http://localhost:3000/api/tasks/from-email
 ```
 
-## Best Practices
+## Best practices
 
 1. **Use Temporary Routes for Testing**: Create temporary routes with wildcards during development
 2. **Verify Signatures**: Always validate webhook signatures in production
@@ -251,12 +251,12 @@ ahasend routes listen --recipient "tasks@example.com" \
 
 **Connection Lost**: The listener does not reconnect. Start it again with `--route-id` and the same route ID to receive the [kept events](#events-without-a-listener).
 
-## Next Steps
+## Next steps
 
 - [Learn about routes](/cli/commands/routes)
 - [Configure webhooks](/cli/commands/webhooks)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Inbound routing setup](/integrations/routing).
 - [Route payload](/api-reference/routes/route-message), [Route CLI](/cli/commands/routes), [Signature verification](/api-reference/webhooks/security).

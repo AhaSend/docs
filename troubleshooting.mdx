@@ -9,19 +9,19 @@ import EmailConceptRelated from "/snippets/email-concept-related.mdx";
 
 AhaSend troubleshooting starts with the failed step: DNS verification, authentication, message acceptance or recipient delivery; this FAQ points you to the right checks.
 
-## Why Is My AhaSend Domain Not Verifying?
+## Why is my AhaSend domain not verifying?
 
 Check that the records are saved at the provider serving your current nameservers, with the exact full names, types and values shown in AhaSend. A repeated domain suffix, proxied CNAME or duplicate SPF record can break verification. Use your [provider guide](/dns), then **Check DNS**. See [domain setup](/domains) for propagation timing and required records.
 
-## Why Does the API Return 403 Domain Not Allowed?
+## Why does the API return 403 domain not allowed?
 
 The key must belong to the right account and allow the domain in the message's From address. Check the account ID, verified sender and [key scope](/api-reference/scopes). A domain-scoped key for `example.com` does not automatically authorize a different sending domain. Follow [send-only key setup](/send-api/credentials) and read the actual [API error message](/api-reference/errors).
 
-## Why Is Sending Paused on My Domain?
+## Why is sending paused on my domain?
 
 AhaSend refuses new email from a paused domain. It pauses a domain when too many recent emails from it bounced. Your other domains continue to send. Check the domain page in the dashboard for the reason and the next steps. See [paused domains](/domains#why-is-sending-paused-on-my-domain).
 
-## Why Is Sending Paused on My Account?
+## Why is sending paused on my account?
 
 AhaSend refuses all new email from a paused account. Each v2 API request that uses an API key of the account gets HTTP 401 with `account is paused`. SMTP refuses each message with code `521`. You can still sign in to the dashboard. The dashboard alert shows the reason and the next steps. AhaSend can also send an email about the pause to the account members. For a sub-account, the members of the parent account also get it.
 
@@ -40,35 +40,35 @@ You cannot lift a pause on your own account. If AhaSend paused it, fix the cause
 
 The owner or an Administrator of the parent account can resume a paused [sub-account](/scale/sub-accounts): open the sub-account in **Settings > Sub-accounts** and click **Resume**, or call [Resume Sub-Account](/api-reference/sub-accounts/unsuspend-sub-account). The parent cannot resume a sub-account that our team paused for a terms of service violation or for an examination; contact support for these. When the parent account is paused, its sub-accounts cannot send until AhaSend support lifts that pause.
 
-## Why Does SMTP Port 465 Not Work?
+## Why does SMTP port 465 not work?
 
 Port 465 on `send.ahasend.com` uses implicit TLS. Set your client's security option to SSL/TLS (also called SMTPS or implicit TLS), not STARTTLS: a client that waits for a greeting before it starts TLS gets no greeting, and the server closes the connection after 30 seconds. See the settings for common libraries on [SMTP](/smtp#does-ahasend-support-port-465). Authenticate with an SMTP username and password; an API key is not an SMTP password. If the connection itself times out, check outbound network access on your host: some hosting providers block port 465. Ports 587 and 2525 with STARTTLS work the same way.
 
-## Why Was My Email Delivered but Not Received?
+## Why was my email delivered but not received?
 
 Delivered means the recipient server accepted the message, not that it placed it in the inbox. Ask the recipient to check spam, quarantine, rules and forwarding. Compare the exact recipient and delivery timestamp with the [message log](/api-reference/messages/get-message). For repeated issues, examine [authentication](/email-authentication) and [sender reputation](/deliverability). A sandbox send is never delivered to a mailbox.
 
-## Why Is the Message Queued or Deferred?
+## Why is the message queued or deferred?
 
 Queued means accepted for processing; deferred means an attempt hit a temporary problem. Check whether the message was scheduled, read delivery attempts, and look for the affected recipient provider. Let AhaSend continue its attempts rather than sending another copy. See [bounces and failures](/bounces) and [schedule rules](/send-api/send-email).
 
-## Why Was a Recipient Suppressed?
+## Why was a recipient suppressed?
 
 A matching suppression stops the send. Look up its reason, sending domain and expiry before changing it. An unsubscribe or complaint is not fixed by deleting the record. See [suppression duration and removal guidance](/bounces).
 
-## Why Did HTTP 202 Still Include an Error?
+## Why did HTTP 202 still include an error?
 
 The API can accept a request while a recipient entry has `status: error`. Check every item in the response's `data` array and its error details; do not report a complete success based only on HTTP 202. See the [send response](/send-api/send-email) and [Create Message](/api-reference/messages/create-message).
 
-## Why Did a Retry Send a Duplicate?
+## Why did a retry send a duplicate?
 
 Use a stable [idempotency key](/api-reference/idempotency) with the exact same API payload and within its supported window. A timeout or server error can leave the outcome uncertain. Check your job record and message log before retrying. SMTP does not offer that API header, and a new random key on every retry cannot identify the original job.
 
-## Why Are Webhooks Missing or Failing Verification?
+## Why are webhooks missing or failing verification?
 
 Check that the endpoint is enabled, subscribed to the needed event and reachable at its final URL. Verify the original request bytes and full raw secret before parsing or changing the body. Do not base64-decode AhaSend secrets. See [signature verification](/api-reference/webhooks/security), [retry behavior](/api-reference/webhooks/retry-policy) and [local tests](/cli/webhook-testing).
 
-## What Should I Collect Before Asking for Help?
+## What should I collect before asking for help?
 
 Check the [status page](https://status.ahasend.com). Record the time and timezone, message or job ID, sender domain, affected recipient domain, response status and sanitized error text. Keep keys, SMTP passwords, signing secrets and private message content out of screenshots and tickets. Use the support route for your [plan](/facts).
 

@@ -36,7 +36,7 @@ go get github.com/google/uuid
 
 `google/uuid` is a transitive dependency of the SDK, but the account ID is a `uuid.UUID`, so your own code imports it directly and it needs its own `go get`.
 
-## Configure Environment Variables
+## Configure environment variables
 
 ```bash
 export AHASEND_API_KEY=aha-sk-...
@@ -48,7 +48,7 @@ export WELCOME_ENDPOINT_TOKEN=a-long-random-server-to-server-token
 
 Keep the API key, webhook secret, and endpoint token in your deployment platform's secret store. The example requires an explicit `sandbox` or `live` delivery mode and refuses to start for any other value.
 
-## Create the Client
+## Create the client
 
 Create the client once at startup and share it across handlers: it maintains its own rate-limit, retry, and idempotency state. Use an `http.Server` with explicit limits and timeouts to serve the router:
 
@@ -139,7 +139,7 @@ func main() {
 }
 ```
 
-## Send an Email from a gorilla/mux Handler
+## Send an email from a gorilla/mux handler
 
 gorilla/mux handlers are ordinary `net/http` handlers, so decode the JSON body with `encoding/json`:
 
@@ -287,7 +287,7 @@ This example uses a dedicated bearer token for a server-to-server endpoint. For 
 
 The explicit idempotency key protects a retry of the same business event outside the SDK's internal retry loop. Reuse it only for the exact same payload and never log it — the API matches a key against the request body, so the same key with a changed body is rejected with `422` rather than replayed, which is why the key carries the delivery mode. Stored outcomes replay for 24 hours, but a `5xx` is not stored and the key is released, so a retry after a server error can still send twice; reconcile an uncertain result before issuing another send when duplicates are unacceptable.
 
-## Handle Webhooks
+## Handle webhooks
 
 gorilla/mux hands your handler the `*http.Request`, so the SDK's `ParseRequest` can verify the HMAC signature over the exact raw body and return a typed event. Timestamp validation rejects stale signatures but does not deduplicate a valid delivery replayed inside the tolerance window.
 
@@ -394,7 +394,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 `EnqueueOnce` must atomically store the verified `webhook-id` and durable work/outbox record, retaining the ID for at least the delivery and retry horizon. A duplicate receives `2xx` without running the work again, while a storage failure receives `5xx` so it can be retried. Process queued work idempotently outside the request; an untracked goroutine can be lost when the process exits. Apply request-rate and concurrency limits at the reverse proxy, and never log the raw body, signature, whole event/error, subjects, addresses, or message content.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

@@ -8,7 +8,7 @@ sidebarTitle: "Errors"
 
 AhaSend API errors use an HTTP status and a JSON message; this reference explains status codes and how your application should handle them.
 
-## Error Response Format
+## Error response format
 
 All API errors return a consistent JSON structure with an HTTP status code and a descriptive message:
 
@@ -34,17 +34,17 @@ When [Send Campaign](/api-reference/campaigns/send-campaign) or [Test Campaign](
 }
 ```
 
-## HTTP Status Codes
+## HTTP status codes
 
 The AhaSend API uses standard HTTP status codes to indicate the success or failure of requests:
 
-### 2xx Success
+### 2xx success
 
 - **200 OK** - Request succeeded
 - **201 Created** - Resource created successfully
 - **202 Accepted** - Message accepted for processing; inspect each recipient's status. Send Campaign also answers `202`, with the campaign in `validating`
 
-### 4xx Client Errors
+### 4xx client errors
 
 #### 400 Bad Request
 
@@ -206,7 +206,7 @@ When you receive this error, wait the number of seconds in the `Retry-After` hea
 
 **Daily test limit:** [Test Campaign](/api-reference/campaigns/test-campaign) also answers `429` when the addresses of the test would take the day's total over 50 test emails (UTC). Its message currently reads `daily test send limit reached`. Backoff does not clear this `429`. A test to fewer addresses can still fit the same day; otherwise the limit clears when the UTC day changes. Keep count of the test emails you send each UTC day; a `429` from Test Campaign that stays after backoff is the daily limit. See [Test Campaign](/api-reference/campaigns/test-campaign) for the rules of the limit.
 
-### 5xx Server Errors
+### 5xx server errors
 
 #### 500 Internal Server Error
 
@@ -258,11 +258,11 @@ The service could not finish the request. Retry it later. When the response has 
 }
 ```
 
-## Validation Errors
+## Validation errors
 
 When request validation fails, you'll receive a `400 Bad Request` with a descriptive message:
 
-### Request Body Validation
+### Request body validation
 
 ```json
 {
@@ -270,7 +270,7 @@ When request validation fails, you'll receive a `400 Bad Request` with a descrip
 }
 ```
 
-### Field-Specific Validation
+### Field-specific validation
 
 The API provides specific validation messages for individual fields:
 
@@ -286,7 +286,7 @@ The API provides specific validation messages for individual fields:
 }
 ```
 
-### Security-Related Validation
+### Security-related validation
 
 ```json
 {
@@ -294,11 +294,11 @@ The API provides specific validation messages for individual fields:
 }
 ```
 
-## Scope and Permission Errors
+## Scope and permission errors
 
 When your API key doesn't have sufficient permissions:
 
-### Missing Scopes
+### Missing scopes
 
 ```json
 {
@@ -306,7 +306,7 @@ When your API key doesn't have sufficient permissions:
 }
 ```
 
-### Invalid API Key Context
+### Invalid API key context
 
 ```json
 {
@@ -314,15 +314,15 @@ When your API key doesn't have sufficient permissions:
 }
 ```
 
-## Best Practices
+## Best practices
 
-### Error Handling
+### Error handling
 - Always check the HTTP status code first
 - Show the `message` field to people; do not branch on its text, which can change
 - Retry 5xx errors with backoff. When a `503` has a `Retry-After` header, wait that number of seconds first
 - Respect rate limits when receiving 429 responses
 
-### Common Fixes
+### Common fixes
 - **400 errors**: Validate your request parameters and JSON structure
 - **401 errors**: Check your API key and authentication headers
 - **403 errors**: Verify your API key has the required scopes
@@ -334,7 +334,7 @@ When your API key doesn't have sufficient permissions:
 Error messages are designed to be descriptive and actionable. They provide specific guidance on what needs to be corrected in your request.
 </Note>
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
 - [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).

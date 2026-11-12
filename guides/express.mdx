@@ -50,7 +50,7 @@ bun add --dev typescript @types/express @types/node
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 Add your credentials to `.env` (and load them with `node --env-file=.env` or `dotenv`):
 
@@ -61,7 +61,7 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
 ```
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope and reuse it across requests:
 
@@ -74,7 +74,7 @@ export const ahasend = new AhaSendClient({
 });
 ```
 
-## Send an Email from an Express Route
+## Send an email from an Express route
 
 ```ts server.ts (part 1 of 2)
 import express, { type ErrorRequestHandler } from "express";
@@ -177,7 +177,7 @@ The SDK generates an `Idempotency-Key` for every `send()` and reuses it across i
 
 The send example uses `sandbox: true` to validate the request without delivering anything. It changes the request body, so give a sandbox send a different `idempotencyKey` from the live send it stands in for.
 
-## Handle Webhooks
+## Handle webhooks
 
 The SDK ships a dedicated Express adapter that verifies the HMAC signature and timestamp, then hands you a typed event. Mount `expressWebhookHandler` **directly** on the route: it reads and size-bounds the raw request stream itself, so you don't need `express.raw()` (or any other body parser) in front of it. Do not put a global `express.json()` middleware before this route, or the body will already be parsed by the time the adapter runs.
 
@@ -223,7 +223,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
   Timestamp verification is not replay deduplication. Before adding side effects, atomically persist the verified `webhook-id` header together with durable queue/outbox work. Acknowledge an already-recorded ID without processing it again, and make the worker idempotent. As you replace the `console.log` calls with real handling, keep `event.data` out of your logs: it carries the recipient address, sender, and subject, plus the opener's IP and user agent on open and click events.
 </Warning>
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

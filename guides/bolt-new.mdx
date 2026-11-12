@@ -18,7 +18,7 @@ This guide shows how to send transactional email from a Bolt.new server function
 
 <SendGuideRules />
 
-## AhaSend Rules for AI Coding Agents
+## AhaSend rules for AI coding agents
 
 Add this shared block to your project instructions:
 
@@ -34,7 +34,7 @@ This example pins `@supabase/server` to 1.4.1. Its [withSupabase helper](https:/
 
 Set the AhaSend side up in the [dashboard](https://dash.ahasend.com) before Bolt writes a line: the [quickstart](/quickstart) covers domain verification and key creation. Scope the key to `messages:send:{your-domain}` instead of `messages:send:all` so a leaked key can only touch one domain's mail.
 
-## Pick Your Backend
+## Pick your backend
 
 Two rules apply whichever shape your project takes. Never call AhaSend from the frontend or the WebContainer preview: that makes your API key available in the browser. Put the key in the secret store for the backend that sends the message, not in a project environment variable used by preview or client code.
 
@@ -194,19 +194,19 @@ Note what never crosses the boundary: the recipient address comes from the order
 
 On a Node backend the code differs only in how it reads configuration and how it is routed: swap `Deno.env.get(...)` for `process.env`, and call the send from your Express, Fastify, or Nitro route after that route has authenticated the caller and loaded the order itself. Full framework setup lives in the [Express](/guides/express) and [Next.js](/guides/nextjs) guides.
 
-## Handle the 202 Response
+## Handle the 202 response
 
 Success is **202**, not 200: AhaSend has accepted and queued your message for asynchronous delivery. A handler that expects 200 reports failures that did not happen.
 
 The 202 body is multi-status: it carries one result per recipient. An individual recipient can come back `status: "error"` with a null `id`, a suppressed address for example, while the request succeeded and the promise resolves. Inspect every entry, not just the first.
 
-## Test in Sandbox Mode
+## Test in sandbox mode
 
 Test through the deployed server function, including when you trigger it from Bolt's preview; do not put the key in the WebContainer to test locally. Keep `AHASEND_SANDBOX=true` and AhaSend accepts the message, validates it, triggers the relevant webhooks, and logs it in your dashboard, then stops before delivery. That gives you a real round-trip to the API confirmed by a real 202, with nothing landing in an inbox while you iterate.
 
 Rehearse the failures too. Add `sandbox_result: "bounce"` to simulate a hard bounce, or `"defer"`, `"fail"`, and `"suppress"` for the rest, and check your code handles each. The full set is in the [sandbox mode guide](/send-api/sandbox).
 
-## Deploy and Verify the Key
+## Deploy and verify the key
 
 Your deployed backend and frontend live in different homes. Before you call it done:
 
@@ -225,7 +225,7 @@ Your deployed backend and frontend live in different homes. Before you call it d
   </Step>
 </Steps>
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 
