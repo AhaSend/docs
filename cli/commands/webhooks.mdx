@@ -45,6 +45,7 @@ Available subcommands:
 | `suppression_created` | `suppression.created` | New suppression added |
 | `suppression_deleted` | `suppression.deleted` | Suppression deleted |
 | `dns_error` | `domain.dns_error` | DNS configuration error for a domain |
+| `sending_type_changed` | `domain.sending_type_changed` | Sending type of a domain changed between transactional and marketing |
 | `contact_created` | `contact.created` | Contact created |
 | `contact_updated` | `contact.updated` | A field of a contact changed |
 | `contact_deleted` | `contact.deleted` | Contact deleted |
@@ -54,7 +55,7 @@ Available subcommands:
 | `contact_unsubscribed` | `contact.unsubscribed` | Contact unsubscribed from a list, or from all lists |
 | `contact_complained` | `contact.complained` | Contact reported a campaign email as spam |
 
-`unsubscribed`, `complained`, `suppression_deleted` and the contact events need CLI v0.4.0 or later.
+`unsubscribed`, `complained`, `suppression_deleted` and the contact events need CLI v0.4.0 or later, and `sending_type_changed` needs CLI v0.5.0 or later.
 
 `--events` can be given several times, and each value can hold several events separated by commas, so `--events delivered,bounced` is the same as `--events delivered --events bounced`. An unknown event, or the same event given twice (by its key, its type or both), fails with exit code 4 before any request.
 
@@ -62,11 +63,11 @@ Available subcommands:
 
 The last eight events of the table are the contact events. They need an account with the marketing features, and an API key with the `contacts:read` scope, and `lists:read` as well for `contact_added_to_list`, `contact_removed_from_list`, `contact_subscribed`, `contact_unsubscribed` and `contact_complained`. The API checks the key for every event an enabled webhook has on, so a change to such a webhook needs these scopes even when it names no event. See [contact events](/api-reference/webhooks#contact-events) for what they report.
 
-On `create`, `update` and `trigger`, `--all-events` selects every event except the contact events: the 13 events any account can use. `--all-contact-events` selects the eight contact events. The two can be used together, and neither with `--events`. `--all-contact-events` needs CLI v0.4.0 or later.
+On `create`, `update` and `trigger`, `--all-events` selects every event except the contact events: the 14 events any account can use. `--all-contact-events` selects the eight contact events. The two can be used together, and neither with `--events`. `--all-contact-events` needs CLI v0.4.0 or later.
 
 ## Origins
 
-A webhook's origins pick whose changes its contact and suppression events report: `recipient` (the contact or recipient, through an unsubscribe or a spam complaint), `api`, `dashboard` or `system` (AhaSend). Message events and `dns_error` have no origin, and a webhook always gets them. See [origin](/api-reference/webhooks#origin).
+A webhook's origins pick whose changes its contact and suppression events report: `recipient` (the contact or recipient, through an unsubscribe or a spam complaint), `api`, `dashboard` or `system` (AhaSend). Message events, `dns_error` and `sending_type_changed` have no origin, and a webhook always gets them. See [origin](/api-reference/webhooks#origin).
 
 `--origins` on `create` and `update` takes origins as `--events` takes events: several times, or separated by commas. Without it, `create` leaves the origins out, and the webhook gets every origin. On `update`, `--origins` replaces the origins, and `--all-origins` gives the webhook every origin again, since the API keeps the stored origins when a request names none; the two cannot be combined. `--origins` and `--all-origins` need CLI v0.4.0 or later.
 
@@ -181,7 +182,7 @@ ahasend webhooks update YOUR_RESOURCE_ID --scope global
 ```
 
 <Warning>
-On CLI v0.4.0 or later, the event flags set the webhook's whole list of events: every event they do not name is turned off, including a contact event turned on in the dashboard. To keep an event, name it too.
+On CLI v0.4.0 or later, the event flags set the webhook's whole list of events: every event they do not name is turned off, including a contact event turned on in the dashboard. On CLI v0.5.0 or later, this includes `sending_type_changed`. To keep an event, name it too.
 </Warning>
 
 - `--events` gives the webhook the events it names, and `--all-events` and `--all-contact-events` select events as [Contact events](#contact-events) describes. `--clear-events` turns every event off, and cannot be combined with the other event flags.
@@ -241,7 +242,7 @@ ahasend webhooks trigger YOUR_RESOURCE_ID --all-events
 ahasend webhooks trigger YOUR_RESOURCE_ID --all-contact-events
 ```
 
-Give `--events`, `--all-events` or `--all-contact-events`. `--all-events` and `--all-contact-events` together trigger all 21 events. Without an event flag, the command fails with exit code 4. The output is the API's message. A disabled webhook gets no events: the API answers that they are queued, and then drops them. Enable the webhook first with `ahasend webhooks update YOUR_RESOURCE_ID --enabled`.
+Give `--events`, `--all-events` or `--all-contact-events`. `--all-events` and `--all-contact-events` together trigger all 22 events. Without an event flag, the command fails with exit code 4. The output is the API's message. A disabled webhook gets no events: the API answers that they are queued, and then drops them. Enable the webhook first with `ahasend webhooks update YOUR_RESOURCE_ID --enabled`.
 
 ## Command flags
 

@@ -5,7 +5,7 @@ description: "Automate Campaign Builder: push contacts from your app, manage lis
 icon: "code"
 ---
 
-Contacts, lists, segments, campaign templates and campaigns are resources of the Management API, with tools in the MCP server. The CLI has commands for all of them except segments. Defining custom fields, under **Marketing > Contact fields**, stays in the dashboard. Simple Editor designs are read and written as [AhaML](/send-api/ahaml) through the API and the MCP server; some designs, such as one with an HTML block, cannot be read as AhaML (see [what a read prints](/send-api/ahaml#what-a-read-prints)). The dashboard, the API, the CLI and the MCP server all work on the same data, so a contact pushed from your app shows up in the dashboard at once, and a campaign drafted by an AI tool is there for you to review.
+Contacts, lists, segments, campaign templates and campaigns are resources of the Management API, with tools in the MCP server. The CLI has commands for all of them. Defining custom fields, under **Marketing > Contact fields**, stays in the dashboard. Simple Editor designs are read and written as [AhaML](/send-api/ahaml) through the API and the MCP server; some designs, such as one with an HTML block, cannot be read as AhaML (see [what a read prints](/send-api/ahaml#what-a-read-prints)). The dashboard, the API, the CLI and the MCP server all work on the same data, so a contact pushed from your app shows up in the dashboard at once, and a campaign drafted by an AI tool is there for you to review.
 
 ## Typical automations
 
@@ -22,7 +22,7 @@ You need an API key with the `contacts`, `lists`, `segments`, `campaigns` and, f
 
 ## CLI
 
-The CLI has a command group for each resource: [`ahasend contacts`](/cli/commands/contacts), [`ahasend lists`](/cli/commands/lists) and [`ahasend campaigns`](/cli/commands/campaigns), the last one including `campaigns templates`. Use them for scripts and one-off jobs, such as a nightly import from your database or a test send from a deploy pipeline.
+The CLI has a command group for each resource: [`ahasend contacts`](/cli/commands/contacts), [`ahasend lists`](/cli/commands/lists), [`ahasend segments`](/cli/commands/segments) and [`ahasend campaigns`](/cli/commands/campaigns), the last one including `campaigns templates`. Use them for scripts and one-off jobs, such as a nightly import from your database or a test send from a deploy pipeline.
 
 ## MCP server
 

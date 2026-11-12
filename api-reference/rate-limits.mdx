@@ -1,7 +1,7 @@
 ---
 title: "API Rate Limits and 429 Handling"
 sidebarTitle: "Rate Limits"
-description: "AhaSend API v2 allows 100 requests/second per account (burst 200); statistics endpoints allow 1/second. Learn what a 429 response looks like and how to retry."
+description: "AhaSend API v2 allows 100 requests/second per account (burst 200), transactional statistics 1/second. Learn what a 429 response looks like and how to retry."
 icon: "gauge-high"
 ---
 
@@ -16,9 +16,9 @@ AhaSend API implements rate limiting to ensure fair usage and maintain optimal p
 Rate limits are enforced per account, not per API key. All API keys belonging to the same account share the same rate limit quotas.
 </Warning>
 
-## Rate limit tiers
+## Rate Limit Tiers
 
-### Standard API endpoints
+### Standard API Endpoints
 
 Most API endpoints are subject to the following rate limits:
 
@@ -45,10 +45,11 @@ Most API endpoints are subject to the following rate limits:
 - `/v2/accounts/{account_id}/routes/*` - Route management
 - `/v2/accounts/{account_id}/webhooks/*` - Webhook management
 - `/v2/accounts/{account_id}/smtp-credentials/*` - SMTP credential management
+- `/v2/accounts/{account_id}/statistics/emails` - Email statistics
 
-### Statistics, stream and trigger endpoints
+### Transactional Statistics, Stream and Trigger Endpoints
 
-Statistics, webhook and route stream, and test-trigger endpoints have a separate limit of 1 request per second:
+Transactional statistics, webhook and route stream, and test-trigger endpoints have a separate limit of 1 request per second:
 
 <CardGroup cols={2}>
   <Card title="Request Rate" icon="chart-line">
@@ -68,7 +69,7 @@ Statistics, webhook and route stream, and test-trigger endpoints have a separate
 - `/v2/accounts/{account_id}/statistics/transactional/bounce`
 - `/v2/accounts/{account_id}/statistics/transactional/delivery-time`
 
-## Rate limit exceeded response
+## Rate Limit Exceeded Response
 
 When you exceed the rate limit, the API returns a `429 Too Many Requests` status code:
 
@@ -86,9 +87,9 @@ Requests share the account limit. Spread requests over time; a new second does n
 
 [Test Campaign](/api-reference/campaigns/test-campaign) also answers `429` when your account reaches its daily test limit. Backoff does not clear that `429`. See [Test Campaign](/api-reference/campaigns/test-campaign) for the rules of the limit.
 
-## Best practices
+## Best Practices
 
-### 1. Implement exponential backoff
+### 1. Implement Exponential Backoff
 
 When you receive a 429 response, implement exponential backoff with jitter:
 
@@ -140,7 +141,7 @@ def make_request_with_retry(url, headers, max_retries=3):
 ```
 </CodeGroup>
 
-### 2. Batch operations when possible
+### 2. Batch Operations When Possible
 
 For operations that support batching, group multiple items into single requests:
 
@@ -148,29 +149,29 @@ For operations that support batching, group multiple items into single requests:
 Instead of sending 100 individual message requests, consider using bulk operations or queuing messages to reduce API calls.
 </Tip>
 
-### 3. Cache frequently accessed data
+### 3. Cache Frequently Accessed Data
 
 Cache static or slowly-changing data like account information and domain lists to reduce unnecessary API calls.
 
-### 4. Use webhooks for real-time updates
+### 4. Use Webhooks for Real-time Updates
 
 Instead of polling endpoints repeatedly, configure webhooks to receive real-time notifications about message status changes and other events.
 
-## Statistics API considerations
+## Statistics API Considerations
 
 <Warning>
-Statistics endpoints have very restrictive rate limits (1 request per second). Plan your analytics queries carefully and consider:
+Transactional statistics endpoints have very restrictive rate limits (1 request per second). Plan your analytics queries carefully and consider:
 
 - Caching results for frequently accessed time periods
 - Using broader time ranges to reduce query frequency
 - Implementing request queuing for multiple statistics calls
 </Warning>
 
-## Sending limits
+## Sending Limits
 
 Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. These are separate from API request rates and the Free plan's 1,000 included emails per month. See [plans and limits](/facts).
 
-## Contact support
+## Contact Support
 
 If your application requires higher rate limits due to legitimate high-volume usage patterns, please contact our support team to discuss custom rate limit arrangements.
 
@@ -178,7 +179,7 @@ If your application requires higher rate limits due to legitimate high-volume us
 Reach out to our [support team](mailto:support@ahasend.com) if you need increased rate limits for your production application.
 </Card>
 
-## Related guides
+## Related Guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
 - [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).

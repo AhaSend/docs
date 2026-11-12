@@ -387,7 +387,8 @@
                 "pages": [
                   "api-reference/reports/get-deliverability-report",
                   "api-reference/reports/get-bounce-report",
-                  "api-reference/reports/get-delivery-time-report"
+                  "api-reference/reports/get-delivery-time-report",
+                  "api-reference/reports/get-email-statistics"
                 ]
               },
               {
@@ -444,7 +445,8 @@
                 "group": "Domain Events",
                 "icon": "globe",
                 "pages": [
-                  "api-reference/webhooks/domain-dns_error"
+                  "api-reference/webhooks/domain-dns_error",
+                  "api-reference/webhooks/domain-sending_type_changed"
                 ]
               },
               {

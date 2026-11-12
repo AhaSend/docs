@@ -12,7 +12,7 @@ The AhaSend CLI lets you send email, manage domains, templates, campaigns, conta
 The AhaSend CLI is available on [GitHub](https://github.com/AhaSend/ahasend-cli) and supports Linux, macOS, and Windows.
 </Note>
 
-## Key features
+## Key Features
 
 <CardGroup>
 <Card title="Email Sending" icon="envelope">
@@ -31,11 +31,11 @@ The AhaSend CLI is available on [GitHub](https://github.com/AhaSend/ahasend-cli)
   Configure event notifications and inbound routes, and test them locally
 </Card>
 <Card title="Analytics" icon="chart-line">
-  Deliverability, bounce, and delivery time statistics
+  Email counts of any period, and deliverability, bounce, and delivery time statistics
 </Card>
 </CardGroup>
 
-## Why use the CLI?
+## Why Use the CLI?
 
 - **Scripting**: Exit codes tell the kind of failure, and `--output json` prints the API response unchanged
 - **Batch Sending**: Concurrent sends with a progress bar, and a file of failed recipients to send again
@@ -44,7 +44,7 @@ The AhaSend CLI is available on [GitHub](https://github.com/AhaSend/ahasend-cli)
 - **Local Testing**: Webhook and route listeners that forward events to a server on your machine
 - **Logging**: `--verbose` and `--debug` logs on stderr, with credentials redacted
 
-## Quick example
+## Quick Example
 
 Log in, check a sending domain you [added and configured](/cli/quickstart#step-2-add-a-sending-domain), and send a sandbox email. Replace `example.com` below with that domain:
 
@@ -63,9 +63,9 @@ ahasend messages send --sandbox \
   --text "Welcome to AhaSend!"
 ```
 
-## Core capabilities
+## Core Capabilities
 
-### Email operations
+### Email Operations
 - Send to recipients given with `--to`, or to a JSON or CSV recipients file with per-recipient substitutions
 - HTML, plain text, and AMP content, inline or from files
 - Stored transactional templates with `--template-id`
@@ -74,35 +74,36 @@ ahasend messages send --sandbox \
 - Sandbox mode for testing without delivering email
 - Message search, details, and cancellation of scheduled messages
 
-### Domain management
+### Domain Management
 - Add sending domains and print the DNS records they need, also in BIND, Cloudflare, and Terraform formats
 - Check DNS records and track verification status
 - Set the sending type, DKIM, and custom subdomains
 
-### Templates and campaigns
+### Templates and Campaigns
 - Store transactional templates, edit drafts, publish them, and restore earlier versions
 - Read and write Simple Editor designs as AhaML
 - Draft, test, send, or schedule campaigns to contact lists and segments, and leave out the contacts of other lists and segments
 - Campaign statistics, recipients, and campaign templates
 
-### Contacts, lists and segments
+### Contacts, Lists and Segments
 - Create, update, and delete contacts, or import them in batches
 - Create contact lists, and add, set, or remove their members
 - Create segments that find contacts by rules, preview the rules, and list the members
 
-### Webhook & route management
+### Webhook & Route Management
 - Configure webhooks for message, suppression, domain and contact events
 - Stream webhook and route events to your terminal, and forward them to a local server
 - Trigger test webhook and route events
 - Inbound email route configuration
 
-### Analytics & reporting
+### Analytics & Reporting
+- Email counts of any period, for the whole account or per domain
 - Deliverability statistics
 - Bounce statistics
 - Delivery time metrics
 - CSV output for spreadsheets
 
-## Supported platforms
+## Supported Platforms
 
 The CLI is distributed as a single binary with no external dependencies:
 
@@ -112,7 +113,7 @@ The CLI is distributed as a single binary with no external dependencies:
 
 Install it with Homebrew, Scoop, npm, an install script, a .deb or .rpm package, or a binary download. See [Installation](/cli/installation).
 
-## Integration with AhaSend services
+## Integration with AhaSend Services
 
 The CLI covers these AhaSend services:
 
@@ -123,7 +124,7 @@ The CLI covers these AhaSend services:
 - **Suppressions**: List, add, check, and delete suppressed addresses
 - **API Keys and Sub-accounts**: Manage API keys and their scopes, and sub-accounts with their own API keys
 
-## Command groups
+## Command Groups
 
 - [Messages](/cli/commands/messages): send, list, get, and cancel messages.
 - [Domains](/cli/commands/domains): create, check, verify, update, and delete sending domains.
@@ -137,12 +138,12 @@ The CLI covers these AhaSend services:
 - [Suppressions](/cli/commands/suppressions): list, create, check, delete, and wipe suppressions.
 - [SMTP](/cli/commands/smtp): manage SMTP credentials and send test messages.
 - [API Keys](/cli/commands/apikeys): manage API keys, their scopes, and IP allow lists.
-- [Statistics](/cli/commands/stats): deliverability, bounce, and delivery time statistics.
+- [Statistics](/cli/commands/stats): email counts, and deliverability, bounce, and delivery time statistics.
 - [Sub-accounts](/cli/commands/subaccounts): manage child accounts, usage, pauses, and their API keys.
 - [Authentication](/cli/commands/auth): log in, switch, check, and log out profiles.
 - [Ping](/cli/commands/ping): test the connection to the API.
 
-## Next steps
+## Next Steps
 
 <CardGroup cols={2}>
 <Card title="Installation" href="/cli/installation" icon="download">
@@ -164,7 +165,7 @@ The CLI covers these AhaSend services:
 - **GitHub Issues**: [Report bugs or request features](https://github.com/AhaSend/ahasend-cli/issues)
 - **Email Support**: support@ahasend.com
 
-## Related guides
+## Related Guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).

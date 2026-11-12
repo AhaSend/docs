@@ -58,7 +58,7 @@ Pass options after `sh -s --`:
 
 ```bash
 # Install a given version
-curl -fsSL https://ahasend.com/install.sh | sh -s -- --version v0.4.0
+curl -fsSL https://ahasend.com/install.sh | sh -s -- --version v0.5.0
 
 # Install into another folder
 curl -fsSL https://ahasend.com/install.sh | sh -s -- --install-dir ~/bin
@@ -66,7 +66,7 @@ curl -fsSL https://ahasend.com/install.sh | sh -s -- --install-dir ~/bin
 
 | Option | Environment variable | What it does |
 |---|---|---|
-| `--version <tag>` | `AHASEND_VERSION` | Installs this release, such as `v0.4.0`. The default is the latest release. |
+| `--version <tag>` | `AHASEND_VERSION` | Installs this release, such as `v0.5.0`. The default is the latest release. |
 | `--install-dir <dir>` | `AHASEND_INSTALL_DIR` | Installs into this folder. |
 | `--quiet` | | Prints only errors. |
 | `--no-color` | | Prints without colors. |
@@ -98,12 +98,12 @@ The script works in Windows PowerShell 5.1 and PowerShell 7. It downloads the la
 Pass parameters like this:
 
 ```powershell
-& ([scriptblock]::Create((irm https://ahasend.com/install.ps1))) -Version v0.4.0
+& ([scriptblock]::Create((irm https://ahasend.com/install.ps1))) -Version v0.5.0
 ```
 
 | Parameter | Environment variable | What it does |
 |---|---|---|
-| `-Version <tag>` | `AHASEND_VERSION` | Installs this release, such as `v0.4.0`. The default is the latest release. |
+| `-Version <tag>` | `AHASEND_VERSION` | Installs this release, such as `v0.5.0`. The default is the latest release. |
 | `-InstallDir <dir>` | `AHASEND_INSTALL_DIR` | Installs into this folder. |
 | `-Quiet` | | Prints only errors. |
 
@@ -178,7 +178,7 @@ If either case matters to you, for example under a process supervisor, install t
 
 ## Debian and Ubuntu (.deb)
 
-These commands download the package of the latest release for your architecture (`amd64` or `arm64`) and install it. To install another release, replace the first line with that version, such as `VERSION=0.4.0`.
+These commands download the package of the latest release for your architecture (`amd64` or `arm64`) and install it. To install another release, replace the first line with that version, such as `VERSION=0.5.0`.
 
 ```bash
 VERSION=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/AhaSend/ahasend-cli/releases/latest | sed 's|.*/tag/v||')
@@ -195,7 +195,7 @@ sudo apt remove ahasend
 
 ## Fedora and RHEL (.rpm)
 
-These commands download the package of the latest release for your architecture (`x86_64` or `aarch64`) and install it. To install another release, replace the first line with that version, such as `VERSION=0.4.0`.
+These commands download the package of the latest release for your architecture (`x86_64` or `aarch64`) and install it. To install another release, replace the first line with that version, such as `VERSION=0.5.0`.
 
 ```bash
 VERSION=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/AhaSend/ahasend-cli/releases/latest | sed 's|.*/tag/v||')

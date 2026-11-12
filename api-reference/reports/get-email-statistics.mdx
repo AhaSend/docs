@@ -1,0 +1,27 @@
+---
+title: "Get Email Statistics via the API"
+sidebarTitle: "Email Statistics"
+openapi: "/openapi.yaml GET /v2/accounts/{account_id}/statistics/emails"
+description: "Get stored email counts from the AhaSend API for any period of your account's history, by hour, day, week or month, for the whole account or per domain."
+---
+
+
+The AhaSend API returns the stored email counts of the account, or of each of its domains, for any period of the account's history. Unlike the transactional reports, it is not limited to the account's [message metadata retention](/retention#message-data-vs-metadata) period. The counts cover transactional, campaign and inbound mail.
+
+A key with `statistics:read:all` can query every domain. A
+domain-scoped key reads only the domains in its scopes and must be able
+to read every comma-separated name supplied in `sender_domain`.
+
+**Query Parameters:**
+- `from_time`: Start of the range, included (RFC3339 format). Defaults to 30 days before `to_time`
+- `to_time`: End of the range, excluded (RFC3339 format). Defaults to now
+- `group_by`: Group by time period (hour, day, week, month). Defaults to day
+- `sender_domain`: Filter by sender domain (comma-separated, deleted domains included)
+- `breakdown`: `domain` returns the counts of each domain, paged by domain
+- `limit` and `after`: Page through the domains of a breakdown
+
+## Related Guides
+
+- [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Statistics CLI](/cli/commands/stats).
+- [Delivery statistics API](/api-reference/reports/get-deliverability-report), [API rate limits](/api-reference/rate-limits), [API errors](/api-reference/errors).
+- [Retention rules](/retention).
