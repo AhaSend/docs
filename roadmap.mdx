@@ -374,6 +374,145 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
     </div>
 
     <p className="rm-note">and 15 more</p>
+
+    {/* Not shown: the Planned cards after the first 20. Kept here so their text stays the same when they move up.
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Move off Cloudflare <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Reduce third-party dependencies in our infrastructure.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Rotate BYO DKIM keys <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Rotate your own (BYO) DKIM keys after verification.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Billing contacts <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Add a dedicated billing contact to receive invoices.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Bad domain check API endpoint <span className="rm-tag is-new">New feature</span></p>
+          <p>An API endpoint to check addresses against our known bad-domain list.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Warning for routes with zero retention <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>The dashboard warns you when a message route exists on an account with message data retention set to 0, since routing needs at least one day.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Link webhook invocation data to messages <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>See the webhook delivery attempts tied to each individual message.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Suppression expiry webhook <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>A webhook event when a suppression expires.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Whitelabel DNS for Pro accounts <span className="rm-tag is-new">New feature</span></p>
+          <p>DNS whitelabeling, also called link branding, as an add-on for Pro accounts: tracking, return-path and unsubscribe hostnames under your own domain. Custom tracking subdomains are already available; see <a href="/domains">domain setup</a>.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Clearer <code>message\_id\_header</code> in CreateMessage <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Remove the confusion around the <code>message\_id\_header</code> field in the v2 CreateMessage API.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">DKIM rotation for manual-DNS domains <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Add DKIM rotation support when a manual-DNS domain moves to managed DNS.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Rotate API keys <span className="rm-tag is-new">New feature</span></p>
+          <p>Rotate API keys without recreating your credentials.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Daily limit per API key <span className="rm-tag is-new">New feature</span></p>
+          <p>Set a daily sending cap on an individual API key.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Wildcard subdomains for message routes <span className="rm-tag is-new">New feature</span></p>
+          <p>Match a route on any subdomain of a routed domain.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Wildcard subdomains for sending domains <span className="rm-tag is-new">New feature</span></p>
+          <p>Verify a domain once and send from any of its subdomains.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Retry delivery for failed messages <span className="rm-tag is-new">New feature</span></p>
+          <p>Retry the delivery of a failed message from the dashboard, within its retention period.</p>
+        </div>
+      </div>
+
+    */}
   </section>
 
   <section>
@@ -484,6 +623,140 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
     </div>
 
     <p className="rm-note">and 13 more</p>
+
+    {/* Not shown: the Shipped cards after the first 10. Kept here so their text stays the same when they move up.
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/integrations/routing">Inbound routing between AhaSend domains</a> <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>Fixed inbound delivery when both the sending and receiving domain are registered on AhaSend.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/scale/sub-accounts">Sub-Accounts</a></p>
+          <p>Isolated sending environments so you can separate clients, brands or stages, each with its own domains, credentials and sending reputation.</p>
+          <span className="rm-date">Q2 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/api-reference/webhooks/message-bounced">Delivery-attempt details in webhook payloads</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Delivered, deferred and bounced message webhooks include the SMTP outcome and bounce classification, so you can act on bounces without opening the dashboard. Supported in the TypeScript and Go SDKs.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/domains">Same domain on multiple accounts</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Fixed a verification issue when the same domain is verified on more than one account.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/scale/dns-whitelabel">Whitelabel-aware MX guidance</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Inbound routing instructions now account for whitelabeled MX hostnames.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/integrations/routing">Message Routing visibility</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Incoming Routes are easier to discover, with clear guidance to point your domain's MX record to mx.ahasend.com.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/changelog">Bulk list management</a></p>
+          <p>Add contacts to lists in bulk and edit existing lists.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/api-reference/routes/route-message">Routed message attachments fix</a></p>
+          <p>Fixed attachment handling for routed messages, with SDK and documentation updates.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/scale/sub-accounts">Improve Sub-Account Delivery Tier assignment</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Better delivery tier assignment for sub-accounts, aligned with the parent account.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/facts">Higher default rate limits</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Increased default sending rate limits, with higher ceilings on Pro and Max plans.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/api-reference/domains/update-domain">Domain management locked while paused</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Domain management is disabled while sending is paused on an account.</p>
+          <span className="rm-date">Q3 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/security/ip-allow-lists">IP allow list for API keys</a></p>
+          <p>Restrict API key usage to specific IP addresses, managed from the dashboard.</p>
+          <span className="rm-date">Q2 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/api-reference/domains/create-domain">Domain-level DKIM selector</a></p>
+          <p>Choose a custom DKIM selector for each of your domains.</p>
+          <span className="rm-date">Q2 2026</span>
+        </div>
+      </div>
+
+    */}
   </section>
 
   <p className="rm-note">
