@@ -7,12 +7,12 @@ sidebarTitle: "Roadmap"
 
 The AhaSend roadmap shows active work, planned improvements and shipped features, with links to the available documentation.
 
-<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 5 November 2026</p>
+<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 18 November 2026</p>
 
 <div className="rm">
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (8)</h2>
+      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (7)</h2>
     </div>
 
     <div className="rm-list">
@@ -85,22 +85,12 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
           <span className="rm-date">Q4 2026</span>
         </div>
       </div>
-
-      <div className="rm-card is-shipped">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title"><a href="/scale/sub-accounts">Zero-day retention for sub accounts</a> <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Sub accounts inherit the option to set message data retention to zero when the parent account is allowed to.</p>
-          <span className="rm-date">Q4 2026</span>
-        </div>
-      </div>
     </div>
   </section>
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-active" id="active">Active (2)</h2>
+      <h2 className="rm-badge is-active" id="active">Active (10)</h2>
     </div>
 
     <div className="rm-list">
@@ -117,6 +107,78 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
+          <p className="rm-title">Move a domain to a sub account <span className="rm-tag is-new">New feature</span></p>
+          <p>Move a domain from a parent account to one of its sub accounts.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Contact status on list pages <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>A contact on a list page no longer shows Confirmed and Blocked side by side.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">First and last name optional <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Contacts no longer need a first and last name.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Unsubscribes from campaigns <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>Unsubscribing from a campaign no longer marks the contact as unsubscribed for the whole account.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Campaigns with one invalid address <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>One recipient address that cannot be rendered no longer stops the whole campaign.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Validate the full list after a failed check <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>When a campaign fails list validation, you can choose to validate the whole list before you send it.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Fewer false flags for accented text <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>Messages with accented letters, such as Hungarian text, are no longer flagged for mixing alphabets.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Long lines with open tracking <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>Adding the open tracking pixel no longer creates lines longer than mail servers accept.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-active">
+        <div className="rm-accent" />
+
+        <div>
           <p className="rm-title">Clearer automated monitoring <span className="rm-tag is-improvement">Improvement</span></p>
           <p>When automated monitoring pauses or limits sending, the dashboard and the notification say which trigger fired and what to do about it.</p>
         </div>
@@ -126,7 +188,7 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-planned" id="planned">Planned (34)</h2>
+      <h2 className="rm-badge is-planned" id="planned">Planned (35)</h2>
     </div>
 
     <div className="rm-list">
@@ -152,8 +214,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Marketing Automation 1.0 <span className="rm-tag is-product">New product</span></p>
-          <p>Triggered, multi-step email journeys that go beyond one-off campaigns.</p>
+          <p className="rm-title">User permissions <span className="rm-tag is-new">New feature</span></p>
+          <p>Roles and permissions for team members: access to sub accounts only, without the parent account's data; control over who may view message content and who may see or check DNS records in a sub account. Filtering messages by the credential that sent them is part of it.</p>
         </div>
       </div>
 
@@ -161,8 +223,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">User permissions <span className="rm-tag is-new">New feature</span></p>
-          <p>Roles and permissions for team members: access to sub accounts only, without the parent account's data; control over who may view message content and who may see or check DNS records in a sub account. Filtering messages by the credential that sent them is part of it.</p>
+          <p className="rm-title">Marketing Automation 1.0 <span className="rm-tag is-product">New product</span></p>
+          <p>Triggered, multi-step email journeys that go beyond one-off campaigns.</p>
         </div>
       </div>
 
@@ -208,6 +270,15 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div>
           <p className="rm-title">Usage alerting <span className="rm-tag is-new">New feature</span></p>
           <p>Get notified by email or webhook when a domain sends more than usual or crosses a volume you set.</p>
+        </div>
+      </div>
+
+      <div className="rm-card is-planned">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Whitelabel dashboard <span className="rm-tag is-new">New feature</span></p>
+          <p>Platform partners can offer the AhaSend dashboard to their customers on their own hostname and with their own logo.</p>
         </div>
       </div>
 
@@ -300,150 +371,27 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
           <p>Send test messages from unverified domains while in Sandbox mode.</p>
         </div>
       </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Move off Cloudflare <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Reduce third-party dependencies in our infrastructure.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Rotate BYO DKIM keys <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Rotate your own (BYO) DKIM keys after verification.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Billing contacts <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Add a dedicated billing contact to receive invoices.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Bad domain check API endpoint <span className="rm-tag is-new">New feature</span></p>
-          <p>An API endpoint to check addresses against our known bad-domain list.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Warning for routes with zero retention <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>The dashboard warns you when a message route exists on an account with message data retention set to 0, since routing needs at least one day.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Link webhook invocation data to messages <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>See the webhook delivery attempts tied to each individual message.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Suppression expiry webhook <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>A webhook event when a suppression expires.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Whitelabel DNS for Pro accounts <span className="rm-tag is-new">New feature</span></p>
-          <p>DNS whitelabeling, also called link branding, as an add-on for Pro accounts: tracking, return-path and unsubscribe hostnames under your own domain. Custom tracking subdomains are already available; see <a href="/domains">domain setup</a>.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Clearer <code>message\_id\_header</code> in CreateMessage <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Remove the confusion around the <code>message\_id\_header</code> field in the v2 CreateMessage API.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">DKIM rotation for manual-DNS domains <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>Add DKIM rotation support when a manual-DNS domain moves to managed DNS.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Rotate API keys <span className="rm-tag is-new">New feature</span></p>
-          <p>Rotate API keys without recreating your credentials.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Daily limit per API key <span className="rm-tag is-new">New feature</span></p>
-          <p>Set a daily sending cap on an individual API key.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Wildcard subdomains for message routes <span className="rm-tag is-new">New feature</span></p>
-          <p>Match a route on any subdomain of a routed domain.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Wildcard subdomains for sending domains <span className="rm-tag is-new">New feature</span></p>
-          <p>Verify a domain once and send from any of its subdomains.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-planned">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Retry delivery for failed messages <span className="rm-tag is-new">New feature</span></p>
-          <p>Retry the delivery of a failed message from the dashboard, within its retention period.</p>
-        </div>
-      </div>
     </div>
+
+    <p className="rm-note">and 15 more</p>
   </section>
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-shipped" id="shipped">Shipped (22)</h2>
+      <h2 className="rm-badge is-shipped" id="shipped">Shipped (23)</h2>
     </div>
 
     <div className="rm-list">
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title"><a href="/scale/sub-accounts">Zero-day retention for sub accounts</a> <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>Sub accounts inherit the option to set message data retention to zero when the parent account is allowed to.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
 
