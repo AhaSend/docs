@@ -10,9 +10,9 @@ These AhaSend CLI examples show common email sending and management tasks, inclu
 
 Before running the examples, [log in](/cli/authentication) with an API key whose scopes cover the commands, and replace `example.com` in the sender addresses with your verified domain. Create the HTML, CSV, JSON and attachment files that an example names. The scripts use Bash, and the ones that read JSON need [jq](https://jqlang.org). Sends use `--sandbox`, so no email is delivered.
 
-## Transactional Emails
+## Transactional emails
 
-### Order Confirmation
+### Order confirmation
 
 ```bash
 # Single order confirmation
@@ -42,7 +42,7 @@ ahasend messages send --sandbox \
 
 The idempotency key makes a retry safe: for 24 hours, the API answers a request with the same key with the stored result of the first one instead of sending it again.
 
-### Password Reset
+### Password reset
 
 ```bash
 # Secure password reset email
@@ -57,7 +57,7 @@ ahasend messages send --sandbox \
   --idempotency-key "reset-user123-$(date +%s)"
 ```
 
-### Account Verification
+### Account verification
 
 ```bash
 # Save global substitutions in a file (the flag takes a path).
@@ -77,9 +77,9 @@ ahasend messages send --sandbox \
 
 `--tag` can be given several times, and it also splits on commas, so `--tag signup,verification` sets two tags.
 
-## Lifecycle Notifications
+## Lifecycle notifications
 
-### Account Activity Digest
+### Account activity digest
 
 ```bash
 #!/bin/bash
@@ -116,7 +116,7 @@ ahasend stats deliverability \
 
 The send exits with code 0 only when every recipient was sent. When some recipients were not sent, stderr names the file in `~/.ahasend/` that holds them, which you can pass back to `--recipients`. [Exit codes](/cli/configuration#exit-codes) lists what each other code means.
 
-### Account Feature Notifications
+### Account feature notifications
 
 ```bash
 # Notify account users about an enabled feature
@@ -137,7 +137,7 @@ for segment in vip regular trial; do
 done
 ```
 
-### Pending Order Reminder
+### Pending order reminder
 
 ```bash
 #!/bin/bash
@@ -175,9 +175,9 @@ ahasend messages send --sandbox \
 
 `--schedule` takes a relative time, such as `2h` from now, or an RFC 3339 time. The API takes a time in the future and at most 7 days ahead.
 
-## Notification Systems
+## Notification systems
 
-### Real-Time Alerts
+### Real-time alerts
 
 ```bash
 #!/bin/bash
@@ -212,7 +212,7 @@ ahasend messages send --sandbox \
   --tag "alert,${ALERT_TYPE},automated"
 ```
 
-### Daily Reports
+### Daily reports
 
 ```bash
 #!/bin/bash
@@ -247,9 +247,9 @@ ahasend messages send --sandbox \
   --tag "report,daily,automated"
 ```
 
-## Webhook Integration
+## Webhook integration
 
-### Process Webhook Events
+### Process webhook events
 
 ```bash
 # Run your local, signature-verifying receiver first; see the webhook guide.
@@ -260,7 +260,7 @@ ahasend webhooks listen \
 
 The receiver processes `payload.type` and `payload.data.recipient`. The listener's own output is text for people to read, so process the events in the receiver. See [webhook verification and processing](/integrations/webhooks). Your receiver does not need to suppress bouncing addresses: AhaSend suppresses them itself, for a time that depends on the cause, as [suppression durations](/bounces#suppression-duration) lists.
 
-### Webhook Testing Pipeline
+### Webhook testing pipeline
 
 ```bash
 #!/bin/bash
@@ -311,9 +311,9 @@ echo "Integration test complete"
 
 `--non-interactive` makes `webhooks create` fail on a missing flag instead of asking for it, and `webhooks delete --force` skips the confirmation prompt, which cancels the command when stdin holds no answer.
 
-## Automation Scripts
+## Automation scripts
 
-### Exit Codes in Scripts
+### Exit codes in scripts
 
 Every failure exits with a nonzero code, in every output format, so `set -e`, `if`, and CI steps stop on a failed command. The code tells the kind of failure, as [exit codes](/cli/configuration#exit-codes) lists. With `--output json`, stdout holds the API's response, or the error, as [JSON output](/cli/configuration#json-output) describes.
 
@@ -329,7 +329,7 @@ case $STATUS in
 esac
 ```
 
-### CI/CD Email Notifications
+### CI/CD email notifications
 
 ```yaml
 # .github/workflows/deploy-notification.yml
@@ -375,7 +375,7 @@ jobs:
 
 The install step checks the binary against the release's `checksums.txt`, as [binary download](/cli/installation#binary-download) does, and adds its folder to the `PATH` of the later steps. The CLI reads no environment variables for credentials, so the send step passes the secrets with `--api-key` and `--account-id`. It gets the deployment's environment name through `env:`, so the shell reads it as a variable and never runs it as code. The step fails when the send fails, because the CLI exits with a nonzero code.
 
-### Database Backup Notifications
+### Database backup notifications
 
 ```bash
 #!/bin/bash
@@ -406,7 +406,7 @@ ahasend messages send --sandbox \
   --tag "$TAGS"
 ```
 
-### User Onboarding Sequence
+### User onboarding sequence
 
 ```bash
 #!/bin/bash
@@ -463,9 +463,9 @@ echo "Onboarding sequence scheduled for $USER_EMAIL"
 
 The API takes a schedule at most 7 days ahead, so a longer sequence needs a scheduler of its own, such as cron.
 
-## Performance Testing
+## Performance testing
 
-### Load Testing Script
+### Load testing script
 
 ```bash
 #!/bin/bash
@@ -509,9 +509,9 @@ jq '[if type == "array" then .[] else . end | .data[]? | .status]
 rm test-recipients.csv
 ```
 
-## Multi-Environment Management
+## Multi-environment management
 
-### Environment-Specific Sending
+### Environment-specific sending
 
 ```bash
 #!/bin/bash
@@ -556,13 +556,13 @@ echo "Emails sent to $ENVIRONMENT environment"
 
 A profile that does not exist fails with exit code 3 before any request is sent.
 
-## Next Steps
+## Next steps
 
 - [Learn about batch processing](/cli/batch-processing)
 - [Configure webhooks](/cli/commands/webhooks)
 - [Explore the API](/api-reference)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).

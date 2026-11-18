@@ -14,7 +14,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 **Inbound Email Processing:** Message routing handles emails sent TO your domains, while webhooks track emails sent FROM your domains. Both use similar HTTP POST mechanisms but serve different purposes.
 </Info>
 
-## What is Message Routing?
+## What is message routing?
 
 Message routing is a powerful mechanism for efficiently managing and directing inbound email traffic within your applications. By setting up message routes, you can automatically parse and direct incoming emails to appropriate endpoints based on predefined rules or criteria.
 
@@ -35,7 +35,7 @@ This functionality enables you to:
   </Card>
 </CardGroup>
 
-### How Message Routes Work in AhaSend
+### How message routes work in AhaSend
 
 <Steps>
   <Step title="Email Received" icon="envelope">
@@ -59,7 +59,7 @@ This functionality enables you to:
 **MX Record Requirement:** Message routing requires your domain's [MX records from your domain details](/domains) to point to AhaSend. Without proper MX configuration, AhaSend cannot receive emails sent to your domain.
 </Note>
 
-## Delivery Limits
+## Delivery limits
 
 AhaSend makes 12 attempts over about 11 hours, including the first attempt. Each attempt times out after 5 seconds. After more than 100 consecutive failed attempts, the route is disabled and account users are emailed. See [route retry policy](/api-reference/webhooks/retry-policy) and [security](/api-reference/webhooks/security).
 
@@ -101,7 +101,7 @@ Before setting up message routing, ensure your domain is properly configured:
   </Accordion>
 </AccordionGroup>
 
-## Creating Message Routes
+## Creating message routes
 
 Configure message routes in your AhaSend dashboard to start processing inbound emails:
 <Frame>
@@ -196,7 +196,7 @@ Configure message routes in your AhaSend dashboard to start processing inbound e
   </Step>
 </Steps>
 
-## Testing Message Routes
+## Testing message routes
 
 Verify your message routing integration works correctly:
 
@@ -233,13 +233,13 @@ Verify your message routing integration works correctly:
   </Step>
 </Steps>
 
-## Security and Verification
+## Security and verification
 
 Message routing follows the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks) for secure payload delivery:
 
 `webhook-id` is the delivery ID used for deduplication. The payload's `webhook_id` or `route_id` identifies the configured endpoint, not the delivery.
 
-## Security Headers
+## Security headers
 
 Every routing request includes the same security headers as webhooks:
 
@@ -263,7 +263,7 @@ webhook-signature: v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=
   </Accordion>
 </AccordionGroup>
 
-### Signature Verification
+### Signature verification
 
 Use Standard Webhooks libraries to verify routing request authenticity:
 
@@ -442,7 +442,7 @@ http_response_code(204);
 **Standard Webhooks Compatibility:** Message routing uses the same [Standard Webhooks libraries](https://github.com/standard-webhooks/standard-webhooks) as regular webhooks, so you can use the same verification code for both.
 </Info>
 
-## Message Route Payload Structure
+## Message route payload structure
 
 All message routing requests follow the Standard Webhooks payload format:
 
@@ -457,7 +457,7 @@ All message routing requests follow the Standard Webhooks payload format:
 }
 ```
 
-### Complete Payload Example
+### Complete payload example
 
 ```json
 {
@@ -503,7 +503,7 @@ All message routing requests follow the Standard Webhooks payload format:
 }
 ```
 
-### Key Fields Explained
+### Key fields explained
 
 <AccordionGroup>
   <Accordion title="Email Metadata" icon="info">
@@ -552,7 +552,7 @@ All message routing requests follow the Standard Webhooks payload format:
 
 The workflow functions below use application-owned callbacks such as `createSupportTicket`, `findConversationByMessageId`, and `enqueueOnce`. Provide those functions from your ticketing, database, or job-queue code. Only invoke them after signature verification.
 
-## Common Use Cases
+## Common use cases
 
 <AccordionGroup>
   <Accordion title="Support Ticket System" icon="ticket">
@@ -643,7 +643,7 @@ The workflow functions below use application-owned callbacks such as `createSupp
   </Accordion>
 </AccordionGroup>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Error Handling" icon="triangle-exclamation">
@@ -796,7 +796,7 @@ The workflow functions below use application-owned callbacks such as `createSupp
 </AccordionGroup>
 
 
-## Related Guides
+## Related guides
 
 - [Domain setup](/domains), [API authentication](/api-reference/authentication), [Route payload](/api-reference/routes/route-message).
 - [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing), [Signature verification](/api-reference/webhooks/security).

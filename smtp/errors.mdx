@@ -7,13 +7,13 @@ icon: "triangle-exclamation"
 
 AhaSend SMTP errors tell you whether a connection, submission or recipient delivery failed; this reference helps you read the full reply and choose the next step.
 
-## Where Did the Error Occur?
+## Where did the error occur?
 
 An error during your application's connection to AhaSend is a submission problem. A reply recorded later in a delivery attempt came from the destination mail system. Fix the component that produced the reply: changing your SMTP password will not repair a nonexistent recipient mailbox.
 
 The three-digit SMTP reply gives a broad result. An enhanced code such as `5.1.1` adds detail. A `4xx` reply is generally temporary; a `5xx` reply is generally permanent for that attempt. Read the accompanying text and sender or recipient address. The [SMTP standard](https://www.rfc-editor.org/rfc/rfc5321.html) and [enhanced status code registry](https://www.iana.org/assignments/smtp-enhanced-status-codes/smtp-enhanced-status-codes.xhtml) define these classes.
 
-## What Do Common Codes Mean?
+## What do common codes mean?
 
 These are common SMTP meanings, not a promise that every server emits identical text.
 
@@ -35,21 +35,21 @@ These are common SMTP meanings, not a promise that every server emits identical 
 | `550 5.7.1 Sending from domain '<domain>' is paused` | AhaSend paused sending from that domain | See [paused domains](/domains#why-is-sending-paused-on-my-domain) |
 | `5.7.26` | Multiple authentication checks failed | Check SPF, DKIM and DMARC alignment |
 
-## Why Does AhaSend Return a 556 Domain Error?
+## Why does AhaSend return a 556 domain error?
 
 An AhaSend submission reply such as `556 Invalid account or domain` or a reply saying the From domain is not allowed means the account, sender domain or credential's domain access needs checking. Confirm that the From address uses a verified domain allowed by that credential. For a newly added or verified domain, use the refresh timing on [domain setup](/domains#troubleshooting).
 
 Do not infer that every `556` from every recipient server has this AhaSend-specific meaning. Keep the exact reply when reporting a problem.
 
-## Why Does Port 465 Fail?
+## Why does port 465 fail?
 
 Port 465 uses implicit TLS: set your client to SSL/TLS, not STARTTLS. A client set to STARTTLS on port 465 waits for a greeting, and the server closes the connection after 30 seconds. See the settings for common libraries in [SMTP settings](/smtp#does-ahasend-support-port-465). Do not disable certificate validation to get past a connection error. If your host blocks outbound SMTP, check its network policy or use the [HTTPS API](/send-api/send-email).
 
-## Should I Retry a Failed Send?
+## Should I retry a failed send?
 
 Let AhaSend handle recipient delivery attempts after it accepts a message. A temporary delivery event is not a request for your app to send another copy. If the connection drops before you receive the final submission reply, the outcome can be uncertain; check the message log before retrying. SMTP has no equivalent of the REST API's [idempotency key](/api-reference/idempotency).
 
-## Related Guides
+## Related guides
 
 - [SMTP credentials](/smtp/credentials), [SMTP hosts, ports and limits](/smtp), [domain setup](/domains) and [email authentication](/email-authentication).
 - [Bounces and suppression durations](/bounces), [message logs API](/api-reference/messages/get-messages), [SMTP CLI](/smtp/cli) and [Node.js SMTP](/smtp/nodejs).

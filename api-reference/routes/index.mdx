@@ -9,7 +9,7 @@ The AhaSend Routes API lets you create, list, update and delete inbound email ro
 
 Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-## API Operations
+## API operations
 
 | Task | Endpoint reference |
 |---|---|
@@ -19,7 +19,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 | Change settings or re-enable a route | [Update Route](/api-reference/routes/update-route) |
 | Remove a route | [Delete Route](/api-reference/routes/delete-route) |
 
-## Payload Structure
+## Payload structure
 
 All routing events use a consistent JSON structure:
 
@@ -40,11 +40,11 @@ All routing events use a consistent JSON structure:
 
 This is a shortened payload. See [the full routing schema](/api-reference/routes/route-message) for attachments, headers and reply fields.
 
-## Delivery and Verification
+## Delivery and verification
 
 The [signature reference](/api-reference/webhooks/security) covers route secrets and raw-body verification. The [retry policy](/api-reference/webhooks/retry-policy) covers timeouts, duplicate deliveries and automatic disabling.
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Inbound routing setup](/integrations/routing).
 - [Route payload](/api-reference/routes/route-message), [Route CLI](/cli/commands/routes), [Local route testing](/cli/route-testing).

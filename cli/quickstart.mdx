@@ -49,7 +49,7 @@ Verify your authentication:
 ahasend auth status
 ```
 
-## Step 2: Add a Sending Domain
+## Step 2: Add a sending domain
 
 Before sending emails, you need to add and verify a domain:
 
@@ -74,9 +74,9 @@ ahasend domains get example.com
 Most records verify within minutes. DNS changes can take up to 48 hours to propagate. Run `ahasend domains check-dns` again until the DNS is valid.
 </Note>
 
-## Step 3: Send Your First Email
+## Step 3: Send your first email
 
-### Simple Text Email
+### Simple text email
 
 ```bash
 ahasend messages send --sandbox \
@@ -86,7 +86,7 @@ ahasend messages send --sandbox \
   --text "This is my first email sent using the AhaSend CLI!"
 ```
 
-### HTML Email
+### HTML email
 
 ```bash
 ahasend messages send --sandbox \
@@ -96,7 +96,7 @@ ahasend messages send --sandbox \
   --html "<h1>Welcome!</h1><p>Thank you for using AhaSend.</p>"
 ```
 
-### Email with Both HTML and Text
+### Email with both HTML and text
 
 ```bash
 ahasend messages send --sandbox \
@@ -107,7 +107,7 @@ ahasend messages send --sandbox \
   --text "Welcome to AhaSend! We're glad you're here."
 ```
 
-## Step 4: Test with Sandbox Mode
+## Step 4: Test with sandbox mode
 
 Before sending real emails, test your integration using sandbox mode:
 
@@ -146,9 +146,9 @@ ahasend messages send \
   --sandbox-result deliver
 ```
 
-## Step 5: Send Batch Emails
+## Step 5: Send batch emails
 
-### Prepare Recipients File
+### Prepare recipients file
 
 Create a CSV file with recipient data (`recipients.csv`). The `email` and `name` columns set the recipient; each other column is a substitution:
 
@@ -159,7 +159,7 @@ jane@example.com,Jane Smith,Jane,Tech Inc
 alice@example.com,Alice Johnson,Alice,StartUp Ltd
 ```
 
-### Create an HTML File
+### Create an HTML file
 
 Create the HTML content (`welcome.html`):
 
@@ -177,7 +177,7 @@ Create the HTML content (`welcome.html`):
 </html>
 ```
 
-### Send Batch Emails
+### Send batch emails
 
 ```bash
 ahasend messages send --sandbox \
@@ -196,9 +196,9 @@ The CLI:
 - Saves any failed recipients to a file in `~/.ahasend/` and prints its path, so you can pass it back to `--recipients`
 - Exits with code 0 only when every recipient was sent; [exit codes](/cli/configuration#exit-codes) lists the other codes
 
-## Step 6: Monitor Your Emails
+## Step 6: Monitor your emails
 
-### Check Delivery Statistics
+### Check delivery statistics
 
 ```bash
 # View statistics for the last 7 days
@@ -210,7 +210,7 @@ ahasend stats deliverability \
   --to-time 7d
 ```
 
-### List Recent Messages
+### List recent messages
 
 ```bash
 # List recent sent messages
@@ -220,9 +220,9 @@ ahasend messages list
 ahasend messages list --status "sandbox delivered"
 ```
 
-## Common Patterns
+## Common patterns
 
-### Using Different Output Formats
+### Using different output formats
 
 ```bash
 # Default plain output
@@ -237,7 +237,7 @@ ahasend stats deliverability --output csv > stats.csv
 
 Every failure exits with a nonzero code. [JSON output](/cli/configuration#json-output) describes what `--output json` prints, errors included, and [stdout and stderr](/cli/configuration#stdout-and-stderr) says where each part of the output goes.
 
-### Working with Multiple Environments
+### Working with multiple environments
 
 ```bash
 # Set up different profiles
@@ -257,7 +257,7 @@ ahasend auth switch production
 
 [Profiles](/cli/configuration#profiles) says which profile is the default; `ahasend auth switch` changes it.
 
-### Adding Attachments
+### Adding attachments
 
 ```bash
 ahasend messages send --sandbox \
@@ -269,7 +269,7 @@ ahasend messages send --sandbox \
   --attach receipt.pdf
 ```
 
-### Scheduling Emails
+### Scheduling emails
 
 `--schedule` takes a relative time, such as `2h` from now, or an RFC 3339 time. It must be in the future and at most 7 days ahead.
 
@@ -283,7 +283,7 @@ ahasend messages send --sandbox \
   --schedule 24h
 ```
 
-## What's Next?
+## What's next?
 
 Now that you've sent your first emails, explore more features:
 
@@ -302,7 +302,7 @@ Now that you've sent your first emails, explore more features:
 </Card>
 </CardGroup>
 
-## Getting Help
+## Getting help
 
 If you need help at any point:
 
@@ -323,7 +323,7 @@ For additional support:
 - [API Documentation](/api-reference)
 - Email: support@ahasend.com
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).

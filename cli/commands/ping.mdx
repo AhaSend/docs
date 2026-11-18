@@ -21,7 +21,7 @@ The `ping` command sends a ping request to the AhaSend API, which checks that:
 
 The API answers a ping before it looks at the account. So `ping` does not check that the key belongs to the account ID, or what the key may do. Run [`ahasend auth status`](/cli/commands/auth) for that.
 
-## Basic Usage
+## Basic usage
 
 ```bash
 # Test with the default profile
@@ -52,7 +52,7 @@ pong
 
 CSV output has a `message` column and one row.
 
-## Exit Codes
+## Exit codes
 
 `ping` uses the CLI's [exit codes](/cli/configuration#exit-codes):
 
@@ -66,17 +66,17 @@ CSV output has a `message` column and one row.
 ahasend --api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID" ping || exit 1
 ```
 
-## Command Flags
+## Command flags
 
 This command has no command-specific flags. It accepts the [global flags](/cli/configuration#global-flags).
 
-## Next Steps
+## Next steps
 
 - [Configure authentication](/cli/authentication)
 - [Manage API keys](/cli/commands/apikeys)
 - [Send your first message](/cli/commands/messages)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).

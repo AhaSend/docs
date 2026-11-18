@@ -28,7 +28,7 @@ Available subcommands:
 
 A route receives email only when its domain's MX record points to AhaSend. The DNS records that `ahasend domains create` prints include that MX record, marked optional; see [domains](/cli/commands/domains#create-domain).
 
-## Recipient Patterns
+## Recipient patterns
 
 `--recipient`, on `create`, `update` and `listen`, takes the form `local@domain`. The domain must be one of your domains. The local part cannot be empty, and may be `*` or hold `*` wildcards:
 
@@ -38,7 +38,7 @@ A route receives email only when its domain's MX record points to AhaSend. The D
 
 A value of another form, such as `support@*`, fails with exit code 4 before any request. The API checks that the domain is one of yours. A route's recipient cannot be cleared.
 
-## List Routes
+## List routes
 
 ```bash
 # List all routes
@@ -62,9 +62,9 @@ ahasend routes list --output json
 
 - `--domain` filters by recipient domain. An API key scoped to domains requires it.
 - `--enabled` filters the page that the API returned, so a page can hold fewer than `--limit` routes. It cannot be used with `--output json`, which prints the API's response unchanged; filter the routes' `enabled` field instead.
-- Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
+- Pages work as [Lists and pagination](/cli/configuration#lists-and-pagination) describes.
 
-## Create Route
+## Create route
 
 ```bash
 # Create a route for one address
@@ -97,7 +97,7 @@ ahasend routes create \
 
 The output shows the route's signing secret once, in every output format. Save it to [verify the signatures](/api-reference/webhooks/security) of the emails the route posts; `routes get` does not show it.
 
-## Get Route
+## Get route
 
 Show a route's name, URL, status, recipient, processing options, timestamps and call counters. The output has no secret: the API returns it only when you create the route.
 
@@ -108,7 +108,7 @@ ahasend routes get YOUR_RESOURCE_ID
 ahasend routes get YOUR_RESOURCE_ID --output json > route-backup.json
 ```
 
-## Update Route
+## Update route
 
 Only the flags you set are sent; other settings stay as they are. Give at least one flag. Each on/off option turns off with `=false`.
 
@@ -138,7 +138,7 @@ ahasend routes update YOUR_RESOURCE_ID \
   --strip-replies=false
 ```
 
-## Delete Route
+## Delete route
 
 ```bash
 # Delete with a confirmation prompt
@@ -154,7 +154,7 @@ The command asks for confirmation first, as [Prompts](/cli/configuration#prompts
 Deleting a route is irreversible. To keep a route for later, disable it instead: `ahasend routes update YOUR_RESOURCE_ID --enabled=false`.
 </Warning>
 
-## Listen for Inbound Email
+## Listen for inbound email
 
 `routes listen` streams inbound email events (`message.routing`) to your terminal over a WebSocket connection, and can forward each event to a local endpoint. It prints events as text, whatever `--output` says, and runs until you press Ctrl+C or the connection closes. Give exactly one of `--route-id` and `--recipient`.
 
@@ -172,7 +172,7 @@ ahasend routes listen --recipient "support-*@example.com" \
 
 The API key needs the `routes:write:all` scope, and `messages:read` for the domain of the route's recipient. With `--recipient`, the API creates a temporary route that stays after the command ends. Forwarded events are signed with a forwarding secret that the command prints when it connects. The [route testing guide](/cli/route-testing) covers temporary routes, forwarding, signatures and exit codes.
 
-## Trigger Test Events
+## Trigger test events
 
 `routes trigger` asks the API to send a test `message.routing` event to a route, so you can test your endpoint without sending real email. The API key needs `messages:read` for the domain of the route's recipient (`messages:read:all`, or `messages:read:{example.com}`); route scopes do not grant it.
 
@@ -182,7 +182,7 @@ ahasend routes trigger YOUR_RESOURCE_ID
 
 The output is the API's message. A disabled route gets no event: the API answers that it is queued, and then drops it. Enable the route first with `ahasend routes update YOUR_RESOURCE_ID --enabled`.
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -248,7 +248,7 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | `--strip-replies` | Strip reply content from emails (`=false` to stop) |
 | `--url string` | New webhook URL |
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Inbound routing setup](/integrations/routing).
 - [Route payload](/api-reference/routes/route-message), [Local route testing](/cli/route-testing), [Signature verification](/api-reference/webhooks/security).

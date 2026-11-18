@@ -16,7 +16,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 <a id="what-are-webhooks" />
 
-## What Are AhaSend Webhooks?
+## What are AhaSend webhooks?
 
 Webhooks are user-defined HTTP callbacks triggered by specific events in AhaSend. When an event occurs—such as an email being delivered or bouncing—AhaSend automatically sends a POST request to your webhook URL with detailed event data.
 
@@ -37,7 +37,7 @@ This enables you to:
   </Card>
 </CardGroup>
 
-### How Webhooks Work in AhaSend
+### How webhooks work in AhaSend
 
 <Steps>
   <Step title="Event Occurs" icon="bolt">
@@ -63,15 +63,15 @@ This enables you to:
 
 <a id="available-webhook-events" />
 
-## Which Events Can I Receive?
+## Which events can I receive?
 
 Choose delivery, bounce, deferral, failure, suppression, open, click, unsubscribe, spam complaint, contact, domain-DNS and domain sending type events when configuring your webhook. Contact events are available to accounts with the marketing features. The [event reference](/api-reference/webhooks#event-types) lists every event, its filter flag and its payload. Inbound routes use the separate [`message.routing` event](/api-reference/routes/route-message).
 
-## Understanding Message Lifecycle
+## Understanding message lifecycle
 
 The message lifecycle helps you understand when different webhook events occur:
 
-### Successful Delivery Path
+### Successful delivery path
 
 ```text
 Reception → Delivered → [Opened] → [Clicked]
@@ -82,7 +82,7 @@ Reception → Delivered → [Opened] → [Clicked]
 3. **Opened**: Recipient opens email (requires tracking enabled)
 4. **Clicked**: Recipient clicks tracked links (requires tracking enabled)
 
-### Bounce Scenarios
+### Bounce scenarios
 
 <AccordionGroup>
   <Accordion title="Hard Bounce (Immediate Failure)" icon="x">
@@ -120,7 +120,7 @@ Reception → Delivered → [Opened] → [Clicked]
 
 <a id="creating-webhooks" />
 
-## How Do I Create a Webhook?
+## How do I create a webhook?
 <Frame>
 <img src="https://ahasend.com/sites/default/files/inline-images/webhooks.png" alt="Screenshot of the webhooks dashboard" className="rounded-md" width="300"/>
 </Frame>
@@ -171,7 +171,7 @@ Configure webhooks in your AhaSend dashboard to start receiving event notificati
 
 <a id="testing-your-webhooks" />
 
-## How Do I Test a Webhook Locally?
+## How do I test a webhook locally?
 
 Use [CLI webhook testing](/cli/webhook-testing) to forward events to localhost and trigger sample events. Use [sandbox sends](/send-api/sandbox) to exercise delivery outcomes without real mail.
 
@@ -216,13 +216,13 @@ Verify your webhook integration works correctly before going live:
 
 <a id="security-and-verification" />
 
-## How Do I Verify a Webhook?
+## How do I verify a webhook?
 
 AhaSend follows the [Standard Webhooks specification](https://github.com/standard-webhooks/standard-webhooks) for secure webhook delivery:
 
 `webhook-id` is the delivery ID used for deduplication. The payload's `webhook_id` or `route_id` identifies the configured endpoint, not the delivery.
 
-## Security Headers
+## Security headers
 
 Every webhook request includes security headers:
 
@@ -246,7 +246,7 @@ webhook-signature: v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=
   </Accordion>
 </AccordionGroup>
 
-### Signature Verification
+### Signature verification
 
 Use Standard Webhooks libraries for easy verification:
 
@@ -410,7 +410,7 @@ http_response_code(204);
 **Standard Webhooks Libraries:** AhaSend webhooks are fully compatible with [Standard Webhooks libraries](https://github.com/standard-webhooks/standard-webhooks) available for Python, JavaScript, Go, PHP, Ruby, Java, Rust, C#, and Elixir.
 </Info>
 
-## Webhook Payload Structure
+## Webhook payload structure
 
 <Tip>
 **Complete Payload Documentation:** For detailed event schemas and all payload fields, see the [Webhook Events API Reference](/api-reference/webhooks).
@@ -430,7 +430,7 @@ All AhaSend webhooks follow the Standard Webhooks payload format:
 }
 ```
 
-### Message Event Example
+### Message event example
 
 ```json
 {
@@ -455,9 +455,9 @@ All AhaSend webhooks follow the Standard Webhooks payload format:
 }
 ```
 
-`data.message_id_header` is the email's Message-ID header. [Message Events](/api-reference/webhooks#message-events) says what `data.id` is.
+`data.message_id_header` is the email's Message-ID header. [Message events](/api-reference/webhooks#message-events) says what `data.id` is.
 
-### Delivery Attempt Diagnostics
+### Delivery attempt diagnostics
 
 `message.delivered`, `message.transient_error`, and `message.bounced` can include
 an optional `data.delivery_attempt` object describing the SMTP exchange behind
@@ -485,7 +485,7 @@ observed SMTP exchange. A sandbox classification may not agree with its sample
 SMTP code and response, so test classification-based behavior with production
 events or fixtures you control.
 
-### Suppression Event Example
+### Suppression event example
 
 ```json
 {
@@ -504,7 +504,7 @@ events or fixtures you control.
 }
 ```
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Reliability and Performance" icon="rocket">
@@ -561,7 +561,7 @@ events or fixtures you control.
 
 <a id="troubleshooting" />
 
-## Why Did My Webhook Fail?
+## Why did my webhook fail?
 
 <AccordionGroup>
   <Accordion title="Webhooks Not Being Received" icon="question">
@@ -633,7 +633,7 @@ events or fixtures you control.
   </Accordion>
 </AccordionGroup>
 
-## Advanced Integration Patterns
+## Advanced integration patterns
 
 <CardGroup cols={2}>
   <Card title="Event-Driven Architecture" icon="diagram-project">
@@ -654,7 +654,7 @@ events or fixtures you control.
 </CardGroup>
 
 
-## Related Guides
+## Related guides
 
 - [Domain setup](/domains), [API authentication](/api-reference/authentication), [Event reference](/api-reference/webhooks).
 - [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing), [Signature verification](/api-reference/webhooks/security).

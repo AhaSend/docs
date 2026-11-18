@@ -49,7 +49,7 @@ Without proper domain setup, your emails will either be **rejected outright** or
 **Subdomain recommendation:** Use a subdomain like `email.yourcompany.com` instead of your main domain for transactional emails. This separates configuration and monitoring; mailbox providers can still consider the parent domain’s reputation. See [sending subdomains](/deliverability#should-transactional-mail-use-a-separate-subdomain).
 </Tip>
 
-## Sending Type
+## Sending type
 
 Each domain has a sending type: **transactional** or **marketing**. A new domain is transactional. Set it in the domain's settings in the dashboard, or with `sending_type` in [Create Domain](/api-reference/domains/create-domain) or [Update Domain](/api-reference/domains/update-domain), to match the mail you send from the domain through the API or SMTP:
 

@@ -47,7 +47,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 In the console: **Lambda → your function → Configuration → Environment variables**. Give each function only what it needs — `AHASEND_API_KEY` and `AHASEND_ACCOUNT_ID` on the send function, `AHASEND_WEBHOOK_SECRET` on the webhook function. With SAM, take the secrets as `NoEcho` parameters instead of writing them into a file you commit:
 
@@ -85,7 +85,7 @@ CDK (`environment: {...}` on `NodejsFunction`) and Terraform (`environment { var
   Lambda environment variables are visible to anyone with read access to the function's configuration. For production, keep the API key in **AWS Secrets Manager** or an **SSM SecureString parameter** rather than hardcoding it in your template. Fetch and cache it with an AWS SDK or Powertools parameters utility, or use the Parameters and Secrets Lambda extension during the invocation phase (the extension is not available during Lambda initialization).
 </Warning>
 
-## Send an Email from a Lambda Handler
+## Send an email from a Lambda handler
 
 Initialize the client **outside** the handler: module scope survives across warm invocations, so configuration is validated and the client built once per execution environment instead of once per request, and the runtime's HTTP connection pool (plus the client's own rate-limiter buckets, if you enable pacing) stays warm between invocations:
 
@@ -214,7 +214,7 @@ Metadata:
     Target: node22
 ```
 
-## Handle Webhooks
+## Handle webhooks
 
 Put a second Lambda (or a second route on the same one) behind API Gateway and point your AhaSend webhook at its URL. This route is the one endpoint that has to accept anonymous callers — AhaSend can't hold an IAM credential — so the HMAC signature is the authentication, and nothing may read the body as trusted until `verifier.parse()` has returned.
 
@@ -269,7 +269,7 @@ Return the 2xx only after that durable write commits, and hand slower processing
 
 Deploying serverless elsewhere too? See the [Vercel](/guides/vercel) and [Cloudflare Workers](/guides/cloudflare-workers) guides.
 
-## Quick Test in the Console
+## Quick test in the console
 
 If you want to confirm your credentials work before wiring up a project, you can send one message straight from the console with no build step at all. Create a function with the current Node.js runtime in the [Lambda console](https://console.aws.amazon.com/lambda), paste this into `index.mjs`, choose **Deploy**, and then choose **Test**. No packages, no build step: it calls the AhaSend REST API with the `fetch` built into the Node runtime:
 
@@ -305,7 +305,7 @@ The returned JSON carries one entry per recipient, so read the `status` on each 
 
 This is a smoke test, not a pattern to build on. It has no retries, no idempotency key, and no typed errors, which is what the SDK adds above.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

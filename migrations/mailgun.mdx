@@ -19,7 +19,7 @@ AhaSend migration from Mailgun means changing your send call or SMTP settings, m
 
 <MigrationPrepare />
 
-## Map the API Fields
+## Map the API fields
 
 Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message) with [v2 authentication](/api-reference/authentication). This is a field mapping from [Mailgun's send API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/messages/post-v3--domain-name--messages), not a drop-in change of base URL.
 
@@ -38,13 +38,13 @@ Use the [AhaSend Create Message endpoint](/api-reference/messages/create-message
 
 <MigrationApiResult />
 
-## Replace the SMTP Settings
+## Replace the SMTP settings
 
 Replace your Mailgun region's SMTP host and domain SMTP credentials with AhaSend's host and a new AhaSend SMTP credential. Do not reuse a Mailgun API key or domain password. Review region-specific source settings in [Mailgun's SMTP guide](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages/send-smtp).
 
 <MigrationSmtpSettings />
 
-## Map Events by Meaning
+## Map events by meaning
 
 These are the closest matching outcomes, not identical payloads or a guaranteed one-to-one event sequence. Keep the provider name with each saved message ID while both systems are active. See [Mailgun's event documentation](https://documentation.mailgun.com/docs/mailgun/user-manual/events/event-types) and the [AhaSend event list](/api-reference/webhooks).
 
@@ -61,7 +61,7 @@ These are the closest matching outcomes, not identical payloads or a guaranteed 
 
 <MigrationWebhookChecks />
 
-## Export the Old Recipient Blocks
+## Export the old recipient blocks
 
 Export bounces, complaints and unsubscribes for every Mailgun sending domain you are moving. Preserve Mailgun unsubscribe tags or list scopes in your app, then decide which blocks should apply to a whole AhaSend sending domain. Use the list operations in Mailgun's [Bounces API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/bounces), [Complaints API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/complaints) and [Unsubscribe API](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/unsubscribe). Follow pagination rather than assuming the first page contains the full list.
 

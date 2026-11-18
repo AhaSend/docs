@@ -27,7 +27,7 @@ Attribute keys must already exist in the dashboard. Creating a contact does not 
 
 Commands that take `<id-or-email>` accept a contact ID or a raw email address. Pass the address exactly as written, including `+`, and do not percent-encode it.
 
-## Create, Read and Update
+## Create, read and update
 
 Save these commands in one Bash script. The script creates two test contacts, and its last step deletes them.
 
@@ -48,7 +48,7 @@ ahasend contacts list --status enabled --subscribed=true
 ahasend contacts list --from-time 7d --limit 50
 ```
 
-## Batch Import
+## Batch import
 
 Continue the script. `contacts batch` creates or updates up to 1,000 contacts in one request. Save this as `contacts.json`:
 
@@ -65,7 +65,7 @@ ahasend contacts batch --file contacts.json
 - The command prints the result of each item, and exits with code 1 when any item failed.
 - With `--idempotency-key`, reuse a key only to retry the same file contents.
 
-## List a Contact's Lists
+## List a contact's lists
 
 Continue the script:
 
@@ -76,7 +76,7 @@ ahasend contacts memberships docs-contact-test@example.com --subscription-status
 
 Each membership shows its list and its status: `unconfirmed`, `confirmed`, `unsubscribed` or `complained`.
 
-## List a Contact's Segments
+## List a contact's segments
 
 Continue the script. `contacts segments` lists the [segments](/cli/commands/segments) a contact is a member of, in the order of `segments list`. It needs CLI v0.4.0 or later.
 
@@ -86,7 +86,7 @@ ahasend contacts segments docs-contact-test@example.com
 
 The output shows each segment as `segments list` does. A contact in no segment prints `No segments found`. A segment that is `building` may still list the contact by its previous rules.
 
-## Delete the Test Contacts
+## Delete the test contacts
 
 Finish the script by deleting the contacts it created.
 
@@ -103,7 +103,7 @@ The script stops at the first command that fails, and then deletes nothing. If i
 Deleting a contact cannot be undone. It cancels the contact's active workflows and erases its unsubscribe, list membership, campaign, open and click history. To stop mail and keep the history, run `ahasend contacts update <id-or-email> --unsubscribed=true` instead.
 </Warning>
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -214,7 +214,7 @@ ahasend contacts update <id-or-email> [flags]
 | `--status-reason string` | New reason for the status (empty clears it) |
 | `--unsubscribed` | Whether the contact is globally unsubscribed (false resubscribes it) |
 
-## Related Guides
+## Related guides
 
 - [Contacts API](/api-reference/contacts/overview), [Batch upsert contacts](/api-reference/contacts/batch-upsert-contacts), [Lists of a contact](/api-reference/lists/get-contact-lists), [Segments of a contact](/api-reference/segments/get-contact-segments).
 - [Lists commands](/cli/commands/lists), [Segments commands](/cli/commands/segments), [Campaigns commands](/cli/commands/campaigns), [CLI authentication](/cli/authentication).

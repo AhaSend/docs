@@ -47,7 +47,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Store Credentials as Encore Secrets
+## Store credentials as Encore secrets
 
 Encore has first-class secrets instead of `.env` files. Set each secret for local development (and again with `--type prod` for production):
 
@@ -86,7 +86,7 @@ export function ahasend(): AhaSendClient {
 
 Read the secret on every call rather than closing over it once. Encore refreshes secret values in a running process, so a client cached forever would keep presenting a rotated-away API key until the next deploy; comparing the value rebuilds the client only when the key actually changes. The SDK still generates a new automatic idempotency key for each logical call and reuses that key only for that call's internal retries.
 
-## Send an Email from an Encore API Endpoint
+## Send an email from an Encore API endpoint
 
 ```ts email/welcome.ts
 import { api, APIError } from "encore.dev/api";
@@ -157,7 +157,7 @@ curl -X POST http://localhost:4000/welcome \
 
 The send example uses `sandbox: true` to validate the request without delivering anything. Give that trial its own idempotency key: AhaSend matches a key against a hash of the request body, so a sandbox call under the `welcome-` key makes the first real send for that user fail with `422` instead of delivering.
 
-## Handle Webhooks with a Raw Endpoint
+## Handle webhooks with a raw endpoint
 
 Signature verification needs the **raw request body**, which Encore's typed endpoints parse away. Use `api.raw` instead: its handler receives a Node `IncomingMessage`, so you collect the body chunks into a Buffer and hand them to the verifier along with the headers. `verifier.parse()` is asynchronous, so await it:
 
@@ -266,7 +266,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 Not on Encore everywhere? The same SDK, including dedicated webhook adapters, powers the [Express](/guides/express) and [Fastify](/guides/fastify) guides.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

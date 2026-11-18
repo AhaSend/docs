@@ -99,7 +99,7 @@ Send your first email with AhaSend by verifying a domain, creating a credential,
 
 <a id="http-api" />
 
-## How Do I Send Through the HTTP API?
+## How do I send through the HTTP API?
 
 Call `POST https://api.ahasend.com/v2/accounts/{account_id}/messages` with your API key and a sender on your verified domain. See [API authentication](/api-reference/authentication) for the header and [sending limits](/send-api/send-email#limits) before adding recipients.
 
@@ -107,7 +107,7 @@ Call `POST https://api.ahasend.com/v2/accounts/{account_id}/messages` with your 
 **API Version Note:** These examples use our latest API v2, which provides the most powerful features including advanced tracking, bulk sending, and better error handling. Existing v1 integrations can use the [legacy API v1 reference](/api-reference/v1); use v2 for new integrations.
 </Info>
 
-### Basic Email
+### Basic email
 
 <CodeGroup>
 
@@ -310,11 +310,11 @@ func main() {
 
 <a id="smtp-relay" />
 
-## How Do I Send Through SMTP?
+## How do I send through SMTP?
 
 Use our SMTP servers with any email library. Great for existing applications or when you need SMTP compatibility.
 
-### SMTP Settings
+### SMTP settings
 
 ```text
 Host: send.ahasend.com
@@ -328,7 +328,7 @@ Password: Your SMTP password (from dashboard)
 **Get SMTP credentials:** You should have created these in Step 4. If not, go to your dashboard → Credentials → Create New Credential
 </Info>
 
-### SMTP Examples
+### SMTP examples
 
 <CodeGroup>
 
@@ -459,7 +459,7 @@ func main() {
 
 ---
 
-## Next Steps
+## Next steps
 
 Now that you've sent your first email, here's what to do next:
 
@@ -480,7 +480,7 @@ Now that you've sent your first email, here's what to do next:
 
 <a id="troubleshooting" />
 
-## Why Did My First Send Fail?
+## Why did my first send fail?
 
 Having issues? Here are the most common problems:
 
@@ -518,7 +518,7 @@ Having issues? Here are the most common problems:
 
 <EmailHelpGuides />
 
-## Related Guides
+## Related guides
 
 - [Domain setup](/domains), [Send-only API keys](/send-api/credentials), [Sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart), [SDK and framework guides](/guides).

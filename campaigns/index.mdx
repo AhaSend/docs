@@ -9,7 +9,7 @@ Campaign Builder sends newsletters, product updates and promotions from your Aha
 
 Open **Marketing** in the dashboard to find it. Contacts, lists, campaign templates and campaigns are also available through the [Management API](/campaigns/api-and-automation), the CLI and the [MCP server](/mcp-server).
 
-## How a Campaign Goes Out
+## How a campaign goes out
 
 <Steps>
   <Step title="Make a list">
@@ -29,19 +29,19 @@ Open **Marketing** in the dashboard to find it. Contacts, lists, campaign templa
   </Step>
 </Steps>
 
-## Separate from Your Transactional Email
+## Separate from your transactional email
 
 Campaigns go out over AhaSend's marketing infrastructure: their own IP pools and their own [daily marketing limit](/campaigns/marketing-limit). A large newsletter never delays your password resets or receipts. To keep the reputation of your domains apart too, send campaigns from their own subdomain. Bounces and complaints from campaigns still count towards the health of your account, so a poor list can pause all of your sending.
 
 You do not have to configure anything for this. Any verified sending domain of your account can send a campaign, whatever its [sending type](/domains#sending-type). The sending type only matters for marketing mail that you send yourself through the API or SMTP: that mail must come from a domain with the sending type marketing. Campaign Builder adds the unsubscribe link and processes opt-outs for you; for marketing mail from your own tool, you add the link and keep the opt-outs yourself. See [unsubscribe links](/campaigns/unsubscribe).
 
-## Built for the Inbox
+## Built for the inbox
 
 - Every campaign carries an unsubscribe link and one-click unsubscribe headers, as Gmail and Yahoo expect from bulk senders. A campaign without the link cannot be sent.
 - Before a campaign to a new or changed list goes out, AhaSend checks the list and the content. Addresses that cannot receive mail are left out, a list with too many bad addresses pauses the campaign, and a campaign that looks like spam, phishing or cold outreach is held for review. See [review](/campaigns/test-and-send#review).
 - Unsubscribes and spam complaints are processed for you: the contact gets no more campaigns from that list, or, after a campaign sent through a segment, no more marketing email at all. Re-importing an old CSV never puts anyone back on a list they left.
 
-## Where Things Are in the Dashboard
+## Where things are in the dashboard
 
 | Menu | What you find there |
 |---|---|
@@ -52,7 +52,7 @@ You do not have to configure anything for this. Any verified sending domain of y
 | Marketing > Templates | Your catalog of campaign templates |
 | Marketing > Contact fields | The custom fields of your contacts |
 
-## Related Guides
+## Related guides
 
 - [Contacts and lists](/campaigns/contacts-and-lists), [Segments](/campaigns/segments), [Campaign templates](/campaigns/templates), [Creating a campaign](/campaigns/create).
 - [Testing, review and sending](/campaigns/test-and-send), [Reports](/campaigns/reports), [Daily marketing limit](/campaigns/marketing-limit).

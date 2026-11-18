@@ -32,11 +32,11 @@ Before you begin, ensure you have:
 </AccordionGroup>
 
 
-## Connection Settings
+## Connection settings
 
 <SmtpSettings />
 
-## PHPMailer Integration
+## PHPMailer integration
 
 PHPMailer is the most popular and feature-rich PHP email library, supporting HTML messages, attachments, and advanced SMTP features.
 
@@ -48,7 +48,7 @@ Install PHPMailer using Composer:
 composer require phpmailer/phpmailer
 ```
 
-### Basic Email Example
+### Basic email example
 
 <CodeGroup>
 
@@ -135,7 +135,7 @@ try {
 
 </CodeGroup>
 
-### PHPMailer with Special Headers
+### PHPMailer with special headers
 
 Add AhaSend's special headers for tracking, sandbox mode, and more:
 
@@ -179,7 +179,7 @@ try {
 ?>
 ```
 
-## Symfony Mailer Integration
+## Symfony Mailer integration
 
 Symfony Mailer is a modern, powerful email library that's part of the Symfony ecosystem and used by Laravel.
 
@@ -191,7 +191,7 @@ Install Symfony Mailer using Composer:
 composer require symfony/mailer
 ```
 
-### Basic Examples
+### Basic examples
 
 <CodeGroup>
 
@@ -257,11 +257,11 @@ echo 'Email with attachment sent!';
 
 </CodeGroup>
 
-## Laravel Configuration
+## Laravel configuration
 
 Laravel uses Symfony Mailer internally. Configure AhaSend SMTP by updating your `.env` file:
 
-### Environment Configuration
+### Environment configuration
 
 ```env Laravel .env Configuration
 MAIL_MAILER=smtp
@@ -274,7 +274,7 @@ MAIL_FROM_ADDRESS=hello@yourdomain.com
 MAIL_FROM_NAME="Your App Name"
 ```
 
-### Sending Emails in Laravel
+### Sending emails in Laravel
 
 <CodeGroup>
 
@@ -313,7 +313,7 @@ echo 'Email sent with tracking enabled!';
 
 </CodeGroup>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Error Handling" icon="triangle-exclamation">
@@ -341,7 +341,7 @@ echo 'Email sent with tracking enabled!';
   </Accordion>
 </AccordionGroup>
 
-## Testing with Sandbox Mode
+## Testing with sandbox mode
 
 Use sandbox mode to test your PHP email integration safely:
 

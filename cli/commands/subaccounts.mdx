@@ -11,9 +11,9 @@ AhaSend CLI sub-account commands let Platform Partners manage child accounts and
 
 Use a [full parent-account API key](/api-reference/authentication) with the matching [sub-account scopes](/api-reference/scopes): `sub-accounts:read`, `sub-accounts:write`, `sub-accounts:delete`, `sub-accounts:suspend` (also for `unpause-domain`) and `sub-accounts:usage`, and for keys `sub-account-api-keys:read`, `sub-account-api-keys:write` and `sub-account-api-keys:delete`. Sub-accounts are included on Pro (up to 9) and Max (no limit); see the [sub-accounts guide](/scale/sub-accounts). The shell examples need Bash and jq.
 
-## Create and Manage a Test Sub-Account
+## Create and manage a test sub-account
 
-The examples that use `$TEST_SUBACCOUNT_ID` make one Bash script: this one, the first one in [Manage a Test Sub-Account API Key](#manage-a-test-sub-account-api-key) and the one in [Delete the Test Sub-Account](#delete-the-test-sub-account). Save them in that order. The script stops if creation fails, and only updates or deletes the test account it creates. The other examples use placeholders: replace `YOUR_RESOURCE_ID` with a sub-account ID and `YOUR_KEY_ID` with the ID of one of its API keys.
+The examples that use `$TEST_SUBACCOUNT_ID` make one Bash script: this one, the first one in [Manage a test sub-account API key](#manage-a-test-sub-account-api-key) and the one in [Delete the test sub-account](#delete-the-test-sub-account). Save them in that order. The script stops if creation fails, and only updates or deletes the test account it creates. The other examples use placeholders: replace `YOUR_RESOURCE_ID` with a sub-account ID and `YOUR_KEY_ID` with the ID of one of its API keys.
 
 ```bash
 set -euo pipefail
@@ -32,7 +32,7 @@ Usage `allocated_cost` is a proportional share of the parent's pooled invoice, n
 
 `suspend` asks for confirmation unless you pass `--force`; a script needs it. `pause` is an alias of `suspend`, and `resume` and `unpause` are aliases of `unsuspend`. A suspension that AhaSend started can only be lifted by AhaSend support.
 
-## Manage a Test Sub-Account API Key
+## Manage a test sub-account API key
 
 Continue with the sub-account created above. Store the one-time `secret_key` securely if an application needs it; this test keeps only the key ID.
 
@@ -53,7 +53,7 @@ ahasend subaccounts api-keys update YOUR_RESOURCE_ID YOUR_KEY_ID --ip-allow-list
 ahasend subaccounts api-keys update YOUR_RESOURCE_ID YOUR_KEY_ID --clear-ip-allow-list
 ```
 
-## Unpause a Sub-Account Domain
+## Unpause a sub-account domain
 
 AhaSend pauses a domain, for example when too many of its recent emails bounced. To let a sub-account's domain send again:
 
@@ -63,7 +63,7 @@ ahasend subaccounts unpause-domain YOUR_RESOURCE_ID example.com
 
 Unpausing a domain that is not paused changes nothing and prints the domain. A change can take some minutes to apply to new email.
 
-## Delete the Test Sub-Account
+## Delete the test sub-account
 
 After the preceding create-first workflow, remove only its test account:
 
@@ -73,9 +73,9 @@ ahasend subaccounts delete "$TEST_SUBACCOUNT_ID" --force
 
 Deletion is a soft delete: the sub-account can no longer be used and leaves list results, but AhaSend keeps its historical data. Current billing-period usage still belongs to the parent invoice. Without `--force`, the command asks for confirmation; answer `y` or `yes`.
 
-## Command Flags
+## Command flags
 
-These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags). List commands page as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
+These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags). List commands page as [Lists and pagination](/cli/configuration#lists-and-pagination) describes.
 
 ### `subaccounts api-keys create`
 
@@ -231,7 +231,7 @@ ahasend subaccounts usage [flags]
 
 No command-specific flags.
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Sub-account setup](/scale/sub-accounts).
 - [Sub-account API rules](/api-reference/sub-accounts/overview), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key), [CLI configuration and output](/cli/configuration).

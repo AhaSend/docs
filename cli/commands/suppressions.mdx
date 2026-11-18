@@ -29,7 +29,7 @@ Unsubscribes and spam complaints are protected suppressions. `suppressions wipe`
 
 The commands check each email address and each `--domain` value before they send a request. An invalid value fails with exit code 4. An empty `--domain` fails too; leave the flag out instead.
 
-## List Suppressions
+## List suppressions
 
 List suppressed email addresses, with cursor pagination. Filter by email address, domain and creation time.
 
@@ -54,9 +54,9 @@ ahasend suppressions list --limit 100 --after YOUR_CURSOR
 ahasend suppressions list --output json
 ```
 
-`--from-time` and `--to-time` take an RFC 3339 time, such as `2026-09-01T00:00:00Z`, or a relative time that counts back from now, such as `24h` or `7d`. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
+`--from-time` and `--to-time` take an RFC 3339 time, such as `2026-09-01T00:00:00Z`, or a relative time that counts back from now, such as `24h` or `7d`. Pages work as [Lists and pagination](/cli/configuration#lists-and-pagination) describes; replace `YOUR_CURSOR` with the cursor of the previous page.
 
-## Create Suppression
+## Create suppression
 
 `--expires` is required. It takes a time after now: a relative time, such as `24h`, `30d`, `1w`, `3mo` or `1y`, or an RFC 3339 time in the future, such as `2027-12-31T23:59:59Z`. A time in the past fails before any request is sent.
 
@@ -75,7 +75,7 @@ ahasend suppressions create user@example.com --reason "Holiday pause" --expires 
 
 `--reason` holds up to 255 characters. Give your own `--idempotency-key` when a script may retry the command; without it, each run generates a new key.
 
-## Check Suppression
+## Check suppression
 
 Without `--domain`, the command shows the address's suppressions on every domain, up to the API's default page of 100. With `--domain`, it shows only the suppression for that domain. It exits with code 0 whether or not the address is suppressed. `--output json` prints the API's list of matching suppressions.
 
@@ -87,7 +87,7 @@ ahasend suppressions check user@example.com
 ahasend suppressions check user@example.com --domain example.com
 ```
 
-## Delete Suppression
+## Delete suppression
 
 With `--domain`, the command deletes only the suppression for that domain. Without it, the command deletes the address's suppressions on every domain, unsubscribes and complaints included.
 
@@ -106,7 +106,7 @@ ahasend suppressions delete docs-delete-test@example.com --force
 
 The last step fails with exit code 5 when the address has no suppression left, as in an account with one domain: the API answers 404 when nothing matches.
 
-## Wipe Suppressions
+## Wipe suppressions
 
 `suppressions wipe` deletes every suppression of the account, or of one domain with `--domain`. Protected suppressions (unsubscribes and spam complaints) are kept. The command prints a warning and asks for confirmation unless you give `--force` (`-f`).
 
@@ -133,7 +133,7 @@ ahasend suppressions wipe --domain example.com --force
 A wipe cannot be undone. Afterwards, email can be sent to every wiped address again, which can hurt your sender reputation. The backup is for your records only: the CLI cannot import it, and `suppressions create` adds one address at a time.
 </Warning>
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -178,12 +178,12 @@ These flags come from the CLI's `--help`. All commands also accept the [global f
 | `--domain string` | Domain to wipe suppressions for |
 | `-f`, `--force` | Skip confirmation prompt |
 
-## Next Steps
+## Next steps
 
 - [Send messages](/cli/commands/messages)
 - [View statistics](/cli/commands/stats)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Suppression list API](/api-reference/suppressions/get-suppressions).
 - [Suppression durations](/bounces#suppression-duration), [CLI configuration and output](/cli/configuration), [API authentication](/api-reference/authentication).

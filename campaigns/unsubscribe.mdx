@@ -7,7 +7,7 @@ icon: "bell-slash"
 
 AhaSend can give each recipient a signed one-click unsubscribe link. This page explains when AhaSend adds the unsubscribe headers, how to put the link in your email with `{{unsubscribe_url}}`, and what happens when a recipient uses it.
 
-## Which Mail Gets the Unsubscribe Headers?
+## Which mail gets the unsubscribe headers?
 
 The unsubscribe headers let mail clients show their own unsubscribe button. Gmail and Yahoo require them for bulk marketing mail. See [what Gmail and Yahoo require](/deliverability#what-do-gmail-and-yahoo-require).
 
@@ -29,7 +29,7 @@ List-Unsubscribe-Post: List-Unsubscribe=One-Click
 
 AhaSend signs both headers with DKIM, together with the rest of the message. The link uses your [subscription management domain](/domains) when you set one up. Otherwise, it uses an AhaSend hostname.
 
-## How Do I Add the Link to My Email?
+## How do I add the link to my email?
 
 Put `{{unsubscribe_url}}` in the HTML or text content. AhaSend replaces it with a signed link for each recipient.
 
@@ -76,7 +76,7 @@ It works for both sending types. When a message from a transactional domain uses
 AhaSend adds each recipient's link just before delivery. Thus, the message data in your message logs can show `{{unsubscribe_url}}` instead of the link.
 </Note>
 
-## Can I Use My Own List-Unsubscribe Header?
+## Can I use my own List-Unsubscribe header?
 
 Yes. AhaSend keeps your headers as they are when all of these are true:
 
@@ -105,7 +105,7 @@ List-Unsubscribe-Post: List-Unsubscribe=One-Click
 
 AhaSend does not examine or change the headers of transactional mail that does not use `{{unsubscribe_url}}`.
 
-### Building Your Own Unsubscribe Endpoint
+### Building your own unsubscribe endpoint
 
 Implement an HTTPS endpoint that accepts the standard one-click POST and saves the opt-out without requiring login, cookies or another confirmation. Use a hard-to-guess token tied to the recipient and list, and do not unsubscribe on a GET request, because link scanners may visit it. The endpoint must accept the form body `List-Unsubscribe=One-Click`, save the preference, return success promptly and handle repeated requests safely. Also include a visible unsubscribe link in the email body.
 
@@ -113,7 +113,7 @@ With the [REST API](/api-reference/messages/create-message), set the two headers
 
 Yahoo currently accepts a `mailto:` unsubscribe method too, while recommending POST; the HTTPS POST method meets Gmail's one-click mechanism as well. On a marketing domain, AhaSend replaces a header that has only a `mailto:` link, as [shown above](#can-i-use-my-own-list-unsubscribe-header). Process opt-outs promptly and stop future sends to that address. Keep durable preferences in your app, and add an AhaSend [suppression](/bounces) when the address must be blocked for the sending domain as a whole.
 
-## What Happens When a Recipient Unsubscribes?
+## What happens when a recipient unsubscribes?
 
 The recipient can use the unsubscribe button of their mail client, or open the link and confirm on the unsubscribe page. AhaSend then adds a [suppression](/bounces) for that address and your sending domain, with the reason `Unsubscribed`. Like a spam complaint, it is effectively permanent. AhaSend stops sending mail to the address from that domain.
 
@@ -121,14 +121,14 @@ Only opening the link does not unsubscribe the recipient. The page asks the reci
 
 Keep the opt-out in your own recipient data too. Use [List Suppressions](/api-reference/suppressions/get-suppressions) to find addresses that unsubscribed.
 
-## What If AhaSend Cannot Make the Link?
+## What if AhaSend cannot make the link?
 
 AhaSend never sends a message that needs the unsubscribe link without it. If AhaSend cannot make the link, it refuses the message with a temporary error:
 
 - **SMTP:** `451 4.3.0 Unsubscribe link is not available. Try again later.` Your SMTP client sends the message again later.
 - **API:** the recipient gets an `error` entry in the response. If AhaSend could not queue any recipient, the API returns a `500` error. Send the request again later.
 
-## Related Guides
+## Related guides
 
 - [Deliverability best practices](/deliverability), [bounces and suppressions](/bounces) and [domain setup](/domains).
 - [REST API](/send-api/send-email), [SMTP settings](/smtp), [SMTP errors](/smtp/errors) and [click tracking](/tracking/click-tracking).

@@ -15,17 +15,17 @@ https://mcp.ahasend.com/mcp
 
 You add this one address to your AI tool, log in with your AhaSend dashboard account in the browser, and choose what the agent may do. You do not create or copy an API key.
 
-## How the Connection Works
+## How the connection works
 
 When you connect a tool, AhaSend shows a page in your browser where you:
 
 1. Choose the account that the tool works on. You can choose a sub-account.
-2. Choose what the agent may do, with a preset or your own set of permissions. See [Choose What the Agent May Do](#choose-what-the-agent-may-do).
+2. Choose what the agent may do, with a preset or your own set of permissions. See [Choose what the agent may do](#choose-what-the-agent-may-do).
 3. Click **Authorize**.
 
 Each connection is a normal API key on the [API Keys](https://dash.ahasend.com/account/-/developers/api-keys) page of that account. The key's label names the tool and the user who connected it. The API applies the key's scopes to every action of the agent, so the agent can do only what the key allows. You can change the scopes of the key on the API Keys page at any time.
 
-## Connect Your AI Tool
+## Connect your AI tool
 
 <Tabs>
   <Tab title="Claude Code">
@@ -102,7 +102,7 @@ Each connection is a normal API key on the [API Keys](https://dash.ahasend.com/a
   </Tab>
 </Tabs>
 
-## Choose What the Agent May Do
+## Choose what the agent may do
 
 On the connection page, choose a preset:
 
@@ -123,7 +123,7 @@ You can also:
 
 The permissions are the API key [scopes](/api-reference/scopes). The agent sees only the tools that its scopes allow.
 
-## What the Agent Can Do
+## What the agent can do
 
 The tools cover:
 
@@ -137,13 +137,13 @@ The tools cover:
 
 The agent cannot create API keys or SMTP credentials, change account settings, billing or team members, remove all suppressions at once, or delete or suspend sub-accounts. Do these in the dashboard.
 
-## Safety Rules
+## Safety rules
 
 - **A campaign sends only after you say yes.** Before the agent sends or schedules a campaign, your AI tool shows you a question with the send time, the number of contacts, the campaign name, the subject, the sender, and the lists and segments it sends to or excludes. The campaign is sent only if you answer yes. If your AI tool cannot show the question, the agent sends nothing and gives you a link to the campaign in the dashboard, where you send it yourself.
 - **One email goes to 50 recipients or fewer.** The agent cannot send one email to more than 50 recipients. Use a campaign to send to more people.
-- **Received email is hidden.** See [Received Email](#received-email).
+- **Received email is hidden.** See [Received email](#received-email).
 
-## Received Email
+## Received email
 
 Anyone can send email to your inbound addresses. A received email can contain text that tells the agent to do something, such as sending your account data to someone else. The agent can follow such text through AhaSend's tools, and through any other tool that your AI tool gives it, such as web access. AhaSend cannot control your AI tool's other tools.
 
@@ -156,13 +156,13 @@ To turn it on, choose **Custom** on the connection page, choose a permission to 
 
 Contact fields and bounce reasons can also contain text from other people, whatever this setting is.
 
-## Disconnect a Tool
+## Disconnect a tool
 
 Delete the connection's API key on the [API Keys](https://dash.ahasend.com/account/-/developers/api-keys) page. The tool loses access at once. If you only remove the server in your AI tool, the API key stays until the connection ends.
 
 A connection also ends when the user who connected it loses access to the account, and when the tool does not use it for 30 days.
 
-## When Tools Stop Working
+## When tools stop working
 
 If the account is paused, if two-factor authentication is required and your user does not have it, or if your email address is not confirmed, every tool returns a message that says what to fix in the dashboard. The connection stays. When you fix the cause, the tools work again.
 

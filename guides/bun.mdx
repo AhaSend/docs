@@ -32,7 +32,7 @@ bun add @ahasend/sdk
 
 The latest Bun is a supported runtime for the package, so no shims or flags are needed.
 
-## Configure Environment Variables
+## Configure environment variables
 
 Create `.env` yourself and ensure it is ignored by git before adding values:
 
@@ -47,7 +47,7 @@ WELCOME_ENDPOINT_TOKEN=replace-with-a-long-random-value
   Bun loads `.env` automatically, no `dotenv` package or `--env-file` flag needed. The variables are available on `process.env` (and `Bun.env`) as soon as your script starts.
 </Note>
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope and reuse it across requests:
 
@@ -60,7 +60,7 @@ export const ahasend = new AhaSendClient({
 });
 ```
 
-## Send an Email from a Bun.serve Route
+## Send an email from a Bun.serve route
 
 `Bun.serve` with a fetch handler is all the HTTP server you need. A send route reaches into your AhaSend quota and puts caller-supplied text into mail you sign, so it authenticates the caller and validates the body before it calls the SDK:
 
@@ -190,7 +190,7 @@ The SDK retries transient failures automatically, but a retry after a 5xx can st
 
 The send request already uses `sandbox: true` to validate it without delivering anything. Sandbox is a body field, so a key already used for a sandbox send is rejected when the same key is replayed for the live send — give the two runs different keys.
 
-## Handle Webhooks
+## Handle webhooks
 
 There's no Bun-specific adapter, and you don't need one: `verifier.parse()` accepts a Fetch `Headers` object and raw `Uint8Array` body directly. `parse()` is asynchronous, so await it. Read the body with `req.arrayBuffer()`, not `req.json()`, so the verifier sees the exact bytes AhaSend signed. The server configuration above caps request bodies at the verifier's fixed 30,000,000-byte limit before the handler reads them.
 
@@ -202,7 +202,7 @@ Webhooks can be delivered more than once. After verification and before performi
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

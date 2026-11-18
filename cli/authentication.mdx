@@ -7,11 +7,11 @@ sidebarTitle: "Authentication"
 
 The AhaSend CLI saves your API credentials as profiles, so you can work with several accounts or environments.
 
-## Getting Started
+## Getting started
 
 Create a full API key under **Account Settings → API Keys**, with the scopes your commands need, and copy the account ID from account settings. See [API authentication](/api-reference/authentication).
 
-### Interactive Login
+### Interactive login
 
 ```bash
 ahasend auth login
@@ -25,7 +25,7 @@ Before it saves anything, the command reads the account to check that the key be
 - A key whose IP allow list leaves out this machine fails with exit code 6.
 - A key without the scope to read the account belongs to the account, and is saved.
 
-### Direct Login
+### Direct login
 
 ```bash
 ahasend auth login \
@@ -36,7 +36,7 @@ ahasend auth login \
 
 Give both flags or neither: one alone fails with exit code 4. A key passed as a flag can end up in your shell history. Prefer the prompt on your own machine.
 
-### CI Credentials
+### CI credentials
 
 In CI, skip `auth login`: store the API key and account ID as secrets and pass them with the global flags:
 
@@ -48,7 +48,7 @@ The CLI reads no environment variable for credentials or profiles. `--api-key` a
 
 ## Profiles
 
-### Creating Profiles
+### Creating profiles
 
 ```bash
 ahasend auth login --profile production
@@ -57,7 +57,7 @@ ahasend auth login --profile staging
 
 [Profiles](/cli/configuration#profiles) says which profile becomes the default. When a login keeps another profile as the default, its output says how to switch to the new one. To log in to a profile again, run `auth login` with its name; the login replaces the profile's credentials without asking.
 
-### Switching Profiles
+### Switching profiles
 
 ```bash
 # Change the default profile
@@ -72,7 +72,7 @@ ahasend messages send --sandbox --profile staging \
 
 `auth switch` checks the profile's key first. When the check fails, it prints a warning on stderr and switches anyway.
 
-### Check Status
+### Check status
 
 ```bash
 # Status of the default profile
@@ -87,7 +87,7 @@ ahasend auth status --all
 
 `auth status` shows the profile, its account ID, whether the API accepts its key for that account, and the account. It exits nonzero when the key cannot be verified.
 
-### Remove Profiles
+### Remove profiles
 
 ```bash
 # Remove one profile
@@ -101,15 +101,15 @@ ahasend auth logout --all
 
 `auth logout` without a profile removes the default profile. When you remove the default profile and one profile is left, that profile becomes the default. When several are left, none is the default until you run `ahasend auth switch <profile>`.
 
-## Credential Storage
+## Credential storage
 
-Profiles live in `~/.ahasend/config.yaml`, which holds your API keys in plain text and is readable by your user only. No `auth` command prints a profile's API key. `apikeys create` and `subaccounts api-keys create` print the new key's secret once, so store it when you create the key. See [Configuration File](/cli/configuration#configuration-file).
+Profiles live in `~/.ahasend/config.yaml`, which holds your API keys in plain text and is readable by your user only. No `auth` command prints a profile's API key. `apikeys create` and `subaccounts api-keys create` print the new key's secret once, so store it when you create the key. See [Configuration file](/cli/configuration#configuration-file).
 
 <Warning>
 Keep your API keys secure. Never commit credentials to version control.
 </Warning>
 
-## Testing Authentication
+## Testing authentication
 
 Verify your setup:
 
@@ -120,13 +120,13 @@ ahasend auth status
 
 `ping` checks that the API can be reached and accepts your key. `auth status` also checks that the key belongs to the profile's account.
 
-## Next Steps
+## Next steps
 
 - [Send your first email](/cli/quickstart)
 - [Manage domains](/cli/commands/domains)
 - [Configure webhooks](/cli/commands/webhooks)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [REST sending guide](/send-api/send-email), [SMTP settings](/smtp).
 - [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [CLI configuration and output](/cli/configuration).

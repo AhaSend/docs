@@ -21,7 +21,7 @@ ahasend auth logout [profile] [flags]
 - `auth switch` makes a profile the default. It checks the profile's key first, and warns on stderr but switches anyway when the check fails.
 - `auth logout` removes the default profile, the profile you name as the argument or with `--profile`, or every profile with `--all`. Only `--all` asks for confirmation; one profile is removed at once.
 
-The `auth` commands do not take the global `--api-key` and `--account-id` flags; see [Global Flags](/cli/configuration#global-flags). `auth switch` takes the profile as its argument only; `--profile` fails with exit code 4.
+The `auth` commands do not take the global `--api-key` and `--account-id` flags; see [Global flags](/cli/configuration#global-flags). `auth switch` takes the profile as its argument only; `--profile` fails with exit code 4.
 
 ## Examples
 
@@ -45,7 +45,7 @@ ahasend auth logout --profile production
 ahasend auth logout --all --force
 ```
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -140,7 +140,7 @@ When there are no profiles, the command exits with code 0. Table and plain outpu
 
 With `--all` and no profiles, table and plain output print `No authentication profiles found`, `--output json` prints an empty `profiles` array, and CSV output prints the `profile` header row alone.
 
-## Exit Codes
+## Exit codes
 
 The `auth` commands use the CLI's [exit codes](/cli/configuration#exit-codes). In particular:
 
@@ -152,7 +152,7 @@ The `auth` commands use the CLI's [exit codes](/cli/configuration#exit-codes). I
 
 `auth status` prints the status even when the check fails, and then exits with the code of that failure.
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).

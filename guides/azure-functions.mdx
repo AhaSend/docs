@@ -23,7 +23,7 @@ This guide runs Go as an Azure Functions **custom handler**: a small HTTP server
 - An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
 - A Linux/x64 Azure Function App configured for a custom handler (select .NET as the runtime stack when creating it), the [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) (`func`), and the Azure CLI (`az`)
 
-## Project Layout
+## Project layout
 
 A custom handler app pairs one Go binary with the standard Functions metadata files, one folder per function:
 
@@ -52,7 +52,7 @@ go get github.com/google/uuid
 
 `google/uuid` arrives with the SDK as a transitive dependency, but the account ID is a `uuid.UUID` that your own code parses, so it needs its own `go get` or the build fails on a missing `go.sum` entry.
 
-## Configure the Functions Host
+## Configure the Functions host
 
 <Steps>
   <Step title="host.json">
@@ -123,7 +123,7 @@ The webhook endpoint is `anonymous` because the HMAC signature, not a function k
 </Step>
 </Steps>
 
-## Configure App Settings
+## Configure app settings
 
 Azure Function App settings are exposed to your binary as environment variables. Set them in the Portal under **Function App → Environment variables**, or with the CLI:
 
@@ -152,7 +152,7 @@ For local development, put the same values in `local.settings.json`:
 
 `local.settings.json` contains secrets, so add it to `.gitignore`.
 
-## Write the Azure Functions Handler
+## Write the Azure Functions handler
 
 The binary is an ordinary `net/http` server. The only Azure-specific detail is the listen port: the host tells you where to listen via `FUNCTIONS_CUSTOMHANDLER_PORT`. Create the SDK client and webhook verifier once at startup and reuse them across invocations.
 
@@ -305,7 +305,7 @@ func sendWelcome(w http.ResponseWriter, r *http.Request) {
 
 The caller owns the idempotency key, which is what makes a retry safe. Reusing a key with the same body inside 24 hours replays the stored result instead of sending again; reusing it with a *different* body returns `422`, so derive the key from the thing you're sending (`welcome-<user-id>`, say) rather than from the attempt. Left to itself the SDK generates a fresh random key per call, which covers only its own internal retries — of `429`, `5xx`, and network failures, with exponential backoff — and does nothing about a caller that retries. Note that a `5xx` outcome is never stored, so a retry after a server error can still send twice.
 
-## Handle Webhooks
+## Handle webhooks
 
 Because the host passes the original HTTP request through untouched, the SDK's `ParseRequest` works directly on it: it verifies the HMAC signature over the raw body bytes, rejects timestamps outside its five-minute tolerance in either direction, and returns a typed event:
 
@@ -372,7 +372,7 @@ Timestamp checking is not complete replay protection: the same correctly signed 
 
 Return 200 promptly because AhaSend retries webhooks that don't get a timely 2xx. For slow work, durably enqueue it before returning and process it with a queue-triggered function — which needs an `extensionBundle` entry in `host.json`, since custom handlers get non-HTTP triggers through extension bundles. Don't start a background goroutine and return: Azure Functions can shut down the instance after the invocation completes.
 
-## Build and Deploy
+## Build and deploy
 
 The Linux/x64 Function App used in this guide needs a linux/amd64 binary, so cross-compile, then publish with Core Tools:
 
@@ -385,7 +385,7 @@ func azure functionapp publish your-function-app
 
 For local testing, build for your own OS and run `func start`: the host reads `local.settings.json` and proxies to your binary. In CI, run the same two commands after `az login` (or use a deployment workflow such as the official Azure Functions GitHub Action).
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

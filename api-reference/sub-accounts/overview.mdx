@@ -31,7 +31,7 @@ Each sub-account reports a `status` field:
 
 The `monthly_credit` field is an optional monthly cap on the sub-account, where `0` means no cap.
 
-## Parent and Child Credentials
+## Parent and child credentials
 
 Use a [full parent API key](/api-reference/authentication) for the sub-account endpoints. A child key uses the child account ID on ordinary v2 endpoints and cannot manage its own nested API keys. The [setup guide](/scale/sub-accounts) walks through creation and safe storage of the one-time child secret.
 
@@ -69,7 +69,7 @@ Sub-account operations require dedicated scopes, all granted to **parent**-accou
 
 See the [Scopes reference](/api-reference/scopes#sub-account-management) for how scopes are evaluated.
 
-## Getting Started
+## Getting started
 
 <CardGroup cols={2}>
   <Card title="Create a Sub-Account" icon="plus" href="/api-reference/sub-accounts/create-sub-account">
@@ -86,7 +86,7 @@ See the [Scopes reference](/api-reference/scopes#sub-account-management) for how
   </Card>
 </CardGroup>
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sub-account setup](/scale/sub-accounts).
 - [Sub-account CLI](/cli/commands/subaccounts), [Child API keys](/api-reference/sub-accounts/create-sub-account-api-key), [Idempotency rules](/api-reference/idempotency).

@@ -43,7 +43,7 @@ print("Accepted by SMTP")
 
 Run `python quick_send.py`. It exits with an error if sending fails.
 
-## Configure the Application Backend
+## Configure the application backend
 
 Save this as `mail_settings.py` for the standalone check, or add the settings to your existing Django settings module. They use [Django's SMTP backend](https://docs.djangoproject.com/en/5.2/topics/email/#smtp-backend).
 
@@ -62,7 +62,7 @@ DEFAULT_FROM_EMAIL = os.environ["AHASEND_FROM"]
 
 Keep credentials in your deployment's secret store. `EMAIL_USE_TLS` enables STARTTLS. To use [port 465 with implicit TLS](/smtp#does-ahasend-support-port-465) instead, set `EMAIL_PORT = 465`, `EMAIL_USE_SSL = True` and `EMAIL_USE_TLS = False`; Django allows only one of the two to be `True`.
 
-## Send from Your Application
+## Send from your application
 
 Save this as `send_email.py` beside `mail_settings.py`. Set `AHASEND_TO=recipient@example.com` for the sandbox check.
 

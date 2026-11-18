@@ -8,7 +8,7 @@ icon: "bullhorn"
 
 The AhaSend Campaigns API creates marketing campaigns, sends them to your lists and segments and reports the results. This page gives the steps from a new campaign to its report, and the rules that apply to all campaign operations.
 
-## Campaign Templates and Campaigns
+## Campaign templates and campaigns
 
 A campaign template is a reusable design. In the dashboard, campaign templates are under **Marketing > Templates**. When you create a campaign with a `template_id`, the campaign copies the design of that campaign template. The copy belongs to the campaign: later changes to the campaign template do not change the campaign, and you can delete the campaign template without an effect on the campaign.
 
@@ -20,9 +20,9 @@ Before you create a campaign, make sure you have:
 
 - **An API key** with the `campaigns` scopes that you need, and the `templates` scopes to manage campaign templates. Copying a campaign template with `template_id` on Create Campaign needs only `campaigns:write`. See [Scopes](#scopes).
 - **A verified sender domain** that is not paused. See [domain setup](/domains).
-- **A list or a segment with contacts who can get marketing email.** Create lists and add contacts with the [Lists API](/api-reference/lists/overview), create segments with the [Segments API](/api-reference/segments/overview), or do both in the dashboard. See [Build and Send a Campaign](#build-and-send-a-campaign) for where to find the ID of a list or a segment.
+- **A list or a segment with contacts who can get marketing email.** Create lists and add contacts with the [Lists API](/api-reference/lists/overview), create segments with the [Segments API](/api-reference/segments/overview), or do both in the dashboard. See [Build and send a campaign](#build-and-send-a-campaign) for where to find the ID of a list or a segment.
 
-## Build and Send a Campaign
+## Build and send a campaign
 
 <Steps>
   <Step title="Make the design">
@@ -45,7 +45,7 @@ Before you create a campaign, make sure you have:
   </Step>
 
   <Step title="Send a test">
-    [Test Campaign](/api-reference/campaigns/test-campaign) sends the campaign to up to 5 addresses, so you can check it in a real inbox. See [Test Sends](#test-sends).
+    [Test Campaign](/api-reference/campaigns/test-campaign) sends the campaign to up to 5 addresses, so you can check it in a real inbox. See [Test sends](#test-sends).
   </Step>
 
   <Step title="Send now or later">
@@ -73,7 +73,7 @@ A campaign sends to the lists in `list_ids` and the segments in `segment_ids`, l
 
 In [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients), a recipient reached through a list has `list_name`, and one reached through a segment has `segment_id` and `segment_name` instead.
 
-## Campaign Status
+## Campaign status
 
 | Status | Meaning |
 |--------|---------|
@@ -89,7 +89,7 @@ In [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients),
 
 When a send reaches the daily marketing limit of your account, it continues later. `send_resumes_at` gives the time when it continues. In the dashboard, the page of a scheduled, sending or sent campaign shows your daily marketing limit.
 
-## Changes Only to Drafts
+## Changes only to drafts
 
 You can change, delete, test and send a campaign only while its status is `draft`. For a campaign in any other status, these operations answer `409` with `campaign is not a draft`.
 
@@ -112,13 +112,13 @@ A draft campaign is `ready` when it has no issues. Send Campaign refuses a campa
 | `text_unchecked` | The subject, the preview text and the design could not be checked right now. Nothing is known to be wrong with them. Try again in a moment. Under load, this issue can come and go between reads. |
 | `unsubscribe_link_missing` | The HTML of the design has no unsubscribe link. |
 
-## Unsubscribe Link
+## Unsubscribe link
 
 Every campaign must have an unsubscribe link. The HTML of the design must use `{{ unsubscribe_url }}` or `{{ unsubscribe_link }}`, with or without filters. Without one of them, the campaign has the issue `unsubscribe_link_missing`, and Send Campaign refuses it.
 
 A test send does not need the unsubscribe link, so you can test a design before you add it.
 
-## Test Sends
+## Test sends
 
 A test send goes to 1 to 5 addresses, and your account can send 50 test emails per day (UTC). [Test Campaign](/api-reference/campaigns/test-campaign) gives the rules of the daily limit.
 
@@ -160,7 +160,7 @@ See [Idempotency](/api-reference/idempotency).
 
 The `templates` scopes give access to transactional templates and campaign templates together. To choose lists and segments by ID, a campaign write needs only `campaigns:write`. To find the IDs, you need `lists:read` or `segments:read`. See [Permission scopes](/api-reference/scopes).
 
-## API Operations
+## API operations
 
 | Task | Endpoint reference |
 |---|---|
@@ -180,7 +180,7 @@ The `templates` scopes give access to transactional templates and campaign templ
 | Read the results | [Get Campaign Stats](/api-reference/campaigns/get-campaign-stats), [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients) |
 | Remove a draft | [Delete Campaign](/api-reference/campaigns/delete-campaign) |
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
 - [Lists API overview](/api-reference/lists/overview), [Segments API overview](/api-reference/segments/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

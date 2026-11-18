@@ -9,17 +9,17 @@ import EmailConceptRelated from "/snippets/email-concept-related.mdx";
 
 AhaSend helps you track transactional email delivery; this guide explains how to protect sender reputation, warm up sending, separate mail streams and meet mailbox-provider requirements.
 
-## What Does Delivered Mean?
+## What does delivered mean?
 
 Delivered means the recipient's mail server accepted the message. It does not prove the message is in the inbox or that a person read it. Review [delivery events](/api-reference/webhooks/message-delivered), [bounces](/bounces) and user reports together. Open and click tracking can be affected by mailbox software and bots; it is not a complete measure of engagement.
 
-## How Do I Protect Sender Reputation?
+## How do I protect sender reputation?
 
 Send messages people expect from their actions, such as a requested reset or an order receipt. Verify addresses during signup, remove invalid addresses from future jobs, and keep complaints and opt-outs blocked. Use consistent From names and domains so users recognize the sender. Keep promotional content out of time-sensitive service messages when it changes what the recipient signed up for.
 
 Watch delivery failures and temporary deferrals by receiving domain. A sudden rise can show a bad import, broken authentication, an unexpected volume change or a provider-specific block. Start with the [bounce report](/api-reference/reports/get-bounce-report) and [delivery statistics](/api-reference/reports/get-deliverability-report), then read actual SMTP replies. Repair the cause before raising volume.
 
-## How Should I Warm Up a Domain or IP?
+## How should I warm up a domain or IP?
 
 Warm-up means increasing real, wanted email gradually so receiving systems see a stable sending pattern. A new domain needs care even on a shared IP; a new dedicated IP also needs its own sending history. Buying a dedicated IP does not repair an untrusted recipient list. See [dedicated IP availability](/scale/dedicated-ips) and [IP pools](/scale/ip-pools) for the product settings and plan rules.
 
@@ -35,13 +35,13 @@ There is no fixed daily schedule that works for every sender. Base the next incr
 
 Avoid creating fake engagement or mailing old addresses just to warm an IP. Keep the previous sending path available during a migration, while ensuring each job is assigned to only one provider. The account's [sending limits](/facts) still apply.
 
-## Should Transactional Mail Use a Separate Subdomain?
+## Should transactional mail use a separate subdomain?
 
 Use a subdomain such as `notify.example.com` for transactional mail when you need separate credentials, reporting and mail policies from newsletters or employee mail. [Add and verify that exact subdomain](/domains), then use it in the visible From address and review DMARC alignment.
 
 A separate subdomain makes operations easier to manage; it does not guarantee that reputation is fully isolated from the parent domain. Keep the main domain's mailbox MX records in place. A return-path subdomain and a visible From subdomain serve different purposes; follow the records AhaSend gives you for each.
 
-## Which Sending Type Should My Domain Use?
+## Which sending type should my domain use?
 
 Each sending domain is transactional or marketing. The type decides which infrastructure and sending limit the domain's API and SMTP mail uses, and whether that mail gets one-click unsubscribe headers. Match it to the mail you send: transactional for messages a recipient expects from their own actions, marketing for newsletters, promotions and announcements. If you send both kinds, use a separate [subdomain](#should-transactional-mail-use-a-separate-subdomain) for each, so the two reputations stay apart.
 
@@ -51,7 +51,7 @@ Campaigns made with [Campaign Builder](/campaigns) always use the marketing infr
 Do not send marketing mail through the API or SMTP from a transactional domain. It can get your account paused.
 </Warning>
 
-## What Do Gmail and Yahoo Require?
+## What do Gmail and Yahoo require?
 
 Review these rules before launch and whenever a provider changes its guidance. This summary was checked in September 2026; the provider pages remain the source of current requirements.
 
@@ -67,7 +67,7 @@ Gmail applies its bulk requirements to senders exceeding 5,000 daily messages to
 
 A password reset requested by a user is different from a newsletter. Decide whether a message is marketing or subscribed mail by its actual purpose and content; calling it transactional does not remove provider requirements.
 
-## How Do I Add One-Click Unsubscribe?
+## How do I add one-click unsubscribe?
 
 It depends on how the mail is sent:
 

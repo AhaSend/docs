@@ -18,7 +18,7 @@ Available on Max. See [plans and features](/facts#plans-and-features).
 **Extended Compliance:** While AhaSend retains message data for up to 30 days, S3 archiving provides unlimited retention for industries with strict compliance requirements.
 </Info>
 
-## Why Use S3 Archiving?
+## Why use S3 archiving?
 
 S3-compatible object storage provides a cost-effective solution for long-term email archiving:
 
@@ -68,7 +68,7 @@ Before enabling S3 archiving, ensure you meet these prerequisites:
   </Accordion>
 </AccordionGroup>
 
-## Setting Up S3 Archiving
+## Setting up S3 archiving
 
 Configure S3 archiving in your AhaSend account settings:
 
@@ -119,11 +119,11 @@ Configure S3 archiving in your AhaSend account settings:
   </Step>
 </Steps>
 
-## File Organization Structure
+## File organization structure
 
 AhaSend organizes archived messages in a logical directory structure for easy navigation and retrieval:
 
-### Directory Pattern
+### Directory pattern
 
 ```text
 RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID/MESSAGE_ID.eml
@@ -132,7 +132,7 @@ RECIPIENT_EMAIL_ADDRESS/YYYY-MM-DD/MESSAGE_ID/YYYYMMDDTHHMMSSZ-STATUS.txt
 
 `MESSAGE_ID` is the message's `id`, which [Get Message](/api-reference/messages/get-message) takes.
 
-### Email Address Formatting
+### Email address formatting
 
 Special characters in email addresses are replaced for S3 compatibility:
 
@@ -146,7 +146,7 @@ Special characters in email addresses are replaced for S3 compatibility:
 - `user+tag@example.com` becomes `user_PLUS_tag_AT_example.com`
 - `sales+leads@company.org` becomes `sales_PLUS_leads_AT_company.org`
 
-### Complete Example Structure
+### Complete example structure
 
 ```text
 my-email-archive/
@@ -172,7 +172,7 @@ my-email-archive/
         │   └── 20240115T120100Z-Expiration.txt
 ```
 
-## Archived File Formats
+## Archived file formats
 
 AhaSend saves two types of files for each message:
 
@@ -203,7 +203,7 @@ AhaSend saves two types of files for each message:
   </Accordion>
 </AccordionGroup>
 
-## Provider-Specific Configuration
+## Provider-specific configuration
 
 <AccordionGroup>
   <Accordion title="Amazon AWS S3" icon="aws">
@@ -255,7 +255,7 @@ AhaSend saves two types of files for each message:
   </Accordion>
 </AccordionGroup>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Storage Management" icon="database">
@@ -354,7 +354,7 @@ AhaSend saves two types of files for each message:
   </Accordion>
 </AccordionGroup>
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [Retention settings](/retention).
 - [Account settings API](/api-reference/accounts/update-account), [Message API](/api-reference/messages/get-message), [Plans and limits](/facts).

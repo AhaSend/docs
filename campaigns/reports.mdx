@@ -7,7 +7,7 @@ icon: "chart-line"
 
 Every campaign has a report, live while it sends and complete when it is done. This page explains the numbers, how opens and clicks are counted, and how to get the data out.
 
-## The Numbers
+## The numbers
 
 | Number | Meaning |
 |---|---|
@@ -26,25 +26,25 @@ Open and click rates count unique recipients out of delivered messages. Bounce a
 
 On a sent campaign's page, the **View email** button next to the design opens the email as recipients got it.
 
-## Deliverability per Source
+## Deliverability per source
 
 The report shows recipients and delivered per source: each list and each [segment](/campaigns/segments) that the campaign went to. A contact reached through a list and a segment counts under the list. A source with a lower delivery rate than the others usually has older or less well-sourced addresses; the bounce reasons below tell you which.
 
-## Bounce Reasons
+## Bounce reasons
 
 The report groups bounces by classification: invalid recipient, inactive mailbox, bad domain, quota issues, policy related, authentication failed, and so on. Behind each classification are the recipients, with the reason the receiving server gave. See [bounce classifications](/bounces) for what each one means and what to do.
 
-## Opens and Clicks per Contact
+## Opens and clicks per contact
 
 The contact page shows the campaigns a contact received, opened and clicked. Use it when a recipient asks what they were sent, or to see how an individual engages.
 
-## Export and Webhooks
+## Export and webhooks
 
 Export a report as CSV or PDF from the campaign page. To follow campaign events in your own systems as they happen, use [webhooks](/integrations/webhooks): delivered, bounced, opened and clicked events of campaign messages arrive like those of your transactional mail.
 
 Through the API, [Get Campaign Stats](/api-reference/campaigns/get-campaign-stats) returns the counters and rates, and [List Campaign Recipients](/api-reference/campaigns/get-campaign-recipients) returns the recipients in one status or with one bounce classification.
 
-## Related Guides
+## Related guides
 
 - [Testing, review and sending](/campaigns/test-and-send), [Contacts and lists](/campaigns/contacts-and-lists), [Bounces and suppressions](/bounces).
 - [Campaigns API](/api-reference/campaigns/overview), [Webhooks](/integrations/webhooks), [Open tracking](/tracking/open-tracking) and [click tracking](/tracking/click-tracking).

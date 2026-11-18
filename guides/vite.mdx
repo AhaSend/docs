@@ -28,7 +28,7 @@ for example [Astro](/guides/astro).
 - An [AhaSend account](https://dash.ahasend.com/user/register) with a verified sending domain
 - An [API key](https://dash.ahasend.com/account/-/transactional/credentials) permitted to send from that domain, and your account ID
 
-## 1. Add a Backend
+## 1. Add a backend
 
 Install the SDK and Express in the package that runs your backend. A single
 repository can keep them at its root; what matters is that no module imported by
@@ -190,7 +190,7 @@ stored result is replayed for 24 hours and a server-error outcome releases the
 key for re-execution, so the surrounding workflow must tolerate an uncertain
 duplicate.
 
-## 2. Proxy `/api` During Development
+## 2. Proxy `/api` during development
 
 Vite's development server can forward `/api` requests to the backend, keeping
 the browser on one origin:
@@ -220,7 +220,7 @@ production, build the frontend and serve `dist/` from static hosting; configure
 the hosting platform or reverse proxy to send `/api` to the backend. Do not use
 `vite preview` as a production server.
 
-## 3. Call the Authenticated Endpoint
+## 3. Call the authenticated endpoint
 
 The browser sends no recipient or AhaSend credential. The backend derives the
 recipient from the authenticated session:
@@ -270,7 +270,7 @@ worker idempotent. Keep `event.data` out of your logs: it carries the recipient
 address, sender, and subject, plus the opener's IP and user agent on open and
 click events.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

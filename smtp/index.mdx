@@ -16,13 +16,13 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 **New to SMTP?** Check out our [SMTP credentials guide](/smtp/credentials) to get started, or try our [HTTP API](/send-api/send-email) for a more modern approach.
 </Info>
 
-## Which SMTP Settings Should I Use?
+## Which SMTP settings should I use?
 
 Use `send.ahasend.com` with your SMTP credentials on port 587, 25 or 2525 with STARTTLS, or on port 465 with implicit TLS.
 
 <SmtpSettings />
 
-## Does AhaSend Support Port 465?
+## Does AhaSend support port 465?
 
 Yes. Port 465 uses implicit TLS: your client starts TLS as soon as it connects, before the server greets it, and sends no `STARTTLS` command. It accepts AUTH PLAIN and AUTH LOGIN. Limits, response codes and [special headers](/smtp/special-headers) are the same on every port.
 
@@ -38,7 +38,7 @@ Set your client's security option to match the port:
 
 A client set to STARTTLS on port 465 waits for a greeting that never comes, and the server closes the connection after 30 seconds. A client set to SSL/TLS on port 587 fails at once with a TLS error such as `wrong version number`. See [port 465 problems](/troubleshooting#why-does-smtp-port-465-not-work).
 
-## What Are the SMTP Limits?
+## What are the SMTP limits?
 
 | Limit | Value | What to do |
 |---|---|---|
@@ -53,17 +53,17 @@ Base64 increases attachment size by about one third, so a 15 MB file uses about 
 
 Hourly sending limits start low for new accounts and grow with account age, plan and sending reputation; support can raise them. See [facts and limits](/facts).
 
-## What Do SMTP Response Codes Mean?
+## What do SMTP response codes mean?
 
 AhaSend returns standard SMTP response codes with specific meanings:
 
-### Success Codes
+### Success codes
 
 | Code | Description |
 |------|-------------|
 | `250` | **OK** - Message queued successfully for delivery |
 
-### Error Codes
+### Error codes
 
 | Code | Description | Action Required |
 |------|-------------|-----------------|
@@ -81,7 +81,7 @@ AhaSend returns standard SMTP response codes with specific meanings:
 **553 email Rejection:** This response is only returned if you enable [Recipient Shields](/security/reputation-shield) in your [Account Settings](https://dash.ahasend.com/account/-/settings).
 </Warning>
 
-## How Do I Set Per-message Options?
+## How do I set per-message options?
 
 AhaSend supports special email headers that modify system behavior:
 
@@ -89,9 +89,9 @@ AhaSend supports special email headers that modify system behavior:
   Learn about custom headers for tracking, routing, and advanced email features
 </Card>
 
-## Example Configurations
+## Example configurations
 
-### Basic SMTP Configuration
+### Basic SMTP configuration
 
 ```text
 Host: send.ahasend.com
@@ -102,7 +102,7 @@ Password: your-smtp-password
 Authentication: PLAIN
 ```
 
-### Port 465 Configuration
+### Port 465 configuration
 
 ```text
 Host: send.ahasend.com
@@ -113,7 +113,7 @@ Password: your-smtp-password
 Authentication: PLAIN or LOGIN
 ```
 
-### Programming Language Examples
+### Programming language examples
 
 <CardGroup cols={3}>
   <Card title="Node.js" icon="node-js" href="/smtp/nodejs">
@@ -136,7 +136,7 @@ Authentication: PLAIN or LOGIN
   </Card>
 </CardGroup>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Connection Management">
@@ -166,7 +166,7 @@ Authentication: PLAIN or LOGIN
   </Accordion>
 </AccordionGroup>
 
-## Security Considerations
+## Security considerations
 
 <Warning>
 **Always use TLS:** use STARTTLS on ports 25, 587 and 2525, or implicit TLS on port 465. Unencrypted SMTP connections are not secure and may expose your credentials and email content.
@@ -191,7 +191,7 @@ Authentication: PLAIN or LOGIN
 **Prefer HTTP API?** While SMTP is great for compatibility, our [HTTP API](/send-api/send-email) offers better performance, features, and error handling for modern applications.
 </Info>
 
-## Related Guides
+## Related guides
 
 - [Domain setup](/domains), [SMTP credentials](/smtp/credentials), [Special headers](/smtp/special-headers).
 - [Sandbox mode](/send-api/sandbox), [Retention](/retention), [API sending](/send-api/send-email).

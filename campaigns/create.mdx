@@ -7,7 +7,7 @@ icon: "pen-to-square"
 
 A campaign is one email to one or more lists and segments. This page walks through the parts of a campaign, in the order the campaign page shows them. You can fill them in any order and come back later; a campaign stays a draft until you send or schedule it.
 
-## Name and Start Point
+## Name and start point
 
 Under **Marketing > Campaigns**, click **Create Campaign**. Give it a name that you will recognize in the list later, such as "October newsletter"; recipients never see it. Under **Start From**, start from scratch or from a copy of one of your [campaign templates](/campaigns/templates).
 
@@ -31,7 +31,7 @@ The campaign page shows how many contacts the campaign will reach. From a list, 
 
 To send to part of a list, create a segment with a rule such as **Is a confirmed member of** that list, or filter the list with advanced search and **Save as new list**.
 
-## Subject and Preview Text
+## Subject and preview text
 
 The subject is what the inbox shows first. The preview text is the line most inboxes show after the subject; without one, the inbox shows the first words of the email instead, often the view-in-browser link. Both are required before the campaign can be sent, and both can use [personalization](#personalization).
 
@@ -56,7 +56,7 @@ Hi {{ first_name|default("there") }},
 
 Personalization works in the design, the subject and the preview text. To check the result, click **Preview** on the campaign page and choose a contact, or [send a test](/campaigns/test-and-send#test-sends) to one of your contacts. Template syntax that cannot be rendered, such as an unclosed brace, blocks the send with the issue `text_broken`.
 
-### The Unsubscribe Link
+### The unsubscribe link
 
 Every campaign must have an unsubscribe link in its HTML. New Simple Editor designs start with one in the footer. In the Advanced Editor, add it from the link dialog under **Automatic Links**, or write `{{ unsubscribe_url }}`:
 
@@ -74,7 +74,7 @@ This section is about campaigns. For the unsubscribe link and headers of mail yo
 
 The editors save as you work, and the campaign page saves each part when you confirm it. The page lists what is still missing before the campaign can go out. The same campaign can be edited in the dashboard and through the [API](/api-reference/campaigns/update-campaign); both change the same draft.
 
-## Related Guides
+## Related guides
 
 - [Testing, review and sending](/campaigns/test-and-send), [Contacts and lists](/campaigns/contacts-and-lists), [Segments](/campaigns/segments), [Templates and editors](/campaigns/templates).
 - [Campaigns API](/api-reference/campaigns/overview), [Domain setup](/domains), [Deliverability best practices](/deliverability).

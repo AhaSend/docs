@@ -58,11 +58,11 @@ For TypeScript projects, also install type definitions:
 npm install --save-dev @types/nodemailer
 ```
 
-## Connection Settings
+## Connection settings
 
 <SmtpSettings />
 
-## Basic Email Examples
+## Basic email examples
 
 <CodeGroup>
 
@@ -188,7 +188,7 @@ transporter.sendMail(mailOptions, (error, info) => {
 </Tip>
 
 
-## Testing with Sandbox Mode
+## Testing with sandbox mode
 
 Use sandbox mode to safely test your Node.js email integration:
 
@@ -312,9 +312,9 @@ sendSandboxEmail();
 **Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
 </Info>
 
-## Environment Variables & Best Practices
+## Environment variables & best practices
 
-### Using Environment Variables
+### Using environment variables
 <CodeGroup>
 ```javascript Nodemailer with environment variables
 const nodemailer = require('nodemailer');

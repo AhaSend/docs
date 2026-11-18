@@ -10,7 +10,7 @@ The AhaSend API returns the complete message by its ID, including raw content an
 Access requires `messages:read:all` or a read role matching the
 message's sender domain.
 
-Pass the message's `id`, which the send response and [List Messages](/api-reference/messages/get-messages) give, and which message events ([Message Events](/api-reference/webhooks#message-events)) and route events ([Inbound Routing](/integrations/routing)) carry as `data.id`.
+Pass the message's `id`, which the send response and [List Messages](/api-reference/messages/get-messages) give, and which message events ([Message events](/api-reference/webhooks#message-events)) and route events ([Inbound Routing](/integrations/routing)) carry as `data.id`.
 
 The main difference between the response of this API and the response of the
 [List Messages API](/api-reference/messages/get-messages) is that this API returns
@@ -19,7 +19,7 @@ while the message objects returned in the List Messages API do not include
 the email `content`.
 Message `content` and `content_parsed` are absent when message-data retention has expired or was set to 0. See [retention](/retention).
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Sending guide](/send-api/send-email).
 - [Message CLI](/cli/commands/messages), [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk).

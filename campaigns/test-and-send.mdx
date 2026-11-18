@@ -7,7 +7,7 @@ icon: "paper-plane"
 
 A campaign goes out in four steps: a test to yourself, the checks on the campaign page, a send or schedule, and AhaSend's own review of the list and the content. This page explains each step, the statuses a campaign passes through, and what to do when it is held, paused or needs a change.
 
-## Test Sends
+## Test sends
 
 Click **Send Test** on the campaign page and enter up to 3 addresses or pick up to 3 of your contacts; through the [API](/api-reference/campaigns/test-campaign), up to 5 addresses. A contact you pick gets the email with its own values. A typed address gets placeholder text in place of the contact fields, such as `--PLACEHOLDER for First Name--`. A click on the unsubscribe link in a test unsubscribes nobody.
 
@@ -31,7 +31,7 @@ The campaign page lists what is missing before the campaign can go out. The same
 | Unsubscribe link missing | Put `{{ unsubscribe_url }}` back in the design |
 | Text unchecked | The campaign could not be checked right now; nothing is known to be wrong. Check again in a moment |
 
-## Send Now or Schedule
+## Send now or schedule
 
 **Schedule & Send** sends the campaign now or at a date and time you choose. A scheduled campaign shows your daily marketing limit, so you can see whether it fits in one day.
 
@@ -71,15 +71,15 @@ Contact [support](mailto:support@ahasend.com) if you want to discuss a paused or
 | Canceled | Stopped before it finished; the page says why. |
 | Failed | Could not be sent; the page says why. |
 
-## The Daily Marketing Limit
+## The daily marketing limit
 
 Campaigns do not send faster than your account's [daily marketing limit](/campaigns/marketing-limit). When the limit is used up, the campaign waits and continues when capacity comes back; a campaign larger than the limit continues over the next days. The report shows an estimated finish and, while the campaign waits, the time it continues. The limit starts low for new accounts and grows with your plan, account age, volume and a low spam rate; support can raise it.
 
-## After the Send
+## After the send
 
 Open the report for delivered, opens, clicks, unsubscribes, complaints and bounces. See [reports](/campaigns/reports). Unsubscribes and spam complaints that mailbox providers report back are processed for you: the contact leaves that list and gets no more campaigns from it. A contact that the campaign reached through a segment gets no more marketing email from your account.
 
-## Related Guides
+## Related guides
 
 - [Creating a campaign](/campaigns/create), [Reports](/campaigns/reports), [Daily marketing limit](/campaigns/marketing-limit).
 - [Campaigns API](/api-reference/campaigns/overview), [Test Campaign](/api-reference/campaigns/test-campaign), [Send Campaign](/api-reference/campaigns/send-campaign).

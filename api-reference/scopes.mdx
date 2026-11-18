@@ -13,7 +13,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 In a domain scope such as `messages:send:{example.com}`, keep the braces and replace only `example.com` with your domain. The braces are part of the scope string.
 
-## Types of Scopes
+## Types of scopes
 
 AhaSend supports three types of scopes:
 
@@ -41,9 +41,9 @@ AhaSend supports three types of scopes:
   The wildcard scope `*` grants all permissions and should be used with extreme caution, preferably only for development and testing.
 </Note>
 
-## Available Scopes
+## Available scopes
 
-### Account Management
+### Account management
 
 | Scope | Description |
 |-------|-------------|
@@ -55,7 +55,7 @@ AhaSend supports three types of scopes:
 | `accounts:members:update` | Update member permissions |
 | `accounts:members:remove` | Remove account members |
 
-### Domain Management
+### Domain management
 
 | Scope | Description |
 |-------|-------------|
@@ -68,7 +68,7 @@ AhaSend supports three types of scopes:
   Domain deletion accepts `domains:delete:all` or the matching `domains:delete:{domain}` scope.
 </Warning>
 
-### Message Operations
+### Message operations
 
 <Tabs>
   <Tab title="Global Scopes">
@@ -88,7 +88,7 @@ AhaSend supports three types of scopes:
   </Tab>
 </Tabs>
 
-### Webhook Management
+### Webhook management
 
 <Tabs>
   <Tab title="Global Scopes">
@@ -110,7 +110,7 @@ AhaSend supports three types of scopes:
 
 Creating or updating a webhook with contact events on also needs `contacts:read`, and `lists:read` as well for the list events. See [contact events](/api-reference/webhooks#contact-events).
 
-### Email Routing
+### Email routing
 
 <Tabs>
   <Tab title="Global Scopes">
@@ -130,7 +130,7 @@ Creating or updating a webhook with contact events on also needs `contacts:read`
   </Tab>
 </Tabs>
 
-### SMTP Credentials
+### SMTP credentials
 
 <Tabs>
   <Tab title="Global Scopes">
@@ -210,7 +210,7 @@ Removing a contact from a list needs `lists:write`, not `lists:delete`. Listing 
 
 Previewing a definition, listing the members of a segment and listing the segments of a contact read contacts, so they need `contacts:read` as well as `segments:read`. See the [Segments API](/api-reference/segments/overview).
 
-### API Key Management
+### API key management
 
 | Scope | Description |
 |-------|-------------|
@@ -218,7 +218,7 @@ Previewing a definition, listing the members of a segment and listing the segmen
 | `api-keys:write` | Create and update API keys |
 | `api-keys:delete` | Delete API keys |
 
-### Sub-Account Management
+### Sub-account management
 
 These scopes are granted to **parent**-account API keys to manage sub-accounts and the API keys owned by those sub-accounts. See the [Sub-Accounts API](/api-reference/sub-accounts/overview) for the full workflow.
 
@@ -237,7 +237,7 @@ These scopes are granted to **parent**-account API keys to manage sub-accounts a
   Sub-account API keys are managed only with parent credentials that hold the relevant `sub-account-api-keys:*` scope. A sub-account's own credentials cannot create or manage its nested API keys.
 </Note>
 
-### Statistics and Reports
+### Statistics and reports
 
 <Tabs>
   <Tab title="Global Scopes">
@@ -255,9 +255,9 @@ These scopes are granted to **parent**-account API keys to manage sub-accounts a
 
 These scopes cover the [transactional reports](/api-reference/reports/get-deliverability-report) and [Get Email Statistics](/api-reference/reports/get-email-statistics). The earlier names `statistics-transactional:read:all` and `statistics-transactional:read:{domain}` still work and give the same access. One key cannot hold the same scope under both names.
 
-## Scope Validation and Hierarchy
+## Scope validation and hierarchy
 
-### Validation Rules
+### Validation rules
 
 1. **Domain Ownership**: Domain-specific scopes are only valid if you own the specified domain
 2. **No Duplicates**: Duplicate scopes in the same API key are not allowed
@@ -267,7 +267,7 @@ These scopes cover the [transactional reports](/api-reference/reports/get-delive
   If you have both `messages:send:all` and `messages:send:{example.com}`, only the global scope will be retained as it already covers the specific domain scope.
 </Note>
 
-### Scope Hierarchy
+### Scope hierarchy
 
 ```mermaid
 graph TD
@@ -281,7 +281,7 @@ graph TD
     style D fill:#96ceb4,color:#1a1a1a
 ```
 
-## Authorization Flow
+## Authorization flow
 
 When an API request is made, the system checks scopes in the following order:
 
@@ -305,7 +305,7 @@ When an API request is made, the system checks scopes in the following order:
   </Step>
 </Steps>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Principle of Least Privilege" icon="shield-check">
@@ -358,7 +358,7 @@ When an API request is made, the system checks scopes in the following order:
   </Accordion>
 </AccordionGroup>
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart), [Node.js SDK](/guides/nodejs-sdk).

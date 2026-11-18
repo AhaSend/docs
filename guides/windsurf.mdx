@@ -34,7 +34,7 @@ Cascade writes and runs code, but it can't verify your domain or create your cre
   </Step>
 </Steps>
 
-## Step 1: Install the SDK Before You Prompt
+## Step 1: Install the SDK before you prompt
 
 Do this yourself. An agent that finds the dependency already in `package.json` has far less room to improvise a different one.
 
@@ -60,7 +60,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Step 2: Give Cascade the Ground Truth with a Rules File
+## Step 2: Give Cascade the ground truth with a rules file
 
 Give Cascade an authoritative project Rule instead of relying on generated code to reconstruct the integration from general context. Cascade can also search documentation, but a Rule keeps the critical constraints available inside the repository.
 
@@ -79,7 +79,7 @@ description: AhaSend email integration rules
 
 To start from a draft, point Cascade at AhaSend's machine-readable doc index at `https://ahasend.com/docs/llms.txt`, ask it to write the rule from those pages, then check the result against the list above.
 
-## Step 3: Capture the Integration as a Workflow
+## Step 3: Capture the integration as a workflow
 
 A Workflow is a Markdown file under `.windsurf/workflows/` with a short frontmatter description and a series of steps: a saved prompt-plus-procedure that Cascade can replay instead of you re-explaining the task each time.
 
@@ -117,7 +117,7 @@ description: Add a transactional email send via the AhaSend SDK
 
 Adding email to a new screen is now one invocation, and because the recipe encodes the same facts as your Rules file, every replay lands the integration the same way.
 
-## Step 4: Prompt Cascade with Specifics
+## Step 4: Prompt Cascade with specifics
 
 Whether you're invoking the Workflow or asking directly, name the file and the behavior:
 
@@ -196,7 +196,7 @@ export async function sendWelcome(signupEvent: SignupEvent) {
 }
 ```
 
-## Step 5: Test in Sandbox Mode
+## Step 5: Test in sandbox mode
 
 Cascade can run terminal commands, but a production-capable API key remains production-capable even when one request sets `sandbox: true`. Prefer mocked tests. If you explicitly approve a live integration check, use a dedicated domain-scoped credential configured in Sandbox mode. [Sandbox mode](/send-api/sandbox) validates and processes the message, triggers relevant configured webhooks, consumes no email credits, and never delivers it.
 
@@ -213,7 +213,7 @@ const result = await ahasend.messages.send({
 
 With explicit approval, ask Cascade to send once with the dedicated Sandbox-mode credential and confirm no recipient result has `status === "error"`. Swap `sandbox_result` to `"deliver"`, `"bounce"`, `"defer"`, `"fail"`, or `"suppress"` to trigger the applicable configured webhook event. A webhook test also needs a configured endpoint that AhaSend can reach. Keep delivery fail-closed through `AHASEND_DELIVERY_MODE`; do not infer live delivery from a generic environment name.
 
-## Step 6: Read the Diff
+## Step 6: Read the diff
 
 Confirm these before you commit:
 
@@ -226,7 +226,7 @@ Confirm these before you commit:
   If Cascade scaffolds frontend code, make sure the key never lands in a client-exposed variable (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `NUXT_PUBLIC_`). Anything with those prefixes ships to the browser.
 </Warning>
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

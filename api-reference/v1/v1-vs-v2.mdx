@@ -11,7 +11,7 @@ AhaSend offers two API versions for sending emails. This page helps you understa
 **API v1 is in maintenance mode.** It will continue to work, but all new features and improvements go to API v2. We recommend API v2 for new integrations.
 </Info>
 
-## Quick Comparison
+## Quick comparison
 
 | | API v1 | API v2 |
 |--|--------|--------|
@@ -36,13 +36,13 @@ AhaSend offers two API versions for sending emails. This page helps you understa
 | **Resource management** | No | Yes (domains, webhooks, routes, etc.) |
 | **Reporting & analytics** | No | Yes |
 
-## When to Use API v1
+## When to use API v1
 
 API v1 is a single endpoint for sending emails. Choose it if you are maintaining an existing integration that already uses v1.
 
 For new integrations, use API v2.
 
-## When to Use API v2
+## When to use API v2
 
 API v2 is the recommended choice for all new integrations. It includes everything v1 can do, plus:
 
@@ -59,7 +59,7 @@ API v2 is the recommended choice for all new integrations. It includes everythin
 - **Full resource management** — domains, webhooks, routes, suppressions, and more
 - **Delivery analytics and reporting**
 
-## Key Differences in Detail
+## Key differences in detail
 
 ### Authentication
 
@@ -87,7 +87,7 @@ API v2 is the recommended choice for all new integrations. It includes everythin
   </Tab>
 </Tabs>
 
-### Request Structure
+### Request structure
 
 <Tabs>
   <Tab title="API v1">
@@ -155,7 +155,7 @@ API v2 is the recommended choice for all new integrations. It includes everythin
   </Tab>
 </Tabs>
 
-### Response Format
+### Response format
 
 <Tabs>
   <Tab title="API v1">
@@ -207,7 +207,7 @@ API v2 is the recommended choice for all new integrations. It includes everythin
   </Tab>
 </Tabs>
 
-### Beyond Sending: Managing Resources with API v2
+### Beyond sending: Managing resources with API v2
 
 API v1 only sends emails. API v2 provides a complete management API:
 
@@ -264,7 +264,7 @@ API v1 only sends emails. API v2 provides a complete management API:
   </Step>
 </Steps>
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="API v2 Credentials" icon="key" href="/send-api/credentials">
@@ -283,7 +283,7 @@ API v1 only sends emails. API v2 provides a complete management API:
 
 For the v2 URL, copy the account UUID from **Account Settings → API Keys** or use `ahasend auth status`. See [account ID and authentication](/api-reference/authentication). Scheduled first attempts must be in the future and within 7 days; expiry must be in the future and within 8 days.
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials).
 - [REST sending guide](/send-api/send-email), [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart).

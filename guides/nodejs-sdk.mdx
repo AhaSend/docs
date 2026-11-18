@@ -44,7 +44,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Runtime Compatibility
+## Runtime compatibility
 
 | Runtime | Supported versions |
 | --- | --- |
@@ -60,7 +60,7 @@ TypeScript declarations ship with the package, so there is no SDK-specific `@typ
   Browsers and browser Service Workers are refused, because the API key grants full send access and anything the browser can read, a visitor can read. `dangerouslyAllowBrowser: true` exists only for browser-shaped server test environments.
 </Warning>
 
-## Send Your First Email
+## Send your first email
 
 Create a [least-privilege API key](/send-api/credentials) with `messages:send:{your-domain}`, and keep the key and account ID in an uncommitted `.env` file or your deployment secret store.
 
@@ -103,7 +103,7 @@ Body fields are snake_case, matching the API. Beyond the ones above: `reply_to`,
   `sandbox_result` rehearses a specific outcome: `deliver`, `bounce`, `defer`, `fail`, or `suppress`. Each one fires the matching webhook, so you can test your bounce handling without a real bounce. See [Sandbox Mode](/send-api/sandbox).
 </Tip>
 
-## Configure the Client
+## Configure the client
 
 Build the client once at module scope and share it. Client-level retry, telemetry, idempotency, and local rate-pacing configuration then stays consistent, and any enabled pacing queue is shared by your handlers in that process.
 
@@ -167,7 +167,7 @@ try {
 
 Match on `error.code` or `error.status`, never on message text. Logs, metrics, traces, and exception tags should allowlist only aggregate counts, appropriate opaque IDs, HTTP status, SDK error code, and request ID. Do not serialize whole requests, responses, events, or errors, and do not log `.body`, `.message`, credentials, addresses, content, or idempotency keys.
 
-## Retries and Idempotency
+## Retries and idempotency
 
 The SDK retries only when the generated operation profile marks the call safe, idempotent, or protected by an idempotency key. For an eligible call it retries `408`, `429`, `5xx`, network failures, timeouts, and an idempotency-in-progress `409` carrying the required replay and retry headers. Caller cancellation and other `4xx` responses are terminal. Create operations declared idempotent receive an automatically generated UUID `Idempotency-Key`, which is reused across the logical call's internal retries.
 
@@ -254,7 +254,7 @@ Timestamp checking rejects any delivery more than five minutes from your clock, 
 
 Direct verification and every adapter enforce a fixed 30,000,000-byte body ceiling. Adapters buffer the whole body before verifying it, and decoding it costs more memory again, so narrow that ceiling to what your payloads actually need: `maxBodyBytes` is a trailing option on `expressWebhookHandler`, `fastifyWebhookHandler`, and `nextRouteHandler`, and it only lowers the fixed limit, never raises it. `WebhookVerifier` takes no such option — on the direct path above, bound the read that produces `rawBody` yourself. Either way, set matching request-size and concurrency limits at the reverse proxy.
 
-## Framework Guides
+## Framework guides
 
 The JavaScript and TypeScript guides use this SDK. The Go framework cards use the [Go SDK](/guides/go-sdk).
 
@@ -262,7 +262,7 @@ The JavaScript and TypeScript guides use this SDK. The Go framework cards use th
 
 Every other framework, runtime, and platform is in the sidebar. Building in Go instead? See the [Go SDK](/guides/go-sdk).
 
-## Source and Support
+## Source and support
 
 MIT licensed, developed at [github.com/AhaSend/ahasend-ts](https://github.com/AhaSend/ahasend-ts). Report reproducible bugs as GitHub issues, without credentials, message content, or webhook payloads.
 

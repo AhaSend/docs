@@ -38,7 +38,7 @@ The AhaSend API sends a test of a draft campaign. Access requires `campaigns:sen
 **Idempotency:**
 This operation accepts an `Idempotency-Key` header. A `2xx` answer is stored, so a retry with the same key replays it and sends nothing again. Unlike other operations, a `4xx` answer is not stored. A retry with the same key, for example after the daily limit resets, gets a new answer. A `502` or a `503` is not stored either, so you can retry it with the same key. See [Idempotency](/api-reference/idempotency).
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
 - [Send Campaign](/api-reference/campaigns/send-campaign), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

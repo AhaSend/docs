@@ -26,7 +26,7 @@ Available subcommands:
 
 `webhooks get`, `webhooks update`, `webhooks delete` and `webhooks trigger` take the webhook ID as their positional argument. A webhook ID that is not a UUID fails with exit code 4 before any request. Find IDs with `ahasend webhooks list`.
 
-## Event Types
+## Event types
 
 `--events` on `list`, `create`, `update`, `listen` and `trigger` takes each event by its key or by its type, such as `delivered` or `message.delivered`. See the [event reference](/api-reference/webhooks) for the payloads.
 
@@ -59,7 +59,7 @@ Available subcommands:
 
 `--events` can be given several times, and each value can hold several events separated by commas, so `--events delivered,bounced` is the same as `--events delivered --events bounced`. An unknown event, or the same event given twice (by its key, its type or both), fails with exit code 4 before any request.
 
-### Contact Events
+### Contact events
 
 The last eight events of the table are the contact events. They need an account with the marketing features, and an API key with the `contacts:read` scope, and `lists:read` as well for `contact_added_to_list`, `contact_removed_from_list`, `contact_subscribed`, `contact_unsubscribed` and `contact_complained`. The API checks the key for every event an enabled webhook has on, so a change to such a webhook needs these scopes even when it names no event. See [contact events](/api-reference/webhooks#contact-events) for what they report.
 
@@ -73,7 +73,7 @@ A webhook's origins pick whose changes its contact and suppression events report
 
 `webhooks get` shows the origins after the events, and CSV output has an `origins` column after `events`. For a webhook that gets every origin, table and plain output show `all`, and CSV output an empty cell. A table of webhooks has no origins column.
 
-## List Webhooks
+## List webhooks
 
 ```bash
 # List all webhooks
@@ -92,9 +92,9 @@ ahasend webhooks list --enabled=false
 ahasend webhooks list --events contact_created
 ```
 
-`--events` lists only the webhooks that have every event it names on, and needs CLI v0.4.0 or later. The API applies the `--enabled` and `--events` filters, so a page holds up to `--limit` matching webhooks. Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
+`--events` lists only the webhooks that have every event it names on, and needs CLI v0.4.0 or later. The API applies the `--enabled` and `--events` filters, so a page holds up to `--limit` matching webhooks. Pages work as [Lists and pagination](/cli/configuration#lists-and-pagination) describes.
 
-## Create Webhook
+## Create webhook
 
 ```bash
 # Create a webhook for three events of every domain
@@ -133,7 +133,7 @@ ahasend webhooks create \
 
 The output shows the webhook's secret once. Save it to [verify the webhook's signatures](/api-reference/webhooks/security); `webhooks get` does not show it.
 
-## Get Webhook
+## Get webhook
 
 Show a webhook's name, URL, status, events, origins, scope and domains, its timestamps and its call counters (successful calls, failed calls, errors since the last success and the last call time). The output has no secret: the API returns it only when you create the webhook.
 
@@ -144,7 +144,7 @@ ahasend webhooks get YOUR_RESOURCE_ID
 ahasend webhooks get YOUR_RESOURCE_ID --output json > webhook-backup.json
 ```
 
-## Update Webhook
+## Update webhook
 
 Only the flags you set are sent, and other settings stay as they are, except that the event flags set the whole list of events (see the warning below). Give at least one flag.
 
@@ -185,12 +185,12 @@ ahasend webhooks update YOUR_RESOURCE_ID --scope global
 On CLI v0.4.0 or later, the event flags set the webhook's whole list of events: every event they do not name is turned off, including a contact event turned on in the dashboard. On CLI v0.5.0 or later, this includes `sending_type_changed`. To keep an event, name it too.
 </Warning>
 
-- `--events` gives the webhook the events it names, and `--all-events` and `--all-contact-events` select events as [Contact Events](#contact-events) describes. `--clear-events` turns every event off, and cannot be combined with the other event flags.
+- `--events` gives the webhook the events it names, and `--all-events` and `--all-contact-events` select events as [Contact events](#contact-events) describes. `--clear-events` turns every event off, and cannot be combined with the other event flags.
 - `--origins` and `--all-origins` change the origins, as [Origins](#origins) describes.
 - `--domains` replaces the domains of a scoped webhook. The API ignores it on a global webhook unless you also give `--scope scoped`. `--scope global --domains <domain>` fails with exit code 4.
 - `--scope global` removes the domain restriction.
 
-## Delete Webhook
+## Delete webhook
 
 ```bash
 # Delete with a confirmation prompt
@@ -202,7 +202,7 @@ ahasend webhooks delete YOUR_RESOURCE_ID --force
 
 The command asks for confirmation first, as [Prompts](/cli/configuration#prompts) describes; `--force` (`-f`) skips it. A deleted webhook cannot be restored.
 
-## Listen for Events
+## Listen for events
 
 `webhooks listen` streams webhook events to your terminal over a WebSocket connection, and can forward each event to a local endpoint. It prints events as text, whatever `--output` says, and runs until you press Ctrl+C or the connection closes.
 
@@ -223,7 +223,7 @@ The API key needs the `webhooks:write:all` scope. Without `--webhook-id`, the AP
 
 The stream sends only the events that the API key's scopes can read. On CLI v0.4.0 or later, for each family of events the webhook turns on whose read scope the key does not have, the command prints the server's warning on stderr as it connects, such as `Warning: The API key does not have the suppressions:read scope, so suppression events are not sent to this stream`.
 
-## Trigger Test Events
+## Trigger test events
 
 `webhooks trigger` asks the API to send test events to a webhook, so you can test your endpoint without waiting for real email events.
 
@@ -244,7 +244,7 @@ ahasend webhooks trigger YOUR_RESOURCE_ID --all-contact-events
 
 Give `--events`, `--all-events` or `--all-contact-events`. `--all-events` and `--all-contact-events` together trigger all 22 events. Without an event flag, the command fails with exit code 4. The output is the API's message. A disabled webhook gets no events: the API answers that they are queued, and then drops them. Enable the webhook first with `ahasend webhooks update YOUR_RESOURCE_ID --enabled`.
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -318,7 +318,7 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 | `--scope string` | New webhook scope: `global` or `scoped` |
 | `--url string` | New webhook URL |
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Webhook setup](/integrations/webhooks).
 - [Event reference](/api-reference/webhooks), [Local webhook testing](/cli/webhook-testing), [Signature verification](/api-reference/webhooks/security).

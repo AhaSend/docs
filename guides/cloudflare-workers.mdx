@@ -68,7 +68,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Configure Secrets
+## Configure secrets
 
 Store credentials as Worker secrets, never in the `vars` block of your Wrangler configuration file — `wrangler.jsonc` in projects scaffolded today, `wrangler.toml` in older ones — which ends up in source control:
 
@@ -99,7 +99,7 @@ export interface Env {
 }
 ```
 
-## Send an Email from a Worker
+## Send an email from a Worker
 
 Pass `fetch: fetch.bind(globalThis)` when constructing the SDK client in workerd. Cloudflare requires the global binding when code stores and later calls `fetch`; without it, SDK 0.2.1 can fail with an [Illegal invocation error](https://developers.cloudflare.com/workers/observability/errors/#illegal-invocation-errors).
 
@@ -203,7 +203,7 @@ The example defaults to `sandbox = true`, which validates without delivering. Ch
   Isolates are reused across requests, so never cache the client in a module-scope variable keyed to one request's `env`. Constructing it inside `fetch` is cheap and keeps each request's credentials scoped to that request.
 </Warning>
 
-## Handle Webhooks
+## Handle webhooks
 
 The webhooks subpath verifies signatures with Web Crypto, which workerd provides natively. The SDK's `nextRouteHandler` is its web-standard `Request`/`Response` adapter despite the name, so it also works in Workers. It streams the authentic body bytes, stops above the configured limit, and returns an opaque 400 or 413 for verification failures:
 
@@ -246,7 +246,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 npx wrangler deploy
 ```
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

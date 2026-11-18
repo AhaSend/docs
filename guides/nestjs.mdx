@@ -46,7 +46,7 @@ bun add @ahasend/sdk @nestjs/config @nestjs/throttler class-transformer class-va
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 For local development, add your credentials to an uncommitted `.env` file, which `@nestjs/config` loads. In production, inject the same variables from your platform's secret manager:
 
@@ -80,7 +80,7 @@ import { InternalAuthGuard } from "./mail/internal-auth.guard";
 export class AppModule {}
 ```
 
-## Create the Client
+## Create the client
 
 Wrap `AhaSendClient` in an injectable service. Nest providers are singletons by default, so this reuses one configured client and any optional local rate limiter across requests. The SDK still creates a fresh automatic idempotency key for each logical send call and reuses it only for that call's internal retries:
 
@@ -119,7 +119,7 @@ export class AhaSendService {
 
 A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first.
 
-## Send an Email from a NestJS Controller
+## Send an email from a NestJS controller
 
 Do not expose a send-any-email route to unauthenticated clients. This example protects a backend-to-backend HTTPS route with a long random bearer token, and puts a rate limit in front of the token check so a stolen or brute-forced token cannot turn the route into an open mail relay. If your app already authenticates users, replace this guard with your existing guard and load the recipient address from your trusted user record instead of accepting an arbitrary address from the browser.
 
@@ -234,7 +234,7 @@ The stable, hashed signup ID above lets a retry reuse the same idempotency key w
 
 The send example uses `sandbox: true` to validate the request without delivering anything. It changes the request body, so give a sandbox send a different `idempotencyKey` from the live send it stands in for.
 
-## Handle Webhooks
+## Handle webhooks
 
 There is no Nest-specific adapter, so use the SDK's generic `WebhookVerifier` directly. It needs the **raw request body**, which Nest can retain for you: pass `rawBody: true` to `NestFactory.create`, and Nest exposes the unparsed bytes as `req.rawBody` alongside the parsed body.
 
@@ -316,7 +316,7 @@ The JSON parser is capped at 30,000,000 bytes, matching the SDK verifier. This i
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

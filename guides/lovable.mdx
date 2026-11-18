@@ -18,7 +18,7 @@ Ask [Lovable](https://lovable.dev) for email and it will build something that sh
 
 <SendGuideRules />
 
-## AhaSend Rules for AI Coding Agents
+## AhaSend rules for AI coding agents
 
 Add this shared block to your project instructions:
 
@@ -35,13 +35,13 @@ This example pins `@supabase/server` to 1.4.1. Its [withSupabase helper](https:/
 
 Lovable cannot verify your sending domain or create your credentials. Those steps happen in the [dashboard](https://dash.ahasend.com) and are quick: the [quickstart](/quickstart) has both. Scope the key to `messages:send:{your-domain}` rather than `messages:send:all`, so if the key ever leaks the blast radius is one domain's outbound mail instead of your whole account.
 
-## Install the SDK for a Local Check
+## Install the SDK for a local check
 
 Install Deno 2.x on your own computer. The `npm:` import in the example below downloads the SDK; no browser package installation is needed.
 
 <QuickSend />
 
-## Store the Key as a Secret
+## Store the key as a secret
 
 Anything the browser can read, a visitor can read, so the key never goes in frontend code or in a `VITE_`-prefixed variable, which ships to the browser by design.
 
@@ -59,7 +59,7 @@ AHASEND_SANDBOX=true
 
 Lovable encrypts these and injects them into your Edge Functions at runtime. They are not part of your frontend bundle, they are not in your project's `.env`, and they do not show up in the published site. That is the whole point.
 
-## Prompt Lovable for a Backend Send
+## Prompt Lovable for a backend send
 
 Lovable Cloud runs backend integrations in Edge Functions. Import [`@ahasend/sdk`](https://www.npmjs.com/package/@ahasend/sdk) with a Deno `npm:` specifier, read secrets with `Deno.env.get()`, and pass them to the constructor.
 
@@ -157,7 +157,7 @@ The stable key protects retries of the same welcome-email operation. Reuse a key
 
 That key is also the send-rate ceiling on this endpoint. Deriving it from the user id means one account gets one welcome email per idempotency window no matter how many times the button is clicked; the calls after the first replay the stored response instead of mailing again. If Lovable rewrites the key to a fresh UUID per request — a reasonable default in other contexts, and what AhaSend's own [idempotency guide](/api-reference/idempotency) suggests for one-off retries — that ceiling disappears and anyone who can sign up can make your account send on demand. For durable exactly-once behavior beyond the API's idempotency window, atomically claim a welcome-email job in your database and process it from a retryable outbox or worker.
 
-## Verify Where the Key Landed
+## Verify where the key landed
 
 Lovable's preview will not catch this mistake for you. Use Lovable's code view to confirm these checks.
 
@@ -177,7 +177,7 @@ Lovable's preview will not catch this mistake for you. Use Lovable's code view t
   If you are not comfortable reading the code, ask Lovable directly: "Is my AhaSend API key exposed anywhere in the frontend bundle?" Then verify its answer against the checks above rather than taking the success toast at face value.
 </Tip>
 
-## Test in Sandbox Mode
+## Test in sandbox mode
 
 Keep `AHASEND_SANDBOX=true` while you build. In sandbox mode AhaSend runs your message through validation and processing, fires the relevant webhooks, shows it in your dashboard logs, and then stops before delivery. It costs nothing and it cannot email a real customer by accident.
 
@@ -185,7 +185,7 @@ Sandbox also lets you rehearse the unhappy paths. Add `sandbox_result: "bounce"`
 
 Know what that flip costs you. A Lovable project has one Cloud backend and one Secrets store, so the editor preview and the published app read the same `AHASEND_SANDBOX`: turning it off turns real sending on for both at once, including the next time you click the button in the preview. If you want to keep rehearsing after launch, do it on the AhaSend side instead of with this flag — a credential created in sandbox mode simulates every send made with it regardless of the request, so a separate development project holding a sandbox-mode key cannot mail a real customer even if the flag is wrong. The [sandbox mode guide](/send-api/sandbox) covers creating one.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

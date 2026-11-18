@@ -9,7 +9,7 @@ AhaSend signs every webhook and inbound route request with HMAC-SHA256; this pag
 
 Signed webhooks and routes are available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
-## Which Headers Does AhaSend Send?
+## Which headers does AhaSend send?
 
 All webhook and route requests include Standard Webhooks security headers for verification:
 - `webhook-id`: Unique identifier for the webhook event (used as idempotency key)
@@ -37,7 +37,7 @@ against the raw request body bytes (before any JSON parsing), and reject
 deliveries whose `webhook-timestamp` is outside your tolerance window in either
 direction to prevent replay.
 
-## Which Secret Should I Use?
+## Which secret should I use?
 
 Webhook secrets start with `aha-whsec-`; route secrets start with `aha-rsec-`. Use the entire secret, including its prefix, as the HMAC-SHA256 key. Do not base64-decode it.
 
@@ -45,7 +45,7 @@ The signed input is the delivery ID, a dot, the Unix timestamp, a dot, and the e
 
 The `webhook-id` header identifies a delivery. Payload `webhook_id` identifies the configured webhook, and `route_id` identifies a route. Deduplicate the header value only after verification, atomically with durable work. Return 2xx for verified unknown event types and already-processed deliveries.
 
-## Runnable Verification Examples
+## Runnable verification examples
 
 For a route delivery, set `AHASEND_WEBHOOK_SECRET` in these examples to that route's `aha-rsec-` secret; the verification code is the same. For an email event, use that webhook's `aha-whsec-` secret.
 
@@ -200,7 +200,7 @@ Python's bytes constructor preserves the raw key. The PHP example computes `base
 
 In an HTTP handler, enforce the 30,000,000-byte limit while reading the stream, before buffering. Keep a lower limit if your hosting platform requires one. SDK adapters already bound their reads; see the [Node.js SDK](/guides/nodejs-sdk) and [Go SDK](/guides/go-sdk) examples.
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Webhook setup](/integrations/webhooks).
 - [Event reference](/api-reference/webhooks), [Webhook CLI](/cli/commands/webhooks), [Local webhook testing](/cli/webhook-testing).

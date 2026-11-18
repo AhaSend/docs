@@ -46,7 +46,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 Declare the keys in `runtimeConfig` so Nuxt maps them from `NUXT_`-prefixed environment variables at runtime:
 
@@ -73,7 +73,7 @@ NUXT_WELCOME_ROUTE_TOKEN=replace-with-a-long-random-value
   Anything under `runtimeConfig.public` (or a `NUXT_PUBLIC_`-prefixed variable) is serialized into the client payload and readable by anyone in the browser. Keep all AhaSend credentials in the top-level, server-only section of `runtimeConfig`.
 </Warning>
 
-## Create the Client
+## Create the client
 
 Create the client on first use and reuse it across requests:
 
@@ -104,7 +104,7 @@ export function useAhaSend(event: H3Event): AhaSendClient {
 
 Files in `server/utils/` are auto-imported in all server routes, so `useAhaSend()` is available everywhere without an import. Passing the request event lets Nuxt apply the runtime environment overrides for that request.
 
-## Send an Email from a Nuxt Server Route
+## Send an email from a Nuxt server route
 
 ```ts server/api/welcome.post.ts
 import { isAhaSendError } from "@ahasend/sdk";
@@ -217,7 +217,7 @@ Message sends draw on your account's [rate limit](/api-reference/rate-limits) of
 
 The send example uses `sandbox: true` to validate the request without delivering anything. Idempotency keys are scoped to the account and matched against a hash of the request body, so sandbox is not a separate namespace: reusing `welcome:<eventId>` with `sandbox` flipped is the same key carrying a different payload, which the API rejects with a 422 for the 24 hours the original record lives. Give sandbox sends their own key prefix.
 
-## Handle Webhooks
+## Handle webhooks
 
 Signature verification needs the **exact request bytes**. The Node-server example below reads `event.node.req` directly and counts bytes before buffering them. Do not run `readBody()` or other body-reading middleware first: parsing and re-serializing JSON changes the signed bytes. Answer every failed check with an empty body so nothing about the failure reaches the sender:
 
@@ -321,7 +321,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 Signature timestamp checks do not prevent a valid delivery from being replayed inside the accepted window. Before adding side effects, atomically store the `webhook-id` header in a table with a unique constraint together with a durable work/outbox record. On a uniqueness conflict, acknowledge the delivery without enqueuing the work again. Process that work idempotently, acknowledge unknown event types, and return a successful response quickly so AhaSend does not retry completed work.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

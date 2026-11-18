@@ -39,7 +39,7 @@ This writes the dependency to `deno.json`. Commit both `deno.json` and `deno.loc
 import { AhaSendClient } from "@ahasend/sdk";
 ```
 
-## Configure Environment Variables
+## Configure environment variables
 
 On Deno Deploy, add the variables to the application under **Settings → Environment Variables** and mark the API key and webhook secret as **Secrets** (the account ID is not a secret). Attach live credentials only to the Production context. If preview revisions need email tests, give the Development context separate domain-scoped sandbox credentials and a separate webhook secret; do not expose production credentials to code from development branches.
 
@@ -55,7 +55,7 @@ For local development, create `.env` yourself and ensure it is ignored by git be
 deno run --env-file=.env --allow-net=0.0.0.0:8000,api.ahasend.com --allow-env=AHASEND_API_KEY,AHASEND_ACCOUNT_ID,AHASEND_WEBHOOK_SECRET main.ts
 ```
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope and reuse it across requests:
 
@@ -68,7 +68,7 @@ export const ahasend = new AhaSendClient({
 });
 ```
 
-## Send an Email from a Deno.serve Route
+## Send an email from a Deno.serve route
 
 The same `Deno.serve` handler API runs locally and on Deno Deploy, although their permission models differ:
 
@@ -134,7 +134,7 @@ The SDK retries transient failures automatically, but a retry after a 5xx can st
 
 The send example uses `sandbox: true` to validate the request without delivering anything. Sandbox and live sends share one idempotency namespace per account, and `sandbox` is part of the request body, so flipping it while reusing a key raises `AhaSendIdempotencyMismatchError` instead of sending.
 
-## Handle Webhooks
+## Handle webhooks
 
 The webhooks module lives on its own subpath, so importing it doesn't pull in the API client. `verifier.parse()` accepts Fetch `Headers` and raw bytes and must be awaited. Bound the request while reading its stream, then pass those exact bytes rather than parsing and re-serializing JSON.
 
@@ -222,7 +222,7 @@ deno deploy create --org your-org --app your-app --source local --runtime-mode d
 deno deploy --org your-org --app your-app --prod
 ```
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

@@ -32,11 +32,11 @@ Before you begin, ensure you have:
 </AccordionGroup>
 
 
-## Connection Settings
+## Connection settings
 
 <SmtpSettings />
 
-## Using net/smtp (Standard Library)
+## Using net/smtp (standard library)
 
 Go's standard library provides basic SMTP functionality through the `net/smtp` package. It's lightweight but requires manual message construction.
 
@@ -177,7 +177,7 @@ func main() {
 
 </CodeGroup>
 
-## Using gomail.v2 (Recommended)
+## Using gomail.v2 (recommended)
 <Tip>
 Use `gomail.v2` for production applications as it provides better error handling, attachment support, and cleaner API. Start with sandbox mode during development and use environment variables for credentials.
 </Tip>
@@ -364,7 +364,7 @@ func main() {
 
 </CodeGroup>
 
-### Advanced Examples
+### Advanced examples
 
 <CodeGroup>
 
@@ -539,7 +539,7 @@ func getEnv(key, defaultValue string) string {
 
 </CodeGroup>
 
-## Testing with Sandbox Mode
+## Testing with sandbox mode
 
 Use sandbox mode to test your Go email integration safely:
 
@@ -621,7 +621,7 @@ func main() {
 **Sandbox Benefits:** Emails sent in sandbox mode are free, trigger webhooks normally, and never actually deliver to recipients - perfect for development and testing.
 </Info>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Error Handling" icon="triangle-exclamation">

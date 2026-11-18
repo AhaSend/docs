@@ -1,0 +1,97 @@
+---
+title: "Send to Multiple Recipients"
+sidebarTitle: "Batch Sending"
+description: "Send personalized email to up to 100 recipients per API request, with per-recipient substitutions, partial failures handled per message, and CC or BCC."
+icon: "users"
+---
+
+One request to [Create Message](/api-reference/messages/create-message) can send to up to 100 recipients. AhaSend creates a separate message for each recipient: every person gets their own email, sees only their own address, and can get their own content through substitutions.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
+<a id="batch" />
+
+## How do I send one request to many recipients?
+
+List the recipients in `recipients`. Values in a recipient's `substitutions` override the request's own `substitutions`, so you can set a default once and personalize per person.
+
+```bash
+curl --request POST \
+  --url https://api.ahasend.com/v2/accounts/{account_id}/messages \
+  --header 'Authorization: Bearer YOUR_API_KEY' \
+  --header 'Content-Type: application/json' \
+  --header 'Idempotency-Key: order-batch-2026-11-11-0001' \
+  --data '{
+    "sandbox": true,
+    "from": { "email": "orders@yourdomain.com", "name": "Your Store" },
+    "recipients": [
+      { "email": "anna@example.com", "name": "Anna", "substitutions": { "first_name": "Anna", "order_id": "1001" } },
+      { "email": "ben@example.com", "name": "Ben", "substitutions": { "first_name": "Ben", "order_id": "1002" } }
+    ],
+    "subject": "Order {{ order_id }} is on its way",
+    "html_content": "<p>Hi {{ first_name }}, order {{ order_id }} has shipped.</p>",
+    "text_content": "Hi {{ first_name }}, order {{ order_id }} has shipped.",
+    "substitutions": { "first_name": "there" }
+  }'
+```
+
+<Note>
+  `recipients` doesn't put several addresses in one To header. Each recipient gets a separate message. To send one message to several people who see each other, use [CC and BCC](#cc-and-bcc).
+</Note>
+
+<a id="results" />
+
+## How do I check which recipients were sent?
+
+The response holds one item per recipient, in the order of your request. A request can succeed as a whole (HTTP `202`) while the message for one recipient is not sent. Check every item:
+
+```json
+{
+  "object": "list",
+  "data": [
+    { "object": "message", "id": "3f8e2b1a-7c4d-4e2a-9b1e-2f3a4b5c6d7e", "recipient": { "email": "anna@example.com", "name": "Anna" }, "status": "queued", "error": null },
+    { "object": "message", "id": null, "recipient": { "email": "ben@example.com", "name": "Ben" }, "status": "error", "error": "<why this message was not sent>" }
+  ]
+}
+```
+
+An invalid recipient address doesn't show up here: it fails the whole request with `400`, and nothing is sent.
+
+Keep each `id` to look the message up later with [Get Message](/api-reference/messages/get-message), and use [webhooks](/integrations/webhooks) to learn whether each one was delivered. A recipient on your suppression list is accepted here and reported later as suppressed; see [why an email was suppressed](/bounces#why-was-my-email-suppressed).
+
+<a id="larger-lists" />
+
+## How do I send to more than 100 recipients?
+
+Split the list into requests of up to 100 recipients and send them one after another or in parallel, within the [API rate limit](/api-reference/rate-limits) of 100 requests per second. Give every request its own [idempotency key](/api-reference/idempotency), so a retry after a timeout never sends a batch twice.
+
+The number of emails your account can send per hour is a separate limit; see [sending limits](/api-reference/rate-limits#sending-limits).
+
+<Tip>
+  For newsletters and other marketing mail to a list, [Campaign Builder](/campaigns) does the batching, unsubscribe handling and reporting for you, and sends over the marketing infrastructure.
+</Tip>
+
+<a id="cc-and-bcc" />
+
+## How do I send one message with CC or BCC?
+
+Use [Create Conversation Message](/api-reference/messages/create-conversation). It sends one message with `to`, `cc` and `bcc`, up to 50 addresses combined, the way a person sends an email from their mail client.
+
+```json
+{
+  "from": { "email": "support@yourdomain.com", "name": "Support" },
+  "to": [{ "email": "customer@example.com" }],
+  "cc": [{ "email": "account-manager@yourdomain.com" }],
+  "bcc": [{ "email": "archive@yourdomain.com" }],
+  "subject": "Your support request",
+  "text_content": "Thanks for getting in touch. We're on it."
+}
+```
+
+Conversation messages don't support substitutions; use Create Message when the content differs per recipient.
+
+## Related guides
+
+- [Send email](/send-api/send-email), [Transactional templates](/send-api/templates), [Idempotency](/api-reference/idempotency).
+- [Rate limits](/api-reference/rate-limits), [Webhooks](/integrations/webhooks), [Sandbox mode](/send-api/sandbox).
+- [Bounces and suppressions](/bounces).

@@ -39,7 +39,7 @@ Before you begin, ensure you have:
 </AccordionGroup>
 
 
-## Why MailKit Over System.Net.Mail?
+## Why MailKit over System.Net.Mail?
 
 AhaSend works with any SMTP-compatible library, but for C#/.NET applications, we strongly recommend MailKit over the built-in `System.Net.Mail`:
 
@@ -58,15 +58,15 @@ AhaSend works with any SMTP-compatible library, but for C#/.NET applications, we
   </Card>
 </CardGroup>
 
-## Connection Settings
+## Connection settings
 
 <SmtpSettings />
 
-## Why System.Net.Mail Fails
+## Why System.Net.Mail fails
 
 The built-in `System.Net.Mail.SmtpClient` in .NET has fundamental issues with STARTTLS authentication that make it incompatible with AhaSend.
 
-### The Problem
+### The problem
 
 Even with correct credentials and `EnableSsl = true`, the SMTP client often never issues an `AUTH` command after the STARTTLS handshake. This causes silent authentication failures where the connection appears to succeed but emails are rejected.
 
@@ -74,7 +74,7 @@ Even with correct credentials and `EnableSsl = true`, the SMTP client often neve
 **Tested and Confirmed:** We've tested this issue on .NET 9 across Linux and Windows. The problem persists across different .NET versions and platforms.
 </Warning>
 
-### What Doesn't Work
+### What doesn't work
 
 Here's the problematic code that fails with AhaSend:
 
@@ -117,7 +117,7 @@ class Program
 }
 ```
 
-### Debugging the Issue
+### Debugging the issue
 
 You can confirm this authentication failure by capturing SMTP traffic with tools like `tcpdump` or `Wireshark`:
 
@@ -130,7 +130,7 @@ You can confirm this authentication failure by capturing SMTP traffic with tools
 **Know a Workaround?** If you've found a way to make `System.Net.Mail` work reliably with AhaSend's AUTH PLAIN over STARTTLS, please [contact our support team](mailto:support@ahasend.com). We'd be happy to update this guide with your solution!
 </Info>
 
-## Use MailKit (Recommended)
+## Use MailKit (recommended)
 
 MailKit is a modern, actively maintained .NET library that correctly handles SMTP authentication with AhaSend. It properly negotiates authentication mechanisms like `PLAIN` and `LOGIN` over `STARTTLS`.
 
@@ -164,7 +164,7 @@ Search for "MailKit" by Jeffrey Stedfast in NuGet Package Manager
 **MimeKit Included:** MailKit automatically includes MimeKit for MIME message construction. No additional packages needed!
 </Info>
 
-### Basic MailKit Examples
+### Basic MailKit examples
 
 <CodeGroup>
 
@@ -333,7 +333,7 @@ class Program
 
 </CodeGroup>
 
-### Advanced MailKit Examples
+### Advanced MailKit examples
 
 <CodeGroup>
 
@@ -591,7 +591,7 @@ class Program
 
 </CodeGroup>
 
-## Testing with Sandbox Mode
+## Testing with sandbox mode
 
 Use sandbox mode to safely test your C# email integration:
 

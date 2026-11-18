@@ -13,7 +13,7 @@ All API requests must be made over HTTPS. Calls made over plain HTTP will fail. 
 
 The API base URL is `https://api.ahasend.com`. Find your account ID in the dashboard account settings. Message-list examples below need a full API key with `messages:read:{your-domain}` or `messages:read:all`.
 
-## API Key Format
+## API key format
 
 AhaSend API keys follow this format:
 
@@ -25,7 +25,7 @@ aha-sk-64-CHARACTER-RANDOM-STRING
   Keep your API keys secure and never expose them in client-side code, version control, or logs.
 </Warning>
 
-## Obtaining Your API Key
+## Obtaining your API key
 
 For management tasks, create a full API key as follows. For send-only applications, use **Credentials → Add → API Key v2** instead; see [send-only API keys](/send-api/credentials).
 
@@ -43,7 +43,7 @@ For management tasks, create a full API key as follows. For send-only applicatio
   You can restrict a key to specific IP addresses so it cannot be used from anywhere else. See [IP Allow Lists](/security/ip-allow-lists).
 </Tip>
 
-## Making Authenticated Requests
+## Making authenticated requests
 
 Authentication to the API is performed via HTTP Bearer Authentication. Provide your API key in the `Authorization` header:
 
@@ -127,7 +127,7 @@ func main() {
 
 </CodeGroup>
 
-## Security Best Practices
+## Security best practices
 
 <CardGroup cols={2}>
   <Card title="Server-Side Only" icon="server">
@@ -144,7 +144,7 @@ func main() {
   </Card>
 </CardGroup>
 
-### Environment Variables
+### Environment variables
 
 Store your API key as an environment variable:
 
@@ -171,7 +171,7 @@ api_key = os.environ.get('AHASEND_API_KEY')
 
 </CodeGroup>
 
-## Testing Authentication
+## Testing authentication
 
 You can test your authentication by making a simple request to the [Ping utility endpoint](/api-reference/utility/ping):
 
@@ -204,7 +204,7 @@ if (response.ok) {
   If you're getting authentication errors, double-check that your API key is correct and that it has the necessary scopes for the endpoint you're trying to access.
 </Tip>
 
-## Next Steps
+## Next steps
 
 Now that you understand authentication, you can:
 
@@ -212,7 +212,7 @@ Now that you understand authentication, you can:
 - Check [Rate Limits](/api-reference/rate-limits) to understand usage restrictions
 - Start [sending messages](/api-reference/messages/create-message) with the API
 
-## Related Guides
+## Related guides
 
 - [Permission scopes](/api-reference/scopes), [Send-only API keys](/send-api/credentials), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [CLI quickstart](/cli/quickstart), [Node.js SDK](/guides/nodejs-sdk).

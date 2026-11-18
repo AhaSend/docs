@@ -33,7 +33,7 @@ go get github.com/labstack/echo/v5
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 ```bash
 export AHASEND_API_KEY=aha-sk-...
@@ -42,7 +42,7 @@ export AHASEND_WEBHOOK_SECRET=aha-whsec-...
 export AHASEND_SEND_TOKEN=a-high-entropy-server-to-server-token
 ```
 
-## Create the Client
+## Create the client
 
 Create the client and verifier once at startup and share them across handlers. Fail startup if any required credential is missing:
 
@@ -146,7 +146,7 @@ func main() {
 
 Both routes carry a `BodyLimit` so no handler reads an unbounded body. On the send route the middleware order matters: authentication runs first, so unauthenticated traffic is rejected before it can consume the rate limiter's budget and 429 legitimate callers.
 
-## Send an Email from an Echo Handler
+## Send an email from an Echo handler
 
 Echo handlers take a `*echo.Context` and return an `error`. Bind the JSON body into a struct with `c.Bind`:
 
@@ -265,7 +265,7 @@ The example defaults to sandbox mode, which validates without delivery. Change `
 
 The SDK also generates a key when none is supplied and reuses a request's key across its automatic exponential-backoff retries. Stored outcomes replay for 24 hours, but a 5xx is not stored, so even a same-key retry after a server error can still send twice.
 
-## Handle Webhooks
+## Handle webhooks
 
 Echo exposes the underlying `*http.Request` via `c.Request()`, so the SDK's `ParseRequest` works directly: it verifies the HMAC signature and timestamp, then returns a typed event.
 
@@ -315,7 +315,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointin
 
 Timestamp tolerance is not replay deduplication: the same valid delivery can be replayed within the window. This example intentionally performs no business side effects. Before adding any, atomically commit the verified `webhook-id` together with durable queue/outbox work, acknowledge duplicates with 2xx, and process the durable work idempotently. Do not acknowledge and then start an in-process goroutine; a crash can lose the event permanently.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

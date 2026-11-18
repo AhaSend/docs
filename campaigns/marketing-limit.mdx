@@ -9,7 +9,7 @@ AhaSend gives each account two sending limits. Transactional mail uses the hourl
 
 The two limits are independent. Marketing mail never uses the hourly limit, and transactional mail never uses the daily marketing limit. Thus, a large campaign does not delay your password resets or receipts.
 
-## Which Mail Counts?
+## Which mail counts?
 
 | Mail | Counts against the daily marketing limit |
 |---|---|
@@ -25,7 +25,7 @@ Each recipient counts as one email.
 
 The sending type of a domain decides which limit its API and SMTP mail uses. See [sending type](/domains#sending-type). Campaigns always use the daily marketing limit, whatever the sending type of the sender domain.
 
-## What Is My Limit?
+## What is my limit?
 
 The limit starts low for new accounts. It grows with your plan, account age, sending volume and a low spam rate.
 
@@ -35,13 +35,13 @@ The campaign page shows the current limit of your account.
 Contact our [support team](mailto:support@ahasend.com) to ask for a higher daily marketing limit.
 </Card>
 
-## How Does the 24-Hour Window Work?
+## How does the 24-hour window work?
 
 The limit uses a rolling 24-hour window, not a calendar day. You can send the full daily amount at once. After that, capacity comes back gradually during the next 24 hours.
 
 All marketing mail of the account shares one limit. For example, API and SMTP marketing mail reduces the amount that is available to your campaigns.
 
-## What Happens Above the Limit?
+## What happens above the limit?
 
 **Campaigns** do not send faster than your limit. When the limit is used up, the campaign waits and continues when capacity comes back. A campaign that is larger than your daily limit continues over the next days.
 
@@ -51,7 +51,7 @@ All marketing mail of the account shares one limit. For example, API and SMTP ma
 Do not send more API or SMTP marketing mail than your daily limit permits. Mail that waits too long expires and is not delivered. Spread large sends over more than one day, or use a campaign.
 </Warning>
 
-## What Does the Campaign Page Show?
+## What does the campaign page show?
 
 | Field | When it shows |
 |---|---|
@@ -61,7 +61,7 @@ Do not send more API or SMTP marketing mail than your daily limit permits. Mail 
 
 The estimated finish assumes that the campaign gets your full daily limit. Other marketing mail from your account uses the same limit, so the campaign can finish later than the estimate.
 
-## Related Guides
+## Related guides
 
 - [Plans and limits](/facts), [deliverability best practices](/deliverability) and [bounces and suppressions](/bounces).
 - [IP pools](/scale/ip-pools), [sandbox mode](/send-api/sandbox) and [API rate limits](/api-reference/rate-limits).

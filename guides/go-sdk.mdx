@@ -35,7 +35,7 @@ go get github.com/google/uuid
 
 <QuickSend />
 
-## Send Your First Email
+## Send your first email
 
 ```go main.go
 package main
@@ -116,7 +116,7 @@ Note the loop. `Recipients` takes up to 100 addresses and each one becomes its o
 
 Optional fields are pointers, so the SDK exports helpers such as `ahasend.String()` to build them inline. Beyond the fields above: `Tags []string`, `Substitutions map[string]interface{}` for `{{ variable }}` templating, plus attachments, scheduling, tracking, and retention.
 
-## Configure the Client
+## Configure the client
 
 The following configuration fragment belongs inside your startup function and requires `import "time"`. Build the client once at startup and share it. It holds rate-limit, retry, and idempotency state.
 
@@ -185,7 +185,7 @@ Treat `Message`, `Raw`, and `err.Error()` as sensitive: an API response can repe
 
 When retries are enabled, a surfaced `429` or server error has exhausted the configured retry attempts. Disabling retries or setting the retry count to zero makes the first response surface immediately.
 
-## Retries and Idempotency
+## Retries and idempotency
 
 Retries are on by default: the SDK retries network failures, `429`, and `5xx` responses with the configured backoff, and leaves every other `4xx` alone unless you opt in with `RetryConfig.RetryClientErrors`. It attaches an idempotency key to POST operations and reuses that key across its own retry attempts.
 
@@ -295,7 +295,7 @@ Signature timestamp validation is not replay protection: the same signed request
 
 Events implement `webhooks.WebhookEvent` with `GetType()` and `GetTimestamp()`. The SDK covers the message, suppression, domain, contact, and route event types. Helpers such as `webhooks.IsMessageEvent()` and `webhooks.GetMessageEventData()` handle common message events without a full type switch.
 
-## Framework Guides
+## Framework guides
 
 <CardGroup cols={3}>
   <Card title="Gin" icon="golang" href="/guides/gin" />
@@ -308,7 +308,7 @@ Events implement `webhooks.WebhookEvent` with `GetType()` and `GetTimestamp()`. 
 
 Azure Functions is in the sidebar too. Building in Node.js instead? See the [Node.js SDK](/guides/nodejs-sdk).
 
-## Source and Support
+## Source and support
 
 MIT licensed, developed at [github.com/AhaSend/ahasend-go](https://github.com/AhaSend/ahasend-go), with reference docs on [pkg.go.dev](https://pkg.go.dev/github.com/AhaSend/ahasend-go). The [AhaSend CLI](https://github.com/AhaSend/ahasend-cli) is built on this SDK.
 

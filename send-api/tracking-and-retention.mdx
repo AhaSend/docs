@@ -1,0 +1,56 @@
+---
+title: "Tracking and Retention per Message"
+sidebarTitle: "Tracking and Retention"
+description: "Turn open and click tracking on or off for a single email, and choose how long AhaSend keeps its content and metadata, overriding your account settings."
+icon: "sliders"
+---
+
+Your account settings decide whether opens and clicks are tracked and how long AhaSend keeps your messages. The `tracking` and `retention` fields change that for a single send, for example no tracking on a password reset and no stored content for a message with sensitive data.
+
+Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
+
+<a id="tracking" />
+
+## How do I turn tracking on or off for one email?
+
+```json
+{
+  "tracking": {
+    "open": false,
+    "click": false
+  }
+}
+```
+
+`true` turns tracking on, `false` turns it off, and leaving a field out keeps your account setting. Tracking needs a tracking domain set up for the sending domain; without it the message is sent without tracking. Open tracking works on HTML email only, click tracking on `http://` and `https://` links. To keep one link untracked, add `data-as-no-track` to it. See [open tracking](/tracking/open-tracking) and [click tracking](/tracking/click-tracking).
+
+<Tip>
+  Leave tracking off for login codes, password resets and other security mail. Rewritten links in those messages make them look less trustworthy, and some security scanners click links, which can use up one-time links.
+</Tip>
+
+<a id="retention" />
+
+## How do I choose how long a message is kept?
+
+```json
+{
+  "retention": {
+    "metadata": 7,
+    "data": 0
+  }
+}
+```
+
+| Field | What it keeps | Range |
+| --- | --- | --- |
+| `metadata` | Delivery status, timestamps, recipient and tracking events | 1 to 30 days, within your [plan's range](/retention) |
+| `data` | The content: body, headers and attachments | 0 to 30 days, within your plan's range |
+
+`data: 0` keeps no copy of the content after it's sent. It applies to accounts allowed to turn off message data retention; on other accounts the message keeps the account's default. See [data retention](/retention).
+
+Over SMTP, the same settings use [special headers](/smtp/special-headers).
+
+## Related guides
+
+- [Open tracking](/tracking/open-tracking), [Click tracking](/tracking/click-tracking), [Data retention](/retention).
+- [Send email](/send-api/send-email), [SMTP special headers](/smtp/special-headers).

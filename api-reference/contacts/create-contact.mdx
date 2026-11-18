@@ -20,7 +20,7 @@ The new contact is on no list, so a campaign cannot reach it yet. To add it to a
 
 This operation accepts an `Idempotency-Key` header. The API stores a `201`, a `400` and a `409` for a duplicate contact for 24 hours, and replays them for a retry with the same key. A `409` with `Idempotent-Replayed: false` and `Retry-After` means a request with the same key is still in progress. See [Idempotency](/api-reference/idempotency).
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
 - [Contacts API overview](/api-reference/contacts/overview), [Batch Upsert Contacts](/api-reference/contacts/batch-upsert-contacts), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

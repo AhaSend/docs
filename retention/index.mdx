@@ -14,7 +14,7 @@ Available on Free, Pro and Max; the retention ranges depend on your plan, and ze
 Choose retention periods that fit your privacy policy. A retention setting alone does not establish compliance with a law or standard.
 </Info>
 
-## Retention Limits
+## Retention limits
 
 | Setting | Free | Pro | Max | New-account default |
 |---|---|---|---|---|
@@ -25,7 +25,7 @@ Zero data retention needs approval from AhaSend, to prevent abuse. Per-message r
 
 All message data is stored in the EU. See [data location and the data processing agreement](/facts). After retention expires, the affected content or metadata is no longer available; [S3 archives](/retention/s3) have their own storage policy.
 
-## Message Data vs Metadata
+## Message data vs metadata
 
 Understanding the difference between data and metadata helps you set appropriate retention policies:
 
@@ -56,7 +56,7 @@ Understanding the difference between data and metadata helps you set appropriate
   </Accordion>
 </AccordionGroup>
 
-## Account-Wide Settings
+## Account-wide settings
 
 Configure default retention periods for your entire account:
 
@@ -86,11 +86,11 @@ Configure default retention periods for your entire account:
   </Step>
 </Steps>
 
-## Per-Message Overrides
+## Per-message overrides
 
 Override account defaults for specific emails using special headers:
 
-### SMTP Headers
+### SMTP headers
 
 When sending via SMTP, add these headers to individual emails:
 
@@ -115,7 +115,7 @@ ahasend-data-retention: 0
   </Accordion>
 </AccordionGroup>
 
-### API v1 Implementation
+### API v1 implementation
 
 For API v1, include retention headers in your message payload:
 
@@ -142,7 +142,7 @@ For API v1, include retention headers in your message payload:
 }
 ```
 
-### API v2 Implementation
+### API v2 implementation
 
 For API v2, use the dedicated retention fields:
 
@@ -175,7 +175,7 @@ For API v2, use the dedicated retention fields:
 **Header Removal:** Retention headers are automatically removed before email delivery and never visible to recipients.
 </Note>
 
-## Common Use Cases
+## Common use cases
 
 Use the settings below only when they fit your plan's range. Any 0-day data setting needs prior approval.
 
@@ -221,7 +221,7 @@ Use the settings below only when they fit your plan's range. Any 0-day data sett
   </Accordion>
 </AccordionGroup>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Compliance Strategy" icon="shield-check">
@@ -251,7 +251,7 @@ Use the settings below only when they fit your plan's range. Any 0-day data sett
 </AccordionGroup>
 
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Send-only API keys](/send-api/credentials), [Account settings API](/api-reference/accounts/update-account).
 - [SMTP retention headers](/smtp/special-headers), [API message retention](/api-reference/messages/create-message), [S3 archiving](/retention/s3).

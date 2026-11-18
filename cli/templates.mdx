@@ -8,12 +8,12 @@ sidebarTitle: "Message Content"
 This guide shows how to give `ahasend messages send` its content, from flags or files, and how to personalize it with substitutions.
 
 <Note>
-To send a transactional template stored in your AhaSend account instead, see [Stored Templates](#stored-templates) and the [`ahasend templates` commands](/cli/commands/templates).
+To send a transactional template stored in your AhaSend account instead, see [Stored templates](#stored-templates) and the [`ahasend templates` commands](/cli/commands/templates).
 </Note>
 
 Before running the examples, [log in with a full API key](/cli/authentication), use your verified sender domain, and replace `YOUR_RESOURCE_ID` with the ID of a published template in your test account. The [AhaML example](#edit-a-design-as-ahaml) needs a template made in the Simple Editor. Create any named content, recipient, or JSON files first. Shell examples use Bash. Sends use sandbox mode.
 
-## Content Flags
+## Content flags
 
 Give each part of the message inline or from a file, not both:
 
@@ -36,7 +36,7 @@ ahasend messages send --sandbox \
   --text-file order.txt
 ```
 
-## Substitution Basics
+## Substitution basics
 
 The subject and the content can hold placeholders in double curly braces. The AhaSend API fills them for each recipient with [MiniJinja](https://github.com/mitsuhiko/minijinja), which uses Jinja2-compatible syntax.
 
@@ -55,9 +55,9 @@ The values come from two places:
 
 A recipient's own value for a key wins over the global value of the same key. The API HTML-escapes values in the HTML and AMP content, so send them as plain text. The subject, custom headers and the text content get values as they are. Use `{{ name|safe }}` only for HTML that your own code builds.
 
-## Substitution Types
+## Substitution types
 
-### Global Substitutions
+### Global substitutions
 
 Use global substitutions for values that are the same for every recipient. They work with `--to` and with `--recipients`.
 
@@ -78,7 +78,7 @@ ahasend messages send --sandbox \
   --global-substitutions company-data.json
 ```
 
-### Recipient Substitutions
+### Recipient substitutions
 
 Use a recipients file for values that differ per recipient. The file's extension, `.csv` or `.json`, sets its format.
 
@@ -126,9 +126,9 @@ ahasend messages send --sandbox \
 
 A file with no recipients, an invalid address or an unknown JSON key fails with exit code 4 before anything is sent. For a bad entry, the error names its CSV row or JSON index. To send to many recipients, see [batch processing](/cli/batch-processing).
 
-## Template Syntax Examples
+## Template syntax examples
 
-### Variables and Defaults
+### Variables and defaults
 
 `default` gives a value to use when a variable is missing:
 
@@ -137,7 +137,7 @@ A file with no recipients, an invalid address or an unknown JSON key fails with 
 <p>Questions? Contact {{ support_email }}.</p>
 ```
 
-### Conditional Content
+### Conditional content
 
 ```html conditional.html
 <h1>Hello {{ first_name }}!</h1>
@@ -149,7 +149,7 @@ A file with no recipients, an invalid address or an unknown JSON key fails with 
 {% endif %}
 ```
 
-### Lists and Loops
+### Lists and loops
 
 A loop needs a list, so its values come from a JSON recipients file or the global substitutions file. CSV cells hold text only.
 
@@ -191,11 +191,11 @@ ahasend messages send --sandbox \
   --html-file order-confirmation.html
 ```
 
-## Stored Templates
+## Stored templates
 
 `--template-id` sends a transactional template that is stored in your AhaSend account, instead of content from flags or files. Create, publish and inspect stored templates with the [`ahasend templates` commands](/cli/commands/templates).
 
-A send uses the template's published copy. `ahasend templates get --published` shows that copy, with the variables that a send must supply. `ahasend templates get` shows the working copy instead: the draft while the template has one, which sends do not use until you publish it. See [Drafts, Publishing and Versions](/cli/commands/templates#drafts-publishing-and-versions). `--published` needs CLI v0.4.0 or later.
+A send uses the template's published copy. `ahasend templates get --published` shows that copy, with the variables that a send must supply. `ahasend templates get` shows the working copy instead: the draft while the template has one, which sends do not use until you publish it. See [Drafts, publishing and versions](/cli/commands/templates#drafts-publishing-and-versions). `--published` needs CLI v0.4.0 or later.
 
 ```bash
 ahasend messages send --sandbox \
@@ -208,7 +208,7 @@ ahasend messages send --sandbox \
 - `--from` and `--subject` are optional. Without them, the template's sender and subject apply.
 - Substitutions work as on this page: the values of `--global-substitutions` are copied into each recipient's substitutions, and a recipient's own value wins.
 
-### Edit a Design as AhaML
+### Edit a design as AhaML
 
 The design of a template made in the Simple Editor reads and writes as [AhaML](/send-api/ahaml), so you can edit it as a text file. `templates get --markup` writes the AhaML of the working copy, and `templates update --markup-file` writes it back to the draft. Publish the draft so that sends use it. `--markup` and `--markup-file` need CLI v0.4.0 or later.
 
@@ -222,9 +222,9 @@ ahasend templates get YOUR_RESOURCE_ID
 ahasend templates publish YOUR_RESOURCE_ID
 ```
 
-[AhaML Designs](/cli/commands/templates#ahaml-designs) describes when `--markup` fails, and how the CLI shows the API's warnings and errors about the AhaML.
+[AhaML designs](/cli/commands/templates#ahaml-designs) describes when `--markup` fails, and how the CLI shows the API's warnings and errors about the AhaML.
 
-## Testing Content
+## Testing content
 
 Send to a test address in sandbox mode, which delivers nothing:
 
@@ -239,7 +239,7 @@ ahasend messages send --sandbox \
 
 Then open the message in the AhaSend dashboard, or run `ahasend messages get` with the ID that `messages send` printed to see its content. See [`messages get`](/cli/commands/messages#get-a-message).
 
-## Best Practices
+## Best practices
 
 1. **Use meaningful variable names**: `{{ customer_first_name }}`, not `{{ fn }}`.
 2. **Provide default values**: `{{ name|default("Friend") }}`.
@@ -247,14 +247,14 @@ Then open the message in the AhaSend dashboard, or run `ahasend messages get` wi
 4. **Keep templates simple**: Complex logic belongs in your application.
 5. **Split global and recipient data**: Company details go in the global file, personal details in the recipients file.
 
-## Next Steps
+## Next steps
 
 - [Learn about batch processing](/cli/batch-processing)
 - [Manage stored templates](/cli/commands/templates)
 - [Explore the MiniJinja documentation](https://github.com/mitsuhiko/minijinja)
 - [View CLI examples](/cli/examples)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).

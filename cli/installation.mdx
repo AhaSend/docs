@@ -7,7 +7,7 @@ sidebarTitle: "Installation"
 
 Install the AhaSend CLI with the tool you already use. The package managers, the install scripts and the downloads all install the same release binary.
 
-## Choose a Method
+## Choose a method
 
 | Method | Command | Platforms |
 |---|---|---|
@@ -46,7 +46,7 @@ brew uninstall ahasend
 brew untap ahasend/tap
 ```
 
-## Install Script (macOS and Linux)
+## Install script (macOS and Linux)
 
 ```bash
 curl -fsSL https://ahasend.com/install.sh | sh
@@ -87,7 +87,7 @@ To upgrade, run the script again, with the same `--install-dir` if you used one.
 rm ~/.local/bin/ahasend
 ```
 
-## PowerShell Script (Windows)
+## PowerShell script (Windows)
 
 ```powershell
 irm https://ahasend.com/install.ps1 | iex
@@ -210,7 +210,7 @@ The package installs `/usr/bin/ahasend` and shell completion for bash, zsh and f
 sudo dnf remove ahasend
 ```
 
-## Binary Download
+## Binary download
 
 Every release has a binary for each system, with the same name in every release:
 
@@ -305,7 +305,7 @@ Then open a new terminal.
 
 To upgrade, run the download, check and move commands again; the `PATH` is already set. To uninstall, delete the binary. On Windows, also remove the folder from your user `PATH`, as the [PowerShell script](#powershell-script-windows) section describes.
 
-## Go Install
+## Go install
 
 Needs Go 1.26 or later.
 
@@ -321,7 +321,7 @@ mv "$(go env GOPATH)/bin/ahasend-cli" "$(go env GOPATH)/bin/ahasend"
 
 Make sure that directory is on your `PATH`. A `go install` build prints `dev` as its version, because only release builds carry a version number. To upgrade, run both commands again.
 
-## Build from Source
+## Build from source
 
 Needs Go 1.26 or later, Git, and Make (optional).
 
@@ -335,7 +335,7 @@ cp bin/ahasend ~/.local/bin/ahasend
 
 Without Make, run `go build -o bin/ahasend .` instead of `make build`. If `~/.local/bin` is not on your `PATH`, add it as the [binary download](#binary-download) steps show.
 
-## Verify the Download
+## Verify the download
 
 Every release has a `checksums.txt` with the SHA-256 of each file. The install scripts check it for you, and the [binary download](#binary-download) steps check it before they move the file. For any other file from a release, such as a .deb or .rpm package, download `checksums.txt` from the same [release](https://github.com/AhaSend/ahasend-cli/releases) into the same folder, then run, before you rename the file:
 
@@ -353,7 +353,7 @@ GitHub also records where each release file was built. With the [GitHub CLI](htt
 gh attestation verify ahasend-linux-amd64 --repo AhaSend/ahasend-cli
 ```
 
-## Shell Completion
+## Shell completion
 
 Homebrew and the .deb and .rpm packages install completion for bash, zsh and fish. For other install methods, or for PowerShell, generate it with `ahasend completion`.
 
@@ -401,7 +401,7 @@ Windows PowerShell 5.1 runs profile scripts only when the execution policy allow
 </Tab>
 </Tabs>
 
-## Remove Your Configuration
+## Remove your configuration
 
 Uninstalling the CLI leaves your profiles in `~/.ahasend` (`%USERPROFILE%\.ahasend` on Windows). Delete that folder to remove them:
 
@@ -417,7 +417,7 @@ Remove-Item -Recurse "$env:USERPROFILE\.ahasend"
 
 ## Troubleshooting
 
-### Command Not Found
+### Command not found
 
 The install folder is not on your `PATH`. The install scripts print the line to add, unless you ran them with `--quiet` or `-Quiet`. To add the folder yourself on macOS and Linux, put this line, with your folder, in your shell's startup file, such as `~/.bashrc` or `~/.zshrc`, and open a new terminal:
 
@@ -433,7 +433,7 @@ fish_add_path ~/.local/bin
 
 On Windows, use the `PATH` command in the [binary download](#binary-download) steps, with your folder.
 
-### More Than One Copy
+### More than one copy
 
 If `ahasend --version` shows an older version than you installed, another copy comes first on your `PATH`. List every copy:
 
@@ -449,13 +449,13 @@ Get-Command ahasend -All
 
 Remove the copies you do not use, with the tool that installed them. A manual install may also have put a copy in `/usr/local/bin` on macOS and Linux, or in `%LOCALAPPDATA%\AhaSend` on Windows; delete it there.
 
-## Next Steps
+## Next steps
 
 1. [Set up authentication](/cli/authentication)
 2. [Start with the quick start guide](/cli/quickstart)
 3. [Explore available commands](/cli/commands/messages)
 
-## Related Guides
+## Related guides
 
 - [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email), [SMTP settings](/smtp).
 - [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk), [CLI configuration and output](/cli/configuration).

@@ -47,7 +47,7 @@ bun add @ahasend/sdk
 
 <QuickSend />
 
-## Configure Environment Variables
+## Configure environment variables
 
 Add your credentials to `.env` for local development. The route token protects
 the server-to-server example below; generate at least 32 random characters for
@@ -72,7 +72,7 @@ build time.
   code. Rotate an API key immediately if it is exposed.
 </Warning>
 
-## Create the Client
+## Create the client
 
 Build the client on first use and reuse it across requests. SvelteKit prevents
 `$lib/server/` modules from being imported into client code, so keep it there:
@@ -108,7 +108,7 @@ export function ahasend(): AhaSendClient {
   module instead of a failure of one request.
 </Warning>
 
-## Send an Email from a SvelteKit Endpoint
+## Send an email from a SvelteKit endpoint
 
 This example is a server-to-server endpoint. It authenticates the caller before
 reading a bounded request body and requires a stable event ID for safe retries.
@@ -290,7 +290,7 @@ sandbox send is not a separate namespace: flipping `sandbox` while reusing
 rejects with a 422 for the 24 hours the original record lives. Give sandbox
 sends their own key prefix.
 
-## Handle Webhooks
+## Handle webhooks
 
 `nextRouteHandler` is the SDK's adapter for web-standard `Request`/`Response`
 handlers, so it works unchanged in a SvelteKit `+server.ts`. It reads a bounded
@@ -362,7 +362,7 @@ Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com), point
 it at `https://your-app.com/api/webhooks/ahasend`, and configure its secret as
 `AHASEND_WEBHOOK_SECRET`.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

@@ -25,7 +25,7 @@ These commands work on templates stored in your AhaSend account. To send content
 
 `messages send --template-id` needs only the send scope of the sender's domain, not a `templates` scope. The shell examples need Bash and jq.
 
-## Drafts, Publishing and Versions
+## Drafts, publishing and versions
 
 Changes to a template go to its draft, the same draft the dashboard edits. Sends use the published copy, so publish the draft with `--publish` or `templates publish` before you send. A template created without `--publish` has only a draft, and sends of it fail until you publish it.
 
@@ -33,7 +33,7 @@ On CLI v0.4.0 or later, `templates get` shows the template's working copy: its d
 
 Every publish is kept as a version. A template keeps its 50 most recent versions, and you can restore any of them into the draft.
 
-## Create, Publish and Send a Test Template
+## Create, publish and send a test template
 
 Save this file as `welcome.html`:
 
@@ -59,7 +59,7 @@ Each variable shows its kind and whether a send must give it a value. A value sh
 
 Content comes from files. `--markup-file` sets the design of a simple template as [AhaML](#ahaml-designs), `--mjml-file` the MJML of an advanced template, and `--html-file` the HTML of an html template; you cannot combine them. `--text-file` sets the plain text version, which is otherwise made from the HTML. Give `--editor` when there is no markup, MJML or HTML file. The editor cannot change after you create the template.
 
-## Update the Draft
+## Update the draft
 
 Continue the script. `update` sends only the flags you give. Every field but the name goes to the draft; a new name applies at once.
 
@@ -78,7 +78,7 @@ Other update flags:
 - `--reply-to` needs a template that has a sender. `--clear-reply-to` removes the reply-to.
 - `--regenerate-text` makes the text version again from the HTML.
 
-## AhaML Designs
+## AhaML designs
 
 The design of a simple template reads and writes as [AhaML](/send-api/ahaml) (AhaSend Markup), the text form of a Simple Editor design. `templates get --markup` writes only the design's AhaML to stdout, so you can save it, edit it, and write it back with `--markup-file`. These flags need CLI v0.4.0 or later.
 
@@ -102,7 +102,7 @@ line 3, column 48: text holds {{, which stays text (jinja_in_text) at Email > Pa
 
 A write whose AhaML the API refuses fails with exit code 4, and outside JSON output lists each problem under the error, with its line and column. See [AhaML errors](/send-api/ahaml#errors) for the problems the API reports.
 
-## List and Restore Versions
+## List and restore versions
 
 Continue the script. `versions list` shows each published version, newest first, without its content. The script reads the ID of the oldest version, its first publish, from the JSON output's `data` array, then shows and restores that version:
 
@@ -119,7 +119,7 @@ Restoring replaces the template's whole draft, including unpublished changes mad
 
 With `--publish`, a version that the publish checks refuse is refused before the restore, and the draft is left as it was.
 
-## Delete the Test Template
+## Delete the test template
 
 Finish the script by deleting the template it created. Sends of a deleted template fail.
 
@@ -131,7 +131,7 @@ The script stops at the first command that fails, and then deletes nothing. If i
 
 `templates delete`, `templates draft discard` and `templates versions restore` ask for confirmation first; see [prompts](/cli/configuration#prompts).
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -262,7 +262,7 @@ ahasend templates versions restore <template-id> <version-id> [flags]
 | `--idempotency-key string` | Idempotency key for safe retries (generated when omitted) |
 | `--publish` | Publish the draft once the version is restored |
 
-## Related Guides
+## Related guides
 
 - [Create template](/api-reference/templates/create-template), [Publish template](/api-reference/templates/publish-template), [Restore template version](/api-reference/templates/restore-template-version).
 - [Send a template message](/api-reference/messages/create-template-message), [Messages commands](/cli/commands/messages), [Message content guide](/cli/templates).

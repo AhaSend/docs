@@ -14,7 +14,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 **Sender Protection:** Reputation Shield helps maintain your sender reputation by preventing emails to known problematic domains that could damage your deliverability scores.
 </Info>
 
-## Why Use Reputation Shield?
+## Why use Reputation Shield?
 
 Your sender reputation directly impacts email deliverability. Sending to toxic, temporary, or typo-squatted domains can:
 
@@ -23,7 +23,7 @@ Your sender reputation directly impacts email deliverability. Sending to toxic, 
 - **Enable fraud** by allowing bad actors to create fake accounts
 - **Expose users to attacks** through typo-squatted domains used for phishing
 
-## Protection Types
+## Protection types
 
 Reputation Shield provides two distinct protection mechanisms:
 
@@ -42,9 +42,9 @@ Reputation Shield provides two distinct protection mechanisms:
 
 ---
 
-## Toxic & Temporary Email Filtering
+## Toxic & temporary email filtering
 
-### What Are Toxic Domains?
+### What are toxic domains?
 
 Toxic domains are email domains with low reputation scores that are frequently used by bad actors for:
 - **Phishing attacks** to steal user credentials
@@ -52,7 +52,7 @@ Toxic domains are email domains with low reputation scores that are frequently u
 - **Account takeover attempts** and other malicious activities
 - **Fraud and abuse** of trial offers and promotional codes
 
-### What Are Temporary Email Domains?
+### What are temporary email domains?
 
 Temporary email (tempmail) services provide disposable email addresses that users leverage to:
 - **Bypass trial limitations** by creating multiple accounts
@@ -60,7 +60,7 @@ Temporary email (tempmail) services provide disposable email addresses that user
 - **Avoid legitimate communications** from your service
 - **Abuse promotional offers** and discount codes
 
-### How It Works
+### How it works
 
 When toxic and tempmail filtering is enabled:
 
@@ -73,7 +73,7 @@ When toxic and tempmail filtering is enabled:
 **Database Updates:** Our toxic domain database is continuously updated based on threat intelligence from multiple sources, ensuring protection against emerging threats.
 </Note>
 
-### Rejection Response
+### Rejection response
 
 When an email is blocked due to toxic or tempmail domain:
 
@@ -87,9 +87,9 @@ This error is returned via:
 
 ---
 
-## Typo Detection & Prevention
+## Typo detection & prevention
 
-### The Typo-Squatting Threat
+### The typo-squatting threat
 
 People make typing mistakes. They enter `gmil.com` instead of `gmail.com` or `outlok.com` instead of `outlook.com`. Attackers exploit these mistakes by:
 
@@ -98,7 +98,7 @@ People make typing mistakes. They enter `gmil.com` instead of `gmail.com` or `ou
 3. **Harvesting sensitive information** from misdirected emails
 4. **Using collected data** for targeted phishing attacks
 
-### How Typo Detection Works
+### How typo detection works
 
 When typo detection is enabled:
 
@@ -107,7 +107,7 @@ When typo detection is enabled:
 3. **Automatic blocking:** Prevents delivery to detected typo domains
 4. **User protection:** Shields your users from potential security threats
 
-### Common Typo Examples
+### Common typo examples
 
 <AccordionGroup>
   <Accordion title="Gmail Typos" icon="envelope">
@@ -132,7 +132,7 @@ When typo detection is enabled:
   </Accordion>
 </AccordionGroup>
 
-### Rejection Response
+### Rejection response
 
 When an email is blocked due to domain typo:
 
@@ -190,9 +190,9 @@ When an email is blocked due to domain typo:
   </Step>
 </Steps>
 
-## Implementation Considerations
+## Implementation considerations
 
-### Handling Rejections in Your Application
+### Handling rejections in your application
 
 When Reputation Shield blocks an email, your application should:
 
@@ -300,7 +300,7 @@ When Reputation Shield blocks an email, your application should:
   </Tab>
 </Tabs>
 
-### User Experience Best Practices
+### User experience best practices
 
 <AccordionGroup>
   <Accordion title="Form Validation" icon="circle-check">
@@ -329,7 +329,7 @@ When Reputation Shield blocks an email, your application should:
 
 ## Benefits
 
-### Security Advantages
+### Security advantages
 
 <CardGroup cols={2}>
   <Card title="Reputation Protection" icon="star">
@@ -349,7 +349,7 @@ When Reputation Shield blocks an email, your application should:
   </Card>
 </CardGroup>
 
-### Operational Benefits
+### Operational benefits
 
 - **Reduced bounce rates** from invalid or non-existent domains
 - **Lower complaint rates** by avoiding spam trap domains
@@ -357,7 +357,7 @@ When Reputation Shield blocks an email, your application should:
 - **Decreased fraud** from temporary email abuse
 - **Enhanced security posture** against phishing attacks
 
-## Monitoring and Analytics
+## Monitoring and analytics
 
 Track the effectiveness of Reputation Shield through:
 
@@ -394,7 +394,7 @@ Track the effectiveness of Reputation Shield through:
   </Accordion>
 </AccordionGroup>
 
-## Related Guides
+## Related guides
 
 - [Account quickstart](/quickstart), [Domain setup](/domains), [Send through API](/send-api/send-email).
 - [SMTP special headers](/smtp/special-headers), [Suppression durations](/bounces#suppression-duration), [Plans and limits](/facts).

@@ -23,7 +23,7 @@ This guide shows how to use AhaSend to send transactional email from Google Clou
 - An [API key](https://dash.ahasend.com/account/-/transactional/credentials) with the domain-scoped `messages:send:{your-domain}` scope matching the domain in `From.Email` (use `messages:send:all` only if the key must cover several domains), and your account ID
 - A Google Cloud project with the `gcloud` CLI configured
 
-## Install the Dependencies
+## Install the dependencies
 
 ```bash
 go mod init example.com/emailfns
@@ -34,7 +34,7 @@ go get github.com/google/uuid
 
 <QuickSend />
 
-## Write the Cloud Run Functions Code
+## Write the Cloud Run functions code
 
 Cloud Run functions in Go live in a non-`main` package. Register each HTTP function in `init()` with `functions.HTTP`; the registered name is what you point `--entry-point` at when deploying. The dependency helpers below initialize once per instance and keep each deployed function from requiring the other function's credentials.
 
@@ -246,7 +246,7 @@ The SDK automatically retries transient failures with backoff and attaches an id
   Both entry points live in the same source package, but each dependency helper initializes only when its handler runs. Give the send function only the API key and account ID, and give the webhook function only the webhook secret.
 </Note>
 
-## Store the API Key in Secret Manager
+## Store the API key in Secret Manager
 
 Environment variables set with `--set-env-vars` are visible to anyone who can describe the function, so keep the API key (and webhook secret) in Secret Manager instead. Read each value from a prompt rather than typing it into the command: a secret written literally on a `gcloud` line stays in your shell history. `read -s` does not echo it, and `printf %s` sends it without the trailing newline that would break verification:
 
@@ -323,7 +323,7 @@ The webhook function must be `--allow-unauthenticated` because AhaSend can't att
 
 Timestamp validation is not replay deduplication. Before adding side effects, atomically store the `webhook-id` header together with durable work; acknowledge a duplicate with `200` without enqueueing it again. Publish to Cloud Tasks or Pub/Sub before returning success, then perform slow work in the consumer. Cloud Run functions does not guarantee work started after the HTTP response will continue.
 
-## Test Locally
+## Test locally
 
 The Functions Framework can serve your function as a local HTTP server. Add a small `main` package:
 
@@ -366,7 +366,7 @@ FUNCTION_TARGET=AhaSendWebhook go run ./cmd
 
 Prompt for the credentials rather than writing them inline here too: a key on the command line lands in your shell history and is readable from `ps` while the server runs.
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 

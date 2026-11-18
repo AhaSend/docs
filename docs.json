@@ -95,6 +95,13 @@
               "send-api/sandbox",
               "send-api/send-email",
               "send-api/templates",
+              "send-api/multiple-recipients",
+              "send-api/attachments",
+              "send-api/inline-images",
+              "send-api/schedule-email",
+              "send-api/custom-headers",
+              "send-api/tags",
+              "send-api/tracking-and-retention",
               "send-api/ahaml"
             ]
           },

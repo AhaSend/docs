@@ -13,7 +13,7 @@ AhaSend works with Symfony Mailer's SMTP bridge; this guide installs it, sends a
 
 Use PHP 8.4.1 or newer and Composer for the Symfony 8.1 packages below. The [AhaSend bridge](https://symfony.com/packages/aha-send-mailer) is a real Symfony package. In the tested 8.1 release, its API transport uses legacy API v1; this guide uses SMTP. Do not put a v2 API key in that release's API transport.
 
-## Install the Mailer
+## Install the mailer
 
 ```bash
 composer require symfony/mailer:^8.1 symfony/aha-send-mailer:^8.1
@@ -37,7 +37,7 @@ echo "Accepted by SMTP\n";
 
 Run `php quick-send.php`. A transport failure raises an exception and exits with an error.
 
-## Use the Symfony Recipe in Your App
+## Use the Symfony recipe in your app
 
 In an existing Symfony app using Flex, run the install command above to add Mailer and its configuration recipe. Set `MAILER_DSN` in the server's secret store to the following value, replacing and URL-encoding the username and password. For local work, put this setting in `.env.local`, excluded from Git. Symfony loads that file when the application starts.
 
@@ -55,7 +55,7 @@ php bin/console mailer:test recipient@example.com --from=sender@YOUR_DOMAIN
 
 A successful command exits with status 0; check the AhaSend sandbox log too. Inject `MailerInterface` into your application's mail service to use this configuration. The [Symfony Mailer guide](https://symfony.com/doc/current/mailer.html) explains the recipe and Messenger delivery. See the [SMTP reference](/smtp) for connection settings and TLS requirements.
 
-## Handle Failures Before Going Live
+## Handle failures before going live
 
 For a standalone worker, save this as `send.php`. Before running it, export `MAILER_DSN`, `AHASEND_FROM` and `AHASEND_TO` in its process environment; use the SMTP DSN above and `AHASEND_TO=recipient@example.com` while testing. This script loads Composer only: it does not boot Symfony or read `.env.local`. Keep using `bin/console mailer:test` for the Symfony app configuration.
 

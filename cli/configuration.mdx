@@ -7,7 +7,7 @@ sidebarTitle: "Configuration"
 
 The AhaSend CLI keeps your profiles in a configuration file, and all commands share one set of global flags, output formats and exit codes. This page describes them.
 
-## Configuration File
+## Configuration file
 
 `ahasend auth login` creates the configuration file at `~/.ahasend/config.yaml` (Windows: `%USERPROFILE%\.ahasend\config.yaml`). It holds your profiles and the name of the default profile. In this example, each `YOUR_...` value stands for an API key or the ID of its account:
 
@@ -46,7 +46,7 @@ ahasend auth switch staging
 
 See [CLI authentication](/cli/authentication) to log in, switch and remove profiles.
 
-### CI Credentials
+### CI credentials
 
 In CI, store the API key and account ID as secrets and pass them with flags:
 
@@ -56,7 +56,7 @@ ahasend --api-key "$AHASEND_API_KEY" --account-id "$AHASEND_ACCOUNT_ID" ping
 
 `--api-key` takes the place of a profile and always uses the production API, `https://api.ahasend.com`. It needs `--account-id`, and you cannot combine it with `--profile`. An empty value, as `"$AHASEND_API_KEY"` gives when the variable is not set, fails with exit code 4. The CLI does not fall back to a profile.
 
-## Global Flags
+## Global flags
 
 These flags work on every command, with one exception: the `auth` commands work on saved profiles, so `auth status`, `auth switch` and `auth logout` refuse `--api-key` and `--account-id` with exit code 4, and `auth login` has its own `--api-key`, `--account-id` and `--profile` flags, which [its page](/cli/commands/auth) describes.
 
@@ -76,7 +76,7 @@ Colors appear only in log lines and in the `webhooks listen` and `routes listen`
 
 `--verbose` and `--debug` write their logs to stderr. `--debug` logs headers that carry credentials, and body values such as `api_key`, `password` or `secret`, as `[REDACTED]`. It logs at most the first 64 KiB of each body.
 
-## Output Formats
+## Output formats
 
 Choose a format with `--output` on each command:
 
@@ -99,7 +99,7 @@ CSV output is for spreadsheets and data tools:
 - CSV output has no pagination line. To page in a script, use `--output json` and read `pagination.next_cursor`.
 - A list with nothing to show prints the header row alone.
 
-### JSON Output
+### JSON output
 
 With `--output json`, a command that calls the API prints the API's response body unchanged: the same keys in the same order, including keys the CLI does not know, indented by two spaces. The fields are those of the [API reference](/api-reference). A delete, cancel or wipe whose response has no body prints nothing.
 
@@ -130,11 +130,11 @@ Use the exit code to tell success from failure. A command that calls the API mor
 
 `webhooks listen` and `routes listen` ignore `--output`: they always print their event stream as text, for people to read. To process the events in code, forward them to a local endpoint with `--forward-to`.
 
-### Stdout and Stderr
+### Stdout and stderr
 
 Stdout holds only the command's output. Prompts, warnings, notices and logs go to stderr in every format, with one exception: in table and plain output, the notices that follow a created API key, SMTP credential, webhook or route, such as the one that tells you to save its secret, go to stdout with the output they belong to. Errors go to stderr in table, plain and CSV output, and to stdout in JSON output.
 
-## Lists and Pagination
+## Lists and pagination
 
 List commands return one page at a time:
 
@@ -160,13 +160,13 @@ These commands ask for confirmation before they act: every `delete` command, `au
 
 No other command asks for confirmation. For example, `auth logout <profile>` removes the profile at once, `campaigns unschedule` unschedules the campaign at once, and `auth login` to a profile that exists replaces its credentials.
 
-### Missing Values
+### Missing values
 
 Commands that ask for a missing required value, such as `domains create` and `messages send`, ask only when stdin is a terminal. Otherwise, or with `--non-interactive`, a missing value fails with an error such as `--name is required` and exit code 4.
 
 `auth login` works differently: without `--api-key` and `--account-id`, it reads them from stdin even when stdin is not a terminal, and it has no `--non-interactive`. Empty stdin cancels it with exit code 4. See [`auth login`](/cli/commands/auth#command-flags).
 
-## Exit Codes
+## Exit codes
 
 Every failure exits nonzero, in every output format. An error that the API returns exits by its HTTP status:
 
@@ -191,12 +191,12 @@ elif [ $? -eq 5 ]; then
 fi
 ```
 
-## Next Steps
+## Next steps
 
 - [Learn about authentication](/cli/authentication)
 - [Explore available commands](/cli/commands/messages)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [REST sending guide](/send-api/send-email).
 - [SMTP settings](/smtp), [Node.js SDK](/guides/nodejs-sdk), [Go SDK](/guides/go-sdk).

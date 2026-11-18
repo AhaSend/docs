@@ -8,7 +8,7 @@ icon: "address-book"
 
 The AhaSend Contacts API manages the contacts of your account. This page explains what a contact is, how it relates to lists and segments, and the rules that apply to all contact operations.
 
-## Contacts, Lists and Segments
+## Contacts, lists and segments
 
 A contact is one person in your account, found by email address. Contacts are account-global: one contact has one email address, and one email address belongs to at most one contact in the account. The API trims the email address and changes it to lowercase before it stores it.
 
@@ -20,7 +20,7 @@ A contact has two kinds of consent:
 
 Contacts and [suppressions](/api-reference/suppressions/get-suppressions) are separate. Create Contact does not read or change suppressions, and a change to `unsubscribed` does not add or remove a suppression.
 
-## Contact Fields
+## Contact fields
 
 | Field | Meaning |
 |-------|---------|
@@ -32,7 +32,7 @@ Contacts and [suppressions](/api-reference/suppressions/get-suppressions) are se
 | `attributes` | Your own fields. See [Attributes](#attributes). |
 | `validation_status`, `last_validated_at` | The result of the last email validation. You cannot write these fields. |
 
-## Name a Contact in the Path
+## Name a contact in the path
 
 Operations on one contact take `{id_or_email}` in the path:
 - A value in UUID form is read as the contact ID.
@@ -74,7 +74,7 @@ To read the lists of a contact, you need `lists:read`. To read the segments of a
 
 Create Contact and Batch Upsert Contacts accept an `Idempotency-Key` header. See [Idempotency](/api-reference/idempotency).
 
-## API Operations
+## API operations
 
 | Task | Endpoint reference |
 |---|---|
@@ -87,7 +87,7 @@ Create Contact and Batch Upsert Contacts accept an `Idempotency-Key` header. See
 | Read the lists of a contact | [List Contact's Lists](/api-reference/lists/get-contact-lists) |
 | Read the segments of a contact | [List Contact's Segments](/api-reference/segments/get-contact-segments) |
 
-## Related Guides
+## Related guides
 
 - [API authentication](/api-reference/authentication), [Permission scopes](/api-reference/scopes), [Idempotency](/api-reference/idempotency).
 - [Lists API overview](/api-reference/lists/overview), [Segments API overview](/api-reference/segments/overview), [Campaigns API overview](/api-reference/campaigns/overview), [API errors](/api-reference/errors), [API rate limits](/api-reference/rate-limits).

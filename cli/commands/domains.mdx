@@ -27,7 +27,7 @@ Available subcommands:
 
 A typical setup is: create the domain, add the DNS records the command prints, then run `domains check-dns` until the DNS is valid.
 
-## List Domains
+## List domains
 
 List the domains in your account with their DNS status and sending type.
 
@@ -50,9 +50,9 @@ ahasend domains list --sending-type marketing
 
 The API filters by whether the DNS is valid, so `--status pending` and `--status failed` both list the domains whose DNS is not valid.
 
-Pages work as [Lists and Pagination](/cli/configuration#lists-and-pagination) describes.
+Pages work as [Lists and pagination](/cli/configuration#lists-and-pagination) describes.
 
-## Create Domain
+## Create domain
 
 ```bash
 ahasend domains create example.com
@@ -75,7 +75,7 @@ ahasend domains create example.com --no-dns-help
 
 `--sending-type marketing`, on `create` and `update`, needs marketing features on your account. Without them, the API answers 400 `sending_type must be transactional`, and the command fails with [exit code](/cli/configuration#exit-codes) 4.
 
-### Export DNS Records
+### Export DNS records
 
 `--format` replaces the setup instructions with the records in a provider format: `bind`, `cloudflare` or `terraform` (version 5 of the Cloudflare Terraform provider). The records also go to stderr. Table output puts a header line above them; plain and CSV output write no header, so you can save the records with `2>`:
 
@@ -90,14 +90,14 @@ ahasend domains create example.com --format terraform --output plain 2> ahasend-
 The output holds every record of the domain, optional ones included. A comment line (`;` in BIND, `#` in the other formats) comes before each optional record, and before the SPF and DMARC records, to say what the record is for or how to add it. The optional records include an MX record for [inbound routes](/cli/commands/routes). The Terraform resources set `zone_id = var.zone_id`, so declare a `zone_id` variable in your configuration.
 
 <Warning>
-Review the file before you import or apply it. Remove the optional records you do not want: the MX record, usually on the domain itself, sends the inbound email of that name to AhaSend instead of your mail server. If the domain has an SPF record or a DMARC record, do not add a second one, which breaks the existing one: merge the AhaSend SPF terms into your record and keep your DMARC record, as [Existing SPF Records](#existing-spf-records) shows.
+Review the file before you import or apply it. Remove the optional records you do not want: the MX record, usually on the domain itself, sends the inbound email of that name to AhaSend instead of your mail server. If the domain has an SPF record or a DMARC record, do not add a second one, which breaks the existing one: merge the AhaSend SPF terms into your record and keep your DMARC record, as [Existing SPF records](#existing-spf-records) shows.
 </Warning>
 
 `--format` cannot be used with `--no-dns-help` or `--output json`, which print no records. Both combinations fail with exit code 4 before any request.
 
 With `--output json`, the command prints the API's response body unchanged and writes no DNS instructions.
 
-## Verify Domain
+## Verify domain
 
 `domains verify` shows a domain's DNS status as of its last DNS check. It does not check the DNS again.
 
@@ -127,7 +127,7 @@ The output, the setup instructions on stderr and the exit code are the same as f
 Most records verify within minutes. DNS changes can take up to 48 hours to propagate.
 </Note>
 
-## Get Domain Details
+## Get domain details
 
 Show a domain's DNS status and records, sending type, custom subdomains, DKIM selector and DKIM rotation interval. For a paused domain, the output also shows when and why it was paused.
 
@@ -138,7 +138,7 @@ ahasend domains get example.com
 ahasend domains get example.com --output json
 ```
 
-## Update Domain
+## Update domain
 
 Change a domain's settings. Only the flags you give are sent; other settings stay as they are. These examples change how a live domain sends, so try them on a test domain, and note the current values with `domains get` first so you can set them back.
 
@@ -162,9 +162,9 @@ ahasend domains update example.com --dkim-selector ""
 - Each subdomain must be one DNS label: 1-63 letters, digits and hyphens, without a leading or trailing hyphen. Subdomains lock after DNS verification; to change a locked subdomain, contact support.
 - `--dkim-selector` works on accounts with DNS whitelabel (Max plan). An empty value clears it. The selector also locks after DNS verification, so the empty-value example works only on a domain that is not verified; to change a locked selector, contact support. The selector cannot change while a DKIM key rotation is in progress.
 - `--dkim-rotation-interval` takes 30 to 180 days.
-- `--sending-type marketing` needs marketing features on your account, as [Create Domain](#create-domain) describes. A sending type change applies to new messages within five minutes.
+- `--sending-type marketing` needs marketing features on your account, as [Create domain](#create-domain) describes. A sending type change applies to new messages within five minutes.
 
-## Delete Domain
+## Delete domain
 
 ```bash
 # Create a test domain, then delete it with a confirmation prompt
@@ -183,9 +183,9 @@ The DNS records you added stay with your DNS provider. Remove them there when yo
 Deleting a domain is irreversible. You'll need to re-add and re-verify the domain if you want to use it again.
 </Warning>
 
-## Common DNS Setup
+## Common DNS setup
 
-### Existing SPF Records
+### Existing SPF records
 
 A domain can have only one SPF record. If you already have one, add the AhaSend `include:` term to it instead of adding a second record:
 
@@ -207,7 +207,7 @@ You can add subdomains for sending:
 ahasend domains create mail.example.com
 ```
 
-## Command Flags
+## Command flags
 
 These flags come from the CLI's `--help`. All commands also accept the [global flags](/cli/configuration#global-flags).
 
@@ -272,13 +272,13 @@ This command has no command-specific flags. See [global flags](/cli/configuratio
 |---|---|
 | `--show-records` | Print the DNS setup instructions even when the DNS is valid |
 
-## Next Steps
+## Next steps
 
 - [Send emails from verified domains](/cli/commands/messages)
 - [Configure webhooks](/cli/commands/webhooks)
 - [View statistics](/cli/commands/stats)
 
-## Related Guides
+## Related guides
 
 - [Install the CLI](/cli/installation), [CLI authentication](/cli/authentication), [Domain setup](/domains).
 - [Domain API](/api-reference/domains/create-domain), [DNS whitelabel](/scale/dns-whitelabel), [CLI configuration and output](/cli/configuration).

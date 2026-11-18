@@ -12,7 +12,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 
 Click tracking is off by default. Enable it in account settings or override it per message. Tracked URLs use the AhaSend tracking domain unless you configure a [custom tracking CNAME](/domains).
 
-## How Click Tracking Works
+## How click tracking works
 
 Click tracking works by automatically rewriting all eligible links in your HTML emails to redirect through AhaSend's tracking servers. When a recipient clicks a tracked link, they're briefly redirected through AhaSend's servers before being sent to the original destination, allowing the click to be recorded.
 
@@ -40,7 +40,7 @@ Click tracking works by automatically rewriting all eligible links in your HTML 
   </Accordion>
 </AccordionGroup>
 
-### Common Accuracy Issues
+### Common accuracy issues
 
 <AccordionGroup>
   <Accordion title="Links Not Tracked" icon="link-slash">
@@ -70,7 +70,7 @@ Click tracking works by automatically rewriting all eligible links in your HTML 
   </Accordion>
 </AccordionGroup>
 
-## Privacy Considerations
+## Privacy considerations
 
 Click tracking has significant privacy implications that you should consider:
 
@@ -78,7 +78,7 @@ Click tracking has significant privacy implications that you should consider:
 **Privacy Compliance:** Ensure your use of click tracking complies with applicable privacy laws (GDPR, CCPA, etc.) in your jurisdiction. Consider disclosing tracking in your privacy policy.
 </Warning>
 
-### Privacy Impact
+### Privacy impact
 
 <AccordionGroup>
   <Accordion title="Information Collected" icon="database">
@@ -110,11 +110,11 @@ Click tracking has significant privacy implications that you should consider:
   </Accordion>
 </AccordionGroup>
 
-## Enabling Click Tracking
+## Enabling click tracking
 
 Click tracking can be controlled at different levels depending on how you send emails:
 
-### Account-Wide Settings
+### Account-wide settings
 
 Configure your default click tracking preference in your AhaSend dashboard:
 
@@ -122,11 +122,11 @@ Configure your default click tracking preference in your AhaSend dashboard:
 2. Toggle **Click Tracking** on or off
 3. This setting applies to all emails unless overridden per message
 
-### Per-Message Override
+### Per-message override
 
 Override account settings for individual emails using different methods:
 
-## SMTP with Special Headers
+## SMTP with special headers
 
 For SMTP email sending, use the `ahasend-track-clicks` header to control tracking:
 
@@ -152,7 +152,7 @@ Content-Type: text/html
 
 For complete SMTP header documentation, see [Special Email Headers](/smtp/special-headers).
 
-## API v2 Implementation
+## API v2 implementation
 
 API v2 (`/v2/accounts/{account_id}/messages`) provides native support for tracking configuration:
 
@@ -182,7 +182,7 @@ API v2 (`/v2/accounts/{account_id}/messages`) provides native support for tracki
 
 For complete API v2 documentation, see [Send Emails using the API](/api-reference/messages/create-message).
 
-## API v1 Implementation
+## API v1 implementation
 
 For API v1 (`/v1/email/send`), include tracking headers in the `content.headers` field:
 
@@ -208,7 +208,7 @@ For API v1 (`/v1/email/send`), include tracking headers in the `content.headers`
 }
 ```
 
-## Excluding Individual Links
+## Excluding individual links
 
 To exclude specific links from click tracking while keeping it enabled for the email, add the `data-as-no-track` attribute:
 
@@ -225,7 +225,7 @@ To exclude specific links from click tracking while keeping it enabled for the e
 **Use Case:** Commonly used for unsubscribe links, privacy policy links, or other administrative links where tracking isn't needed or desired. AhaSend never tracks its own [unsubscribe link](/campaigns/unsubscribe) (`{{unsubscribe_url}}`).
 </Tip>
 
-## Best Practices
+## Best practices
 
 <AccordionGroup>
   <Accordion title="Link Formatting" icon="code">
@@ -263,7 +263,7 @@ To exclude specific links from click tracking while keeping it enabled for the e
   </Accordion>
 </AccordionGroup>
 
-## Related Guides
+## Related guides
 
 - [Account quickstart](/quickstart), [Domain setup](/domains), [Click event payload](/api-reference/webhooks/message-clicked).
 - [Open tracking](/tracking/open-tracking), [API tracking options](/api-reference/messages/create-message), [SMTP tracking headers](/smtp/special-headers).

@@ -43,7 +43,7 @@ echo "Accepted by SMTP\n";
 
 Run `php quick-send.php`. A transport failure throws an exception.
 
-## Configure Laravel's SMTP Mailer
+## Configure Laravel's SMTP mailer
 
 Replace the sample app's `config/mail.php` with this file. In an existing app, merge the `smtp` mailer and sender settings with your current configuration.
 
@@ -63,7 +63,7 @@ return [
 
 Laravel passes `require_tls` to Symfony's SMTP transport. Keep TLS certificate checks enabled. Clear any old cached configuration with `php artisan config:clear`; rebuild the configuration cache in your normal deployment process after the secrets are present. See [Laravel Mail](https://laravel.com/docs/12.x/mail) for mailables and queues.
 
-## Add a Command with Failure Handling
+## Add a command with failure handling
 
 Add this to `routes/console.php`, after its existing opening PHP tag. The following complete file also works in the sample app.
 

@@ -13,7 +13,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 **Header Usage:** All AhaSend special headers are removed before email delivery and are never visible to recipients. They're used only to control AhaSend's processing behavior.
 </Info>
 
-## Available Special Headers
+## Available special headers
 
 <CardGroup cols={2}>
   <Card title="Tracking Control" icon="chart-line">
@@ -30,7 +30,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
   </Card>
 </CardGroup>
 
-## Tracking Headers
+## Tracking headers
 
 Control email tracking behavior on a per-message basis, overriding your account-wide settings.
 
@@ -40,7 +40,7 @@ Control email tracking behavior on a per-message basis, overriding your account-
 
 Header names are case-insensitive. This page uses `AhaSend-` casing for readability.
 
-## Open Tracking Header
+## Open tracking header
 **Header:** `ahasend-track-opens`<br />
 **Values:** `true` | `false`<br />
 **Purpose:** Enable or disable open tracking for individual emails
@@ -64,7 +64,7 @@ Content-Type: text/html
 </html>
 ```
 
-### Click Tracking Header
+### Click tracking header
 
 **Header:** `ahasend-track-clicks`<br />
 **Values:** `true` | `false`<br />
@@ -90,7 +90,7 @@ Content-Type: text/html
 </html>
 ```
 
-### Excluding Individual Links
+### Excluding individual links
 
 To exclude specific links from click tracking while keeping it enabled for the email, add the `data-as-no-track` attribute:
 
@@ -98,11 +98,11 @@ To exclude specific links from click tracking while keeping it enabled for the e
 <a href="https://example.com/unsubscribe" data-as-no-track>Unsubscribe</a>
 ```
 
-## Sandbox Headers
+## Sandbox headers
 
 Control sandbox mode behavior for testing without affecting real email delivery.
 
-### Sandbox Mode Header
+### Sandbox mode header
 
 **Header:** `AhaSend-Sandbox`<br />
 **Values:** `true` | `1`<br />
@@ -118,7 +118,7 @@ Content-Type: text/plain
 This email will be processed in sandbox mode and not delivered.
 ```
 
-### Sandbox Result Header
+### Sandbox result header
 
 **Header:** `AhaSend-Sandbox-Result`<br />
 **Values:** `deliver` | `bounce` | `defer` | `fail` | `suppress`<br />
@@ -147,12 +147,12 @@ This email will simulate a bounce for testing error handling.
 
 Header names are case-insensitive. See the [SMTP language examples](/smtp) for setting them in your library.
 
-## Retention Headers
+## Retention headers
 
 Customize data retention policies for individual emails, overriding your account defaults.
 
 
-### Message Retention Headers
+### Message retention headers
 
 AhaSend provides two types of retention control for different aspects of your email data:
 
@@ -174,7 +174,7 @@ AhaSend provides two types of retention control for different aspects of your em
   </Accordion>
 </AccordionGroup>
 
-### Retention Examples
+### Retention examples
 
 ```plaintext SMTP Example
 From: hello@yourdomain.com
@@ -187,7 +187,7 @@ Content-Type: text/plain
 This email's metadata will be retained for 7 days, but content will be deleted immediately after processing.
 ```
 
-### Retention Use Cases
+### Retention use cases
 
 <CardGroup cols={1}>
   <Card title="High Security" icon="shield">
@@ -199,7 +199,7 @@ This email's metadata will be retained for 7 days, but content will be deleted i
   </Card>
 </CardGroup>
 
-## Message Tags Header
+## Message tags header
 
 Add custom tags to emails for organization, filtering, and analytics.
 
@@ -213,7 +213,7 @@ Add custom tags to emails for organization, filtering, and analytics.
 <Tip>
 **Pro Tip:** Use tags consistently across your emails to build powerful filtering and analytics. Start with basic categories like email type and campaign, then expand based on your tracking needs.
 </Tip>
-### Tag Usage Examples
+### Tag usage examples
 
 ```plaintext SMTP Example
 From: hello@yourdomain.com
@@ -230,7 +230,7 @@ Content-Type: text/html
 </html>
 ```
 
-### Tag Best Practices
+### Tag best practices
 
 <AccordionGroup>
   <Accordion title="Naming Conventions" icon="tag">
@@ -248,7 +248,7 @@ Content-Type: text/html
   </Accordion>
 </AccordionGroup>
 
-## Combining Headers
+## Combining headers
 
 You can use multiple special headers together for comprehensive email customization:
 
@@ -274,7 +274,7 @@ Content-Type: text/html
 </html>
 ```
 
-## Header Reference Summary
+## Header reference summary
 
 <AccordionGroup>
   <Accordion title="Tracking Headers" icon="chart-line">
@@ -295,7 +295,7 @@ Content-Type: text/html
   </Accordion>
 </AccordionGroup>
 
-## Important Notes
+## Important notes
 
 <CardGroup cols={2}>
   <Card title="Header Processing" icon="gear">
@@ -311,7 +311,7 @@ Content-Type: text/html
   </Card>
 </CardGroup>
 
-## Related Guides
+## Related guides
 
 - [Domain setup](/domains), [SMTP credentials](/smtp/credentials), [SMTP settings](/smtp).
 - [Sandbox mode](/send-api/sandbox), [Retention](/retention), [API sending](/send-api/send-email).

@@ -48,7 +48,7 @@ bun add @ahasend/sdk hono @hono/node-server
 
 On Bun you don't need `@hono/node-server`: `Bun.serve` runs Hono natively via `export default app`.
 
-## Configure Environment Variables
+## Configure environment variables
 
 Add your credentials to `.env` (and load them with `node --env-file=.env`; Bun loads `.env` automatically):
 
@@ -59,7 +59,7 @@ AHASEND_WEBHOOK_SECRET=aha-whsec-...
 WELCOME_ROUTE_TOKEN=replace-with-a-long-random-token
 ```
 
-## Create the Client
+## Create the client
 
 Create the client once at module scope and reuse it across requests:
 
@@ -78,7 +78,7 @@ export const ahasend = new AhaSendClient({
 });
 ```
 
-## Send an Email from a Hono Route
+## Send an email from a Hono route
 
 ```ts server.ts
 import { Hono } from "hono";
@@ -182,7 +182,7 @@ The SDK retries transient failures automatically. The stable key in the example 
 
 The send example uses `sandbox: true` to validate the request without delivering anything. `sandbox` is part of the request body, and the server matches an idempotency key against a hash of that body, so a key already used for a sandbox send is rejected with a 422 when the same key is replayed for the live send — give the two runs different keys.
 
-## Handle Webhooks
+## Handle webhooks
 
 `nextRouteHandler` is the SDK's web-standard Request/Response adapter, so it works with Hono's `c.req.raw`.
 
@@ -230,7 +230,7 @@ Let a failed commit reject: the adapter rethrows a handler error, Hono answers 5
 
 Create the webhook in your [AhaSend dashboard](https://dash.ahasend.com) pointing at `https://your-app.com/webhooks/ahasend`, and copy its secret into `AHASEND_WEBHOOK_SECRET` exactly as shown (including the `aha-whsec-` prefix).
 
-## Going Further
+## Going further
 
 <GuideNextSteps />
 
