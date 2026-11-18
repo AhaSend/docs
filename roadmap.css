@@ -120,6 +120,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 .rm-tag.is-new         { background: #6d28d9; }
+.rm-tag.is-integration { background: #15803d; }
 .rm-tag.is-product     { background: #be123c; }
 .rm-tag.is-improvement { background: #0e7490; }
 .rm-tag.is-early       { background: #1d4ed8; }
