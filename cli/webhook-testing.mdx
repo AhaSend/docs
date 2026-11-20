@@ -23,7 +23,7 @@ Every flag on this page is listed in the [`webhooks` command reference](/cli/com
 
 ### Basic usage
 
-`ahasend webhooks listen` prints each event as text, whatever `--output` says. It runs until you press Ctrl+C or the connection closes.
+`ahasend webhooks listen` prints each event as text, whatever `--output` says. It runs until you press Ctrl+C or the connection closes. `SIGTERM` stops it as Ctrl+C does, and so does closing its terminal on Linux or macOS, unless you started the command with `nohup`, which keeps it running.
 
 ```bash
 # Listen for all webhook events
@@ -48,15 +48,24 @@ The API key needs the `webhooks:write:all` scope. When the connection starts, th
 
 ### Temporary webhooks
 
-Without `--webhook-id`, the API creates a temporary webhook named `DevMode webhook for <API key label>`. `webhooks list` does not show it. It stays after the command ends, until you delete it or the API does, as [Events without a listener](#events-without-a-listener) describes.
+Without `--webhook-id`, the API creates a temporary webhook named `DevMode webhook for <API key label>`. `webhooks list` does not show it. The banner shows its ID.
 
-As soon as the API creates it, the command prints a note on stderr with its ID and the command that deletes it:
+When the command ends, however it ends, it deletes the temporary webhook and prints `Deleted temporary webhook YOUR_RESOURCE_ID` on stderr. Once deleted, the webhook cannot be listened on again by its ID, and the events that waited for it are gone. To listen again after the command ends and receive the [kept events](#events-without-a-listener), listen through [a webhook you created](#existing-webhooks).
+
+Deleting needs the `webhooks:delete:all` scope. The command waits at most 5 seconds for the delete, and Ctrl+C does not cut that wait short. When the delete fails, or gets no answer in that time, the command prints a warning on stderr with the webhook's ID, the reason and the command that deletes it:
 
 ```bash
 ahasend webhooks delete YOUR_RESOURCE_ID
 ```
 
-The note appears before the command connects, so you see the ID even when connecting then fails.
+Run it with a key that has the delete scope. The delete does not change the exit code.
+
+The temporary webhook also stays when the command cannot delete it:
+- The command is killed with `SIGKILL`, or the machine stops.
+- On Windows, you close the console window and Windows ends the command before the delete is done.
+- The command is interrupted, or the API's answer is lost, during the request that starts the stream.
+
+The API then deletes it only as [Events without a listener](#events-without-a-listener) describes.
 
 ### Existing webhooks
 
@@ -74,7 +83,7 @@ While you listen, the webhook's own URL keeps receiving its events, the test eve
 A webhook with streaming on keeps it when no listener is connected: the API keeps its events for the next listener, up to the last 100. When 5 minutes pass with no new event, the API drops the kept events. The next `webhooks listen --webhook-id` of the same webhook prints the kept events first, each marked `REPLAY:`.
 
 When an event arrives while 100 events are already kept, the API drops the kept events and turns off streaming for the webhook:
-- A temporary webhook is deleted.
+- A temporary webhook that its command left behind is deleted.
 - A webhook you created keeps sending events to its URL. The next `webhooks listen --webhook-id` turns streaming on again.
 
 ### Available events
@@ -263,14 +272,14 @@ Stdout holds the banner, the `Session established` line and the events, with sep
 
 **Events Not Received**: Check that the webhook is enabled, that the API key has the read scope of the events (on CLI v0.4.0 or later, the command warns on stderr when it does not), that `--events` does not filter the events out, and that your local server is running. Run with `--debug` to see each forward and its response status.
 
-**Connection Lost**: The listener does not reconnect. Start it again with `--webhook-id` and the same webhook ID to receive the [kept events](#events-without-a-listener).
+**Connection Lost**: The listener does not reconnect. When it listened through a webhook you created, start it again with `--webhook-id` and the same webhook ID to receive the [kept events](#events-without-a-listener). A temporary webhook is deleted when the listener ends, so start a new one.
 
 ## Best practices
 
 1. **Start Simple**: Test with single events before complex flows
 2. **Use Sandbox Mode**: Test with sandbox emails to avoid sending real messages
 3. **Verify Signatures**: Always validate webhook signatures in production
-4. **Clean Up**: Delete temporary webhooks when you finish testing
+4. **Clean Up**: Use a key with the delete scope, so the listener can delete its temporary webhook when it ends
 5. **Test Error Cases**: Simulate failures to ensure proper error handling
 
 ## Next steps

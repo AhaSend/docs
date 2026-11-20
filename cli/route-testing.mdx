@@ -24,7 +24,7 @@ Every flag on this page is listed in the [`routes` command reference](/cli/comma
 
 ### Basic usage
 
-`ahasend routes listen` prints each event as text, whatever `--output` says. It runs until you press Ctrl+C or the connection closes. Give exactly one of `--route-id` and `--recipient`.
+`ahasend routes listen` prints each event as text, whatever `--output` says. It runs until you press Ctrl+C or the connection closes. `SIGTERM` stops it as Ctrl+C does, and so does closing its terminal on Linux or macOS, unless you started the command with `nohup`, which keeps it running. Give exactly one of `--route-id` and `--recipient`.
 
 ```bash
 # Listen with an existing route
@@ -50,15 +50,24 @@ Attachment data is not sent over the WebSocket. Only email metadata and content 
 
 ### Temporary routes
 
-With `--recipient`, the API creates a temporary route named `DevMode route for <API key label>`. It is enabled, and `routes list` does not show it. It stays after the command ends, until you delete it or the API does, as [Events without a listener](#events-without-a-listener) describes.
+With `--recipient`, the API creates a temporary route named `DevMode route for <API key label>`. It is enabled, and `routes list` does not show it. The banner shows its ID.
 
-As soon as the API creates it, the command prints a note on stderr with its ID and the command that deletes it:
+When the command ends, however it ends, it deletes the temporary route and prints `Deleted temporary route YOUR_RESOURCE_ID` on stderr. Once deleted, the route cannot be listened on again by its ID, and the events that waited for it are gone. To listen again after the command ends and receive the [kept events](#events-without-a-listener), listen through [a route you created](#existing-routes).
+
+Deleting needs the `routes:delete:all` scope, or `routes:delete:{example.com}` for the domain of the route's recipient. The command waits at most 5 seconds for the delete, and Ctrl+C does not cut that wait short. When the delete fails, or gets no answer in that time, the command prints a warning on stderr with the route's ID, the reason and the command that deletes it:
 
 ```bash
 ahasend routes delete YOUR_RESOURCE_ID
 ```
 
-The note appears before the command connects, so you see the ID even when connecting then fails.
+Run it with a key that has the delete scope. The delete does not change the exit code.
+
+The temporary route also stays when the command cannot delete it:
+- The command is killed with `SIGKILL`, or the machine stops.
+- On Windows, you close the console window and Windows ends the command before the delete is done.
+- The command is interrupted, or the API's answer is lost, during the request that starts the stream.
+
+The API then deletes it only as [Events without a listener](#events-without-a-listener) describes.
 
 ### Existing routes
 
@@ -76,7 +85,7 @@ While you listen, the route's own URL keeps receiving every email it matches, th
 A route with streaming on keeps it when no listener is connected: the API keeps its events for the next listener, up to the last 100. When 5 minutes pass with no new event, the API drops the kept events. The next `routes listen --route-id` of the same route prints the kept events first, each marked `REPLAY:`.
 
 When an event arrives while 100 events are already kept, the API drops the kept events and turns off streaming for the route:
-- A temporary route is deleted.
+- A temporary route that its command left behind is deleted.
 - A route you created keeps posting emails to its URL. The next `routes listen --route-id` turns streaming on again.
 
 ### Event type
@@ -147,7 +156,7 @@ A disabled route gets no event: the API answers that it is queued, and then drop
 ahasend routes list
 ```
 
-Temporary routes do not appear in the list. Their ID is in the listener's banner and in the note on stderr.
+Temporary routes do not appear in the list. Their ID is in the listener's banner.
 
 ## Integration testing
 
@@ -237,7 +246,7 @@ ahasend routes listen --recipient "tasks@example.com" \
 2. **Verify Signatures**: Always validate webhook signatures in production
 3. **Use listeners for development**: Configure a real route URL for production
 4. **Test with Trigger Command**: Use trigger to test without sending real emails
-5. **Clean Up**: Delete temporary routes when you finish testing
+5. **Clean Up**: Use a key with the delete scope, so the listener can delete its temporary route when it ends
 
 ## Troubleshooting
 
@@ -249,7 +258,7 @@ ahasend routes listen --recipient "tasks@example.com" \
 
 **Route Not Found**: Check the route ID with `ahasend routes list`. Temporary routes do not appear there; use the ID from the listener's banner.
 
-**Connection Lost**: The listener does not reconnect. Start it again with `--route-id` and the same route ID to receive the [kept events](#events-without-a-listener).
+**Connection Lost**: The listener does not reconnect. When it listened through a route you created, start it again with `--route-id` and the same route ID to receive the [kept events](#events-without-a-listener). A temporary route is deleted when the listener ends, so start a new one.
 
 ## Next steps
 
