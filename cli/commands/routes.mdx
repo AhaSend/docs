@@ -170,7 +170,7 @@ ahasend routes listen --recipient "support-*@example.com" \
   --forward-to http://localhost:3000/webhook
 ```
 
-The API key needs the `routes:write:all` scope, and `messages:read` for the domain of the route's recipient. With `--recipient`, the API creates a temporary route, and the command deletes it when it ends, which needs the `routes:delete:all` scope too, or `routes:delete:{domain}` for the domain of the route's recipient. Forwarded events are signed with a forwarding secret that the command prints when it connects. The [route testing guide](/cli/route-testing) covers temporary routes, forwarding, signatures and exit codes.
+The API key needs the `routes:write:all` scope, and `messages:read` for the domain of the route's recipient. With `--recipient`, the API creates a temporary route, and, on CLI v0.6.0 or later, the command deletes it when it ends, which needs the `routes:delete:all` scope too, or `routes:delete:{domain}` for the domain of the route's recipient. Forwarded events are signed with a forwarding secret that the command prints when it connects. The [route testing guide](/cli/route-testing) covers temporary routes, forwarding, signatures and exit codes.
 
 ## Trigger test events
 

@@ -219,7 +219,7 @@ ahasend webhooks listen \
   --forward-to http://localhost:3000/webhook
 ```
 
-The API key needs the `webhooks:write:all` scope. Without `--webhook-id`, the API creates a temporary webhook, and the command deletes it when it ends, which needs the `webhooks:delete:all` scope too. Forwarded events are signed with a forwarding secret that the command prints when it connects. The [webhook testing guide](/cli/webhook-testing) covers temporary webhooks, forwarding, signatures and exit codes.
+The API key needs the `webhooks:write:all` scope. Without `--webhook-id`, the API creates a temporary webhook, and, on CLI v0.6.0 or later, the command deletes it when it ends, which needs the `webhooks:delete:all` scope too. Forwarded events are signed with a forwarding secret that the command prints when it connects. The [webhook testing guide](/cli/webhook-testing) covers temporary webhooks, forwarding, signatures and exit codes.
 
 The stream sends only the events that the API key's scopes can read. On CLI v0.4.0 or later, for each family of events the webhook turns on whose read scope the key does not have, the command prints the server's warning on stderr as it connects, such as `Warning: The API key does not have the suppressions:read scope, so suppression events are not sent to this stream`.
 

@@ -33,6 +33,10 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
   - The `sending_type_changed` webhook event. `--all-events` selects it.
   - The new statistics scope names in `apikeys` and `subaccounts api-keys`. The earlier names still work.
   - **Breaking:** the event flags of `webhooks update` name the webhook's whole set of events, so a flag that does not select `sending_type_changed` turns it off. See the [v0.5.0 release notes](https://github.com/AhaSend/ahasend-cli/releases/tag/v0.5.0).
+- **[AhaSend CLI](/cli) v0.6.0.** `webhooks listen` and `routes listen` clean up after themselves:
+  - They delete the [temporary webhook](/cli/webhook-testing#temporary-webhooks) or [temporary route](/cli/route-testing#temporary-routes) they listened through when they end. The API key needs the delete scope for this; without it, the command warns and names the command that deletes it.
+  - Closing the terminal on Linux or macOS stops them as Ctrl+C does. A command started with `nohup` keeps running.
+  - **Breaking:** a temporary webhook or route cannot be listened on again by its ID after the command ends, and the note on stderr before connecting is gone. See the [v0.6.0 release notes](https://github.com/AhaSend/ahasend-cli/releases/tag/v0.6.0).
 
 #### Changes
 

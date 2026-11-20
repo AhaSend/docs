@@ -52,7 +52,7 @@ Attachment data is not sent over the WebSocket. Only email metadata and content 
 
 With `--recipient`, the API creates a temporary route named `DevMode route for <API key label>`. It is enabled, and `routes list` does not show it. The banner shows its ID.
 
-When the command ends, however it ends, it deletes the temporary route and prints `Deleted temporary route YOUR_RESOURCE_ID` on stderr. Once deleted, the route cannot be listened on again by its ID, and the events that waited for it are gone. To listen again after the command ends and receive the [kept events](#events-without-a-listener), listen through [a route you created](#existing-routes).
+On CLI v0.6.0 or later, when the command ends, however it ends, it deletes the temporary route and prints `Deleted temporary route YOUR_RESOURCE_ID` on stderr. Once deleted, the route cannot be listened on again by its ID, and the events that waited for it are gone. To listen again after the command ends and receive the [kept events](#events-without-a-listener), listen through [a route you created](#existing-routes).
 
 Deleting needs the `routes:delete:all` scope, or `routes:delete:{example.com}` for the domain of the route's recipient. The command waits at most 5 seconds for the delete, and Ctrl+C does not cut that wait short. When the delete fails, or gets no answer in that time, the command prints a warning on stderr with the route's ID, the reason and the command that deletes it:
 
@@ -68,6 +68,8 @@ The temporary route also stays when the command cannot delete it:
 - The command is interrupted, or the API's answer is lost, during the request that starts the stream.
 
 The API then deletes it only as [Events without a listener](#events-without-a-listener) describes.
+
+Earlier versions of the CLI do not delete the temporary route: they print a note on stderr with its ID before they connect, and the route stays until you delete it or the API does. Closing the terminal ends them at once.
 
 ### Existing routes
 
