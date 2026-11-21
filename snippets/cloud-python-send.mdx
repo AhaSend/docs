@@ -42,4 +42,4 @@ def send_email(body, authorization):
         return 502, {"error": "Email request failed"}
 ```
 
-Only your server chooses the sender, recipient and message body. Look up a user's verified address from your database before adapting this to a real signup flow. Keep that saved message unchanged when retrying an `event_id`; a new business event needs a new ID. See [idempotency](/api-reference/idempotency) for time limits and uncertain outcomes. Record an internal event ID on failures without logging API keys or message bodies. Add request limits at the hosting layer.
+Only your server chooses the sender, recipient and message body. Look up a user's verified address from your database before adapting this to a real signup flow. Keep that saved message unchanged when retrying an `event_id`; a new business event needs a new ID. See [idempotency](/api-reference/idempotency) for how long a key lives and how to retry. Record an internal event ID on failures without logging API keys or message bodies. Add request limits at the hosting layer.

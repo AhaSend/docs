@@ -190,7 +190,7 @@ When retries are enabled, a surfaced `429` or server error has exhausted the con
 Retries are on by default: the SDK retries network failures, `429`, and `5xx` responses with the configured backoff, and leaves every other `4xx` alone unless you opt in with `RetryConfig.RetryClientErrors`. It attaches an idempotency key to POST operations and reuses that key across its own retry attempts.
 
 <Note>
-  Stored outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, so a retry after a 5xx can still result in a second send. Pass your own key derived from a stable business identifier when a duplicate would be expensive. API key creation is the exception: because its response carries a one-time secret, that outcome replays for only 5 minutes, after which the same key creates a second credential.
+  Stored outcomes replay for 24 hours, covering 2xx and deterministic 4xx responses. Server errors are not stored, and a retry with the same key after a 5xx does not result in a second send. Pass your own key derived from a stable business identifier when your application may retry a call. API key creation is the exception: because its response carries a one-time secret, that outcome replays for only 5 minutes, after which a request with the same key is a new request.
 </Note>
 
 ```go
@@ -200,7 +200,7 @@ response, _, err := client.MessagesAPI.CreateMessage(
 )
 ```
 
-Reuse a caller-provided key only for the same exact request payload, and never log it. If the original keyed request is still running, the API can return `409`; the SDK surfaces this as `api.ErrorTypeIdempotencyConflict` with `RetryAfter` and does not retry it automatically. For email sends, reconcile the business operation or explicitly decide whether a possible duplicate is preferable to a possible missed send before retrying with the same key.
+Reuse a caller-provided key only for the same exact request payload, and never log it. If the original keyed request is still running, the API can return `409`; the SDK surfaces this as `api.ErrorTypeIdempotencyConflict` with `RetryAfter` and does not retry it automatically. Wait for `RetryAfter`, then retry with the same key: an email send happens at most one time for its key.
 
 ## Services
 

@@ -263,7 +263,7 @@ This is a server-to-server route. Never expose `AHASEND_SEND_TOKEN` to a browser
 
 The example defaults to sandbox mode, which validates without delivery. Change `sandbox` to `false` only when you intend to send real mail. The stable business-event key protects later calls for the same logical request, so keep an `event_id` bound to the same request data: AhaSend hashes the method, path, and body behind the key, so reusing one key for a changed payload returns `422 Unprocessable Entity` rather than sending. The mode prefix keeps the sandbox and live attempts on separate keys, so flipping `sandbox` for the same `event_id` sends instead of hitting that `422`.
 
-The SDK also generates a key when none is supplied and reuses a request's key across its automatic exponential-backoff retries. Stored outcomes replay for 24 hours, but a 5xx is not stored, so even a same-key retry after a server error can still send twice.
+The SDK also generates a key when none is supplied and reuses a request's key across its automatic exponential-backoff retries. Stored outcomes replay for 24 hours, and a same-key retry after a server error does not send a second email.
 
 ## Handle webhooks
 

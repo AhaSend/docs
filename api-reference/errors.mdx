@@ -242,11 +242,19 @@ These errors indicate a problem on our end. If you consistently receive 500 erro
 
 The service could not finish the request. Retry it later. When the response has a `Retry-After` header, wait that number of seconds before you retry.
 
-**Template check busy:** [Create Message](/api-reference/messages/create-message), [Create Template Message](/api-reference/messages/create-template-message), [Create Conversation](/api-reference/messages/create-conversation) and [Test Campaign](/api-reference/campaigns/test-campaign) answer `503` with a `Retry-After` header when the template check could not run right now, because the service was busy or the check failed. Nothing was sent, and nothing is known to be wrong with the message. Send the same request again after the delay. If the request has an `Idempotency-Key`, use the same key: a `503` is not stored under it.
+**Template check busy:** [Create Message](/api-reference/messages/create-message), [Create Template Message](/api-reference/messages/create-template-message), [Create Conversation](/api-reference/messages/create-conversation) and [Test Campaign](/api-reference/campaigns/test-campaign) answer `503` with a `Retry-After` header when the template check could not run right now, because the service was busy or the check failed. Nothing is known to be wrong with the message. Send the same request again after the delay. If the request has an `Idempotency-Key`, use the same key: a `503` is not stored under it.
 
 ```json
 {
   "message": "the message could not be checked right now; try again in a moment"
+}
+```
+
+**Result not known yet:** [Create Message](/api-reference/messages/create-message), [Create Template Message](/api-reference/messages/create-template-message) and [Create Conversation](/api-reference/messages/create-conversation) answer `503` with a `Retry-After` header when the request has an `Idempotency-Key` and its result is not known yet. Send the same request again with the same key after the delay. The retry sends each message at most one time.
+
+```json
+{
+  "message": "The result of this request is not known yet. Send it again with the same Idempotency-Key."
 }
 ```
 

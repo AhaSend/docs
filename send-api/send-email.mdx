@@ -377,7 +377,7 @@ HTTP `202` means the request was accepted for processing. Inspect every item's `
 | 422 | This idempotency key was used with a different method, path or body |
 | 429 | Account API request limit exceeded |
 | 500 | Server error; retry with the same idempotency key |
-| 503 | The template check could not run, and nothing was sent; wait for `Retry-After`, then retry with the same idempotency key |
+| 503 | The template check could not run, or the result of a request with an idempotency key is not known yet; wait for `Retry-After`, then retry with the same idempotency key |
 
 Error responses have a human-readable `message` field. Its text can change; do not parse it as a machine error code.
 
@@ -426,7 +426,7 @@ Based on the [API documentation](/api-reference/messages/create-message), ensure
     ```bash
     --header 'Idempotency-Key: unique-request-id-12345'
     ```
-    Stored send results expire after 24 hours. The same key and exact request replay a stored result; a 5xx can allow re-execution. See [idempotency](/api-reference/idempotency).
+    Stored send results expire after 24 hours. The same key and exact request replay a stored result, and a retry after a 5xx sends each message at most one time. See [idempotency](/api-reference/idempotency).
   </Accordion>
 
   <Accordion title="Template Variables" icon="code">

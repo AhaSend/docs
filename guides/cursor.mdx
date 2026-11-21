@@ -125,7 +125,7 @@ if (rejected.length > 0) {
 Six things to confirm in whatever the agent wrote:
 
 - **The handoff is durable.** The user and uniquely keyed welcome-email job are committed together, and a worker retries pending work. There must be no detached send promise in the request handler.
-- **Retries reuse an immutable request.** The job stores the exact send payload, and its stable idempotency key is reused only for that payload. A retry beyond AhaSend's 24-hour result-retention window must reconcile rather than assume deduplication.
+- **Retries reuse an immutable request.** The job stores the exact send payload, and its stable idempotency key is reused only for that payload. A key lives 24 hours, so a retry later than that is a new send: check the job record first.
 - **The real package.** The import must be `@ahasend/sdk`. If you see `import ahasend from "ahasend"` or a hand-rolled `fetch` to the REST API in a plain Node service, the model ignored your rule.
 - **Every recipient checked.** Code that reads `result.data[0].status` and moves on will miss a suppressed address in a batch. The promise resolving means the request was accepted, not that every recipient was.
 - **The key comes from the environment.** If the agent hardcoded the key or dropped it in a config file that git tracks, fix that before you commit.

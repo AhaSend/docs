@@ -173,7 +173,7 @@ Call this route only from trusted server-side code with `Authorization: Bearer <
 
 AhaSend's 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry rather than treating a resolved promise as full success.
 
-The SDK generates an `Idempotency-Key` for every `send()` and reuses it across its own internal retries, but a 5xx releases the server record and a retry can send twice. It cannot cover a retry your *caller* makes — and a timeout never proves the send did not land — which is what the stable `idempotencyKey` above is for: a stored result is replayed for 24 hours, while a server error releases the key for re-execution. Reuse a key only with an identical request body — the same key with different content is rejected as `AhaSendIdempotencyMismatchError` (HTTP 422).
+The SDK generates an `Idempotency-Key` for every `send()` and reuses it across its own internal retries, so a retry after a 5xx does not send a second email. It cannot cover a retry your *caller* makes — and a timeout never proves the send did not land — which is what the stable `idempotencyKey` above is for: for 24 hours, a retry with it replays the stored result, and a retry after a server error does not send a second email. Reuse a key only with an identical request body — the same key with different content is rejected as `AhaSendIdempotencyMismatchError` (HTTP 422).
 
 The send example uses `sandbox: true` to validate the request without delivering anything. It changes the request body, so give a sandbox send a different `idempotencyKey` from the live send it stands in for.
 

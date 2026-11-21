@@ -240,7 +240,7 @@ func ahaSendWebhook(w http.ResponseWriter, r *http.Request) {
 
 Run `go mod tidy` once the source is in place. `go get` records the modules you named but not the Functions Framework's own dependencies, and both `go build` and the deploy's buildpack fail on the missing `go.sum` entries until you tidy.
 
-The SDK automatically retries transient failures with backoff and attaches an idempotency key to every send. The stable key above also covers a later invocation for the same `event_id`, but stored outcomes expire after 24 hours and a 5xx is not stored. A retry must repeat the *exact* payload: reusing `welcome-<event_id>` with a different recipient or body returns `422`, so derive `event_id` from the signup event rather than per attempt. Reconcile an uncertain result before retrying, and persist `event_id` in your application if the welcome email must never be sent twice.
+The SDK automatically retries transient failures with backoff and attaches an idempotency key to every send. The stable key above also covers a later invocation for the same `event_id` within 24 hours: such a retry, also after a 5xx, does not send a second email. A retry must repeat the *exact* payload: reusing `welcome-<event_id>` with a different recipient or body returns `422`, so derive `event_id` from the signup event rather than per attempt. Persist `event_id` in your application if a retry can come later than 24 hours.
 
 <Note>
   Both entry points live in the same source package, but each dependency helper initializes only when its handler runs. Give the send function only the API key and account ID, and give the webhook function only the webhook secret.

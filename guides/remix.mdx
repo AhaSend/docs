@@ -202,7 +202,7 @@ The limiter should combine the signals appropriate to your application, such as 
 
 A 202 is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` (a suppressed address, for example) while the call itself succeeds. Inspect every entry, not just the first — a resolved promise with nothing queued is a failed send, so the action above reports it as one instead of rendering a silent success.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. When a duplicate would be expensive, pass a stable key from the committed business operation as the second argument: `ahasend.messages.send(message, { idempotencyKey: "welcome-" + signup.id })`. Do not derive it from an arbitrary retry attempt.
+The SDK retries transient failures automatically with the same idempotency key, so a retry after a 5xx does not send a second email. When your application may retry later and a duplicate would be expensive, pass a stable key from the committed business operation as the second argument: `ahasend.messages.send(message, { idempotencyKey: "welcome-" + signup.id })`. Do not derive it from an arbitrary retry attempt.
 
 The example sets `sandbox: true` on the send request to validate it without delivering anything.
 

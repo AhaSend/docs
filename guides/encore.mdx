@@ -145,7 +145,7 @@ The explicit `Promise<SendWelcomeResponse>` annotation is load-bearing: Encore d
 
 This assumes your app has an [Encore auth handler](https://encore.dev/docs/ts/develop/auth) whose auth data contains immutable `userID` and verified `email` fields. Taking the recipient from authenticated server data prevents the endpoint from becoming an arbitrary-recipient mail relay. A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The business-stable idempotency key lets a retried signup reuse the same operation. Use the same key only for the exact same payload. AhaSend retains ordinary idempotency results for 24 hours, but server-error outcomes are not stored and a retry can re-execute the send, so this is not an exactly-once guarantee. Persist a completed-welcome marker in your application database when duplicate prevention must last longer, and make the workflow safe to reconcile after an uncertain result.
+The business-stable idempotency key lets a retried signup reuse the same operation. Use the same key only for the exact same payload. AhaSend retains ordinary idempotency results for 24 hours, and a retry with the same key after a server error does not send a second email. Persist a completed-welcome marker in your application database when duplicate prevention must last longer than 24 hours.
 
 Run it locally:
 

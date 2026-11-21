@@ -285,7 +285,7 @@ A `2xx` from the API is not a per-recipient guarantee: every entry in `response.
 
 This example uses a dedicated bearer token for a server-to-server endpoint. For a user-facing route, use your application's session authentication and authorization and load the recipient from server-authoritative storage instead of accepting an email address from the browser. Never expose either bearer token to client-side code or logs. Serve the route only over HTTPS, and apply per-caller request-rate and concurrency limits at your reverse proxy: an endpoint that sends to a caller-supplied address is a mail relay for anyone holding the token.
 
-The explicit idempotency key protects a retry of the same business event outside the SDK's internal retry loop. Reuse it only for the exact same payload and never log it — the API matches a key against the request body, so the same key with a changed body is rejected with `422` rather than replayed, which is why the key carries the delivery mode. Stored outcomes replay for 24 hours, but a `5xx` is not stored and the key is released, so a retry after a server error can still send twice; reconcile an uncertain result before issuing another send when duplicates are unacceptable.
+The explicit idempotency key protects a retry of the same business event outside the SDK's internal retry loop. Reuse it only for the exact same payload and never log it — the API matches a key against the request body, so the same key with a changed body is rejected with `422` rather than replayed, which is why the key carries the delivery mode. Stored outcomes replay for 24 hours, and a retry with the same key after a server error does not send a second email.
 
 ## Handle webhooks
 

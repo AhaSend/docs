@@ -271,9 +271,9 @@ An accepted send is multi-status: `result.data` contains one result per
 recipient, and an entry can have `status: "error"` even though the request
 resolved. Reuse the same `eventId` when retrying the same business operation;
 the stable idempotency key lets AhaSend replay a stored outcome instead of
-creating another send. A server-error outcome can be re-executed, so make the
-surrounding business workflow tolerate an uncertain duplicate. Do not expose or
-log provider errors, recipients, message content, or the idempotency key.
+creating another send, and a retry after a server error does not send a second
+email. Do not expose or log provider errors, recipients, message content, or the
+idempotency key.
 
 A rate-limit error surfaces only after the SDK has already retried it while
 honouring `Retry-After`, so pass that budget on to the caller instead of

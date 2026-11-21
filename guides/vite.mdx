@@ -186,9 +186,8 @@ raw identifier in request metadata. AhaSend matches a key against the exact
 request body, so editing the subject or the HTML and then retrying for a user
 who already received one is rejected with `AhaSendIdempotencyMismatchError`
 (HTTP 422) rather than replayed; change the key prefix alongside the content. A
-stored result is replayed for 24 hours and a server-error outcome releases the
-key for re-execution, so the surrounding workflow must tolerate an uncertain
-duplicate.
+stored result is replayed for 24 hours, and a retry with the same key after a
+server error does not send a second email.
 
 ## 2. Proxy `/api` during development
 

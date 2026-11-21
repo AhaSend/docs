@@ -38,4 +38,4 @@ exports.sendEmail = async (body, authorization = "") => {
 };
 ```
 
-The caller supplies only the business event ID. For a real signup, read the recipient from your database after checking the caller's access. Save the exact message with that event ID and reuse both when retrying. Read the [idempotency limits](/api-reference/idempotency) before retrying an uncertain send. Add request limits at the hosting layer and log an internal event ID instead of credentials or message bodies.
+The caller supplies only the business event ID. For a real signup, read the recipient from your database after checking the caller's access. Save the exact message with that event ID and reuse both when retrying. A retry with the same event ID does not send a second email; see [idempotency](/api-reference/idempotency) for how long a key lives. Add request limits at the hosting layer and log an internal event ID instead of credentials or message bodies.

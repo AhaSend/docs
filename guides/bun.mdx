@@ -186,7 +186,7 @@ Call this route only from trusted server-side code with `Authorization: Bearer <
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. For a business operation your application may retry later, pass a stable `idempotencyKey`, reuse it only with the exact same request payload, and remember that the server retains non-secret results for 24 hours.
+The SDK retries transient failures automatically with the same idempotency key, so a retry after a 5xx does not send a second email. For a business operation your application may retry later, pass a stable `idempotencyKey`, reuse it only with the exact same request payload, and remember that the server retains non-secret results for 24 hours.
 
 The send request already uses `sandbox: true` to validate it without delivering anything. Sandbox is a body field, so a key already used for a sandbox send is rejected when the same key is replayed for the live send — give the two runs different keys.
 
