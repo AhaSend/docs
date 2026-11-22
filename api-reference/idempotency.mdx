@@ -5,7 +5,7 @@ icon: "repeat"
 sidebarTitle: "Idempotency"
 ---
 
-AhaSend uses an `Idempotency-Key` to replay a stored result when you retry the same request. A request with a key does its operation at most one time during the life of the key: 24 hours from its first use, or 5 minutes for API key creation. A retry with the same key and the same request after a server error, a timeout or a lost answer does not send a second message or create a second resource.
+AhaSend uses an `Idempotency-Key` to replay a stored result when you retry the same request. A request with a key does its operation at most one time while the key is valid. A key is valid for 24 hours. A retry with the same key and the same request after a server error, a timeout or a lost answer does not send a second message or create a second resource.
 
 Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
