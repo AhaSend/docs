@@ -7,15 +7,45 @@ sidebarTitle: "Roadmap"
 
 The AhaSend roadmap shows active work, planned improvements and shipped features, with links to the available documentation.
 
-<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 18 November 2026</p>
+<p style={{ fontSize: "0.85rem", opacity: 0.7 }}>Last updated 23 November 2026</p>
 
 <div className="rm">
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (8)</h2>
+      <h2 className="rm-badge is-shipped" id="recently-shipped">Recently shipped (11)</h2>
     </div>
 
     <div className="rm-list">
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Fewer false flags for accented text <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>Messages with accented letters, such as Hungarian text, are no longer flagged for mixing alphabets.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">Clearer automated monitoring <span className="rm-tag is-improvement">Improvement</span></p>
+          <p>When automated monitoring pauses or limits sending, the dashboard and the notification say which trigger fired and what to do about it.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
+      <div className="rm-card is-shipped">
+        <div className="rm-accent" />
+
+        <div>
+          <p className="rm-title">SMTP credentials after a domain is deleted <span className="rm-tag is-bugfix">Bug fix</span></p>
+          <p>Listing and managing SMTP credentials through the API no longer fails after you delete a domain that a credential was scoped to.</p>
+          <span className="rm-date">Q4 2026</span>
+        </div>
+      </div>
+
       <div className="rm-card is-shipped">
         <div className="rm-accent" />
 
@@ -100,7 +130,7 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
 
   <section>
     <div className="rm-head">
-      <h2 className="rm-badge is-active" id="active">Active (10)</h2>
+      <h2 className="rm-badge is-active" id="active">Active (8)</h2>
     </div>
 
     <div className="rm-list">
@@ -162,26 +192,8 @@ The AhaSend roadmap shows active work, planned improvements and shipped features
         <div className="rm-accent" />
 
         <div>
-          <p className="rm-title">Fewer false flags for accented text <span className="rm-tag is-bugfix">Bug fix</span></p>
-          <p>Messages with accented letters, such as Hungarian text, are no longer flagged for mixing alphabets.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-active">
-        <div className="rm-accent" />
-
-        <div>
           <p className="rm-title">Long lines with open tracking <span className="rm-tag is-bugfix">Bug fix</span></p>
           <p>Adding the open tracking pixel no longer creates lines longer than mail servers accept.</p>
-        </div>
-      </div>
-
-      <div className="rm-card is-active">
-        <div className="rm-accent" />
-
-        <div>
-          <p className="rm-title">Clearer automated monitoring <span className="rm-tag is-improvement">Improvement</span></p>
-          <p>When automated monitoring pauses or limits sending, the dashboard and the notification say which trigger fired and what to do about it.</p>
         </div>
       </div>
 
