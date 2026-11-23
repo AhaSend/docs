@@ -155,7 +155,7 @@ Call this route only from trusted server-side code with `Authorization: Bearer <
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. When a duplicate would be expensive, pass a stable key as the second argument: `ahasend.messages.send(message, { idempotencyKey: "stable-business-key" })`. Reuse that key only with the exact same request payload — the API matches on a hash of the body as well as the key, and answers a mismatched replay with a 422. Stored non-server-error results are replayed for 24 hours; a server error releases the key so the retry re-executes.
+The SDK retries transient failures automatically with the same idempotency key, so a retry after a 5xx does not send a second email. When your application may retry later and a duplicate would be expensive, pass a stable key as the second argument: `ahasend.messages.send(message, { idempotencyKey: "stable-business-key" })`. Reuse that key only with the exact same request payload — the API matches on a hash of the body as well as the key, and answers a mismatched replay with a 422. Stored non-server-error results are replayed for 24 hours, and a retry with the key after a server error does not send a second email.
 
 Add `sandbox: true` to the send request to validate it without delivering anything. Sandbox is a body field, so a key already spent on a sandbox send is rejected when the same key is replayed for the live send — give the two runs different keys.
 

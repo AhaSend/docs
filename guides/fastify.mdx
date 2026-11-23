@@ -171,7 +171,7 @@ Keep `WELCOME_ROUTE_TOKEN` server-side and require your application authenticati
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK retries transient failures automatically, but a 5xx or timeout does not prove that no email was sent. The stable `idempotencyKey` lets stored results be replayed for 24 hours, but server errors release the key for re-execution. Reconcile an uncertain result before retrying, and persist `eventId` in your application if the welcome email must never be sent twice.
+The SDK retries transient failures automatically. After a 5xx or a timeout, retry with the stable `idempotencyKey`: for 24 hours, a retry with it replays the stored result, and a retry after a 5xx or a timeout does not send a second email. Persist `eventId` in your application if a retry can come later than that.
 
 The send example uses `sandbox: true` to validate the request without delivering anything. The idempotency key is bound to a hash of the request body, so flipping `sandbox` on or off while reusing the same `eventId` returns `422` `AhaSendIdempotencyMismatchError` — use a distinct key prefix for sandbox traffic.
 

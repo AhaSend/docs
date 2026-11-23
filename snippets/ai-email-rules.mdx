@@ -14,7 +14,7 @@
 - Require AHASEND_DELIVERY_MODE to be sandbox or live; reject missing or other values.
   Use a sandbox-mode credential for agent tests. Never decide delivery mode from NODE_ENV.
 - Set sandbox from that explicit mode. Prefix stable business-event idempotency keys with the mode.
-  Reuse a key only with the same request. Ordinary results last 24 hours; 5xx may re-execute.
+  Reuse a key only with the same request. A key lives 24 hours; retry a 5xx with the same key.
 - Inspect every result.data item: queued and scheduled were accepted; error was rejected and has
   a null id. Return a non-2xx result or fail the job when any recipient is rejected.
 - Verify webhooks with @ahasend/sdk/webhooks before parsing or acting on untrusted data.

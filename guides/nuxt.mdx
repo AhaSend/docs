@@ -209,7 +209,7 @@ export default defineEventHandler(async (event) => {
 
 A 202 from AhaSend is a **multi-status** response: `result.data` holds one entry per recipient, and an individual recipient can come back with `status: "error"` and a null `id` while the call itself succeeds. Inspect every entry, but do not return recipient-level errors to the browser because they can contain addresses and provider diagnostics.
 
-Require your application's authenticated server to call this route. If a browser calls it directly, replace the bearer-token check with your normal server-side session validation and derive the recipient from that verified identity. `eventId` must be a stable ID for the welcome-email business event, persisted by the caller and reused for every retry. The SDK reuses this explicit idempotency key during its retries; a 5xx can be re-executed, so your application must still reconcile an uncertain result instead of blindly creating a new event ID.
+Require your application's authenticated server to call this route. If a browser calls it directly, replace the bearer-token check with your normal server-side session validation and derive the recipient from that verified identity. `eventId` must be a stable ID for the welcome-email business event, persisted by the caller and reused for every retry. The SDK reuses this explicit idempotency key during its retries, and a retry with it after a 5xx does not send a second email, so retry with the same event ID instead of creating a new one.
 
 The `content-length` check rejects an oversized declared body, but Nitro does not cap request bodies on its own. Set a matching body-size limit at your reverse proxy or platform ingress in front of both routes.
 

@@ -24,7 +24,7 @@ Authorization uses the domain in `from.email`: either
 sufficient.
 
 **Template check:**
-Every message is checked with the template engine before it is sent. Content that the check refuses is answered with `400`, and nothing of the request is sent. When the check cannot run right now, the API answers `503` with a `Retry-After` header: send the same request again after that delay. See [API errors](/api-reference/errors#400-bad-request).
+Every message is checked with the template engine before it is sent. Content that the check refuses is answered with `400`, and nothing of the request is sent. When the check cannot run right now, or the result of the request is not known yet, the API answers `503` with a `Retry-After` header: send the same request again after that delay, with the same `Idempotency-Key`. See [API errors](/api-reference/errors#400-bad-request).
 
 ## Related guides
 

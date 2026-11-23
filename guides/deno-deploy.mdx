@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
 
 A 202 is **multi-status**: `result.data` carries one entry per recipient, and an individual recipient can come back `status: "error"` with a null `id` (a suppressed address, say) while the call itself succeeds, so check every entry, not just the first.
 
-The SDK retries transient failures automatically, but a retry after a 5xx can still send twice. Reuse a stable `idempotencyKey` only for the exact same request payload. Stored message results expire after 24 hours, so reconcile an uncertain operation rather than assuming a later retry is deduplicated.
+The SDK retries transient failures automatically with the same idempotency key, so a retry after a 5xx does not send a second email. Reuse a stable `idempotencyKey` only for the exact same request payload. Stored message results expire after 24 hours, so a retry later than that is a new send.
 
 The send example uses `sandbox: true` to validate the request without delivering anything. Sandbox and live sends share one idempotency namespace per account, and `sandbox` is part of the request body, so flipping it while reusing a key raises `AhaSendIdempotencyMismatchError` instead of sending.
 

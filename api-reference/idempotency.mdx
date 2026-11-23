@@ -1,11 +1,11 @@
 ---
 title: "Idempotency Keys for Safe API Retries"
-description: "Use AhaSend Idempotency-Key headers on supported API operations to reduce duplicate requests, replay stored results, and handle expiry or conflicts."
+description: "Use AhaSend Idempotency-Key headers on supported API operations to retry safely, replay stored results, and handle expiry or conflicts."
 icon: "repeat"
 sidebarTitle: "Idempotency"
 ---
 
-AhaSend uses an `Idempotency-Key` to replay a stored result when you retry the same request. It reduces duplicate operations, but a server error, an interrupted request, or an expired record can allow the operation to run again. Reconcile uncertain sends before retrying when duplicates are unacceptable.
+AhaSend uses an `Idempotency-Key` to replay a stored result when you retry the same request. A request with a key does its operation at most one time while the key is valid. A key is valid for 24 hours. A retry with the same key and the same request after a server error, a timeout or a lost answer does not send a second message or create a second resource.
 
 Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
@@ -19,7 +19,7 @@ When you make a request with an `Idempotency-Key` header:
 
 1. **First Request**: The API processes your request normally and stores the response
 2. **Subsequent Requests**: If you retry with the same key, the API returns the stored response instead of processing the request again
-3. **Server Errors Are Retriable**: If the original attempt failed with a server error (HTTP 5xx) or never completed, no response is stored — retrying with the same key re-executes the request and can repeat a side effect
+3. **Server Errors Are Retriable**: If the original attempt failed with a server error (HTTP 5xx), no response is stored. When it failed, timed out or you lost its answer, retry with the same key and the same request: the operation happens at most one time, and the retry gets its result
 4. **Automatic Cleanup**: Stored idempotency responses expire after 24 hours. The exception is API key creation: because its response carries a one-time `secret_key`, the replayable response expires after 5 minutes
 
 <AccordionGroup>
@@ -269,11 +269,13 @@ The API responds differently based on the idempotency key status:
   </Tab>
 
   <Tab title="Failed Original">
-    **Replayed**: on ordinary idempotent operations, deterministic `2xx` and `4xx` outcomes produced after the idempotency middleware are stored and replayed. Authentication failures, IP allow list failures and the rate-limit `429` happen before that middleware and are not stored. API key creation stores a successful `201` only; a controller-produced `4xx` leaves the key in progress until its lease expires. [Test Campaign](/api-reference/campaigns/test-campaign) stores a `2xx` only; a `4xx` releases the key, so a retry with the same key gets a new answer.
+    **Replayed**: on ordinary idempotent operations, deterministic `2xx` and `4xx` outcomes produced after the idempotency middleware are stored and replayed. Authentication failures, IP allow list failures and the rate-limit `429` happen before that middleware and are not stored. API key creation stores a successful `201` only; a controller-produced `4xx` leaves the key in progress until its lease expires. [Test Campaign](/api-reference/campaigns/test-campaign) stores a `2xx` only; a `4xx` releases the key, so a retry with the same key gets a new answer. A Test Campaign request that follows an earlier request with the same key that did not finish sends nothing and answers `200` with `result_unknown: true`, because the earlier request may have sent the test.
 
     **Campaign status conflicts**: Update Campaign, Send Campaign, Unschedule Campaign and Test Campaign answer `409` when the status of the campaign does not allow the request. That `409` has no `Retry-After` header. Except for Test Campaign, it is stored like other `4xx` answers, so a retry with the same key replays it with `Idempotent-Replayed: true`. After the status changes, retry with a new key. See the [forms of a campaign 409](/api-reference/campaigns/overview#idempotency).
 
-    **Re-executed**: server errors (`5xx`) are transient — no response is stored, and a retry with the same idempotency key re-executes the request as if it were the first attempt.
+    **Not stored**: server errors (`5xx`) are not stored. A retry with the same idempotency key and the same request is safe: it gets the result of the operation, which happens at most one time.
+
+    **Result not known yet**: [Create Message](/api-reference/messages/create-message), [Create Template Message](/api-reference/messages/create-template-message) and [Create Conversation](/api-reference/messages/create-conversation) answer `503` with a `Retry-After` header and `The result of this request is not known yet. Send it again with the same Idempotency-Key.` when the result of a keyed send is not known yet. Wait for the `Retry-After` delay, then send the same request again with the same key.
   </Tab>
 
   <Tab title="Payload Mismatch">
@@ -301,9 +303,9 @@ The API responds differently based on the idempotency key status:
   </Card>
 
   <Card title="Retry Logic" icon="arrow-rotate-right">
-    Retry with the same idempotency key when you do not know the outcome, or the answer was not stored, as the **Failed Original** tab under [Response behavior](#response-behavior) describes. Examples are a network error, a `5xx` (when a `503` has a `Retry-After` header, wait that delay), a rate-limit `429` (wait as [API rate limits](/api-reference/rate-limits) describes), and a `409` that is still in progress (wait for its `Retry-After` delay). A stored answer is replayed, so a retry of a stored `4xx` with the same key gets the same answer. For a `5xx` or a network error, wait with exponential backoff between retries. The snippet below handles the in-progress `409`; the [Error Handling](#best-practices) card lists how to treat the other `409` answers.
+    Retry with the same idempotency key and the same request when you do not know the outcome, or the answer was not stored, as the **Failed Original** tab under [Response behavior](#response-behavior) describes. Examples are a network error, a `5xx`, a rate-limit `429` (see [API rate limits](/api-reference/rate-limits)), and a `409` that is still in progress. Before each retry, wait: for the `Retry-After` delay when the answer has one, or with exponential backoff when it has none. A stored answer is replayed, so a retry of a stored `4xx` with the same key gets the same answer. The snippet below handles the in-progress `409`; the [Error Handling](#best-practices) card lists how to treat the other `409` answers.
 
-    Pass a `makeRequest(key)` callback that sends the same body each time and, on failure, throws an object with the HTTP `status` and the response `headers` (a `Headers` object). Only use this retry policy after deciding that retrying an uncertain send is acceptable.
+    Pass a `makeRequest(key)` callback that sends the same body each time and, on failure, throws an object with the HTTP `status` and the response `headers` (a `Headers` object).
 
     ```javascript
     export async function retryInProgress(makeRequest, idempotencyKey) {
@@ -324,7 +326,7 @@ The API responds differently based on the idempotency key status:
   </Card>
 
   <Card title="Key Expiration" icon="clock">
-    Stored responses expire after 24 hours — don't reuse a key after this period, as it can execute again. API key creation is shorter: its one-time `secret_key` is only replayable for 5 minutes.
+    A key lives 24 hours from its first use. After that, a request with the same key is a new request, so don't reuse a key after this period. API key creation is shorter: its one-time `secret_key` is only replayable for 5 minutes.
   </Card>
 
   <Card title="Error Handling" icon="triangle-exclamation">
@@ -332,7 +334,7 @@ The API responds differently based on the idempotency key status:
     - `409` with `Idempotent-Replayed: false` and `Retry-After`: request in progress — wait for the `Retry-After` interval, then retry with the same key
     - Any other `409`: a conflict with the state of the resource — do not retry with the same key; after you resolve the conflict, use a new key
     - `422`: Key reused with a different request — use a new idempotency key, or retry with the original payload and endpoint
-    - `5xx`: Transient failure — retry with the same idempotency key
+    - `5xx`: Transient failure — wait for the `Retry-After` delay, or with backoff when there is none, then retry with the same idempotency key
     - `2xx`/`4xx` with `Idempotent-Replayed: true` header: replayed original outcome
   </Card>
 </CardGroup>
@@ -345,7 +347,7 @@ The API responds differently based on the idempotency key status:
 
     **What it means**: Another request with the same key is currently being processed.
 
-    **What to do**: Wait for the interval indicated by the `Retry-After` response header, then retry with the same key. The retry will either get a `409` again (still processing), the stored result once complete, or — if the original request never completed (e.g. it was interrupted) — it will re-execute the request once the in-flight lease expires (at most 5 minutes).
+    **What to do**: Wait for the interval indicated by the `Retry-After` response header, then retry with the same key. The retry gets a `409` again (still processing) or the stored result once complete. If the original request never finished (for example, it was interrupted), the retry goes ahead after at most 5 minutes, and the operation still happens at most one time.
 
     ```json Response
     {
@@ -359,7 +361,7 @@ The API responds differently based on the idempotency key status:
 
     **What it means**: The failure is treated as transient, and the key remains usable.
 
-    **What to do**: Retry with the same idempotency key — the request is re-executed as if it were the first attempt. (Other answers can be stored. The **Failed Original** tab under [Response behavior](#response-behavior) lists what is stored and the exceptions.)
+    **What to do**: Wait for the `Retry-After` delay when the response has one, or with exponential backoff when it has none, then retry with the same idempotency key and the same request. The operation happens at most one time, so the retry does not send a second message or create a second resource. (Other answers can be stored. The **Failed Original** tab under [Response behavior](#response-behavior) lists what is stored and the exceptions.)
   </Accordion>
 
   <Accordion title="Key Mismatch" icon="key">
@@ -393,11 +395,11 @@ Claiming an idempotency key happens atomically; While a request is in flight, co
 
 ### Execution leases
 
-An in-flight request holds a lease on its idempotency key for up to 5 minutes. If the original request never completes (for example, it was interrupted by a deploy or crash), the key unblocks automatically when the lease expires and the next retry re-executes the request.
+An in-flight request holds its idempotency key for up to 5 minutes, and another request with the key and the same body gets `409` during that time. If the original request never completes (for example, it was interrupted), the key unblocks automatically after that time, and the next retry with the same request goes ahead. The operation still happens at most one time for the key.
 
 ### Storage duration
 
-Ordinary stored results expire after 24 hours; successful API-key creation results expire after 5 minutes. After expiry, the same key can run a new operation.
+A key lives 24 hours from its first use, and its stored result expires with it; successful API-key creation results expire after 5 minutes. After expiry, a request with the same key is a new request.
 
 Responses that contain a one-time secret — API key creation and sub-account API key creation — are stored encrypted and their replayable response expires after 5 minutes. Within that window an exact retry replays the same `secret_key`; afterward the secret can no longer be returned.
 

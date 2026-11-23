@@ -45,4 +45,4 @@ for number, row in enumerate(rows, 1):
     time.sleep(0.05)
 ```
 
-Run `python import_suppressions.py suppressions.csv`. An existing suppression can return 409: compare its domain, reason and expiry before deciding what to do. Do not delete it just to make the import pass. A stopped run may have imported earlier rows, so keep the progress output and reconcile uncertain requests. Exact retries reuse a stable [idempotency key](/api-reference/idempotency); after its time limit, verify existing records before retrying. Keep imports within [API rate limits](/api-reference/rate-limits).
+Run `python import_suppressions.py suppressions.csv`. An existing suppression can return 409: compare its domain, reason and expiry before deciding what to do. Do not delete it just to make the import pass. A stopped run may have imported earlier rows, so keep the progress output. Exact retries reuse a stable [idempotency key](/api-reference/idempotency), so a retry within its 24 hours does not import a row a second time; after that, verify existing records before retrying. Keep imports within [API rate limits](/api-reference/rate-limits).
