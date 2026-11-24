@@ -45,7 +45,7 @@ AhaSend's glossary explains the email terms used in these docs and links each te
 | Bounce | A rejected delivery or a later notice that delivery failed | [Bounce handling](/bounces) |
 | Suppression | A record that prevents sending to an address for its applicable domain scope | [Suppression rules](/bounces) |
 | Webhook | An HTTP notification from AhaSend to your app when an event occurs | [Webhook setup](/integrations/webhooks) |
-| Idempotency key | A value linking repeat API requests so a stored result can be replayed | [Limits and retry rules](/api-reference/idempotency) |
+| Idempotency key | A value linking repeat API requests so a stored result can be replayed; over SMTP, the `ahasend-idempotency-key` header stops a second message from the same account with the same key to the same recipient within 24 hours | [Limits and retry rules](/api-reference/idempotency), [SMTP header](/smtp/special-headers#idempotency-key-header) |
 | Sandbox | A test mode that processes a message without delivering it to the recipient | [Sandbox mode](/send-api/sandbox) |
 | Retention | How long message data or metadata is kept | [Retention settings](/retention) |
 

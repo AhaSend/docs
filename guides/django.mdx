@@ -90,6 +90,6 @@ if __name__ == "__main__":
         sys.exit(1)
 ```
 
-Run `python send_email.py`. In a real Django project, call `send_welcome` from an authorized backend task using the recipient saved for that user. Save the job's result and avoid blind retries after a connection closes during submission: SMTP does not offer API idempotency keys. Use [webhooks](/integrations/webhooks) for final delivery outcomes.
+Run `python send_email.py`. In a real Django project, call `send_welcome` from an authorized backend task using the recipient saved for that user. Save the job's result. To retry safely after a connection closes during submission, make a key for that message before the first send, save it with the job, and send it in an [`ahasend-idempotency-key` header](/smtp/special-headers#idempotency-key-header) with the `headers` argument of `EmailMultiAlternatives`. Send the retry with the same key within 24 hours. Use [webhooks](/integrations/webhooks) for final delivery outcomes.
 
 <SmtpRelated />

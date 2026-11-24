@@ -77,6 +77,6 @@ def send_welcome():
         raise click.ClickException("Email failed; check the job and SMTP settings.") from None
 ```
 
-Run `flask --app app send-welcome`. SMTP acceptance is not inbox delivery; use [delivery webhooks](/integrations/webhooks) to track the outcome. When moving this into a queue worker, read the recipient from an authorized job, save the job result, and review uncertain submissions before retrying. SMTP has no API idempotency key.
+Run `flask --app app send-welcome`. SMTP acceptance is not inbox delivery; use [delivery webhooks](/integrations/webhooks) to track the outcome. When moving this into a queue worker, read the recipient from an authorized job and save the job result. To retry an uncertain submission safely, make a key for that message before the first send, save it with the job, and send it in an [`ahasend-idempotency-key` header](/smtp/special-headers#idempotency-key-header) of the `EmailMessage`. Send the retry with the same key within 24 hours.
 
 <SmtpRelated />

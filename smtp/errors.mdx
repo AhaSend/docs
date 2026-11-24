@@ -25,9 +25,11 @@ These are common SMTP meanings, not a promise that every server emits identical 
 | `421` | Service unavailable or closing the connection | Retry later with a bounded delay after checking service status |
 | `450`, `451`, `452` | Temporary mailbox, processing or resource problem | Read the text and let the delivery queue retry |
 | `451 4.3.0 Unsubscribe link is not available` | AhaSend could not make the [unsubscribe link](/campaigns/unsubscribe) that the message needs | Send the message again later; SMTP clients do this automatically |
+| `451 4.3.0 A message with this idempotency key is in progress. Try again later.` | AhaSend cannot yet tell whether an earlier message with the same [idempotency key](/smtp/special-headers#idempotency-key-header) was accepted | Send the message again later with the same key; this answer can last up to 5 minutes |
 | `530` | Authentication or a required security step is missing | Enable STARTTLS, then authenticate as the reply requires |
 | `535` / `5.7.8` | Authentication credentials are invalid | Check the SMTP username and password, not an API key |
 | `550 5.1.1` | Destination mailbox address does not exist | Correct the address; do not repeatedly retry it |
+| `550 5.6.0 The idempotency key is longer than 255 bytes.` | AhaSend refused a message whose [idempotency key](/smtp/special-headers#idempotency-key-header) is longer than 255 bytes | Use a key of 255 bytes or less, then resend |
 | `5.2.2` | Mailbox is full | Follow the accompanying 4xx or 5xx reply and provider text |
 | `552` / `5.3.4` | Message exceeds a size limit (AhaSend: 20 MiB per message) | Reduce content or attachments; base64 adds about one third to attachment size |
 | `552` / `5.6.0` | AhaSend rejected a malformed message, for example one with bare line feeds instead of CRLF line endings or no `From` header | Fix the structure or headers named in the reply, then resend |
@@ -47,7 +49,7 @@ Port 465 uses implicit TLS: set your client to SSL/TLS, not STARTTLS. A client s
 
 ## Should I retry a failed send?
 
-Let AhaSend handle recipient delivery attempts after it accepts a message. A temporary delivery event is not a request for your app to send another copy. If the connection drops before you receive the final submission reply, the outcome can be uncertain; check the message log before retrying. SMTP has no equivalent of the REST API's [idempotency key](/api-reference/idempotency).
+Let AhaSend handle recipient delivery attempts after it accepts a message. A temporary delivery event is not a request for your app to send another copy. If the connection drops before you receive the final submission reply, the outcome can be uncertain. Before the first send, give each message a new key in an [`ahasend-idempotency-key` header](/smtp/special-headers#idempotency-key-header), and when the outcome of a send is uncertain, send it again with the same key: within 24 hours, AhaSend does not send a second message from the same account with the same key to the same recipient. For a message without the header, check the message log before retrying.
 
 ## Related guides
 

@@ -1,11 +1,11 @@
 ---
 title: "SMTP Headers for Tracking, Tags and Sandbox"
 sidebarTitle: "Special Headers"
-description: "Reference for AhaSend custom SMTP headers for open and click tracking, tags, retention and sandbox mode, with accepted values and limits."
+description: "Reference for AhaSend custom SMTP headers for open and click tracking, tags, retention, sandbox mode and idempotency keys, with accepted values and limits."
 icon: "heading"
 ---
 
-AhaSend supports special email headers that allow you to override default settings and customize email behavior on a per-message basis. These headers give you fine-grained control over tracking, testing, data retention, and message organization without changing your account-wide settings.
+AhaSend supports special email headers that allow you to override default settings and customize email behavior on a per-message basis. These headers give you fine-grained control over tracking, testing, data retention, message organization, and idempotency keys for safe retries, without changing your account-wide settings.
 
 Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
@@ -27,6 +27,9 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
   </Card>
   <Card title="Message Tagging" icon="tags">
     Add custom tags for organization and filtering
+  </Card>
+  <Card title="Idempotency Key" icon="repeat">
+    Retry a send without sending the same message twice
   </Card>
 </CardGroup>
 
@@ -248,6 +251,45 @@ Content-Type: text/html
   </Accordion>
 </AccordionGroup>
 
+## Idempotency key header
+
+Retry an SMTP send safely when you do not know whether AhaSend accepted it.
+
+**Header:** `ahasend-idempotency-key`<br />
+**Values:** A key of 1 to 255 bytes, such as a UUID<br />
+**Purpose:** Send a message again without a second copy to the same recipient
+
+The header is optional. Make a new key for each message, and save it with the message in your application. If your client does not get the answer to a send, for example because the connection closed, send the same message again with the same key. If AhaSend accepted the first message, it accepts the second one and does not send it. A quick retry can first get a `451` answer; see [Answers to a message with a key](#answers-to-a-message-with-a-key).
+
+```plaintext SMTP Example
+From: hello@yourdomain.com
+To: user@example.com
+Subject: Your order has shipped
+ahasend-idempotency-key: 3f2b8c1e-9d4a-4e6b-8f7c-2a1d5e9b0c43
+Content-Type: text/plain
+
+If this email is sent again with the same key within 24 hours, AhaSend does not send it a second time to user@example.com.
+```
+
+### How the key works
+
+- Within 24 hours of the first message, a second message from the same account with the same key to the same recipient is accepted and not sent.
+- AhaSend does not compare the content of the messages. Within those 24 hours, a message with the key of an accepted message to that recipient is not sent, also when its content is different. Each new message needs a new key.
+- Each recipient of a message is checked on its own. When a message with a key names a recipient two times, that recipient gets one copy.
+- A [sandbox](/send-api/sandbox) message uses up its key like any other message, so use different keys for sandbox and live sends.
+- AhaSend removes the header before delivery.
+- On a send through the API, this header has no effect, and AhaSend removes it. API v2 uses the `Idempotency-Key` header of the request. See [Idempotency](/api-reference/idempotency).
+
+### Answers to a message with a key
+
+| Answer | Meaning | Next step |
+|---|---|---|
+| `250` that ends with `duplicates=<count>`, such as `250 OK ids=<id> <id> duplicates=1` | AhaSend accepted the message. It did not send `<count>` copies, because each repeats an earlier message with this key to the same recipient. | Do not send the message again. |
+| `451 4.3.0 A message with this idempotency key is in progress. Try again later.` | AhaSend cannot yet tell whether an earlier message with this key was accepted, so it did not accept this message. | Send the message again later, with the same key. This answer can last up to 5 minutes. |
+| `550 5.6.0 The idempotency key is longer than 255 bytes.` | AhaSend refused the message, because its key is too long. | Use a key of 255 bytes or less. |
+
+The `250` answer gives an ID for each copy, also for a copy that AhaSend did not send. No stored message has the ID of a copy that was not sent.
+
 ## Combining headers
 
 You can use multiple special headers together for comprehensive email customization:
@@ -292,6 +334,10 @@ Content-Type: text/html
     - `ahasend-metadata-retention`: Integer within your plan's range - metadata and delivery log retention in days
     - `ahasend-data-retention`: Integer within your plan's range - email content retention in days; 0 needs approval
     - `ahasend-tags`: Comma-separated list - Message tags (max 10 tags, 64 chars each)
+  </Accordion>
+
+  <Accordion title="Retry Headers" icon="repeat">
+    - `ahasend-idempotency-key`: 1 to 255 bytes, a new key for each message - Within 24 hours, no second message from the same account with the same key to the same recipient
   </Accordion>
 </AccordionGroup>
 

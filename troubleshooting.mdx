@@ -62,7 +62,7 @@ The API can accept a request while a recipient entry has `status: error`. Check 
 
 ## Why did a retry send a duplicate?
 
-Use a stable [idempotency key](/api-reference/idempotency) with the exact same API payload and within its supported window. After a timeout or a server error, retry with the same key: the API sends each message of a key at most one time. SMTP does not offer that API header, and a new random key on every retry cannot identify the original job.
+Use a stable [idempotency key](/api-reference/idempotency) with the exact same API payload and within its supported window. After a timeout or a server error, retry with the same key: the API sends each message of a key at most one time. Over SMTP, give the message an [`ahasend-idempotency-key` header](/smtp/special-headers#idempotency-key-header) before the first send, and send the retry with the same key within 24 hours. A new random key on every retry cannot identify the original job.
 
 ## Why are webhooks missing or failing verification?
 
