@@ -375,7 +375,7 @@ swaks \
 
 ## Send with the AhaSend CLI
 
-The [AhaSend CLI](/cli/installation) can also send a test email over SMTP, with [`ahasend smtp send`](/cli/commands/smtp#send-via-smtp). It connects to `--server`, which defaults to `send.ahasend.com:587`, and starts TLS: at once on port 465, otherwise with STARTTLS when the server offers it. AhaSend's own servers do not offer implicit TLS on port 465, so use port 587, 25 or 2525 with them. It refuses to send the username, the password or the message to a server that offers no STARTTLS, except on `localhost`, `127.0.0.1` or `::1`.
+The [AhaSend CLI](/cli/installation) can also send a test email over SMTP, with [`ahasend smtp send`](/cli/commands/smtp#send-via-smtp). It connects to `--server`, which defaults to `send.ahasend.com:587`, and starts TLS: at once on port 465, otherwise with STARTTLS when the server offers it. AhaSend's own servers accept both: implicit TLS on port 465, and STARTTLS on ports 587, 25 and 2525. It refuses to send the username, the password or the message to a server that offers no STARTTLS, except on `localhost`, `127.0.0.1` or `::1`.
 
 `--password-stdin` reads the password from the first line of stdin, so it stays out of the process list and your shell history:
 
