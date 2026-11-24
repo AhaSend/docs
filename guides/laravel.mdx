@@ -89,6 +89,6 @@ Artisan::command('mail:send-test {recipient}', function (string $recipient) {
 });
 ```
 
-Run `php artisan mail:send-test recipient@example.com` with a sandbox credential. In your app, choose the recipient from the authenticated user's data and dispatch a job after its database transaction commits. Save the job outcome. SMTP does not have API idempotency keys, so reconcile an uncertain submission before retrying. Track [delivery events](/integrations/webhooks) separately from SMTP acceptance.
+Run `php artisan mail:send-test recipient@example.com` with a sandbox credential. In your app, choose the recipient from the authenticated user's data and dispatch a job after its database transaction commits. Save the job outcome. To retry an uncertain submission safely, make a key for that message before the first send, save it with the job, and send it in an [`ahasend-idempotency-key` header](/smtp/special-headers#idempotency-key-header) among the headers of the Symfony message (`getSymfonyMessage()->getHeaders()`). Send the retry with the same key within 24 hours. Track [delivery events](/integrations/webhooks) separately from SMTP acceptance.
 
 <SmtpRelated />

@@ -163,7 +163,7 @@ A failed send prints no result object: it prints the error object that [JSON out
 | 4 | Invalid input, such as a missing flag, an invalid `--from` address or an invalid `--server` |
 | 7 | The server could not be reached, stopped answering or closed the connection |
 
-Exit code 7 after the whole message was sent means the server may have accepted it. Check whether it arrived before you send it again.
+Exit code 7 after the whole message was sent means the server may have accepted it. Check whether it arrived before you send it again. To make a second run safe, give the first run a `Message-ID` header and an [`ahasend-idempotency-key`](/smtp/special-headers#idempotency-key-header) header, such as `--header 'Message-ID: <YOUR_MESSAGE_ID@example.com>' --header 'ahasend-idempotency-key: YOUR_KEY'`, and run the command again with the same two headers within 24 hours. If AhaSend accepted the first run, it does not send the second one, and `messages list --message-id` finds the message under that Message-ID. A second run soon after the first can be refused with a `451` answer; run it again later.
 
 ## Command flags
 

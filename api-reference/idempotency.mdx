@@ -9,6 +9,8 @@ AhaSend uses an `Idempotency-Key` to replay a stored result when you retry the s
 
 Available on Free, Pro and Max. See [plans and features](/facts#plans-and-features).
 
+For email sent over SMTP, use the [`ahasend-idempotency-key` header](/smtp/special-headers#idempotency-key-header).
+
 <Note>
   Idempotency is particularly important for critical operations like sending emails, creating resources, or processing payments where duplicate actions could cause problems.
 </Note>

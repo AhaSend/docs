@@ -52,7 +52,7 @@ Available on Free, Pro and Max. See [plans and features](/facts#plans-and-featur
 | `List-Unsubscribe`, `List-Unsubscribe-Post` | Added to mail from a [marketing domain](/domains#sending-type), and to other mail that uses `{{unsubscribe_url}}`. On that mail, AhaSend keeps your own headers only when they meet the [rules for your own List-Unsubscribe header](/campaigns/unsubscribe#can-i-use-my-own-list-unsubscribe-header). |
 
 <Note>
-  Tracking, tags, retention and sandbox mode have their own fields in the API: see [Tags](/send-api/tags) and [Tracking and retention per message](/send-api/tracking-and-retention). Over SMTP, the same settings use [special headers](/smtp/special-headers).
+  Tracking, tags, retention and sandbox mode have their own fields in the API: see [Tags](/send-api/tags) and [Tracking and retention per message](/send-api/tracking-and-retention). Over SMTP, the same settings use [special headers](/smtp/special-headers). An `ahasend-idempotency-key` header in `headers` has no effect, and AhaSend removes it; API v2 uses the [`Idempotency-Key`](/api-reference/idempotency) header of the request.
 </Note>
 
 ## Related guides

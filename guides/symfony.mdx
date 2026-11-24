@@ -82,6 +82,6 @@ try {
 }
 ```
 
-Run `php send.php`. Check [delivery events](/integrations/webhooks) after SMTP acceptance. For an application worker, save the job ID and outcome, choose the recipient on the server, and keep email out of a public unauthenticated route. SMTP has no API idempotency key: a lost reply after submission can mean the message was accepted, so review an uncertain outcome before resending. When using the bridge directly in another worker, apply the same TLS requirement and timeout to its transport.
+Run `php send.php`. Check [delivery events](/integrations/webhooks) after SMTP acceptance. For an application worker, save the job ID and outcome, choose the recipient on the server, and keep email out of a public unauthenticated route. A lost reply after submission can mean the message was accepted, so make a key for that message before the first send, save it with the job, and send it in an [`ahasend-idempotency-key` header](/smtp/special-headers#idempotency-key-header) with `addTextHeader()` on the headers of the `Email`. Send the retry with the same key within 24 hours. When using the bridge directly in another worker, apply the same TLS requirement and timeout to its transport.
 
 <SmtpRelated />

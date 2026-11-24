@@ -37,6 +37,7 @@ The AhaSend changelog lists product releases, API changes and fixes by month, wi
   - They delete the [temporary webhook](/cli/webhook-testing#temporary-webhooks) or [temporary route](/cli/route-testing#temporary-routes) they listened through when they end. The API key needs the delete scope for this; without it, the command warns and names the command that deletes it.
   - Closing the terminal on Linux or macOS stops them as Ctrl+C does. A command started with `nohup` keeps running.
   - **Breaking:** a temporary webhook or route cannot be listened on again by its ID after the command ends, and the note on stderr before connecting is gone. See the [v0.6.0 release notes](https://github.com/AhaSend/ahasend-cli/releases/tag/v0.6.0).
+- **Idempotency keys for SMTP.** Give a message that you send over SMTP an [`ahasend-idempotency-key`](/smtp/special-headers#idempotency-key-header) header. If your client does not get the answer to the send, send the message again with the same key. Within 24 hours, a second message from the same account with the same key to the same recipient is accepted and not sent, and the `250` answer ends with `duplicates=<count>`. The content is not compared, so each new message needs a new key. On a send through the API, the header has no effect, and AhaSend removes it; API v2 uses the [`Idempotency-Key`](/api-reference/idempotency) header of the request.
 
 #### Changes
 
