@@ -80,7 +80,7 @@ Copy the key's secret right away, together with your account ID. See [API creden
     Click **Save**.
   </Step>
   <Step title="Connect">
-    Click **Connect AhaSend**. Odoo creates a webhook named *Odoo mail tracking (your database)* in AhaSend with the message events, and stores its signing secret. The settings then show **Connected**, and the webhook appears on the [Webhooks page](https://dash.ahasend.com/account/-/integrations/webhooks) of the dashboard.
+    Click **Connect AhaSend**. Odoo creates a webhook named _Odoo mail tracking (your database)_ in AhaSend with the message events, and stores its signing secret. The settings then show **Connected**, and the webhook appears on the [Webhooks page](https://dash.ahasend.com/account/-/developers/webhooks) of the dashboard.
   </Step>
 </Steps>
 
@@ -128,7 +128,7 @@ With a **Sending domain** set, these buttons only look at suppressions for that 
 
 ## Create the webhook yourself
 
-To create the webhook in the AhaSend dashboard instead of with **Connect AhaSend**, turn on Odoo's developer mode. The AhaSend settings then show a **Manual webhook setup** section.
+To create the webhook in the AhaSend dashboard instead of with **Connect AhaSend**, turn on Odoo's developer mode. The AhaSend settings then show a **Manual webhook setup** section, with a link to the [Webhooks page](https://dash.ahasend.com/account/-/developers/webhooks) of the dashboard.
 
 1. Copy the **Endpoint URL**. It has the form `https://odoo.example.com/mail/tracking/ahasend/<database>`.
 2. In the dashboard, [create a webhook](/integrations/webhooks#creating-webhooks) with that endpoint URL. Send all events, or at least the message events: Odoo ignores the other events.
@@ -146,7 +146,7 @@ The same section shows the AhaSend API URL and the ID of the webhook that **Conn
     Check the account ID and that the API key has the scopes in [Create an API key](#create-an-api-key). **Disconnect AhaSend** needs `webhooks:delete:all`.
   </Accordion>
   <Accordion title="Emails stay on Sent">
-    Check that the webhook exists and is enabled on the [Webhooks page](https://dash.ahasend.com/account/-/integrations/webhooks), and that its endpoint URL reaches your Odoo. Odoo answers `401` when the signature does not match the webhook secret: click **Disconnect AhaSend** and **Connect AhaSend** again to store a fresh secret. AhaSend disables a webhook after more than 100 consecutive failed attempts. Use **Check AhaSend** to update emails that were sent in the meantime.
+    Check that the webhook exists and is enabled on the [Webhooks page](https://dash.ahasend.com/account/-/developers/webhooks), and that its endpoint URL reaches your Odoo. Odoo answers `401` when the signature does not match the webhook secret: click **Disconnect AhaSend** and **Connect AhaSend** again to store a fresh secret. AhaSend disables a webhook after more than 100 consecutive failed attempts. Use **Check AhaSend** to update emails that were sent in the meantime.
   </Accordion>
   <Accordion title="Odoo has several databases">
     The endpoint URL contains the database name, so one Odoo server can receive events for several databases. Connect each database on its own; each one gets its own webhook.
