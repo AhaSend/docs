@@ -573,14 +573,14 @@
               "guides/nestjs",
               "guides/nextjs",
               "guides/nuxt",
+              "guides/rails",
               "guides/railway",
               "guides/remix",
               "guides/sveltekit",
               "guides/symfony",
               "guides/vercel",
               "guides/vite",
-              "guides/wordpress",
-              "guides/rails"
+              "guides/wordpress"
             ]
           },
           {
