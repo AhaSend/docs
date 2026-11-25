@@ -1,94 +1,193 @@
 ---
-title: "How to Send Email with Laravel via SMTP"
+title: "How to Send Email with Laravel"
 sidebarTitle: "Laravel"
-description: "Send email from Laravel through AhaSend SMTP: configure the mailer, require STARTTLS, run a sandbox command and handle failed submissions in your app."
+description: "Send Laravel email through the AhaSend API v2 or SMTP with the ahasend/laravel-mailer package, test in sandbox mode and receive webhooks as Laravel events."
+keywords:
+  - "laravel send email"
+  - "laravel mail api"
+  - "ahasend/laravel-mailer"
+  - "laravel webhooks"
+  - "laravel transactional email"
 ---
 
-import SmtpPrerequisites from "/snippets/smtp-prerequisites.mdx";
-import SmtpRelated from "/snippets/smtp-related.mdx";
+The [`ahasend/laravel-mailer`](https://packagist.org/packages/ahasend/laravel-mailer) package adds an AhaSend mailer to Laravel, over the API v2 or SMTP, so mailables, notifications, queued mail and `Mail::fake()` work as usual. It also adds a webhook route that checks AhaSend's signatures and turns each delivery, open, click or bounce into a Laravel event. This guide installs the package, sends a test email in sandbox mode and sets up webhooks.
 
-AhaSend lets Laravel send transactional email through its SMTP mailer; this guide gives you a short sandbox test and a production configuration with required TLS.
+The package works with Laravel 11, 12 and 13. It uses AhaSend's [Symfony Mailer bridge](/guides/symfony), since Laravel's mailer is built on Symfony Mailer. Its source is on [GitHub](https://github.com/AhaSend/laravel-mailer).
 
-<SmtpPrerequisites />
+## Prerequisites
 
-Use PHP 8.2 or newer, Composer and a Laravel 12 application. In its private `.env`, set `MAIL_USERNAME`, `MAIL_PASSWORD` to sandbox SMTP credentials and `MAIL_FROM_ADDRESS` to your verified sender. Do not commit that file.
+- PHP 8.2 or newer (Laravel 13 needs PHP 8.3) and Laravel 11, 12 or 13. Laravel 11 no longer receives security fixes, so Composer may refuse to install it unless you pass `--no-security-blocking`.
+- A [verified sending domain](/domains)
+- For the API: a [send-only API key](/send-api/credentials) with the `messages:send:{your-domain}` scope, or `messages:send:all`, and your account ID
+- For SMTP: an [SMTP credential](/smtp/credentials)
+- For the test below, a key or credential in **Sandbox** mode, so nothing is delivered. See [sandbox mode](/send-api/sandbox).
 
-## Install Laravel
-
-In a new working directory, create a test app. For an existing Laravel 12 app, use its root directory instead.
+## Install the package
 
 ```bash
-composer create-project laravel/laravel:^12.0 ahasend-laravel
-cd ahasend-laravel
+composer require ahasend/laravel-mailer
 ```
 
-Save `quick-send.php` in the app root:
+Select AhaSend in your app's `.env`. Keep this file out of Git:
 
-```php quick-send.php
-<?php
-require __DIR__.'/vendor/autoload.php';
-$app = require __DIR__.'/bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-config(['mail.default' => 'smtp', 'mail.mailers.smtp' => [
-    'transport' => 'smtp', 'scheme' => 'smtp', 'host' => 'send.ahasend.com', 'port' => 587,
-    'username' => env('MAIL_USERNAME'), 'password' => env('MAIL_PASSWORD'),
-    'require_tls' => true, 'timeout' => 10,
-]]);
-Illuminate\Support\Facades\Mail::raw('Hello from AhaSend', function ($message) {
-    $message->from(env('MAIL_FROM_ADDRESS'))->to('recipient@example.com')
-        ->subject('Laravel sandbox test');
-});
-echo "Accepted by SMTP\n";
+```dotenv .env
+MAIL_MAILER=ahasend
+AHASEND_API_KEY=aha-sk-...
+AHASEND_ACCOUNT_ID=your-account-id
+MAIL_FROM_ADDRESS=hello@yourdomain.com
 ```
 
-Run `php quick-send.php`. A transport failure throws an exception.
+The package registers the `ahasend` mailer, so `config/mail.php` needs no change. The domain of the From address must be verified in AhaSend.
 
-## Configure Laravel's SMTP mailer
+To send through AhaSend's SMTP relay instead, with STARTTLS required:
 
-Replace the sample app's `config/mail.php` with this file. In an existing app, merge the `smtp` mailer and sender settings with your current configuration.
-
-```php config/mail.php
-<?php
-return [
-    'default' => 'smtp',
-    'mailers' => ['smtp' => [
-        'transport' => 'smtp', 'scheme' => 'smtp',
-        'host' => 'send.ahasend.com', 'port' => 587,
-        'username' => env('MAIL_USERNAME'), 'password' => env('MAIL_PASSWORD'),
-        'require_tls' => true, 'timeout' => 10,
-    ]],
-    'from' => ['address' => env('MAIL_FROM_ADDRESS'), 'name' => env('MAIL_FROM_NAME', 'Example App')],
-];
+```dotenv .env
+MAIL_MAILER=ahasend-smtp
+AHASEND_SMTP_USERNAME=your-smtp-username
+AHASEND_SMTP_PASSWORD=your-smtp-password
 ```
 
-Laravel passes `require_tls` to Symfony's SMTP transport. Keep TLS certificate checks enabled. Clear any old cached configuration with `php artisan config:clear`; rebuild the configuration cache in your normal deployment process after the secrets are present. See [Laravel Mail](https://laravel.com/docs/12.x/mail) for mailables and queues.
+## Send a test email
 
-## Add a command with failure handling
-
-Add this to `routes/console.php`, after its existing opening PHP tag. The following complete file also works in the sample app.
+Add this command to `routes/console.php`:
 
 ```php routes/console.php
 <?php
+
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
+
 Artisan::command('mail:send-test {recipient}', function (string $recipient) {
-    if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
-        $this->error('Invalid recipient');
-        return 1;
-    }
-    try {
-        Mail::raw('Your account is ready.', function ($message) use ($recipient) {
-            $message->to($recipient)->subject('Welcome');
-        });
-        $this->info('Accepted by SMTP');
-        return 0;
-    } catch (Throwable $error) {
-        $this->error('Email failed; inspect the job and SMTP settings.');
-        return 1;
-    }
+    $sent = Mail::raw('Hello from AhaSend', function ($message) use ($recipient) {
+        $message->to($recipient)->subject('Laravel sandbox test');
+    });
+    $this->info('Accepted by AhaSend: '.$sent->getMessageId());
 });
 ```
 
-Run `php artisan mail:send-test recipient@example.com` with a sandbox credential. In your app, choose the recipient from the authenticated user's data and dispatch a job after its database transaction commits. Save the job outcome. To retry an uncertain submission safely, make a key for that message before the first send, save it with the job, and send it in an [`ahasend-idempotency-key` header](/smtp/special-headers#idempotency-key-header) among the headers of the Symfony message (`getSymfonyMessage()->getHeaders()`). Send the retry with the same key within 24 hours. Track [delivery events](/integrations/webhooks) separately from SMTP acceptance.
+With the sandbox key or credential in `.env`, run:
 
-<SmtpRelated />
+```bash
+php artisan mail:send-test recipient@example.com
+```
+
+The command prints the message's Message-ID when AhaSend accepted it. With a sandbox key or credential, the message shows up in your AhaSend dashboard and nothing is delivered. An error throws an exception with AhaSend's message, for example for an unverified sender domain or an invalid key.
+
+Sending waits for AhaSend's answer, so queue mail that you send during web requests, with `Mail::to($user)->queue(...)` or a mailable that implements `ShouldQueue`.
+
+## Use AhaSend next to another mailer
+
+To give AhaSend its own settings, or to use it next to another mailer, add a mailer to `config/mail.php`. Its settings win over the others:
+
+```php config/mail.php
+'mailers' => [
+    'ahasend' => [
+        'transport' => 'ahasend',
+        'key' => env('AHASEND_API_KEY'),
+        'account_id' => env('AHASEND_ACCOUNT_ID'),
+        'client' => ['timeout' => 10],
+    ],
+],
+```
+
+```php
+Mail::mailer('ahasend')->to($user)->send(new WelcomeMail($user));
+```
+
+## Set tags and AhaSend options
+
+Mailable tags become AhaSend [tags](/send-api/tags), and metadata goes out as `X-Metadata-*` headers:
+
+```php
+use Illuminate\Mail\Mailables\Envelope;
+
+public function envelope(): Envelope
+{
+    return new Envelope(
+        subject: 'Welcome!',
+        tags: ['welcome'],
+        metadata: ['user_id' => (string) $this->user->id],
+    );
+}
+```
+
+Other AhaSend options use the [SMTP special headers](/smtp/special-headers), so the same mailable works on both mailers:
+
+```php
+use Illuminate\Mail\Mailables\Headers;
+
+public function headers(): Headers
+{
+    return new Headers(text: [
+        'AhaSend-Track-Opens' => 'true',
+        'AhaSend-Sandbox' => 'true', // validate without delivering
+    ]);
+}
+```
+
+On the API mailer, the package handles `AhaSend-Tags`, `AhaSend-Track-Opens`, `AhaSend-Track-Clicks`, `AhaSend-Sandbox`, `AhaSend-Sandbox-Result`, `AhaSend-Metadata-Retention` and `AhaSend-Data-Retention`. A malformed value throws before anything is sent, as does a retention outside AhaSend's limits: 1 to 30 days for metadata, 0 to 30 for data.
+
+## Receive webhook events
+
+[Create a webhook](/integrations/webhooks#creating-webhooks) in AhaSend that points at `https://your-app.example/ahasend/webhook`, and set its secret, including any prefix:
+
+```dotenv .env
+AHASEND_WEBHOOK_SECRET=aha-whsec-...
+```
+
+The package's route checks the signature and the timestamp, then dispatches a Laravel event. Without a secret, it refuses every request.
+
+```php
+use AhaSend\Laravel\Events\MessageBounced;
+use Illuminate\Support\Facades\Event;
+
+Event::listen(function (MessageBounced $event) {
+    $event->payload['data']['recipient'];         // the bounced address
+    $event->payload['data']['message_id_header']; // the Message-ID of the message
+    $event->headers['webhook-id'];                // use it to ignore a repeated delivery
+});
+```
+
+| AhaSend webhook | Laravel event |
+| --- | --- |
+| `message.delivered` | `MessageDelivered` |
+| `message.transient_error` | `MessageTransientError` |
+| `message.bounced` | `MessageBounced` |
+| `message.failed` | `MessageFailed` |
+| `message.suppressed` | `MessageSuppressed` |
+| `message.opened`, `message.clicked` | `MessageOpened`, `MessageClicked` |
+| `message.unsubscribed`, `message.complained` | `MessageUnsubscribed`, `MessageComplained` |
+| `message.routing` | `MessageRouting` |
+| `suppression.created`, `suppression.deleted` | `SuppressionCreated`, `SuppressionDeleted` |
+| Every webhook, including types added later | `WebhookReceived` |
+
+All events are in `AhaSend\Laravel\Events`; the [package README](https://github.com/AhaSend/laravel-mailer#webhooks) lists the contact and domain events too.
+
+- **Match events with your mail.** The Message-ID of a sent message is `$sent->getMessageId()`, or `$event->sent->getMessageId()` in a `MessageSent` listener. It is the event's `data.message_id_header` without angle brackets.
+- **Inbound email.** [Inbound routes](/integrations/routing) have their own secret. Set `AHASEND_ROUTE_SECRET` as well to receive them on the same URL, as `MessageRouting` events.
+- **Answer quickly.** AhaSend retries a delivery that does not get a `2xx` answer and disables a webhook after more than 100 failed attempts in a row. Queue slow work in your listeners.
+- **Expect repeats and any order.** Use `webhook-id` to ignore repeated deliveries and the payload's `timestamp` to order events.
+
+To change the route's path or middleware, publish the package's configuration with `php artisan vendor:publish --tag=ahasend-config`.
+
+## Recipients and rejected addresses
+
+On the API mailer, a message with To addresses goes out as one message to its To, Cc and Bcc addresses, so recipients see each other and reply-all works. Bcc addresses are never shown. With more than 50 addresses, or only Bcc addresses, each address gets a separate copy with its own Message-ID.
+
+AhaSend can reject one recipient and accept the others, for example for a blocked recipient domain. That does not throw an exception, even when every recipient is rejected, because a retried job would send the accepted recipients a second copy. The package logs each rejected recipient and reports it as an event:
+
+```php
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\Mailer\Bridge\AhaSend\Event\AhaSendDeliveryEvent;
+
+Event::listen(function (AhaSendDeliveryEvent $event) {
+    Log::warning('AhaSend rejected a recipient: '.$event->getMessage());
+});
+```
+
+## Related guides
+
+- [Domain setup](/domains), [send-only API keys](/send-api/credentials), [SMTP credentials](/smtp/credentials) and [sandbox mode](/send-api/sandbox).
+- [Webhooks](/integrations/webhooks), [inbound routing](/integrations/routing) and [SMTP special headers](/smtp/special-headers).
+- [Symfony](/guides/symfony), [Rails](/guides/rails) and [PHP SMTP](/smtp/php).
