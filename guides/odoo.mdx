@@ -25,18 +25,30 @@ The module is open source under the AGPL-3.0 license, works with Odoo 18.0 and 1
 
 Tracking starts with the email itself, so Odoo must send through AhaSend SMTP first.
 
-1. In Odoo, go to **Settings → General Settings → Emails**, turn on **Use Custom Email Servers** and click **Outgoing Email Servers**.
-2. Create a server with these settings:
+1. In Odoo, go to **Settings → General Settings → Emails**.
+2. Turn on **Use Custom Email Servers** and click **Save**.
 
-   | Field | Value |
-   | --- | --- |
-   | SMTP Server | `send.ahasend.com` |
-   | SMTP Port | `587` |
-   | Connection Encryption | TLS (STARTTLS). On Odoo 19: TLS (STARTTLS), encryption and validation |
-   | Authenticate with | Username |
-   | Username and Password | Your AhaSend SMTP credential |
+3. Click **Outgoing Email Servers**, then **New**.
+4. Fill in the server with the values below.
+5. Click **Test Connection**. When Odoo confirms the connection, save the server.
 
-3. Click **Test Connection**, then save.
+At the top of the form:
+
+| Field | Value |
+| --- | --- |
+| Name | A name you recognize, such as `AhaSend` |
+| FROM Filtering | Your verified sending domain, such as `email.example.com`. Odoo then uses this server for email from that domain. |
+| Authenticate with | Username |
+
+On the **Connection** tab:
+
+| Field | Value |
+| --- | --- |
+| Connection Encryption | **TLS (STARTTLS), encryption and validation** on Odoo 19, **TLS (STARTTLS)** on Odoo 18 |
+| SMTP Server | `send.ahasend.com` |
+| SMTP Port | `587` |
+| Username | The username of your AhaSend SMTP credential |
+| Password | The password of your AhaSend SMTP credential |
 
 The From address of every email must be on your verified sending domain. See [SMTP settings](/smtp) for the other ports.
 
