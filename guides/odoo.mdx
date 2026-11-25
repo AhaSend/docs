@@ -1,0 +1,160 @@
+---
+title: "Track Odoo Email Delivery with AhaSend"
+sidebarTitle: "Odoo"
+description: "Send Odoo email through AhaSend and see deliveries, bounces, opens and clicks in Odoo's mail tracking with the open source Odoo module for AhaSend."
+keywords:
+  - "odoo email tracking"
+  - "odoo smtp"
+  - "odoo bounces"
+  - "mail_tracking_ahasend"
+  - "odoo webhooks"
+---
+
+The *Mail tracking for AhaSend* module (`mail_tracking_ahasend`) shows in Odoo what happened to every email Odoo sent through AhaSend: delivered, deferred, bounced, opened or clicked. This guide sends Odoo's mail through AhaSend SMTP, installs the module, connects it to your AhaSend account and checks the first tracked email.
+
+The module is open source under the AGPL-3.0 license, works with Odoo 18.0 and 19.0, and builds on the [`mail_tracking`](https://github.com/OCA/mail/tree/19.0/mail_tracking) module of the Odoo Community Association (OCA).
+
+## Prerequisites
+
+- Odoo 18.0 or 19.0, with administrator access and a way to add modules to the addons path
+- A [verified sending domain](/domains) in AhaSend
+- An [SMTP credential](/smtp/credentials) for that domain
+- An address where AhaSend can reach your Odoo over `https://`, such as `https://odoo.example.com`. AhaSend sends tracking events to this address.
+
+## Send Odoo's email through AhaSend
+
+Tracking starts with the email itself, so Odoo must send through AhaSend SMTP first.
+
+1. In Odoo, go to **Settings → General Settings → Emails**, turn on **Use Custom Email Servers** and click **Outgoing Email Servers**.
+2. Create a server with these settings:
+
+   | Field | Value |
+   | --- | --- |
+   | SMTP Server | `send.ahasend.com` |
+   | SMTP Port | `587` |
+   | Connection Encryption | TLS (STARTTLS) |
+   | Authenticate with | Username |
+   | Username and Password | Your AhaSend SMTP credential |
+
+3. Click **Test Connection**, then save.
+
+The From address of every email must be on your verified sending domain. See [SMTP settings](/smtp) for the other ports.
+
+## Install the module
+
+1. Download the branch that matches your Odoo version (`19.0` or `18.0`) of these two repositories:
+   - [AhaSend/odoo-mail-tracking-ahasend](https://github.com/AhaSend/odoo-mail-tracking-ahasend), with the `mail_tracking_ahasend` module
+   - [OCA/mail](https://github.com/OCA/mail), with the `mail_tracking` module it needs
+2. Add both folders to the `addons_path` of your Odoo server and restart Odoo.
+3. In Odoo, go to **Apps**, click **Update Apps List**, search for **AhaSend** and install **Mail tracking for AhaSend**. Odoo installs `mail_tracking` with it.
+
+## Create an API key
+
+The module uses the [Management API](/api-reference) to create its webhook, check messages and manage suppressions. In the [AhaSend dashboard](https://dash.ahasend.com/account/-/transactional/credentials), create an API key with these [scopes](/api-reference/scopes):
+
+| Scope | Used for |
+| --- | --- |
+| `messages:read:all` | The **Check AhaSend** button on a tracked email |
+| `suppressions:read`, `suppressions:write`, `suppressions:delete` | The suppression buttons on a contact |
+| `webhooks:write:all` | **Connect AhaSend** |
+| `webhooks:delete:all` | **Disconnect AhaSend** |
+
+Copy the key's secret right away, together with your account ID. See [API credentials](/send-api/credentials).
+
+<Warning>
+  The SMTP credential and the API key are different credentials. Odoo's outgoing mail server takes the SMTP username and password; the module's **Secret key** takes the API key.
+</Warning>
+
+## Connect Odoo to AhaSend
+
+<Steps>
+  <Step title="Open the AhaSend settings">
+    In Odoo, go to **Settings → General Settings → Emails** and turn on **AhaSend**.
+  </Step>
+  <Step title="Fill in your account">
+    - **Account ID**: your AhaSend account ID.
+    - **Secret key**: the API key's secret.
+    - **Sending domain** (optional): limits the webhook and the suppression buttons to one sending domain. Leave it empty for all domains of your account.
+    - **Odoo URL**: the public `https://` address of your Odoo. It is filled in with Odoo's base URL; change it when AhaSend must reach Odoo on another address. A warning shows when the address does not start with `https://`.
+
+    Click **Save**.
+  </Step>
+  <Step title="Connect">
+    Click **Connect AhaSend**. Odoo creates a webhook named *Odoo mail tracking (your database)* in AhaSend with the message events, and stores its signing secret. The settings then show **Connected**, and the webhook appears on the [Webhooks page](https://dash.ahasend.com/account/-/integrations/webhooks) of the dashboard.
+  </Step>
+</Steps>
+
+**Disconnect AhaSend** deletes the webhook again. Odoo then stops receiving tracking events; the contact buttons keep working, since they only need the API key.
+
+## Send a test email
+
+1. Open a contact with an email address you can read, and use **Send message** in the chatter. A log note is not emailed.
+2. Click the envelope icon next to the message in the chatter to open its tracking. It shows **Delivered** within seconds.
+3. Open the email. The tracking changes to **Opened**.
+
+Opens and clicks are only reported when [open and click tracking](/tracking/open-tracking) is on for your sending domain.
+
+## What Odoo shows
+
+The module turns AhaSend's [message events](/api-reference/webhooks) into the statuses of Odoo's mail tracking:
+
+| AhaSend event | Odoo status |
+| --- | --- |
+| `message.delivered` | Delivered |
+| `message.transient_error` | Deferred |
+| `message.bounced` | Bounced |
+| `message.failed` | Soft bounced |
+| `message.suppressed` | Rejected |
+| `message.opened` | Opened |
+| `message.clicked` | Opened, with the click in the event list |
+| `message.unsubscribed` | Unsubscribed |
+| `message.complained` | Spam |
+
+Odoo links each event to its email by the Message-ID header and the recipient address, so events for mail that another system sent are ignored. Opens and clicks that AhaSend detects as bots are ignored too. An event that arrives late never moves a status backwards: a late delivery event does not turn an opened email back into delivered.
+
+### Check a single email
+
+An administrator can click **Check AhaSend** on a tracking record to fetch the email's current status from the Management API, for example after a missed webhook. This works as long as AhaSend still keeps the message data, which depends on your plan and [retention settings](/retention).
+
+### Manage suppressions from a contact
+
+On a contact, administrators see three AhaSend buttons next to **Email bounced**:
+
+- **Check suppression** marks the contact as bounced when AhaSend [suppresses](/bounces) the address, and removes the mark when it no longer does.
+- **Suppress** adds the address to your AhaSend suppressions.
+- **Remove suppression** removes it again.
+
+With a **Sending domain** set, these buttons only look at suppressions for that domain.
+
+## Create the webhook yourself
+
+To create the webhook in the AhaSend dashboard instead of with **Connect AhaSend**, turn on Odoo's developer mode. The AhaSend settings then show a **Manual webhook setup** section.
+
+1. Copy the **Endpoint URL**. It has the form `https://odoo.example.com/mail/tracking/ahasend/<database>`.
+2. In the dashboard, [create a webhook](/integrations/webhooks#creating-webhooks) with that endpoint URL. Send all events, or at least the message events: Odoo ignores the other events.
+3. Copy the webhook's secret into **Webhook secret** in Odoo and save.
+
+The same section shows the AhaSend API URL and the ID of the webhook that **Connect AhaSend** created.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="AhaSend can only call a public https:// address">
+    **Connect AhaSend** refuses an Odoo URL that does not start with `https://`, such as `http://localhost:8069`. Set **Odoo URL** to the address where AhaSend reaches your Odoo from the internet. To test on your own computer, a tunnel such as [ngrok](https://ngrok.com) gives you a temporary `https://` address.
+  </Accordion>
+  <Accordion title="Connect or Disconnect fails with an AhaSend error">
+    Check the account ID and that the API key has the scopes in [Create an API key](#create-an-api-key). **Disconnect AhaSend** needs `webhooks:delete:all`.
+  </Accordion>
+  <Accordion title="Emails stay on Sent">
+    Check that the webhook exists and is enabled on the [Webhooks page](https://dash.ahasend.com/account/-/integrations/webhooks), and that its endpoint URL reaches your Odoo. Odoo answers `401` when the signature does not match the webhook secret: click **Disconnect AhaSend** and **Connect AhaSend** again to store a fresh secret. AhaSend disables a webhook after more than 100 consecutive failed attempts. Use **Check AhaSend** to update emails that were sent in the meantime.
+  </Accordion>
+  <Accordion title="Odoo has several databases">
+    The endpoint URL contains the database name, so one Odoo server can receive events for several databases. Connect each database on its own; each one gets its own webhook.
+  </Accordion>
+</AccordionGroup>
+
+## Related guides
+
+- [SMTP settings](/smtp), [SMTP credentials](/smtp/credentials) and [domain setup](/domains).
+- [Webhooks](/integrations/webhooks), [webhook events](/api-reference/webhooks) and [API key scopes](/api-reference/scopes).
+- [Bounces and suppressions](/bounces), [open tracking](/tracking/open-tracking) and [retention](/retention).

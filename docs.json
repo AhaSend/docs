@@ -579,7 +579,8 @@
               "guides/symfony",
               "guides/vercel",
               "guides/vite",
-              "guides/wordpress"
+              "guides/wordpress",
+              "guides/odoo"
             ]
           },
           {
