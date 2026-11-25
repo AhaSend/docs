@@ -1,0 +1,212 @@
+---
+title: "Send Email from Rails with the AhaSend Gem"
+sidebarTitle: "Rails"
+description: "Send Rails ActionMailer email through the AhaSend API with the ahasend-rails gem: install, configure, test in sandbox mode and handle delivery errors."
+keywords:
+  - "rails send email"
+  - "actionmailer api"
+  - "ahasend-rails"
+  - "ruby email api"
+  - "rails transactional email"
+---
+
+The [`ahasend-rails`](https://rubygems.org/gems/ahasend-rails) gem adds an `:ahasend` delivery method to ActionMailer, so your existing mailers send through the AhaSend API v2 instead of SMTP. This guide installs the gem, sends a test email in sandbox mode and covers per-message options, errors and retries.
+
+The gem supports Rails 7.0 to 8.1 on Ruby 3.1 or newer, and the plain [`mail`](https://github.com/mikel/mail) gem outside Rails. Its source is on [GitHub](https://github.com/AhaSend/ahasend-rails).
+
+## Prerequisites
+
+- A [verified sending domain](/domains)
+- A [send-only API key](/send-api/credentials) with the `messages:send:{your-domain}` scope, or `messages:send:all` to send from all your domains, and your account ID
+- For the test below, a key in **Sandbox** mode, so nothing is delivered. See [sandbox mode](/send-api/sandbox).
+
+## Install the gem
+
+From your Rails app's root:
+
+```bash
+bundle add ahasend-rails
+```
+
+Store the key and account ID in your Rails credentials, for example with `bin/rails credentials:edit`:
+
+```yaml config/credentials.yml.enc
+ahasend:
+  api_key: aha-sk-...
+  account_id: your-account-id
+```
+
+## Configure ActionMailer
+
+Select the delivery method in each environment that should send through AhaSend:
+
+```ruby config/environments/production.rb
+config.action_mailer.delivery_method = :ahasend
+config.action_mailer.ahasend_settings = {
+  api_key: Rails.application.credentials.dig(:ahasend, :api_key),
+  account_id: Rails.application.credentials.dig(:ahasend, :account_id)
+}
+```
+
+The gem checks these settings when it sends the first message, not when the app boots, so environments that use another delivery method need no AhaSend credentials. A missing or invalid setting, or an unknown key such as a typo, raises `AhaSend::ConfigurationError`.
+
+To validate everything without delivering, for example on staging, add `sandbox: true`:
+
+```ruby config/environments/staging.rb
+config.action_mailer.delivery_method = :ahasend
+config.action_mailer.ahasend_settings = {
+  api_key: Rails.application.credentials.dig(:ahasend, :api_key),
+  account_id: Rails.application.credentials.dig(:ahasend, :account_id),
+  sandbox: true
+}
+```
+
+Keep ActionMailer's `:test` delivery method in your test environment.
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `api_key` | | Required. Your API key (`aha-sk-...`). |
+| `account_id` | | Required. The account the key belongs to. |
+| `open_timeout` | `10` | Seconds to wait for the connection. |
+| `read_timeout` | `30` | Seconds to wait for the response. |
+| `max_retries` | `2` | Retries on `429`, `5xx`, network errors and requests still in progress. `0` turns retries off. |
+| `sandbox`, `sandbox_result`, `tags`, `tracking`, `retention`, `schedule`, `substitutions` | | Defaults for every message, with the same values as the [per-message options](#set-ahasend-options-per-message). |
+
+## Send a test email
+
+Create a mailer:
+
+```ruby app/mailers/welcome_mailer.rb
+class WelcomeMailer < ApplicationMailer
+  def welcome(email)
+    mail(from: "hello@yourdomain.com", to: email, subject: "Welcome!") do |format|
+      format.text { render plain: "Hello from AhaSend" }
+    end
+  end
+end
+```
+
+Replace `hello@yourdomain.com` with an address on your verified domain, then send it from an environment that uses the `:ahasend` delivery method:
+
+```bash
+bin/rails runner 'WelcomeMailer.welcome("recipient@example.com").deliver_now'
+```
+
+The command returns without an error when AhaSend accepted the message. With a sandbox key or `sandbox: true`, the message shows up in your AhaSend dashboard and nothing is delivered.
+
+In your app, send with `deliver_later` from web requests. `deliver_now` waits for the API, including its retries: with the default settings, one delivery can block for two to three minutes in the worst case. Lower `max_retries` and the timeouts if you must send inline.
+
+## Set AhaSend options per message
+
+Set AhaSend options in the mailer action, either with `AhaSend-*` headers or with `message.ahasend`. The gem reads these headers and does not send them on. `deliver_later` queues the mailer's arguments, not the built message, so set the options where the message is built:
+
+```ruby app/mailers/user_mailer.rb
+class UserMailer < ApplicationMailer
+  def welcome(user)
+    headers["AhaSend-Tags"] = "welcome,onboarding"
+    headers["AhaSend-Track-Opens"] = "true"
+    headers["AhaSend-Idempotency-Key"] = "welcome-#{user.id}"
+
+    mail(to: user.email, subject: "Welcome!")
+  end
+
+  def invoice(invoice)
+    message = mail(to: invoice.customer_email, subject: "Your invoice")
+    message.ahasend.tags = ["invoice"]
+    message.ahasend.retention = { metadata: 30, data: 7 }
+    message
+  end
+end
+```
+
+| Header | `message.ahasend` | Value |
+| --- | --- | --- |
+| `AhaSend-Tags` | `tags` | A comma-separated list, or an array of strings |
+| `AhaSend-Track-Opens`, `AhaSend-Track-Clicks` | `tracking` | `true` or `false`, or `{ open: true, click: false }` |
+| `AhaSend-Metadata-Retention`, `AhaSend-Data-Retention` | `retention` | Whole days, or `{ metadata: 30, data: 0 }` |
+| `AhaSend-Sandbox` | `sandbox` | `true` or `false` |
+| `AhaSend-Sandbox-Result` | `sandbox_result` | `deliver`, `bounce`, `defer`, `fail` or `suppress` |
+| `AhaSend-Substitutions` | `substitutions` | A JSON object, or a hash of values for `{{ name }}` in the subject and body |
+| `AhaSend-Schedule-First-Attempt`, `AhaSend-Schedule-Expires` | `schedule` | RFC 3339 timestamps, or `{ first_attempt:, expires: }` |
+| `AhaSend-Idempotency-Key` | `idempotency_key` | A unique string of up to 255 characters |
+
+The tracking, retention and sandbox headers have the same names as the [SMTP special headers](/smtp/special-headers), so an app that moves from SMTP keeps working. `message.ahasend` wins over a header, and a header wins over the defaults in `ahasend_settings`. A malformed value or an unknown `AhaSend-*` header raises `AhaSend::MessageError` before anything is sent. Other custom headers, such as `X-Campaign`, go to AhaSend as message headers.
+
+## Recipients
+
+| The message has | AhaSend sends |
+| --- | --- |
+| To only | A separate copy to each To address, so recipients do not see each other |
+| To with Cc or Bcc | One message with the full To, Cc and Bcc headers, as a mail client sends it |
+| Bcc only | A separate copy to each Bcc address |
+
+A message with Cc but no To, more than 100 recipients, or more than 50 To, Cc and Bcc addresses together raises `AhaSend::MessageError` before anything is sent, as do substitutions together with Cc or Bcc.
+
+## Handle errors
+
+All errors inherit from `AhaSend::Error`. With ActionMailer's default `raise_delivery_errors = true`, they raise from `deliver_now` and fail the job of `deliver_later`.
+
+| Error | When |
+| --- | --- |
+| `AhaSend::ConfigurationError` | A setting is missing, invalid or unknown |
+| `AhaSend::MessageError` | The message cannot be sent as built; raised before any request |
+| `AhaSend::ValidationError` | `400`: the API rejected the request |
+| `AhaSend::AuthenticationError` | `401`: the API key is missing or invalid |
+| `AhaSend::ForbiddenError` | `403`: the key cannot send from this domain, the account cannot send, or sending from the domain is paused |
+| `AhaSend::RateLimitError` | `429` after the retries |
+| `AhaSend::ServerError` | `5xx` after the retries |
+| `AhaSend::ConnectionError` | No response, for example a timeout |
+| `AhaSend::DeliveryError` | The API rejected every recipient, so nothing was sent |
+
+The API can accept some recipients of a message and reject others. That does not raise an error, because a retried job would send the accepted recipients a second copy. The gem reports the rejected recipients in the `deliver.ahasend` notification instead. To stop retrying a message that every recipient rejected, handle `AhaSend::DeliveryError` in your mailer:
+
+```ruby app/mailers/application_mailer.rb
+class ApplicationMailer < ActionMailer::Base
+  rescue_from AhaSend::DeliveryError do |error|
+    Rails.logger.warn("AhaSend rejected all recipients: #{error.message}")
+  end
+end
+```
+
+## Retries and idempotency
+
+Every request carries an `Idempotency-Key`. Without your own key, the gem makes one for each delivery, so its own retries never send an email twice. Set your own key with `AhaSend-Idempotency-Key` when your job itself may run twice, for example `order-confirmation-#{order.id}`. The API accepts a repeated key only for an identical request, so a retried job must build the same message. Give inline images a fixed Content-ID, because the `mail` gem otherwise makes a new one on each build. See [idempotency](/api-reference/idempotency).
+
+## Match messages with webhook events
+
+AhaSend assigns each email's Message-ID header. After delivery, `message.message_id` holds it. The gem also emits a `deliver.ahasend` notification for every API call, with AhaSend's IDs and each recipient's result:
+
+```ruby config/initializers/ahasend.rb
+ActiveSupport::Notifications.subscribe("deliver.ahasend") do |event|
+  event.payload[:recipients]        # [{ email:, status:, id:, message_id_header:, error: }, ...]
+  event.payload[:failed_recipients] # addresses the API rejected
+  event.payload[:sandbox]           # true for sandbox sends
+end
+```
+
+The payload contains no credentials and no message content. The `message_id_header` is the `data.message_id_header` of the message's [webhook events](/integrations/webhooks), so you can store it and match delivery, bounce and open events to your records.
+
+## Use the gem without Rails
+
+```ruby
+require "ahasend-rails"
+
+Mail.defaults do
+  delivery_method AhaSend::DeliveryMethod, api_key: ENV.fetch("AHASEND_API_KEY"), account_id: ENV.fetch("AHASEND_ACCOUNT_ID")
+end
+
+Mail.deliver do
+  from    "hello@yourdomain.com"
+  to      "recipient@example.com"
+  subject "Hello"
+  body    "Sent through AhaSend"
+end
+```
+
+To send over SMTP instead of the API, see [Ruby SMTP](/smtp/ruby).
+
+## Related guides
+
+- [Domain setup](/domains), [send-only API keys](/send-api/credentials) and [sandbox mode](/send-api/sandbox).
+- [Webhooks](/integrations/webhooks), [idempotency](/api-reference/idempotency) and [SMTP special headers](/smtp/special-headers).
+- [Ruby SMTP](/smtp/ruby), [Laravel](/guides/laravel) and [Symfony](/guides/symfony).
