@@ -7577,6 +7577,24 @@ paths:
             });
             console.log("Sandbox message accepted.", { count: result.data.length });
 
+        - lang: ruby
+          label: Ruby on Rails (ahasend-rails)
+          source: |
+            # config/environments/production.rb selects the gem, see https://ahasend.com/docs/guides/rails:
+            #   config.action_mailer.delivery_method = :ahasend
+            #   config.action_mailer.ahasend_settings = { api_key: ..., account_id: ... }
+            class WelcomeMailer < ApplicationMailer
+              def welcome(email)
+                headers["AhaSend-Sandbox"] = "true" # validate without delivering
+                mail(from: "sender@example.com", to: email, subject: "Hello from AhaSend") do |format|
+                  format.text { render plain: "Hello!" }
+                end
+              end
+            end
+
+            # With To addresses only, the gem sends each one a message of its own.
+            WelcomeMailer.welcome("recipient@example.net").deliver_now
+
       requestBody:
         required: true
         content:
@@ -7971,6 +7989,65 @@ paths:
               sandbox: true,
             });
             console.log("Sandbox conversation accepted.", { count: result.data.length });
+
+        - lang: ruby
+          label: Ruby on Rails (ahasend-rails)
+          source: |
+            # config/environments/production.rb selects the gem, see https://ahasend.com/docs/guides/rails:
+            #   config.action_mailer.delivery_method = :ahasend
+            #   config.action_mailer.ahasend_settings = { api_key: ..., account_id: ... }
+            class ProjectMailer < ApplicationMailer
+              def project_update(to, cc)
+                headers["AhaSend-Sandbox"] = "true" # validate without delivering
+                mail(from: "sender@example.com", to: to, cc: cc, subject: "Hello from AhaSend") do |format|
+                  format.text { render plain: "Hello!" }
+                end
+              end
+            end
+
+            # With a Cc or Bcc address, the gem sends one message to all of them, so reply-all works.
+            ProjectMailer.project_update("recipient@example.net", "colleague@example.net").deliver_now
+
+        - lang: php
+          label: Symfony Mailer (ahasend/symfony-mailer)
+          source: |
+            <?php
+            // .env.local: MAILER_DSN=ahasend+api://API_KEY:ACCOUNT_ID@default, see https://ahasend.com/docs/guides/symfony
+            use Symfony\Component\Mailer\MailerInterface;
+            use Symfony\Component\Mime\Email;
+
+            function sendUpdate(MailerInterface $mailer): void
+            {
+                $email = (new Email())
+                    ->from('sender@example.com')
+                    ->to('recipient@example.net')
+                    ->cc('colleague@example.net')
+                    ->subject('Hello from AhaSend')
+                    ->html('<p>Hello!</p>');
+                $email->getHeaders()->addTextHeader('AhaSend-Sandbox', 'true'); // validate without delivering
+
+                // A message with To addresses goes out as one message to all of them, so reply-all works.
+                $mailer->send($email);
+            }
+
+        - lang: php
+          label: Laravel (ahasend/laravel-mailer)
+          source: |
+            <?php
+            // .env: MAIL_MAILER=ahasend, AHASEND_API_KEY and AHASEND_ACCOUNT_ID, see https://ahasend.com/docs/guides/laravel
+            use Illuminate\Mail\Message;
+            use Illuminate\Support\Facades\Mail;
+
+            // A message with To addresses goes out as one message to all of them, so reply-all works.
+            $sent = Mail::html('<p>Hello!</p>', function (Message $message) {
+                $message->from('sender@example.com')
+                    ->to('recipient@example.net')
+                    ->cc('colleague@example.net')
+                    ->subject('Hello from AhaSend');
+                $message->getSymfonyMessage()->getHeaders()
+                    ->addTextHeader('AhaSend-Sandbox', 'true'); // validate without delivering
+            });
+            echo $sent->getMessageId();
 
       requestBody:
         required: true
